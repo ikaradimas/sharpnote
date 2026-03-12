@@ -12,7 +12,7 @@ import Chart from 'chart.js/auto';
 
 // CodeMirror
 import { EditorState, Compartment } from '@codemirror/state';
-import { EditorView, keymap, lineNumbers, highlightActiveLine } from '@codemirror/view';
+import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
@@ -91,6 +91,7 @@ function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
       history(),
       lineNumbers(),
       highlightActiveLine(),
+      highlightActiveLineGutter(),
       oneDark,
       langExt,
       ctrlEnterKey,
@@ -915,6 +916,68 @@ function NugetPanel({ isOpen, onToggle, packages, kernelStatus, sources,
   );
 }
 
+// ── Config Panel ──────────────────────────────────────────────────────────────
+
+const EXAMPLE_CONFIG = [
+  { key: 'Environment', value: 'development' },
+  { key: 'ApiBaseUrl',  value: 'https://api.example.com' },
+];
+
+function ConfigPanel({ isOpen, onToggle, config, onAdd, onRemove, onUpdate }) {
+  const [newKey, setNewKey] = useState('');
+  const [newValue, setNewValue] = useState('');
+  const keyRef = useRef(null);
+
+  if (!isOpen) return null;
+
+  const handleAdd = () => {
+    const k = newKey.trim();
+    if (!k) return;
+    onAdd(k, newValue);
+    setNewKey(''); setNewValue('');
+    keyRef.current?.focus();
+  };
+
+  return (
+    <div className="config-panel">
+      <div className="config-panel-header">
+        <span className="config-panel-title">Config</span>
+        <span className="config-panel-hint">Access in scripts via <code>Config["key"]</code></span>
+        <button className="config-close-btn" onClick={onToggle} title="Close">×</button>
+      </div>
+      <div className="config-body">
+        <div className="config-list">
+          {config.length === 0 && (
+            <span className="config-empty">No entries — add key/value pairs below</span>
+          )}
+          {config.map((entry, i) => (
+            <div key={i} className="config-item">
+              <span className="config-key">{entry.key}</span>
+              <span className="config-eq">=</span>
+              <input
+                className="nuget-input config-value-input"
+                value={entry.value}
+                onChange={(e) => onUpdate(i, e.target.value)}
+                spellCheck={false}
+              />
+              <button className="nuget-remove-btn" title="Remove" onClick={() => onRemove(i)}>×</button>
+            </div>
+          ))}
+        </div>
+        <div className="config-add-row">
+          <input ref={keyRef} className="nuget-input config-key-input" placeholder="Key"
+            value={newKey} onChange={(e) => setNewKey(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleAdd()} spellCheck={false} />
+          <input className="nuget-input config-value-input-add" placeholder="Value"
+            value={newValue} onChange={(e) => setNewValue(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleAdd()} spellCheck={false} />
+          <button className="nuget-add-btn" onClick={handleAdd}>+ Add</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Toolbar ───────────────────────────────────────────────────────────────────
 
 function Toolbar({
@@ -930,6 +993,9 @@ function Toolbar({
   onToggleLogs,
   nugetPanelOpen,
   onToggleNuget,
+  configPanelOpen,
+  onToggleConfig,
+  configCount,
 }) {
   const filename = notebookPath
     ? notebookPath.split(/[\\/]/).pop()
@@ -949,16 +1015,23 @@ function Toolbar({
       <button onClick={onReset} title="Reset kernel state">Reset Kernel</button>
       <div className="toolbar-separator" />
       <button
+        onClick={onToggleConfig}
+        title="Toggle config panel"
+        style={configPanelOpen ? { background: '#0a2a38', borderColor: 'var(--cyber-dim)', color: 'var(--cyber-cyan)' } : undefined}
+      >
+        Config{configCount > 0 ? ` (${configCount})` : ''}
+      </button>
+      <button
         onClick={onToggleNuget}
         title="Toggle NuGet panel"
-        style={nugetPanelOpen ? { background: '#094771', borderColor: '#0e639c' } : undefined}
+        style={nugetPanelOpen ? { background: '#0a2a38', borderColor: 'var(--cyber-dim)', color: 'var(--cyber-cyan)' } : undefined}
       >
         Packages
       </button>
       <button
         onClick={onToggleLogs}
         title="Toggle log panel"
-        style={logPanelOpen ? { background: '#094771', borderColor: '#0e639c' } : undefined}
+        style={logPanelOpen ? { background: '#0a2a38', borderColor: 'var(--cyber-dim)', color: 'var(--cyber-cyan)' } : undefined}
       >
         Logs
       </button>
@@ -990,6 +1063,7 @@ An interactive C# notebook. Press **Ctrl+Enter** to run a cell, or click **▶ R
 | Chart | \`Display.Graph(chartJsConfig)\` |
 | NuGet | \`#r "nuget: Package, Version"\` |
 | Logging | \`value.Log()\` · \`value.Log("label")\` |
+| Config | \`Config["Key"]\` · \`Config.Get("Key", "default")\` |
 | Auto-render | Return a value — type is detected automatically |`),
 
     md('## 1 · Basic C#'),
@@ -1190,6 +1264,36 @@ for (int i = 1; i <= 8; i++) {
 }
 
 results.DisplayTable();`),
+
+    md(`## 9 · Notebook Configuration
+
+Use the **Config** panel (toolbar) to define key/value pairs that become available to all scripts in the notebook via the \`Config\` global.
+
+This is useful for environment-specific settings (URLs, feature flags, credentials) without hard-coding them in cells.
+
+| Expression | Result |
+|------------|--------|
+| \`Config["Key"]\` | Value string, or \`""\` if missing |
+| \`Config.Get("Key", "default")\` | Value with fallback |
+| \`Config.Has("Key")\` | \`true\` if key exists and non-empty |
+| \`Config.All\` | \`IReadOnlyDictionary<string,string>\` |
+
+Config is persisted in the \`.polyglot\` file alongside packages and sources.`),
+
+    cs(`// Read config values (try editing them in the Config panel first)
+var env     = Config.Get("Environment", "development");
+var baseUrl = Config.Get("ApiBaseUrl", "(not set)");
+var missing = Config.Get("NonExistent", "fallback value");
+
+Display.Html($@"
+<table style='border-collapse:collapse;font-size:12px'>
+  <tr><th style='padding:4px 12px;text-align:left;color:#4fc3f7'>Key</th>
+      <th style='padding:4px 12px;text-align:left;color:#4fc3f7'>Value</th></tr>
+  <tr><td style='padding:3px 12px'>Environment</td><td style='padding:3px 12px;color:#00e5cc'>{env}</td></tr>
+  <tr><td style='padding:3px 12px'>ApiBaseUrl</td><td style='padding:3px 12px;color:#00e5cc'>{baseUrl}</td></tr>
+  <tr><td style='padding:3px 12px'>NonExistent</td><td style='padding:3px 12px;color:#555'>{missing}</td></tr>
+  <tr><td style='padding:3px 12px;color:#555'>All entries</td><td style='padding:3px 12px;color:#555'>{Config.All.Count} defined</td></tr>
+</table>");`),
   ];
 }
 
@@ -1205,12 +1309,16 @@ function App() {
   const [nugetPanelOpen, setNugetPanelOpen] = useState(false);
   const [nugetPackages, setNugetPackages] = useState([]);
   const [nugetSources, setNugetSources] = useState(DEFAULT_NUGET_SOURCES);
+  const [notebookConfig, setNotebookConfig] = useState(EXAMPLE_CONFIG);
+  const [configPanelOpen, setConfigPanelOpen] = useState(false);
 
   // Refs so callbacks can read current state without stale closure
   const nugetPackagesRef = useRef(nugetPackages);
   useEffect(() => { nugetPackagesRef.current = nugetPackages; }, [nugetPackages]);
   const nugetSourcesRef = useRef(nugetSources);
   useEffect(() => { nugetSourcesRef.current = nugetSources; }, [nugetSources]);
+  const notebookConfigRef = useRef(notebookConfig);
+  useEffect(() => { notebookConfigRef.current = notebookConfig; }, [notebookConfig]);
 
   // When kernel becomes ready, preload any pending packages
   useEffect(() => {
@@ -1360,6 +1468,9 @@ function App() {
         code: cell.content,
         outputMode: cell.outputMode || 'auto',
         sources: nugetSourcesRef.current.filter((s) => s.enabled).map((s) => s.url),
+        config: Object.fromEntries(
+          notebookConfigRef.current.filter((e) => e.key.trim()).map((e) => [e.key, e.value])
+        ),
       });
     });
   }, []);
@@ -1415,8 +1526,9 @@ function App() {
     title: notebookPath ? notebookPath.split(/[\\/]/).pop().replace('.polyglot', '') : 'notebook',
     packages: nugetPackages.map(({ id, version }) => ({ id, version: version || null })),
     sources: nugetSources,
+    config: notebookConfig.filter((e) => e.key.trim()),
     cells: cells.map(({ id, type, content, outputMode, locked }) => ({ id, type, content, ...(type === 'code' ? { outputMode: outputMode || 'auto', locked: locked || false } : {}) })),
-  }), [cells, notebookPath, nugetPackages, nugetSources]);
+  }), [cells, notebookPath, nugetPackages, nugetSources, notebookConfig]);
 
   // File > Save — writes to current path if known, else prompts
   const handleSave = useCallback(async () => {
@@ -1443,11 +1555,13 @@ function App() {
     if (result.success && result.data) {
       const loadedPkgs = (result.data.packages || []).map((p) => ({ ...p, status: 'pending' }));
       const loadedSources = result.data.sources || DEFAULT_NUGET_SOURCES;
+      const loadedConfig = result.data.config || [];
       setCells(result.data.cells || []);
       setOutputs({});
       setNotebookPath(result.filePath);
       setNugetPackages(loadedPkgs);
       setNugetSources(loadedSources);
+      setNotebookConfig(loadedConfig);
       // If kernel is already ready, kick off preload immediately
       if (kernelStatus === 'ready' && loadedPkgs.length > 0) {
         setNugetPackages(loadedPkgs.map((p) => ({ ...p, status: 'loading' })));
@@ -1515,6 +1629,18 @@ function App() {
     setNugetSources((prev) => prev.map((s) => s.url === url ? { ...s, enabled: !s.enabled } : s));
   }, []);
 
+  const addConfigEntry = useCallback((key, value) => {
+    setNotebookConfig((prev) => [...prev, { key, value }]);
+  }, []);
+
+  const removeConfigEntry = useCallback((index) => {
+    setNotebookConfig((prev) => prev.filter((_, i) => i !== index));
+  }, []);
+
+  const updateConfigEntry = useCallback((index, value) => {
+    setNotebookConfig((prev) => prev.map((e, i) => i === index ? { ...e, value } : e));
+  }, []);
+
   const requestCompletions = useCallback((code, position) => {
     return new Promise((resolve) => {
       if (!window.electronAPI) return resolve([]);
@@ -1553,6 +1679,7 @@ function App() {
     setNotebookPath(null);
     setNugetPackages([]);
     setNugetSources(DEFAULT_NUGET_SOURCES);
+    setNotebookConfig([]);
     pendingResolversRef.current = {};
   }, [cells]);
 
@@ -1592,6 +1719,9 @@ function App() {
         onToggleLogs={() => setLogPanelOpen((v) => !v)}
         nugetPanelOpen={nugetPanelOpen}
         onToggleNuget={() => setNugetPanelOpen((v) => !v)}
+        configPanelOpen={configPanelOpen}
+        onToggleConfig={() => setConfigPanelOpen((v) => !v)}
+        configCount={notebookConfig.length}
       />
       <div id="main-area">
       <div id="content-area">
@@ -1658,6 +1788,14 @@ function App() {
         onAddSource={addNugetSource}
         onRemoveSource={removeNugetSource}
         onToggleSource={toggleNugetSource}
+      />
+      <ConfigPanel
+        isOpen={configPanelOpen}
+        onToggle={() => setConfigPanelOpen((v) => !v)}
+        config={notebookConfig}
+        onAdd={addConfigEntry}
+        onRemove={removeConfigEntry}
+        onUpdate={updateConfigEntry}
       />
       </div>{/* #main-area */}
     </div>

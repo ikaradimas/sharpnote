@@ -40,6 +40,37 @@ public static class LogContext
     }
 }
 
+// ── ConfigContext ─────────────────────────────────────────────────────────────
+
+public class ConfigHelper
+{
+    private readonly IReadOnlyDictionary<string, string> _values;
+
+    public ConfigHelper(IReadOnlyDictionary<string, string> values) => _values = values;
+
+    /// <summary>Returns the value for <paramref name="key"/>, or an empty string if not set.</summary>
+    public string this[string key] => _values.TryGetValue(key, out var v) ? v : "";
+
+    /// <summary>Returns the value for <paramref name="key"/>, or <paramref name="defaultValue"/> if not set.</summary>
+    public string Get(string key, string defaultValue = "") =>
+        _values.TryGetValue(key, out var v) ? v : defaultValue;
+
+    /// <summary>Returns true if the key is present and non-empty.</summary>
+    public bool Has(string key) => _values.ContainsKey(key) && !string.IsNullOrEmpty(_values[key]);
+
+    /// <summary>All config entries as a read-only dictionary.</summary>
+    public IReadOnlyDictionary<string, string> All => _values;
+
+    public override string ToString() =>
+        _values.Count == 0 ? "(empty)" : string.Join(", ", _values.Select(kv => $"{kv.Key}={kv.Value}"));
+}
+
+public static class ConfigContext
+{
+    public static ConfigHelper Current { get; internal set; } =
+        new ConfigHelper(new Dictionary<string, string>());
+}
+
 // ── DisplayHandle ────────────────────────────────────────────────────────────
 
 public class DisplayHandle
@@ -274,6 +305,7 @@ public static class PolyglotExtensions
 public class ScriptGlobals
 {
     public DisplayHelper Display { get; set; } = null!;
+    public ConfigHelper Config => ConfigContext.Current;
 }
 
 // ── Kernel entry point ───────────────────────────────────────────────────────
@@ -341,6 +373,13 @@ class Program
                     var execSources = msg.TryGetProperty("sources", out var esProp)
                         ? esProp.EnumerateArray().Select(s => s.GetString()!).ToList()
                         : (List<string>?)null;
+
+                    // ── Apply notebook config ────────────────────────────────
+                    var configDict = new Dictionary<string, string>();
+                    if (msg.TryGetProperty("config", out var cfgProp))
+                        foreach (var entry in cfgProp.EnumerateObject())
+                            configDict[entry.Name] = entry.Value.GetString() ?? "";
+                    ConfigContext.Current = new ConfigHelper(configDict);
 
                     // ── Parse #r "nuget: ..." directives ────────────────────
                     var (cleanCode, nugetRefs) = ParseNugetDirectives(code);
