@@ -36,8 +36,9 @@
         "filter": ["**/*"]
       }
     ],
+    "afterPack": "./afterPack.js",
     "directories": {
-      "output": "release"
+      "output": "/tmp/polyglot-build"
     },
     "mac": {
       "category": "public.app-category.developer-tools",
