@@ -1,0 +1,21 @@
+# npm
+node_modules/
+
+# esbuild output
+dist/
+
+# .NET build artifacts
+kernel/bin/
+kernel/obj/
+
+# macOS
+.DS_Store
+
+# Editor
+.vscode/
+*.suo
+*.user
+
+# Electron packager output
+out/
+release/

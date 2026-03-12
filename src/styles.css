@@ -1,0 +1,564 @@
+/* VS Code Dark Theme */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: #1e1e1e;
+  color: #d4d4d4;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  height: 100vh;
+  overflow: hidden;
+}
+
+#root {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+#app {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* ── Toolbar ─────────────────────────────────────────────────────────────── */
+
+.toolbar {
+  background: #252526;
+  border-bottom: 1px solid #3c3c3c;
+  padding: 6px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  user-select: none;
+  -webkit-app-region: drag;
+}
+
+.toolbar-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #cccccc;
+  margin-right: 4px;
+  -webkit-app-region: drag;
+}
+
+.toolbar button {
+  -webkit-app-region: no-drag;
+  background: #3a3d41;
+  border: 1px solid #555;
+  color: #cccccc;
+  padding: 4px 10px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 12px;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+
+.toolbar button:hover {
+  background: #4a4d51;
+}
+
+.toolbar button:active {
+  background: #555;
+}
+
+.toolbar-separator {
+  width: 1px;
+  height: 20px;
+  background: #3c3c3c;
+  margin: 0 4px;
+}
+
+.kernel-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  font-size: 12px;
+  color: #888;
+  -webkit-app-region: no-drag;
+}
+
+.kernel-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #888;
+}
+
+.kernel-dot.ready { background: #4ec9b0; }
+.kernel-dot.starting { background: #dcdcaa; }
+.kernel-dot.error { background: #f44747; }
+
+/* ── Notebook ────────────────────────────────────────────────────────────── */
+
+.notebook {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-height: 0;
+}
+
+.notebook::-webkit-scrollbar {
+  width: 8px;
+}
+.notebook::-webkit-scrollbar-track {
+  background: #1e1e1e;
+}
+.notebook::-webkit-scrollbar-thumb {
+  background: #424242;
+  border-radius: 4px;
+}
+
+/* ── Cell ────────────────────────────────────────────────────────────────── */
+
+.cell-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.cell-add-bar {
+  height: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s;
+  cursor: default;
+}
+
+.cell-wrapper:hover .cell-add-bar,
+.cell-add-bar:hover {
+  opacity: 1;
+}
+
+.cell-add-bar-inner {
+  display: flex;
+  gap: 4px;
+}
+
+.cell-add-btn {
+  background: #2d2d2d;
+  border: 1px solid #444;
+  color: #888;
+  font-size: 11px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  cursor: pointer;
+  line-height: 16px;
+}
+.cell-add-btn:hover {
+  background: #3a3d41;
+  color: #ccc;
+}
+
+.cell {
+  border: 1px solid transparent;
+  border-radius: 4px;
+  position: relative;
+  margin: 2px 0;
+  transition: border-color 0.15s;
+}
+
+.cell:hover {
+  border-color: #3c3c3c;
+}
+
+.cell.running {
+  border-color: #569cd6 !important;
+}
+
+/* Cell controls */
+.cell-controls {
+  position: absolute;
+  right: 6px;
+  top: 6px;
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 10;
+}
+
+.cell:hover .cell-controls {
+  opacity: 1;
+}
+
+.cell-ctrl-btn {
+  background: #3a3d41;
+  border: 1px solid #555;
+  color: #888;
+  width: 22px;
+  height: 22px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.cell-ctrl-btn:hover {
+  background: #4a4d51;
+  color: #ccc;
+}
+
+.cell-ctrl-danger {
+  background: #6e2020;
+  border-color: #a33;
+  color: #f99;
+}
+
+.cell-ctrl-danger:hover {
+  background: #8a2a2a;
+  color: #fcc;
+}
+
+.delete-confirm-label {
+  font-size: 10px;
+  color: #e07070;
+  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  user-select: none;
+  white-space: nowrap;
+}
+
+/* ── Markdown Cell ───────────────────────────────────────────────────────── */
+
+.markdown-cell {
+  background: #1e1e1e;
+  padding: 8px 12px;
+  min-height: 40px;
+}
+
+.markdown-render {
+  cursor: text;
+  line-height: 1.6;
+  color: #d4d4d4;
+  padding: 4px 0;
+  min-height: 28px;
+}
+
+.markdown-render:hover {
+  background: rgba(255,255,255,0.02);
+  border-radius: 3px;
+}
+
+.markdown-render h1 { font-size: 1.8em; font-weight: 600; margin: 0.6em 0 0.3em; color: #4ec9b0; border-bottom: 1px solid #3c3c3c; padding-bottom: 4px; }
+.markdown-render h2 { font-size: 1.4em; font-weight: 600; margin: 0.5em 0 0.3em; color: #4ec9b0; }
+.markdown-render h3 { font-size: 1.15em; font-weight: 600; margin: 0.4em 0 0.2em; color: #9cdcfe; }
+.markdown-render p { margin: 0.3em 0; }
+.markdown-render code { background: #2d2d2d; padding: 1px 5px; border-radius: 3px; font-family: 'Cascadia Code', 'Fira Code', monospace; font-size: 0.9em; color: #ce9178; }
+.markdown-render pre { background: #2d2d2d; padding: 10px; border-radius: 4px; overflow-x: auto; margin: 0.5em 0; }
+.markdown-render pre code { background: none; padding: 0; }
+.markdown-render ul, .markdown-render ol { padding-left: 1.5em; margin: 0.3em 0; }
+.markdown-render li { margin: 0.2em 0; }
+.markdown-render blockquote { border-left: 3px solid #569cd6; padding-left: 12px; color: #888; margin: 0.5em 0; }
+.markdown-render a { color: #569cd6; }
+.markdown-render table { border-collapse: collapse; width: 100%; margin: 0.5em 0; }
+.markdown-render th { background: #2d2d2d; padding: 6px 10px; text-align: left; border: 1px solid #3c3c3c; }
+.markdown-render td { padding: 5px 10px; border: 1px solid #3c3c3c; }
+
+.markdown-placeholder {
+  color: #555;
+  font-style: italic;
+  font-size: 13px;
+}
+
+/* ── Code Cell ───────────────────────────────────────────────────────────── */
+
+.code-cell {
+  background: #1e1e1e;
+}
+
+.code-cell-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: #252526;
+  border-bottom: 1px solid #3c3c3c;
+  border-radius: 4px 4px 0 0;
+}
+
+.cell-lang-label {
+  font-size: 11px;
+  color: #569cd6;
+  font-weight: 600;
+  font-family: 'Cascadia Code', monospace;
+  user-select: none;
+}
+
+.run-btn {
+  background: #0e639c;
+  border: none;
+  color: white;
+  padding: 2px 12px;
+  border-radius: 2px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background 0.15s;
+}
+
+.run-btn:hover { background: #1177bb; }
+.run-btn:disabled { background: #2d5a7c; cursor: not-allowed; opacity: 0.7; }
+
+.running-spinner {
+  font-size: 11px;
+  color: #569cd6;
+}
+
+.code-editor-wrap {
+  border-radius: 0 0 4px 4px;
+  overflow: hidden;
+}
+
+/* CodeMirror overrides */
+.cm-editor {
+  background: #1e1e1e !important;
+  font-size: 13px;
+}
+
+.cm-editor.cm-focused { outline: none !important; }
+
+.cm-scroller {
+  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace !important;
+}
+
+.cm-content {
+  padding: 8px 0 !important;
+  min-height: 40px;
+}
+
+.cm-line {
+  padding: 0 12px !important;
+}
+
+/* ── Cell Output ─────────────────────────────────────────────────────────── */
+
+.cell-output {
+  background: #141414;
+  border-top: 1px solid #2d2d2d;
+  padding: 8px 12px;
+  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  font-size: 12.5px;
+}
+
+.output-stdout {
+  white-space: pre-wrap;
+  color: #d4d4d4;
+}
+
+.output-error {
+  color: #f44747;
+  white-space: pre-wrap;
+}
+
+.output-error-stack {
+  color: #888;
+  white-space: pre-wrap;
+  font-size: 11px;
+  margin-top: 4px;
+}
+
+.output-html {
+  color: #d4d4d4;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 13px;
+}
+
+/* ── Data Table ──────────────────────────────────────────────────────────── */
+
+.data-table-wrap {
+  overflow-x: auto;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.data-table {
+  border-collapse: collapse;
+  font-size: 12.5px;
+  width: 100%;
+  min-width: max-content;
+}
+
+.data-table th {
+  background: #252526;
+  color: #9cdcfe;
+  padding: 5px 12px;
+  text-align: left;
+  border: 1px solid #3c3c3c;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.data-table td {
+  padding: 4px 12px;
+  border: 1px solid #2d2d2d;
+  color: #d4d4d4;
+  white-space: nowrap;
+}
+
+.data-table tr:nth-child(even) td {
+  background: rgba(255,255,255,0.02);
+}
+
+.data-table tr:hover td {
+  background: rgba(86,156,214,0.08);
+}
+
+/* ── Graph ───────────────────────────────────────────────────────────────── */
+
+.graph-wrap {
+  padding: 8px 0;
+  max-height: 400px;
+  position: relative;
+}
+
+.graph-wrap canvas {
+  max-height: 380px !important;
+}
+
+/* ── Empty notebook ──────────────────────────────────────────────────────── */
+
+.empty-notebook {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 60px;
+  color: #555;
+  text-align: center;
+}
+
+.empty-notebook h2 {
+  color: #666;
+  font-size: 18px;
+  font-weight: 400;
+}
+
+.empty-notebook p {
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+/* ── CodeMirror lint + autocomplete theming ─────────────────────────────── */
+
+.cm-lintRange-error {
+  text-decoration: underline wavy #f44747;
+}
+
+.cm-lintRange-warning {
+  text-decoration: underline wavy #dcdcaa;
+}
+
+.cm-tooltip.cm-tooltip-lint {
+  background: #252526;
+  border: 1px solid #3c3c3c;
+  color: #d4d4d4;
+  font-size: 12px;
+  max-width: 400px;
+}
+
+.cm-tooltip-autocomplete {
+  background: #252526 !important;
+  border: 1px solid #3c3c3c !important;
+}
+
+.cm-tooltip-autocomplete ul li {
+  color: #d4d4d4;
+  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  font-size: 12px;
+}
+
+.cm-tooltip-autocomplete ul li[aria-selected] {
+  background: #094771 !important;
+}
+
+/* ── Export Button ───────────────────────────────────────────────────────── */
+
+.output-block {
+  position: relative;
+}
+
+.export-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: #2d2d2d;
+  border: 1px solid #444;
+  color: #666;
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 11px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s, background 0.15s;
+  z-index: 5;
+}
+
+.output-block:hover .export-btn {
+  opacity: 1;
+}
+
+.export-btn:hover {
+  background: #3a3d41;
+  color: #ccc;
+}
+
+/* ── Output Mode Dropdown ────────────────────────────────────────────────── */
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.output-mode-label {
+  font-size: 10px;
+  color: #555;
+  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  user-select: none;
+}
+
+.output-mode-select {
+  background: #2d2d2d;
+  border: 1px solid #3c3c3c;
+  color: #888;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  min-width: 52px;
+}
+
+.output-mode-select:hover {
+  border-color: #555;
+  color: #aaa;
+}
+
+.output-mode-select:focus {
+  border-color: #0e639c;
+}
