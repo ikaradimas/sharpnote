@@ -35,6 +35,244 @@ const CSHARP_KEYWORDS = [
   'unchecked','unsafe','ushort','using','var','virtual','void','volatile','while',
 ];
 
+// ── Documentation data ────────────────────────────────────────────────────────
+
+const DOCS_TAB_ID = '__docs__';
+
+const DOCS_SECTIONS = [
+  {
+    id: 'overview', title: 'Overview',
+    content: [
+      { type: 'p', text: 'Polyglot Notebook is a desktop notebook application for interactive C# scripting. Notebooks contain an ordered sequence of code and markdown cells that share execution state within a kernel process.' },
+      { type: 'h3', text: 'Key Concepts' },
+      { type: 'ul', items: [
+        'Notebook — a .cnb file containing an ordered list of cells',
+        'Cell — a unit of code or markdown content',
+        'Kernel — a .NET process that executes C# and persists variables across cells',
+        'Tab — each open notebook has its own tab and fully independent kernel process',
+      ]},
+    ],
+  },
+  {
+    id: 'notebooks', title: 'Notebooks',
+    content: [
+      { type: 'h3', text: 'Creating a Notebook' },
+      { type: 'p', text: 'File → New Notebook (⌘N) or click the + button in the tab bar. A dialog asks whether to start from the Examples template or a blank notebook.' },
+      { type: 'h3', text: 'Opening a Notebook' },
+      { type: 'p', text: 'File → Open… (⌘O). The notebook always opens in a new tab — your existing tabs are unaffected.' },
+      { type: 'h3', text: 'Saving' },
+      { type: 'ul', items: [
+        'Save (⌘S) — saves to the current file path; prompts for a path if not yet saved',
+        'Save As… (⌘⇧S) — always prompts for a new path',
+        'An amber • on the tab indicates unsaved changes',
+      ]},
+      { type: 'h3', text: 'Tabs & Navigation' },
+      { type: 'ul', items: [
+        'Click a tab to switch to it — the inactive pane stays mounted, preserving scroll position, editor undo history, and all state',
+        'Drag a tab left or right to reorder it in the tab bar',
+        'Close a tab with the × button; a confirmation appears if there are unsaved changes',
+        'If the last tab is closed, a fresh blank notebook is created automatically',
+      ]},
+      { type: 'h3', text: 'Renaming' },
+      { type: 'p', text: 'Double-click the tab title or the notebook title in the toolbar to rename inline. Press Enter or click away to confirm; Escape to cancel. If the notebook has been saved, the file on disk is also renamed. Any characters are allowed in the display title; characters illegal in filenames ( / \\ : * ? " < > | ) are stripped from the saved filename.' },
+    ],
+  },
+  {
+    id: 'cells', title: 'Cells',
+    content: [
+      { type: 'h3', text: 'Cell Types' },
+      { type: 'ul', items: [
+        'Code cell — C# code, executed by the kernel with persistent state',
+        'Markdown cell — rich text: headings, lists, code spans, tables, links, blockquotes',
+      ]},
+      { type: 'h3', text: 'Adding Cells' },
+      { type: 'p', text: 'Hover between any two cells (or above the first cell) to reveal the + Code and + Markdown insert buttons. The toolbar also has Add Markdown and Add Code buttons that append to the end of the notebook.' },
+      { type: 'h3', text: 'Moving Cells' },
+      { type: 'p', text: 'Hover over a cell to reveal ↑ ↓ arrows in the top-right corner. Click to move the cell one position up or down.' },
+      { type: 'h3', text: 'Deleting Cells' },
+      { type: 'p', text: 'Hover over a cell to reveal the 🗑 delete button. Click once to enter confirmation mode (button turns red and shows "del?"), then click again to confirm deletion.' },
+      { type: 'h3', text: 'Locking Cells' },
+      { type: 'p', text: 'Hover over a code cell and click the 🔓 lock icon in the bottom-right to toggle the lock. Locked cells (🔒) display a darker background and cannot be edited. Useful for protecting reference code or read-only examples.' },
+      { type: 'h3', text: 'Editing Markdown' },
+      { type: 'p', text: 'Click the ✏ pencil button on a rendered markdown cell, or double-click its content, to enter edit mode. Click OK or press Ctrl+Enter to render; click Cancel or press Escape to discard changes.' },
+    ],
+  },
+  {
+    id: 'execution', title: 'Running Code',
+    content: [
+      { type: 'h3', text: 'Running a Single Cell' },
+      { type: 'ul', items: [
+        'Click the Run button in the cell header',
+        'Press Ctrl+Enter (Cmd+Enter on macOS) while the code editor is focused',
+      ]},
+      { type: 'h3', text: 'Running All Cells' },
+      { type: 'ul', items: [
+        'Run → Run All Cells (⌘⇧↩)',
+        'Cells execute in order from top to bottom',
+        'Each cell waits for the previous cell to complete before starting',
+      ]},
+      { type: 'h3', text: 'Output Modes' },
+      { type: 'p', text: 'Each code cell has an output mode selector (Text / Table / Chart) in the cell header, to the right of the language label:' },
+      { type: 'ul', items: [
+        'Text — plain Console.Write / Console.WriteLine output',
+        'Table — structured data rendered as a scrollable table; use Display.Df() or Display.Table()',
+        'Chart — interactive chart rendered via Chart.js; use Display.Chart()',
+      ]},
+      { type: 'h3', text: 'Clearing Output' },
+      { type: 'p', text: 'Run → Clear All Output removes all cell output in the active notebook without resetting kernel state.' },
+    ],
+  },
+  {
+    id: 'scripting', title: 'C# Scripting',
+    content: [
+      { type: 'h3', text: 'State Persistence' },
+      { type: 'p', text: 'Variables, functions, classes, and using statements defined in any cell persist and are available in all subsequently executed cells. State accumulates as you run cells.' },
+      { type: 'h3', text: 'The Display Helper' },
+      { type: 'p', text: 'A global Display object is available in every cell with the following methods:' },
+      { type: 'ul', items: [
+        'Display.Html(string html) — renders arbitrary HTML in the output area',
+        'Display.Table(IEnumerable<T> rows) — renders an object collection as a formatted data table',
+        'Display.Df(DataTable dt) — renders a System.Data.DataTable',
+        'Display.Chart(object spec) — renders a Chart.js chart from a configuration object',
+      ]},
+      { type: 'h3', text: 'Using Directives' },
+      { type: 'p', text: 'Standard C# using statements work across the notebook. Common namespaces are pre-imported: System, System.Linq, System.Collections.Generic. Add any additional namespace in any cell.' },
+      { type: 'h3', text: 'NuGet References' },
+      { type: 'p', text: 'Add packages via the NuGet panel. After a package loads, reference its namespace in any cell with a standard using statement.' },
+      { type: 'h3', text: 'Config Access' },
+      { type: 'p', text: 'Key-value configuration entries (see Configuration) are available in scripts as a global Dictionary<string, string> named Config:' },
+      { type: 'code', text: 'var connStr = Config["ConnectionString"];\nConsole.WriteLine(connStr);' },
+    ],
+  },
+  {
+    id: 'output', title: 'Output & Display',
+    content: [
+      { type: 'h3', text: 'Text Output' },
+      { type: 'p', text: 'Console.Write and Console.WriteLine produce plain text output shown below the cell.' },
+      { type: 'h3', text: 'HTML Output' },
+      { type: 'p', text: 'Display.Html("<b>bold</b>") renders HTML directly in the output area. Use this for custom formatting, embedded content, or styled results.' },
+      { type: 'h3', text: 'Data Tables' },
+      { type: 'p', text: 'Display.Table(myList) or Display.Df(myDataTable) renders structured data as a scrollable table with column headers. Switch the cell output mode to Table.' },
+      { type: 'h3', text: 'Charts' },
+      { type: 'p', text: 'Display.Chart(spec) renders a Chart.js chart. Switch the cell output mode to Chart and pass a configuration object:' },
+      { type: 'code', text: 'Display.Chart(new {\n  type = "bar",\n  data = new {\n    labels = new[]{ "A", "B", "C" },\n    datasets = new[] { new {\n      label = "Values",\n      data = new[] { 1, 2, 3 }\n    }}\n  }\n});' },
+      { type: 'h3', text: 'Errors' },
+      { type: 'p', text: 'Compilation and runtime errors appear in red. Stack traces are shown in a dimmer colour below the main error message. An error in one cell does not prevent other cells from running.' },
+      { type: 'h3', text: 'Exporting Output' },
+      { type: 'p', text: 'Hover over any output block to reveal an export button (⬇) in the top-right corner. Click it to save the output to a file.' },
+    ],
+  },
+  {
+    id: 'kernel', title: 'Kernel',
+    content: [
+      { type: 'h3', text: 'What Is the Kernel' },
+      { type: 'p', text: 'Each notebook tab spawns its own .NET kernel process (dotnet run). The kernel receives code snippets over stdin and returns structured results over stdout as newline-delimited JSON.' },
+      { type: 'h3', text: 'Status Indicator' },
+      { type: 'p', text: 'The coloured dot in the toolbar shows kernel state:' },
+      { type: 'ul', items: [
+        'Yellow / pulsing — kernel is starting up',
+        'Amber — kernel is ready and waiting for input',
+        'Red — kernel error or process exited unexpectedly',
+      ]},
+      { type: 'h3', text: 'Resetting the Kernel' },
+      { type: 'p', text: 'Run → Reset Kernel sends a reset command to the kernel, clearing all accumulated state: variables, loaded assemblies, and using directives. Cell content and output are preserved.' },
+      { type: 'h3', text: 'Per-Notebook Isolation' },
+      { type: 'p', text: 'Each tab runs a completely independent kernel process. Code in notebook A cannot see or affect state in notebook B. This lets you safely run conflicting experiments in parallel.' },
+    ],
+  },
+  {
+    id: 'nuget', title: 'NuGet Packages',
+    content: [
+      { type: 'p', text: 'Open the NuGet panel with the NuGet button in the toolbar. The panel has three tabs: Installed, Browse, and Sources.' },
+      { type: 'h3', text: 'Installed Tab' },
+      { type: 'p', text: 'Shows all packages added to this notebook. Each entry displays its ID, version, and current load status:' },
+      { type: 'ul', items: [
+        '● dim — package pending load',
+        '● yellow / spinning — currently being restored and loaded',
+        '● amber — loaded and ready to use',
+        '● red — failed to load (hover for error; use the retry button ↺)',
+      ]},
+      { type: 'p', text: 'Remove a package with the × button. Packages are saved in the .cnb file and reloaded automatically when the notebook is opened.' },
+      { type: 'h3', text: 'Browse Tab' },
+      { type: 'p', text: 'Search the NuGet gallery by package ID. Results show package name, latest version, and download count. Click Add to add the package to the notebook at its latest version.' },
+      { type: 'h3', text: 'Sources Tab' },
+      { type: 'p', text: 'Manage NuGet feed URLs. nuget.org is included by default and cannot be removed. Enable or disable sources with the checkbox. Add custom feeds (e.g. private Azure Artifacts) with a name and URL.' },
+    ],
+  },
+  {
+    id: 'config', title: 'Configuration',
+    content: [
+      { type: 'p', text: 'Open the Config panel with the Config button in the toolbar. A badge shows the number of entries when the panel is closed.' },
+      { type: 'h3', text: 'Adding Entries' },
+      { type: 'p', text: 'Enter a key and value in the input row at the bottom of the panel and press Enter or click Add. Keys and values are plain strings.' },
+      { type: 'h3', text: 'Editing Entries' },
+      { type: 'p', text: 'Click the value field of any entry to edit it inline. Changes are applied immediately.' },
+      { type: 'h3', text: 'Using Config in Scripts' },
+      { type: 'p', text: 'Config entries are injected into the kernel at startup and after Reset. Access them via the global Config dictionary:' },
+      { type: 'code', text: 'var token = Config["ApiKey"];\nvar url   = Config["BaseUrl"];\nConsole.WriteLine($"Connecting to {url}");' },
+      { type: 'p', text: 'Config is per-notebook and saved with the .cnb file, making it easy to store environment-specific values without hardcoding them in cells.' },
+    ],
+  },
+  {
+    id: 'logs', title: 'Log Panel',
+    content: [
+      { type: 'p', text: 'Open the Log panel with the Log button in the toolbar.' },
+      { type: 'h3', text: 'Live Stream' },
+      { type: 'p', text: 'When "Live" is selected in the dropdown, log entries appear in real time as the kernel and app produce them. The panel auto-scrolls to the latest entry.' },
+      { type: 'h3', text: 'Log Tags' },
+      { type: 'ul', items: [
+        'NOTEBOOK — lifecycle events: kernel start, cell execute start/complete, kernel exit',
+        'USER — log output from running scripts (tagged by the kernel process)',
+      ]},
+      { type: 'h3', text: 'Historical Logs' },
+      { type: 'p', text: 'Log files are written per calendar day to the logs/ directory. Use the dropdown to select and read a past day\'s log. Use the 🗑 button to delete the selected log file.' },
+      { type: 'h3', text: 'Note' },
+      { type: 'p', text: 'The live log panel shows an interleaved stream from all open notebooks. Use the NOTEBOOK tag and kernel IDs in the messages to distinguish output from different tabs.' },
+    ],
+  },
+  {
+    id: 'shortcuts', title: 'Keyboard Shortcuts',
+    content: [
+      { type: 'shortcuts', rows: [
+        { keys: '⌘ N', desc: 'New notebook (prompts for template)' },
+        { keys: '⌘ O', desc: 'Open notebook in a new tab' },
+        { keys: '⌘ S', desc: 'Save notebook' },
+        { keys: '⌘ ⇧ S', desc: 'Save As…' },
+        { keys: '⌘ ⇧ ↩', desc: 'Run all cells' },
+        { keys: '⌘ =  /  ⌘ +', desc: 'Increase font size' },
+        { keys: '⌘ –', desc: 'Decrease font size' },
+        { keys: '⌘ 0', desc: 'Reset font size to default' },
+        { keys: 'F1', desc: 'Open this documentation' },
+        { keys: 'Ctrl+↩  (in editor)', desc: 'Run current cell' },
+        { keys: 'Tab  (in editor)', desc: 'Indent selection / accept autocomplete' },
+        { keys: 'Ctrl+Z  (in editor)', desc: 'Undo' },
+        { keys: 'Ctrl+Y  (in editor)', desc: 'Redo' },
+        { keys: 'Enter  (in tab rename)', desc: 'Confirm rename' },
+        { keys: 'Escape  (in tab rename)', desc: 'Cancel rename' },
+      ]},
+    ],
+  },
+  {
+    id: 'fileformat', title: 'File Format',
+    content: [
+      { type: 'p', text: 'Notebooks are saved as .cnb files — plain JSON that is human-readable and version-control friendly.' },
+      { type: 'h3', text: 'Top-Level Fields' },
+      { type: 'ul', items: [
+        'version — format version number (currently 1)',
+        'title — display name of the notebook',
+        'cells — ordered array of cell objects',
+        'nugetPackages — array of { id, version } objects',
+        'nugetSources — array of feed objects with name, url, enabled',
+        'config — array of { key, value } configuration pairs',
+      ]},
+      { type: 'h3', text: 'Cell Object' },
+      { type: 'code', text: '{\n  "id":      "uuid-v4",\n  "type":    "code",        // or "markdown"\n  "content": "Console.WriteLine(\\"hello\\");",\n  "locked":  false\n}' },
+      { type: 'h3', text: 'Example File' },
+      { type: 'code', text: '{\n  "version": 1,\n  "title": "My Analysis",\n  "cells": [ ... ],\n  "nugetPackages": [\n    { "id": "Newtonsoft.Json", "version": "13.0.3" }\n  ],\n  "nugetSources": [\n    { "name": "nuget.org",\n      "url": "https://api.nuget.org/v3/index.json",\n      "enabled": true }\n  ],\n  "config": [\n    { "key": "ApiKey", "value": "abc123" }\n  ]\n}' },
+    ],
+  },
+];
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function makeCell(type = 'code', content = '') {
@@ -102,7 +340,6 @@ function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
     ];
 
     if (language === 'csharp') {
-      // Static keyword source — instant, no IPC
       const keywordSource = (ctx) => {
         const word = ctx.matchBefore(/\w*/);
         if (!word || (word.from === word.to && !ctx.explicit)) return null;
@@ -113,7 +350,6 @@ function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
         };
       };
 
-      // Dynamic source — calls kernel for vars + member completions
       const dynamicSource = async (ctx) => {
         const fn = completionsRef.current;
         if (!fn) return null;
@@ -139,7 +375,6 @@ function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
         keymap.of(completionKeymap),
       );
 
-      // Lint source — calls kernel for syntax diagnostics
       const lintSource = async (view) => {
         const fn = lintRef.current;
         if (!fn) return [];
@@ -207,7 +442,6 @@ function DataTable({ rows }) {
   );
 }
 
-// Convert table rows to CSV string
 function tableToCSV(rows) {
   if (!rows || rows.length === 0) return '';
   const cols = Object.keys(rows[0]);
@@ -219,7 +453,6 @@ function tableToCSV(rows) {
   return [cols.join(','), ...rows.map((r) => cols.map((c) => escape(r[c])).join(','))].join('\n');
 }
 
-// Parse CSV string → array of objects
 function parseCsv(csv) {
   const lines = csv.trim().split('\n');
   if (lines.length < 1) return [];
@@ -263,13 +496,11 @@ function LogPanel({ isOpen, onToggle }) {
   const [liveEntries, setLiveEntries] = useState([]);
   const scrollRef = useRef(null);
 
-  // Load file list when panel opens
   useEffect(() => {
     if (!isOpen || !window.electronAPI) return;
     window.electronAPI.getLogFiles().then(setLogFiles);
   }, [isOpen]);
 
-  // Subscribe to live log entries always (accumulate even when panel is closed)
   useEffect(() => {
     if (!window.electronAPI) return;
     const handler = (entry) => setLiveEntries((prev) => [...prev, entry]);
@@ -277,7 +508,6 @@ function LogPanel({ isOpen, onToggle }) {
     return () => window.electronAPI.offLogEntry(handler);
   }, []);
 
-  // Load file content when selection changes
   useEffect(() => {
     if (!isOpen || selectedFile === 'live' || !window.electronAPI) return;
     window.electronAPI.readLogFile(selectedFile).then((text) => {
@@ -285,7 +515,6 @@ function LogPanel({ isOpen, onToggle }) {
     });
   }, [isOpen, selectedFile]);
 
-  // Auto-scroll to bottom on new entries
   useEffect(() => {
     if (scrollRef.current && isOpen) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -356,13 +585,11 @@ function GraphOutput({ config }) {
   const canvasRef = useRef(null);
   const chartRef = useRef(null);
 
-  // Destroy on unmount only
   useEffect(() => () => { chartRef.current?.destroy(); chartRef.current = null; }, []);
 
   useEffect(() => {
     if (!canvasRef.current) return;
     if (chartRef.current) {
-      // In-place update — avoids recreate flicker for live charts
       try {
         chartRef.current.data = config.data;
         if (config.options) chartRef.current.options = config.options;
@@ -475,7 +702,7 @@ function CellOutput({ messages }) {
   );
 }
 
-// ── CellControls (shared move + delete-with-confirm) ─────────────────────────
+// ── CellControls ─────────────────────────────────────────────────────────────
 
 function CellControls({ onMoveUp, onMoveDown, onDelete }) {
   const [confirming, setConfirming] = useState(false);
@@ -672,7 +899,6 @@ function formatDownloads(n) {
   return String(n);
 }
 
-// Resolve the SearchQueryService URL from a NuGet v3 service index
 const _serviceIndexCache = {};
 async function resolveSearchEndpoint(sourceUrl) {
   if (_serviceIndexCache[sourceUrl] !== undefined) return _serviceIndexCache[sourceUrl];
@@ -714,8 +940,6 @@ async function searchNuget(sources, query) {
   }));
   return results;
 }
-
-// ── Installed tab ─────────────────────────────────────────────────────────────
 
 function InstalledTab({ packages, kernelStatus, onAdd, onRemove, onRetry }) {
   const [newId, setNewId] = useState('');
@@ -764,8 +988,6 @@ function InstalledTab({ packages, kernelStatus, onAdd, onRemove, onRetry }) {
     </div>
   );
 }
-
-// ── Browse tab ────────────────────────────────────────────────────────────────
 
 function BrowseTab({ sources, onAdd, installedPackages }) {
   const [query, setQuery] = useState('');
@@ -832,8 +1054,6 @@ function BrowseTab({ sources, onAdd, installedPackages }) {
   );
 }
 
-// ── Sources tab ───────────────────────────────────────────────────────────────
-
 function SourcesTab({ sources, onAdd, onRemove, onToggle }) {
   const [name, setName] = useState('');
   const [url, setUrl] = useState('');
@@ -869,8 +1089,6 @@ function SourcesTab({ sources, onAdd, onRemove, onToggle }) {
     </div>
   );
 }
-
-// ── NuGet Panel (tabbed) ──────────────────────────────────────────────────────
 
 function NugetPanel({ isOpen, onToggle, packages, kernelStatus, sources,
                       onAdd, onRemove, onRetry,
@@ -917,11 +1135,6 @@ function NugetPanel({ isOpen, onToggle, packages, kernelStatus, sources,
 }
 
 // ── Config Panel ──────────────────────────────────────────────────────────────
-
-const EXAMPLE_CONFIG = [
-  { key: 'Environment', value: 'development' },
-  { key: 'ApiBaseUrl',  value: 'https://api.example.com' },
-];
 
 function ConfigPanel({ isOpen, onToggle, config, onAdd, onRemove, onUpdate }) {
   const [newKey, setNewKey] = useState('');
@@ -983,6 +1196,8 @@ function ConfigPanel({ isOpen, onToggle, config, onAdd, onRemove, onUpdate }) {
 function Toolbar({
   kernelStatus,
   notebookPath,
+  notebookTitle,
+  onRename,
   onRunAll,
   onAddMarkdown,
   onAddCode,
@@ -997,13 +1212,47 @@ function Toolbar({
   onToggleConfig,
   configCount,
 }) {
-  const filename = notebookPath
-    ? notebookPath.split(/[\\/]/).pop()
-    : 'Untitled Notebook';
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
+  const inputRef = useRef(null);
+
+  const displayName = notebookPath
+    ? notebookPath.split(/[\\/]/).pop().replace(/\.cnb$/, '')
+    : (notebookTitle || 'Untitled Notebook');
+
+  useEffect(() => {
+    if (editing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [editing]);
+
+  const startEdit = () => { setDraft(displayName); setEditing(true); };
+
+  const commit = () => {
+    const trimmed = draft.trim();
+    if (trimmed && trimmed !== displayName) onRename?.(trimmed);
+    setEditing(false);
+  };
 
   return (
     <div className="toolbar">
-      <span className="toolbar-title">{filename}</span>
+      {editing ? (
+        <input
+          ref={inputRef}
+          className="toolbar-rename-input"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') commit();
+            if (e.key === 'Escape') setEditing(false);
+            e.stopPropagation();
+          }}
+          onBlur={commit}
+        />
+      ) : (
+        <span className="toolbar-title" onDoubleClick={startEdit} title="Double-click to rename">{displayName}</span>
+      )}
       <div className="toolbar-separator" />
       <button onClick={onRunAll} title="Run all code cells">▶▶ Run All</button>
       <button onClick={onAddMarkdown} title="Add markdown cell">+ Markdown</button>
@@ -1278,7 +1527,7 @@ This is useful for environment-specific settings (URLs, feature flags, credentia
 | \`Config.Has("Key")\` | \`true\` if key exists and non-empty |
 | \`Config.All\` | \`IReadOnlyDictionary<string,string>\` |
 
-Config is persisted in the \`.polyglot\` file alongside packages and sources.`),
+Config is persisted in the \`.cnb\` file alongside packages and sources.`),
 
     cs(`// Read config values (try editing them in the Config panel first)
 var env     = Config.Get("Environment", "development");
@@ -1297,103 +1546,526 @@ Display.Html($@"
   ];
 }
 
+// ── Notebook factory ──────────────────────────────────────────────────────────
+
+function createNotebook(withExamples = false) {
+  return {
+    id: uuidv4(),
+    title: 'Untitled',
+    path: null,
+    isDirty: false,
+    cells: withExamples ? makeExampleCells() : [],
+    outputs: {},
+    running: new Set(),
+    kernelStatus: 'starting',
+    nugetPackages: [],
+    nugetSources: [...DEFAULT_NUGET_SOURCES],
+    config: [],
+    logPanelOpen: false,
+    nugetPanelOpen: false,
+    configPanelOpen: false,
+  };
+}
+
+// ── Docs Panel ────────────────────────────────────────────────────────────────
+
+function hiText(text, query) {
+  if (!query) return text;
+  const idx = text.toLowerCase().indexOf(query.toLowerCase());
+  if (idx < 0) return text;
+  return (
+    <>
+      {text.slice(0, idx)}
+      <mark className="docs-highlight">{text.slice(idx, idx + query.length)}</mark>
+      {text.slice(idx + query.length)}
+    </>
+  );
+}
+
+function DocBlock({ block, query }) {
+  if (block.type === 'p')
+    return <p className="docs-p">{hiText(block.text, query)}</p>;
+  if (block.type === 'h3')
+    return <h3 className="docs-h3">{hiText(block.text, query)}</h3>;
+  if (block.type === 'ul')
+    return <ul className="docs-ul">{block.items.map((item, i) => <li key={i}>{hiText(item, query)}</li>)}</ul>;
+  if (block.type === 'code')
+    return <pre className="docs-code"><code>{block.text}</code></pre>;
+  if (block.type === 'shortcuts')
+    return (
+      <table className="docs-shortcuts">
+        <tbody>
+          {block.rows.map((row, i) => (
+            <tr key={i}>
+              <td className="docs-shortcut-keys"><kbd>{row.keys}</kbd></td>
+              <td className="docs-shortcut-desc">{hiText(row.desc, query)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    );
+  return null;
+}
+
+function sectionMatchesQuery(section, query) {
+  if (!query) return true;
+  const q = query.toLowerCase();
+  const flat = [
+    section.title,
+    ...section.content.map((b) => {
+      if (b.text) return b.text;
+      if (b.items) return b.items.join(' ');
+      if (b.rows) return b.rows.map((r) => r.keys + ' ' + r.desc).join(' ');
+      return '';
+    }),
+  ].join(' ').toLowerCase();
+  return flat.includes(q);
+}
+
+function DocsPanel() {
+  const [query, setQuery] = useState('');
+  const sectionRefs = useRef({});
+  const filtered = DOCS_SECTIONS.filter((s) => sectionMatchesQuery(s, query));
+
+  const scrollTo = (id) => {
+    sectionRefs.current[id]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  return (
+    <div className="docs-panel">
+      <nav className="docs-sidebar">
+        <div className="docs-search-wrap">
+          <input
+            className="docs-search"
+            placeholder="Search docs…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          {query && (
+            <button className="docs-search-clear" onClick={() => setQuery('')}>×</button>
+          )}
+        </div>
+        <div className="docs-index">
+          {DOCS_SECTIONS.map((s) => (
+            <button
+              key={s.id}
+              className={`docs-index-item${filtered.some((f) => f.id === s.id) ? '' : ' docs-index-dim'}`}
+              onClick={() => scrollTo(s.id)}
+            >
+              {s.title}
+            </button>
+          ))}
+        </div>
+      </nav>
+      <div className="docs-content">
+        {filtered.map((section) => (
+          <section
+            key={section.id}
+            className="docs-section"
+            ref={(el) => { sectionRefs.current[section.id] = el; }}
+          >
+            <h2 className="docs-section-title">{section.title}</h2>
+            {section.content.map((block, i) => (
+              <DocBlock key={i} block={block} query={query} />
+            ))}
+          </section>
+        ))}
+        {filtered.length === 0 && (
+          <div className="docs-no-results">No results for "{query}"</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Tab & TabBar ──────────────────────────────────────────────────────────────
+
+function Tab({ notebook, isActive, isDragOver, onActivate, onClose, onRename,
+               onDragStart, onDragOver, onDrop, onDragEnd }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
+  const inputRef = useRef(null);
+
+  const name = notebook.path
+    ? notebook.path.split(/[\\/]/).pop().replace(/\.cnb$/, '')
+    : (notebook.title || 'Untitled');
+
+  useEffect(() => {
+    if (editing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [editing]);
+
+  const startEdit = (e) => {
+    e.stopPropagation();
+    setDraft(name);
+    setEditing(true);
+  };
+
+  const commit = () => {
+    const trimmed = draft.trim();
+    if (trimmed && trimmed !== name) onRename(trimmed);
+    setEditing(false);
+  };
+
+  const cancel = () => setEditing(false);
+
+  return (
+    <div
+      className={`tab${isActive ? ' tab-active' : ''}${isDragOver ? ' tab-drag-over' : ''}`}
+      draggable={!editing}
+      onDragStart={() => onDragStart(notebook.id)}
+      onDragOver={(e) => { e.preventDefault(); onDragOver(notebook.id); }}
+      onDrop={(e) => { e.preventDefault(); onDrop(notebook.id); }}
+      onDragEnd={onDragEnd}
+      onClick={editing ? undefined : onActivate}
+      title={notebook.path || name}
+    >
+      {editing ? (
+        <input
+          ref={inputRef}
+          className="tab-rename-input"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') commit();
+            if (e.key === 'Escape') cancel();
+            e.stopPropagation();
+          }}
+          onBlur={commit}
+          onClick={(e) => e.stopPropagation()}
+        />
+      ) : (
+        <span className="tab-title" onDoubleClick={startEdit}>{name}</span>
+      )}
+      {notebook.isDirty && <span className="tab-dirty" title="Unsaved changes">•</span>}
+      <button
+        className="tab-close"
+        onClick={(e) => { e.stopPropagation(); onClose(); }}
+        title="Close tab"
+      >×</button>
+    </div>
+  );
+}
+
+function TabBar({ notebooks, activeId, onActivate, onClose, onNew, onRename,
+                  onReorder, docsOpen, onActivateDocs, onCloseDocs }) {
+  const [dragId, setDragId] = useState(null);
+  const [dragOverId, setDragOverId] = useState(null);
+
+  const handleDragStart = (id) => setDragId(id);
+  const handleDragOver = (id) => { if (id !== dragId) setDragOverId(id); };
+  const handleDrop = (targetId) => {
+    if (dragId && dragId !== targetId) onReorder(dragId, targetId);
+    setDragId(null);
+    setDragOverId(null);
+  };
+  const handleDragEnd = () => { setDragId(null); setDragOverId(null); };
+
+  return (
+    <div className="tab-bar">
+      {notebooks.map((nb) => (
+        <Tab
+          key={nb.id}
+          notebook={nb}
+          isActive={nb.id === activeId}
+          isDragOver={dragOverId === nb.id}
+          onActivate={() => onActivate(nb.id)}
+          onClose={() => onClose(nb.id)}
+          onRename={(newName) => onRename(nb.id, newName)}
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+          onDragEnd={handleDragEnd}
+        />
+      ))}
+      {docsOpen && (
+        <div
+          className={`tab${activeId === DOCS_TAB_ID ? ' tab-active' : ''}`}
+          onClick={onActivateDocs}
+        >
+          <span className="tab-title">Documentation</span>
+          <button className="tab-close" onClick={(e) => { e.stopPropagation(); onCloseDocs(); }} title="Close">×</button>
+        </div>
+      )}
+      <button className="tab-new" onClick={onNew} title="New notebook">+</button>
+    </div>
+  );
+}
+
+// ── NotebookView ──────────────────────────────────────────────────────────────
+
+function NotebookView({
+  nb,
+  onSetNb,
+  onSetNbDirty,
+  onRunCell,
+  onRunAll,
+  onSave,
+  onLoad,
+  onReset,
+  onRename,
+  requestCompletions,
+  requestLint,
+  onAddNugetPackage,
+  onRemoveNugetPackage,
+  onRetryNugetPackage,
+}) {
+  const { cells, outputs, running, kernelStatus, nugetPackages, nugetSources,
+          config, logPanelOpen, nugetPanelOpen, configPanelOpen, path: notebookPath } = nb;
+
+  const addCell = (type, afterIndex = -1) => {
+    const newCell = makeCell(type, '');
+    onSetNbDirty((n) => {
+      const next = [...n.cells];
+      const idx = afterIndex >= 0 ? afterIndex + 1 : next.length;
+      next.splice(idx, 0, newCell);
+      return { cells: next };
+    });
+  };
+
+  const updateCell = (id, content) => {
+    onSetNbDirty((n) => ({ cells: n.cells.map((c) => c.id === id ? { ...c, content } : c) }));
+  };
+
+  const updateCellProp = (id, prop, value) => {
+    onSetNbDirty((n) => ({ cells: n.cells.map((c) => c.id === id ? { ...c, [prop]: value } : c) }));
+  };
+
+  const deleteCell = (id) => {
+    onSetNbDirty((n) => {
+      const newOutputs = { ...n.outputs };
+      delete newOutputs[id];
+      return { cells: n.cells.filter((c) => c.id !== id), outputs: newOutputs };
+    });
+  };
+
+  const moveCell = (id, dir) => {
+    onSetNbDirty((n) => {
+      const idx = n.cells.findIndex((c) => c.id === id);
+      if (idx < 0 || idx + dir < 0 || idx + dir >= n.cells.length) return {};
+      const next = [...n.cells];
+      [next[idx], next[idx + dir]] = [next[idx + dir], next[idx]];
+      return { cells: next };
+    });
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+      <Toolbar
+        kernelStatus={kernelStatus}
+        notebookPath={notebookPath}
+        notebookTitle={nb.title}
+        onRename={onRename}
+        onRunAll={() => onRunAll(nb.id)}
+        onAddMarkdown={() => addCell('markdown')}
+        onAddCode={() => addCell('code')}
+        onSave={() => onSave(nb.id)}
+        onLoad={onLoad}
+        onReset={() => onReset(nb.id)}
+        logPanelOpen={logPanelOpen}
+        onToggleLogs={() => onSetNb((n) => ({ logPanelOpen: !n.logPanelOpen }))}
+        nugetPanelOpen={nugetPanelOpen}
+        onToggleNuget={() => onSetNb((n) => ({ nugetPanelOpen: !n.nugetPanelOpen }))}
+        configPanelOpen={configPanelOpen}
+        onToggleConfig={() => onSetNb((n) => ({ configPanelOpen: !n.configPanelOpen }))}
+        configCount={config.length}
+      />
+      <div className="main-area">
+        <div className="content-area">
+          <div className="notebook">
+            {cells.length === 0 && (
+              <div className="empty-notebook">
+                <h2>Empty Notebook</h2>
+                <p>Add a markdown or code cell to get started.</p>
+              </div>
+            )}
+
+            {cells.length > 0 && (
+              <AddBar
+                onAddMarkdown={() => addCell('markdown', -1)}
+                onAddCode={() => addCell('code', -1)}
+              />
+            )}
+
+            {cells.map((cell, index) => (
+              <div key={cell.id} className="cell-wrapper">
+                {cell.type === 'markdown' ? (
+                  <MarkdownCell
+                    cell={cell}
+                    onUpdate={(val) => updateCell(cell.id, val)}
+                    onDelete={() => deleteCell(cell.id)}
+                    onMoveUp={() => moveCell(cell.id, -1)}
+                    onMoveDown={() => moveCell(cell.id, 1)}
+                  />
+                ) : (
+                  <CodeCell
+                    cell={cell}
+                    outputs={outputs[cell.id]}
+                    isRunning={running.has(cell.id)}
+                    onUpdate={(val) => updateCell(cell.id, val)}
+                    onRun={() => onRunCell(nb.id, cell)}
+                    onDelete={() => deleteCell(cell.id)}
+                    onMoveUp={() => moveCell(cell.id, -1)}
+                    onMoveDown={() => moveCell(cell.id, 1)}
+                    onOutputModeChange={(mode) => updateCellProp(cell.id, 'outputMode', mode)}
+                    onToggleLock={() => updateCellProp(cell.id, 'locked', !(cell.locked || false))}
+                    requestCompletions={(code, pos) => requestCompletions(nb.id, code, pos)}
+                    requestLint={(code) => requestLint(nb.id, code)}
+                  />
+                )}
+                <AddBar
+                  onAddMarkdown={() => addCell('markdown', index)}
+                  onAddCode={() => addCell('code', index)}
+                />
+              </div>
+            ))}
+          </div>
+          <LogPanel
+            isOpen={logPanelOpen}
+            onToggle={() => onSetNb((n) => ({ logPanelOpen: !n.logPanelOpen }))}
+          />
+        </div>{/* .content-area */}
+        <NugetPanel
+          isOpen={nugetPanelOpen}
+          onToggle={() => onSetNb((n) => ({ nugetPanelOpen: !n.nugetPanelOpen }))}
+          packages={nugetPackages}
+          kernelStatus={kernelStatus}
+          sources={nugetSources}
+          onAdd={(id, ver) => onAddNugetPackage(nb.id, id, ver)}
+          onRemove={(id) => onRemoveNugetPackage(nb.id, id)}
+          onRetry={(id, ver) => onRetryNugetPackage(nb.id, id, ver)}
+          onAddSource={(name, url) => onSetNbDirty((n) => ({
+            nugetSources: n.nugetSources.some((s) => s.url === url)
+              ? n.nugetSources
+              : [...n.nugetSources, { name, url, enabled: true }],
+          }))}
+          onRemoveSource={(url) => onSetNbDirty((n) => ({
+            nugetSources: n.nugetSources.filter((s) => s.url !== url),
+          }))}
+          onToggleSource={(url) => onSetNbDirty((n) => ({
+            nugetSources: n.nugetSources.map((s) => s.url === url ? { ...s, enabled: !s.enabled } : s),
+          }))}
+        />
+        <ConfigPanel
+          isOpen={configPanelOpen}
+          onToggle={() => onSetNb((n) => ({ configPanelOpen: !n.configPanelOpen }))}
+          config={config}
+          onAdd={(k, v) => onSetNbDirty((n) => ({ config: [...n.config, { key: k, value: v }] }))}
+          onRemove={(i) => onSetNbDirty((n) => ({ config: n.config.filter((_, idx) => idx !== i) }))}
+          onUpdate={(i, val) => onSetNbDirty((n) => ({
+            config: n.config.map((e, idx) => idx === i ? { ...e, value: val } : e),
+          }))}
+        />
+      </div>{/* .main-area */}
+    </div>
+  );
+}
+
 // ── App ───────────────────────────────────────────────────────────────────────
 
 function App() {
-  const [cells, setCells] = useState(makeExampleCells);
-  const [outputs, setOutputs] = useState({});
-  const [runningCells, setRunningCells] = useState(new Set());
-  const [kernelStatus, setKernelStatus] = useState('starting');
-  const [notebookPath, setNotebookPath] = useState(null);
-  const [logPanelOpen, setLogPanelOpen] = useState(false);
-  const [nugetPanelOpen, setNugetPanelOpen] = useState(false);
-  const [nugetPackages, setNugetPackages] = useState([]);
-  const [nugetSources, setNugetSources] = useState(DEFAULT_NUGET_SOURCES);
-  const [notebookConfig, setNotebookConfig] = useState(EXAMPLE_CONFIG);
-  const [configPanelOpen, setConfigPanelOpen] = useState(false);
+  const [notebooks, setNotebooks] = useState(() => {
+    const nb = createNotebook(true);
+    return [nb];
+  });
+  const [activeId, setActiveId] = useState(notebooks[0].id);
+  const [docsOpen, setDocsOpen] = useState(false);
 
-  // Refs so callbacks can read current state without stale closure
-  const nugetPackagesRef = useRef(nugetPackages);
-  useEffect(() => { nugetPackagesRef.current = nugetPackages; }, [nugetPackages]);
-  const nugetSourcesRef = useRef(nugetSources);
-  useEffect(() => { nugetSourcesRef.current = nugetSources; }, [nugetSources]);
-  const notebookConfigRef = useRef(notebookConfig);
-  useEffect(() => { notebookConfigRef.current = notebookConfig; }, [notebookConfig]);
+  // Synchronized ref pair — callbacks read fresh state without stale closures
+  const notebooksRef = useRef(notebooks);
+  useEffect(() => { notebooksRef.current = notebooks; }, [notebooks]);
+  const activeIdRef = useRef(activeId);
+  useEffect(() => { activeIdRef.current = activeId; }, [activeId]);
+  const prevNbIdRef = useRef(notebooks[0].id);
 
-  // When kernel becomes ready, preload any pending packages
+  // ── State helpers ──────────────────────────────────────────────────────────
+
+  // Update a specific notebook; updater returns a partial object merged into n
+  const setNb = useCallback((id, updater) =>
+    setNotebooks((prev) => prev.map((n) => n.id === id
+      ? (typeof updater === 'function' ? { ...n, ...updater(n) } : { ...n, ...updater }) : n
+    )), []);
+
+  // Like setNb but also marks isDirty: true
+  const setNbDirty = useCallback((id, updater) =>
+    setNb(id, (n) => ({ ...(typeof updater === 'function' ? updater(n) : updater), isDirty: true })),
+    [setNb]);
+
+  // ── Pending resolver maps ──────────────────────────────────────────────────
+  const pendingResolversRef = useRef({});   // cellId -> resolveFn
+  const pendingCompletionsRef = useRef({});  // requestId -> resolveFn
+  const pendingLintRef = useRef({});         // requestId -> resolveFn
+
+  // ── Start kernels on mount ─────────────────────────────────────────────────
   useEffect(() => {
-    if (kernelStatus !== 'ready') return;
-    const pending = nugetPackagesRef.current.filter((p) => p.status === 'pending');
-    if (!pending.length || !window.electronAPI) return;
-    setNugetPackages((prev) => prev.map((p) =>
-      p.status === 'pending' ? { ...p, status: 'loading' } : p
-    ));
-    window.electronAPI.sendToKernel({
-      type: 'preload_nugets',
-      packages: pending.map(({ id, version }) => ({ id, version })),
-      sources: nugetSourcesRef.current.filter((s) => s.enabled).map((s) => s.url),
-    });
-  }, [kernelStatus]);
+    for (const nb of notebooks) {
+      window.electronAPI?.startKernel(nb.id);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Apply font size changes from main process
-  useEffect(() => {
-    if (!window.electronAPI?.onFontSizeChange) return;
-    window.electronAPI.onFontSizeChange((size) => {
-      document.documentElement.style.setProperty('--base-font-size', String(size));
-    });
-  }, []);
-
-  // Queue of cells waiting to run (for Run All)
-  const runQueueRef = useRef([]);
-  const isProcessingQueueRef = useRef(false);
-
-  // Track pending execute completions
-  const pendingResolversRef = useRef({});
-  const pendingCompletionsRef = useRef({});
-  const pendingLintRef = useRef({});
-
+  // ── Kernel message router ──────────────────────────────────────────────────
   useEffect(() => {
     if (!window.electronAPI) return;
 
-    const handler = (msg) => {
+    const handler = (payload) => {
+      const { notebookId, message: msg } = payload;
+
       switch (msg.type) {
         case 'ready':
-          setKernelStatus('ready');
+          setNb(notebookId, { kernelStatus: 'ready' });
+          // Kick pending NuGet preloads
+          {
+            const nb = notebooksRef.current.find((n) => n.id === notebookId);
+            if (nb) {
+              const pending = nb.nugetPackages.filter((p) => p.status === 'pending');
+              if (pending.length > 0 && window.electronAPI) {
+                setNb(notebookId, (n) => ({
+                  nugetPackages: n.nugetPackages.map((p) =>
+                    p.status === 'pending' ? { ...p, status: 'loading' } : p
+                  ),
+                }));
+                window.electronAPI.sendToKernel(notebookId, {
+                  type: 'preload_nugets',
+                  packages: pending.map(({ id, version }) => ({ id, version })),
+                  sources: nb.nugetSources.filter((s) => s.enabled).map((s) => s.url),
+                });
+              }
+            }
+          }
           break;
 
         case 'stdout':
-          setOutputs((prev) => ({
-            ...prev,
-            [msg.id]: [...(prev[msg.id] || []), msg],
+          setNb(notebookId, (n) => ({
+            outputs: { ...n.outputs, [msg.id]: [...(n.outputs[msg.id] || []), msg] },
           }));
           break;
 
         case 'display':
           if (msg.update && msg.handleId) {
-            // Replace the existing slot with matching handleId
-            setOutputs((prev) => ({
-              ...prev,
-              [msg.id]: (prev[msg.id] || []).map((m) =>
-                m.handleId === msg.handleId ? msg : m
-              ),
+            setNb(notebookId, (n) => ({
+              outputs: {
+                ...n.outputs,
+                [msg.id]: (n.outputs[msg.id] || []).map((m) =>
+                  m.handleId === msg.handleId ? msg : m
+                ),
+              },
             }));
           } else {
-            setOutputs((prev) => ({
-              ...prev,
-              [msg.id]: [...(prev[msg.id] || []), msg],
+            setNb(notebookId, (n) => ({
+              outputs: { ...n.outputs, [msg.id]: [...(n.outputs[msg.id] || []), msg] },
             }));
           }
           break;
 
         case 'error':
           if (msg.id) {
-            setOutputs((prev) => ({
-              ...prev,
-              [msg.id]: [...(prev[msg.id] || []), msg],
+            setNb(notebookId, (n) => ({
+              outputs: { ...n.outputs, [msg.id]: [...(n.outputs[msg.id] || []), msg] },
             }));
           } else {
-            // Kernel-level error
-            setKernelStatus('error');
+            setNb(notebookId, { kernelStatus: 'error' });
           }
           break;
 
@@ -1403,10 +2075,10 @@ function App() {
             delete pendingResolversRef.current[msg.id];
             resolve(msg);
           }
-          setRunningCells((prev) => {
-            const next = new Set(prev);
+          setNb(notebookId, (n) => {
+            const next = new Set(n.running);
             next.delete(msg.id);
-            return next;
+            return { running: next };
           });
           break;
         }
@@ -1430,18 +2102,20 @@ function App() {
         }
 
         case 'nuget_status':
-          setNugetPackages((prev) => prev.map((p) =>
-            p.id === msg.id
-              ? { ...p, status: msg.status, ...(msg.message ? { error: msg.message } : { error: undefined }) }
-              : p
-          ));
+          setNb(notebookId, (n) => ({
+            nugetPackages: n.nugetPackages.map((p) =>
+              p.id === msg.id
+                ? { ...p, status: msg.status, ...(msg.message ? { error: msg.message } : { error: undefined }) }
+                : p
+            ),
+          }));
           break;
 
         case 'nuget_preload_complete':
           break;
 
         case 'reset_complete':
-          setKernelStatus('ready');
+          setNb(notebookId, { kernelStatus: 'ready' });
           break;
 
         default:
@@ -1451,202 +2125,274 @@ function App() {
 
     window.electronAPI.onKernelMessage(handler);
     return () => window.electronAPI.offKernelMessage(handler);
+  }, [setNb]);
+
+  // ── Font size ──────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!window.electronAPI?.onFontSizeChange) return;
+    window.electronAPI.onFontSizeChange((size) => {
+      document.documentElement.style.setProperty('--base-font-size', String(size));
+    });
   }, []);
 
-  const runCell = useCallback((cell) => {
-    if (!window.electronAPI || cell.type !== 'code') return;
+  // ── Cell execution ─────────────────────────────────────────────────────────
+
+  const runCell = useCallback((notebookId, cell) => {
+    if (!window.electronAPI || cell.type !== 'code') return Promise.resolve();
 
     return new Promise((resolve) => {
-      // Clear previous outputs
-      setOutputs((prev) => ({ ...prev, [cell.id]: [] }));
-      setRunningCells((prev) => new Set([...prev, cell.id]));
+      setNb(notebookId, (n) => ({
+        outputs: { ...n.outputs, [cell.id]: [] },
+        running: new Set([...n.running, cell.id]),
+      }));
 
       pendingResolversRef.current[cell.id] = resolve;
-      window.electronAPI.sendToKernel({
+
+      const nb = notebooksRef.current.find((n) => n.id === notebookId);
+      window.electronAPI.sendToKernel(notebookId, {
         type: 'execute',
         id: cell.id,
         code: cell.content,
         outputMode: cell.outputMode || 'auto',
-        sources: nugetSourcesRef.current.filter((s) => s.enabled).map((s) => s.url),
-        config: Object.fromEntries(
-          notebookConfigRef.current.filter((e) => e.key.trim()).map((e) => [e.key, e.value])
-        ),
+        sources: nb ? nb.nugetSources.filter((s) => s.enabled).map((s) => s.url) : [],
+        config: nb
+          ? Object.fromEntries(nb.config.filter((e) => e.key.trim()).map((e) => [e.key, e.value]))
+          : {},
       });
     });
-  }, []);
+  }, [setNb]);
 
-  const runAll = useCallback(async () => {
-    const codeCells = cells.filter((c) => c.type === 'code');
-    for (const cell of codeCells) {
-      await runCell(cell);
+  const runAll = useCallback(async (notebookId) => {
+    const nb = notebooksRef.current.find((n) => n.id === notebookId);
+    if (!nb) return;
+    for (const cell of nb.cells.filter((c) => c.type === 'code')) {
+      await runCell(notebookId, cell);
     }
-  }, [cells, runCell]);
+  }, [runCell]);
 
-  const addCell = useCallback((type, afterIndex = -1) => {
-    const newCell = makeCell(type, '');
-    setCells((prev) => {
-      const next = [...prev];
-      const idx = afterIndex >= 0 ? afterIndex + 1 : next.length;
-      next.splice(idx, 0, newCell);
-      return next;
-    });
-  }, []);
+  // ── Kernel reset ───────────────────────────────────────────────────────────
 
-  const updateCell = useCallback((id, content) => {
-    setCells((prev) => prev.map((c) => (c.id === id ? { ...c, content } : c)));
-  }, []);
-
-  const updateCellProp = useCallback((id, prop, value) => {
-    setCells((prev) => prev.map((c) => (c.id === id ? { ...c, [prop]: value } : c)));
-  }, []);
-
-  const deleteCell = useCallback((id) => {
-    setCells((prev) => prev.filter((c) => c.id !== id));
-    setOutputs((prev) => {
-      const next = { ...prev };
-      delete next[id];
-      return next;
-    });
-  }, []);
-
-  const moveCell = useCallback((id, dir) => {
-    setCells((prev) => {
-      const idx = prev.findIndex((c) => c.id === id);
-      if (idx < 0) return prev;
-      const newIdx = idx + dir;
-      if (newIdx < 0 || newIdx >= prev.length) return prev;
-      const next = [...prev];
-      [next[idx], next[newIdx]] = [next[newIdx], next[idx]];
-      return next;
-    });
-  }, []);
-
-  const buildNotebookData = useCallback(() => ({
-    version: '1.0',
-    title: notebookPath ? notebookPath.split(/[\\/]/).pop().replace('.polyglot', '') : 'notebook',
-    packages: nugetPackages.map(({ id, version }) => ({ id, version: version || null })),
-    sources: nugetSources,
-    config: notebookConfig.filter((e) => e.key.trim()),
-    cells: cells.map(({ id, type, content, outputMode, locked }) => ({ id, type, content, ...(type === 'code' ? { outputMode: outputMode || 'auto', locked: locked || false } : {}) })),
-  }), [cells, notebookPath, nugetPackages, nugetSources, notebookConfig]);
-
-  // File > Save — writes to current path if known, else prompts
-  const handleSave = useCallback(async () => {
+  const handleReset = useCallback((notebookId) => {
     if (!window.electronAPI) return;
-    const data = buildNotebookData();
-    if (notebookPath) {
-      await window.electronAPI.saveNotebookTo(notebookPath, data);
+    const nb = notebooksRef.current.find((n) => n.id === notebookId);
+    if (nb) {
+      nb.cells.forEach((cell) => {
+        const resolve = pendingResolversRef.current[cell.id];
+        if (resolve) {
+          delete pendingResolversRef.current[cell.id];
+          resolve({ success: false });
+        }
+      });
+    }
+    setNb(notebookId, { kernelStatus: 'starting', outputs: {}, running: new Set() });
+    window.electronAPI.resetKernel(notebookId);
+  }, [setNb]);
+
+  // ── Save / Load ────────────────────────────────────────────────────────────
+
+  const buildNotebookData = useCallback((notebookId) => {
+    const nb = notebooksRef.current.find((n) => n.id === notebookId);
+    if (!nb) return null;
+    return {
+      version: '1.0',
+      title: nb.path ? nb.path.split(/[\\/]/).pop().replace('.cnb', '') : (nb.title || 'notebook'),
+      packages: nb.nugetPackages.map(({ id, version }) => ({ id, version: version || null })),
+      sources: nb.nugetSources,
+      config: nb.config.filter((e) => e.key.trim()),
+      cells: nb.cells.map(({ id, type, content, outputMode, locked }) => ({
+        id, type, content,
+        ...(type === 'code' ? { outputMode: outputMode || 'auto', locked: locked || false } : {}),
+      })),
+    };
+  }, []);
+
+  const handleSave = useCallback(async (notebookId) => {
+    if (!window.electronAPI) return;
+    const nb = notebooksRef.current.find((n) => n.id === notebookId);
+    if (!nb) return;
+    const data = buildNotebookData(notebookId);
+    if (nb.path) {
+      await window.electronAPI.saveNotebookTo(nb.path, data);
+      setNb(notebookId, { isDirty: false });
     } else {
       const result = await window.electronAPI.saveNotebook(data);
-      if (result.success) setNotebookPath(result.filePath);
+      if (result.success) setNb(notebookId, { path: result.filePath, isDirty: false });
     }
-  }, [buildNotebookData, notebookPath]);
+  }, [buildNotebookData, setNb]);
 
-  // File > Save As — always prompts
-  const handleSaveAs = useCallback(async () => {
+  const handleSaveAs = useCallback(async (notebookId) => {
     if (!window.electronAPI) return;
-    const result = await window.electronAPI.saveNotebook(buildNotebookData());
-    if (result.success) setNotebookPath(result.filePath);
-  }, [buildNotebookData]);
+    const data = buildNotebookData(notebookId);
+    if (!data) return;
+    const result = await window.electronAPI.saveNotebook(data);
+    if (result.success) setNb(notebookId, { path: result.filePath, isDirty: false });
+  }, [buildNotebookData, setNb]);
 
+  // handleLoad always opens a NEW tab
   const handleLoad = useCallback(async () => {
     if (!window.electronAPI) return;
     const result = await window.electronAPI.loadNotebook();
-    if (result.success && result.data) {
-      const loadedPkgs = (result.data.packages || []).map((p) => ({ ...p, status: 'pending' }));
-      const loadedSources = result.data.sources || DEFAULT_NUGET_SOURCES;
-      const loadedConfig = result.data.config || [];
-      setCells(result.data.cells || []);
-      setOutputs({});
-      setNotebookPath(result.filePath);
-      setNugetPackages(loadedPkgs);
-      setNugetSources(loadedSources);
-      setNotebookConfig(loadedConfig);
-      // If kernel is already ready, kick off preload immediately
-      if (kernelStatus === 'ready' && loadedPkgs.length > 0) {
-        setNugetPackages(loadedPkgs.map((p) => ({ ...p, status: 'loading' })));
-        window.electronAPI.sendToKernel({
-          type: 'preload_nugets',
-          packages: loadedPkgs.map(({ id, version }) => ({ id, version })),
-          sources: loadedSources.filter((s) => s.enabled).map((s) => s.url),
-        });
+    if (!result.success || !result.data) return;
+
+    const nb = createNotebook(false);
+    const loadedPkgs = (result.data.packages || []).map((p) => ({ ...p, status: 'pending' }));
+    const nbWithData = {
+      ...nb,
+      path: result.filePath,
+      cells: result.data.cells || [],
+      nugetPackages: loadedPkgs,
+      nugetSources: result.data.sources || [...DEFAULT_NUGET_SOURCES],
+      config: result.data.config || [],
+      isDirty: false,
+    };
+
+    setNotebooks((prev) => [...prev, nbWithData]);
+    setActiveId(nb.id);
+    window.electronAPI.startKernel(nb.id);
+  }, []);
+
+  // ── Tab management ─────────────────────────────────────────────────────────
+
+  const handleNew = useCallback(async () => {
+    if (!window.electronAPI) return;
+    const response = await window.electronAPI.showNewNotebookDialog();
+    if (response === 2) return; // Cancel
+    const nb = createNotebook(response === 0); // 0 = Examples, 1 = Blank
+    setNotebooks((prev) => [...prev, nb]);
+    setActiveId(nb.id);
+    window.electronAPI.startKernel(nb.id);
+  }, []);
+
+  const handleRenameTab = useCallback(async (notebookId, newName) => {
+    const nb = notebooksRef.current.find((n) => n.id === notebookId);
+    const title = newName.trim();
+    if (!nb || !title) return;
+    if (nb.path) {
+      // Strip characters illegal in filenames on Windows/macOS/Linux
+      const safeName = title.replace(/[/\\:*?"<>|]/g, '').replace(/\s+/g, ' ').trim() || 'Untitled';
+      const newPath = nb.path.replace(/[^/\\]+\.cnb$/, `${safeName}.cnb`);
+      const result = await window.electronAPI?.renameFile(nb.path, newPath);
+      if (result?.success) setNb(notebookId, { path: newPath, title });
+    } else {
+      setNb(notebookId, { title });
+    }
+  }, [setNb]);
+
+  const handleCloseTab = useCallback((tabId) => {
+    const currentNotebooks = notebooksRef.current;
+    const nb = currentNotebooks.find((n) => n.id === tabId);
+    if (!nb) return;
+
+    if (nb.isDirty) {
+      const name = nb.path ? nb.path.split(/[\\/]/).pop() : 'Untitled';
+      if (!window.confirm(`Close "${name}" without saving?`)) return;
+    }
+
+    // Stop kernel
+    window.electronAPI?.stopKernel(tabId);
+
+    // Resolve any pending cell executions with failure
+    nb.cells.forEach((cell) => {
+      const resolve = pendingResolversRef.current[cell.id];
+      if (resolve) {
+        delete pendingResolversRef.current[cell.id];
+        resolve({ success: false });
+      }
+    });
+
+    const remaining = currentNotebooks.filter((n) => n.id !== tabId);
+
+    if (remaining.length === 0) {
+      const fresh = createNotebook(false);
+      window.electronAPI?.startKernel(fresh.id);
+      setNotebooks([fresh]);
+      setActiveId(fresh.id);
+    } else {
+      setNotebooks(remaining);
+      if (activeIdRef.current === tabId) {
+        const idx = currentNotebooks.findIndex((n) => n.id === tabId);
+        const newActive = remaining[Math.min(idx, remaining.length - 1)];
+        setActiveId(newActive.id);
       }
     }
-  }, [kernelStatus]);
-
-  const handleReset = useCallback(() => {
-    if (!window.electronAPI) return;
-    setKernelStatus('starting');
-    setOutputs({});
-    setRunningCells(new Set());
-    pendingResolversRef.current = {};
-    window.electronAPI.resetKernel();
   }, []);
 
-  const addNugetPackage = useCallback((id, version) => {
-    const isReady = kernelStatus === 'ready';
-    setNugetPackages((prev) => {
-      if (prev.some((p) => p.id.toLowerCase() === id.toLowerCase())) return prev;
-      return [...prev, { id, version: version || null, status: isReady ? 'loading' : 'pending' }];
+  const handleOpenDocs = useCallback(() => {
+    if (activeIdRef.current !== DOCS_TAB_ID) prevNbIdRef.current = activeIdRef.current;
+    setDocsOpen(true);
+    setActiveId(DOCS_TAB_ID);
+  }, []);
+
+  const handleCloseDocs = useCallback(() => {
+    setDocsOpen(false);
+    const target = prevNbIdRef.current ?? notebooksRef.current[0]?.id;
+    if (target) setActiveId(target);
+  }, []);
+
+  const handleReorder = useCallback((dragId, dropId) => {
+    setNotebooks((prev) => {
+      const from = prev.findIndex((n) => n.id === dragId);
+      const to = prev.findIndex((n) => n.id === dropId);
+      if (from < 0 || to < 0 || from === to) return prev;
+      const result = [...prev];
+      const [item] = result.splice(from, 1);
+      result.splice(to, 0, item);
+      return result;
+    });
+  }, []);
+
+  // ── NuGet package management ───────────────────────────────────────────────
+
+  const addNugetPackage = useCallback((notebookId, id, version) => {
+    const nb = notebooksRef.current.find((n) => n.id === notebookId);
+    if (!nb) return;
+    const isReady = nb.kernelStatus === 'ready';
+    setNb(notebookId, (n) => {
+      if (n.nugetPackages.some((p) => p.id.toLowerCase() === id.toLowerCase())) return {};
+      return {
+        nugetPackages: [...n.nugetPackages, { id, version: version || null, status: isReady ? 'loading' : 'pending' }],
+        isDirty: true,
+      };
     });
     if (isReady && window.electronAPI) {
-      window.electronAPI.sendToKernel({
+      window.electronAPI.sendToKernel(notebookId, {
         type: 'preload_nugets',
         packages: [{ id, version: version || null }],
-        sources: nugetSourcesRef.current.filter((s) => s.enabled).map((s) => s.url),
+        sources: nb.nugetSources.filter((s) => s.enabled).map((s) => s.url),
       });
     }
-  }, [kernelStatus]);
+  }, [setNb]);
 
-  const removeNugetPackage = useCallback((id) => {
-    setNugetPackages((prev) => prev.filter((p) => p.id !== id));
-  }, []);
+  const removeNugetPackage = useCallback((notebookId, id) => {
+    setNbDirty(notebookId, (n) => ({
+      nugetPackages: n.nugetPackages.filter((p) => p.id !== id),
+    }));
+  }, [setNbDirty]);
 
-  const retryNugetPackage = useCallback((id, version) => {
+  const retryNugetPackage = useCallback((notebookId, id, version) => {
     if (!window.electronAPI) return;
-    setNugetPackages((prev) => prev.map((p) =>
-      p.id === id ? { ...p, status: 'loading', error: undefined } : p
-    ));
-    window.electronAPI.sendToKernel({
+    const nb = notebooksRef.current.find((n) => n.id === notebookId);
+    if (!nb) return;
+    setNb(notebookId, (n) => ({
+      nugetPackages: n.nugetPackages.map((p) =>
+        p.id === id ? { ...p, status: 'loading', error: undefined } : p
+      ),
+    }));
+    window.electronAPI.sendToKernel(notebookId, {
       type: 'preload_nugets',
       packages: [{ id, version: version || null }],
-      sources: nugetSourcesRef.current.filter((s) => s.enabled).map((s) => s.url),
+      sources: nb.nugetSources.filter((s) => s.enabled).map((s) => s.url),
     });
-  }, []);
+  }, [setNb]);
 
-  const addNugetSource = useCallback((name, url) => {
-    setNugetSources((prev) => {
-      if (prev.some((s) => s.url === url)) return prev;
-      return [...prev, { name, url, enabled: true }];
-    });
-  }, []);
+  // ── Completions & lint ─────────────────────────────────────────────────────
 
-  const removeNugetSource = useCallback((url) => {
-    setNugetSources((prev) => prev.filter((s) => s.url !== url));
-  }, []);
-
-  const toggleNugetSource = useCallback((url) => {
-    setNugetSources((prev) => prev.map((s) => s.url === url ? { ...s, enabled: !s.enabled } : s));
-  }, []);
-
-  const addConfigEntry = useCallback((key, value) => {
-    setNotebookConfig((prev) => [...prev, { key, value }]);
-  }, []);
-
-  const removeConfigEntry = useCallback((index) => {
-    setNotebookConfig((prev) => prev.filter((_, i) => i !== index));
-  }, []);
-
-  const updateConfigEntry = useCallback((index, value) => {
-    setNotebookConfig((prev) => prev.map((e, i) => i === index ? { ...e, value } : e));
-  }, []);
-
-  const requestCompletions = useCallback((code, position) => {
+  const requestCompletions = useCallback((notebookId, code, position) => {
     return new Promise((resolve) => {
       if (!window.electronAPI) return resolve([]);
       const requestId = uuidv4();
       pendingCompletionsRef.current[requestId] = resolve;
-      window.electronAPI.sendToKernel({ type: 'autocomplete', requestId, code, position });
+      window.electronAPI.sendToKernel(notebookId, { type: 'autocomplete', requestId, code, position });
       setTimeout(() => {
         if (pendingCompletionsRef.current[requestId]) {
           delete pendingCompletionsRef.current[requestId];
@@ -1656,12 +2402,12 @@ function App() {
     });
   }, []);
 
-  const requestLint = useCallback((code) => {
+  const requestLint = useCallback((notebookId, code) => {
     return new Promise((resolve) => {
       if (!window.electronAPI) return resolve([]);
       const requestId = uuidv4();
       pendingLintRef.current[requestId] = resolve;
-      window.electronAPI.sendToKernel({ type: 'lint', requestId, code });
+      window.electronAPI.sendToKernel(notebookId, { type: 'lint', requestId, code });
       setTimeout(() => {
         if (pendingLintRef.current[requestId]) {
           delete pendingLintRef.current[requestId];
@@ -1671,30 +2417,18 @@ function App() {
     });
   }, []);
 
-  const handleNew = useCallback(() => {
-    if (cells.length > 0 && !window.confirm('Create a new notebook? Unsaved changes will be lost.')) return;
-    setCells([]);
-    setOutputs({});
-    setRunningCells(new Set());
-    setNotebookPath(null);
-    setNugetPackages([]);
-    setNugetSources(DEFAULT_NUGET_SOURCES);
-    setNotebookConfig([]);
-    pendingResolversRef.current = {};
-  }, [cells]);
+  // ── Menu action dispatch ───────────────────────────────────────────────────
 
-  const clearAllOutputs = useCallback(() => setOutputs({}), []);
-
-  // Menu action dispatch — use a ref so the handler always sees fresh callbacks
   const menuHandlersRef = useRef({});
   menuHandlersRef.current = {
     new: handleNew,
     open: handleLoad,
-    save: handleSave,
-    'save-as': handleSaveAs,
-    'run-all': runAll,
-    reset: handleReset,
-    'clear-output': clearAllOutputs,
+    save: () => handleSave(activeIdRef.current),
+    'save-as': () => handleSaveAs(activeIdRef.current),
+    'run-all': () => runAll(activeIdRef.current),
+    reset: () => handleReset(activeIdRef.current),
+    'clear-output': () => setNb(activeIdRef.current, { outputs: {} }),
+    docs: handleOpenDocs,
   };
 
   useEffect(() => {
@@ -1704,100 +2438,56 @@ function App() {
     });
   }, []);
 
+  // ── Render ─────────────────────────────────────────────────────────────────
+
   return (
     <div id="app">
-      <Toolbar
-        kernelStatus={kernelStatus}
-        notebookPath={notebookPath}
-        onRunAll={runAll}
-        onAddMarkdown={() => addCell('markdown')}
-        onAddCode={() => addCell('code')}
-        onSave={handleSave}
-        onLoad={handleLoad}
-        onReset={handleReset}
-        logPanelOpen={logPanelOpen}
-        onToggleLogs={() => setLogPanelOpen((v) => !v)}
-        nugetPanelOpen={nugetPanelOpen}
-        onToggleNuget={() => setNugetPanelOpen((v) => !v)}
-        configPanelOpen={configPanelOpen}
-        onToggleConfig={() => setConfigPanelOpen((v) => !v)}
-        configCount={notebookConfig.length}
+      <TabBar
+        notebooks={notebooks}
+        activeId={activeId}
+        onActivate={setActiveId}
+        onClose={handleCloseTab}
+        onNew={handleNew}
+        onRename={handleRenameTab}
+        onReorder={handleReorder}
+        docsOpen={docsOpen}
+        onActivateDocs={handleOpenDocs}
+        onCloseDocs={handleCloseDocs}
       />
-      <div id="main-area">
-      <div id="content-area">
-      <div className="notebook">
-        {cells.length === 0 && (
-          <div className="empty-notebook">
-            <h2>Empty Notebook</h2>
-            <p>Add a markdown or code cell to get started.</p>
-          </div>
-        )}
-
-        {/* Top add bar */}
-        {cells.length > 0 && (
-          <AddBar
-            onAddMarkdown={() => addCell('markdown', -1)}
-            onAddCode={() => addCell('code', -1)}
-          />
-        )}
-
-        {cells.map((cell, index) => (
-          <div key={cell.id} className="cell-wrapper">
-            {cell.type === 'markdown' ? (
-              <MarkdownCell
-                cell={cell}
-                onUpdate={(val) => updateCell(cell.id, val)}
-                onDelete={() => deleteCell(cell.id)}
-                onMoveUp={() => moveCell(cell.id, -1)}
-                onMoveDown={() => moveCell(cell.id, 1)}
-              />
-            ) : (
-              <CodeCell
-                cell={cell}
-                outputs={outputs[cell.id]}
-                isRunning={runningCells.has(cell.id)}
-                onUpdate={(val) => updateCell(cell.id, val)}
-                onRun={() => runCell(cell)}
-                onDelete={() => deleteCell(cell.id)}
-                onMoveUp={() => moveCell(cell.id, -1)}
-                onMoveDown={() => moveCell(cell.id, 1)}
-                onOutputModeChange={(mode) => updateCellProp(cell.id, 'outputMode', mode)}
-                onToggleLock={() => updateCellProp(cell.id, 'locked', !(cell.locked || false))}
-                requestCompletions={requestCompletions}
-                requestLint={requestLint}
-              />
-            )}
-            <AddBar
-              onAddMarkdown={() => addCell('markdown', index)}
-              onAddCode={() => addCell('code', index)}
+      <div id="notebooks-container">
+        {notebooks.map((notebook) => (
+          <div
+            key={notebook.id}
+            className="notebook-pane"
+            style={notebook.id === activeId ? undefined : { display: 'none' }}
+          >
+            <NotebookView
+              nb={notebook}
+              onSetNb={(updater) => setNb(notebook.id, updater)}
+              onSetNbDirty={(updater) => setNbDirty(notebook.id, updater)}
+              onRunCell={runCell}
+              onRunAll={runAll}
+              onSave={handleSave}
+              onLoad={handleLoad}
+              onReset={handleReset}
+              onRename={(newName) => handleRenameTab(notebook.id, newName)}
+              requestCompletions={requestCompletions}
+              requestLint={requestLint}
+              onAddNugetPackage={addNugetPackage}
+              onRemoveNugetPackage={removeNugetPackage}
+              onRetryNugetPackage={retryNugetPackage}
             />
           </div>
         ))}
+        {docsOpen && (
+          <div
+            className="notebook-pane"
+            style={activeId === DOCS_TAB_ID ? undefined : { display: 'none' }}
+          >
+            <DocsPanel />
+          </div>
+        )}
       </div>
-      <LogPanel isOpen={logPanelOpen} onToggle={() => setLogPanelOpen((v) => !v)} />
-      </div>{/* #content-area */}
-      <NugetPanel
-        isOpen={nugetPanelOpen}
-        onToggle={() => setNugetPanelOpen((v) => !v)}
-        packages={nugetPackages}
-        kernelStatus={kernelStatus}
-        sources={nugetSources}
-        onAdd={addNugetPackage}
-        onRemove={removeNugetPackage}
-        onRetry={retryNugetPackage}
-        onAddSource={addNugetSource}
-        onRemoveSource={removeNugetSource}
-        onToggleSource={toggleNugetSource}
-      />
-      <ConfigPanel
-        isOpen={configPanelOpen}
-        onToggle={() => setConfigPanelOpen((v) => !v)}
-        config={notebookConfig}
-        onAdd={addConfigEntry}
-        onRemove={removeConfigEntry}
-        onUpdate={updateConfigEntry}
-      />
-      </div>{/* #main-area */}
     </div>
   );
 }

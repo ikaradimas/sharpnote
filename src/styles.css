@@ -55,6 +55,23 @@ body {
   -webkit-app-region: drag;
 }
 
+.toolbar-rename-input {
+  background: #0e0e10;
+  border: 1px solid var(--cyber-dim);
+  color: var(--cyber-cyan);
+  font-family: var(--font-heading);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 3px;
+  outline: none;
+  width: 180px;
+  box-shadow: 0 0 8px var(--cyber-glow);
+  -webkit-app-region: no-drag;
+}
+
 .toolbar-title {
   font-family: var(--font-heading);
   font-size: 11px;
@@ -65,6 +82,11 @@ body {
   text-shadow: 0 0 10px var(--cyber-glow);
   margin-right: 4px;
   -webkit-app-region: drag;
+  cursor: default;
+}
+
+.toolbar-title:hover {
+  text-shadow: 0 0 16px var(--cyber-glow);
 }
 
 .toolbar button {
@@ -105,7 +127,7 @@ body {
   gap: 6px;
   margin-left: auto;
   font-size: 11px;
-  color: #4a6a7a;
+  color: #7a9aaa;
   -webkit-app-region: no-drag;
   letter-spacing: 0.05em;
 }
@@ -180,7 +202,7 @@ body {
 .cell-add-btn {
   background: #141417;
   border: 1px solid #2e2e38;
-  color: #2a4050;
+  color: #4a6070;
   font-family: var(--font-ui);
   font-size: 11px;
   padding: 1px 8px;
@@ -395,7 +417,7 @@ body {
 .markdown-render td { padding: 5px 10px; border: 1px solid #282830; }
 
 .markdown-placeholder {
-  color: #2a4050;
+  color: #4a6070;
   font-style: italic;
   font-size: 13px;
 }
@@ -515,7 +537,7 @@ body {
 }
 
 .output-error-stack {
-  color: #4a5a6a;
+  color: #6a7a8a;
   white-space: pre-wrap;
   font-size: 11px;
   margin-top: 4px;
@@ -592,13 +614,13 @@ body {
   justify-content: center;
   gap: 12px;
   padding: 60px;
-  color: #303038;
+  color: #5a5a6a;
   text-align: center;
 }
 
 .empty-notebook h2 {
   font-family: var(--font-heading);
-  color: #545462;
+  color: #7a7a90;
   font-size: 16px;
   font-weight: 400;
   letter-spacing: 0.1em;
@@ -656,7 +678,7 @@ body {
   right: 4px;
   background: #1f1f23;
   border: 1px solid #2e2e38;
-  color: #2a4050;
+  color: #4a6070;
   width: 20px;
   height: 20px;
   border-radius: 3px;
@@ -691,7 +713,7 @@ body {
 
 .output-mode-label {
   font-size: 10px;
-  color: #2a4050;
+  color: #5a7080;
   font-family: var(--font-ui);
   user-select: none;
   letter-spacing: 0.05em;
@@ -797,7 +819,7 @@ body {
 .log-header-btn {
   background: transparent;
   border: none;
-  color: #2a4050;
+  color: #4a6070;
   width: 22px;
   height: 22px;
   border-radius: 3px;
@@ -817,7 +839,7 @@ body {
 .log-close-btn {
   background: transparent;
   border: none;
-  color: #2a4050;
+  color: #4a6070;
   width: 22px;
   height: 22px;
   border-radius: 3px;
@@ -857,7 +879,7 @@ body {
 .log-time {
   font-family: var(--font-ui);
   font-size: 10px;
-  color: #303038;
+  color: #505060;
   white-space: nowrap;
 }
 
@@ -885,13 +907,13 @@ body {
 .log-message {
   font-family: var(--font-ui);
   font-size: 11px;
-  color: #5a8090;
+  color: #80a0b0;
   word-break: break-word;
   white-space: pre-wrap;
 }
 
 .log-empty {
-  color: #303038;
+  color: #50505a;
   font-size: 11px;
   text-align: center;
   padding: 24px 12px;
@@ -931,7 +953,7 @@ body {
 
 .nuget-panel-hint {
   font-size: 11px;
-  color: #2a4050;
+  color: #5a7080;
   white-space: nowrap;
 }
 
@@ -945,7 +967,7 @@ body {
 .nuget-close-btn {
   background: transparent;
   border: none;
-  color: #2a4050;
+  color: #4a6070;
   width: 22px;
   height: 22px;
   border-radius: 3px;
@@ -982,7 +1004,7 @@ body {
 .nuget-list::-webkit-scrollbar-thumb { background: #2e2e38; border-radius: 3px; }
 
 .nuget-empty {
-  color: #303038;
+  color: #50505a;
   font-size: 11px;
   font-family: var(--font-ui);
   padding: 8px 4px;
@@ -1008,7 +1030,7 @@ body {
   flex-shrink: 0;
 }
 
-.nuget-dot-pending { color: #2a4050; }
+.nuget-dot-pending { color: #4a6070; }
 .nuget-dot-loading { color: #dcdcaa; animation: nuget-spin 1s linear infinite; }
 .nuget-dot-loaded  { color: var(--cyber-cyan); text-shadow: 0 0 6px var(--cyber-glow); }
 .nuget-dot-error   { color: #ff4060; }
@@ -1032,7 +1054,7 @@ body {
 .nuget-version {
   font-family: var(--font-ui);
   font-size: 11px;
-  color: #2a4050;
+  color: #5a7080;
   white-space: nowrap;
 }
 
@@ -1122,7 +1144,7 @@ body {
 .nuget-tab {
   background: transparent;
   border: 1px solid transparent;
-  color: #2a4050;
+  color: #4a6070;
   padding: 2px 10px;
   border-radius: 3px;
   cursor: pointer;
@@ -1145,7 +1167,7 @@ body {
 .nuget-sources-btn {
   background: transparent;
   border: 1px solid transparent;
-  color: #2a4050;
+  color: #4a6070;
   width: 24px;
   height: 24px;
   border-radius: 3px;
@@ -1257,14 +1279,14 @@ body {
 .nuget-result-version {
   font-family: var(--font-ui);
   font-size: 11px;
-  color: #2a4050;
+  color: #5a7080;
   white-space: nowrap;
   flex-shrink: 0;
 }
 
 .nuget-result-dl {
   font-size: 10px;
-  color: #303038;
+  color: #50505a;
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -1296,7 +1318,7 @@ body {
 
 .nuget-result-desc {
   font-size: 10px;
-  color: #2a4050;
+  color: #5a7080;
   margin-top: 2px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1354,7 +1376,7 @@ body {
 .nuget-source-url {
   font-family: var(--font-ui);
   font-size: 10px;
-  color: #2a4050;
+  color: #5a7080;
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -1395,7 +1417,7 @@ body {
 
 .config-panel-hint {
   font-size: 11px;
-  color: #2a4050;
+  color: #5a7080;
   white-space: nowrap;
 }
 
@@ -1412,7 +1434,7 @@ body {
 .config-close-btn {
   background: transparent;
   border: none;
-  color: #2a4050;
+  color: #4a6070;
   width: 22px;
   height: 22px;
   border-radius: 3px;
@@ -1450,7 +1472,7 @@ body {
 .config-list::-webkit-scrollbar-thumb { background: #2e2e38; border-radius: 3px; }
 
 .config-empty {
-  color: #303038;
+  color: #50505a;
   font-size: 11px;
   font-family: var(--font-ui);
   padding: 6px 4px;
@@ -1478,7 +1500,7 @@ body {
 }
 
 .config-eq {
-  color: #2a4050;
+  color: #5a7080;
   font-size: 11px;
   flex-shrink: 0;
 }
@@ -1503,3 +1525,410 @@ body {
 
 .config-key-input { width: 120px; flex-shrink: 0; }
 .config-value-input-add { flex: 1; min-width: 0; }
+
+/* ── Layout classes (multi-pane safe alternatives to #main-area / #content-area) ── */
+
+.main-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.content-area {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ── Tab Bar ─────────────────────────────────────────────────────────────── */
+
+.tab-bar {
+  height: 36px;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  background: #16161a;
+  border-bottom: 1px solid #2e2e38;
+  -webkit-app-region: drag;
+  overflow-x: auto;
+  flex-shrink: 0;
+  padding: 0 4px;
+  gap: 2px;
+}
+
+.tab-bar::-webkit-scrollbar { height: 3px; }
+.tab-bar::-webkit-scrollbar-track { background: #16161a; }
+.tab-bar::-webkit-scrollbar-thumb { background: #2e2e38; border-radius: 2px; }
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 28px;
+  padding: 0 8px 0 12px;
+  border-radius: 4px 4px 0 0;
+  background: #1c1c22;
+  border: 1px solid #2e2e38;
+  border-bottom-color: #1c1c22;
+  position: relative;
+  bottom: -1px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-app-region: no-drag;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: #7a9aaa;
+  white-space: nowrap;
+  min-width: 80px;
+  max-width: 200px;
+  flex-shrink: 0;
+  transition: background 0.1s, color 0.1s;
+}
+
+.tab:hover {
+  background: #202028;
+  color: #a0c0cc;
+}
+
+.tab.tab-active {
+  background: #18181b;
+  border-color: #2e2e38;
+  border-bottom-color: #18181b;
+  color: #cdd6e0;
+}
+
+.tab-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tab-dirty {
+  color: var(--cyber-cyan);
+  font-size: 14px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.tab-close {
+  background: transparent;
+  border: none;
+  color: #5a7080;
+  width: 16px;
+  height: 16px;
+  border-radius: 2px;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s, background 0.15s;
+}
+
+.tab:hover .tab-close,
+.tab.tab-active .tab-close {
+  opacity: 1;
+}
+
+.tab-close:hover {
+  background: #3a1828;
+  color: #ff4060;
+}
+
+.tab-new {
+  background: transparent;
+  border: none;
+  color: #4a6070;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px 4px 0 0;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+  -webkit-app-region: no-drag;
+  position: relative;
+  bottom: -1px;
+  transition: color 0.15s, background 0.15s;
+}
+
+.tab-new:hover {
+  color: var(--cyber-cyan);
+  background: rgba(196, 150, 74, 0.10);
+}
+
+.tab-rename-input {
+  flex: 1;
+  min-width: 0;
+  background: #0e0e10;
+  border: 1px solid var(--cyber-dim);
+  color: #cdd6e0;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  padding: 1px 4px;
+  border-radius: 2px;
+  outline: none;
+  height: 18px;
+  box-shadow: 0 0 6px var(--cyber-glow);
+}
+
+/* Tab drag-over indicator */
+.tab-drag-over {
+  background: #222230 !important;
+  border-color: var(--cyber-dim) !important;
+  color: var(--cyber-cyan) !important;
+}
+
+/* ── Docs Panel ──────────────────────────────────────────────────────────── */
+
+.docs-panel {
+  display: flex;
+  flex-direction: row;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background: #18181b;
+}
+
+.docs-sidebar {
+  width: 210px;
+  flex-shrink: 0;
+  background: #141417;
+  border-right: 1px solid #2e2e38;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.docs-search-wrap {
+  position: relative;
+  padding: 8px;
+  flex-shrink: 0;
+  border-bottom: 1px solid #2e2e38;
+}
+
+.docs-search {
+  width: 100%;
+  background: #1f1f23;
+  border: 1px solid #2e2e38;
+  color: #cdd6e0;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  padding: 5px 28px 5px 8px;
+  border-radius: 3px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.docs-search:focus {
+  border-color: var(--cyber-dim);
+  box-shadow: 0 0 6px var(--cyber-glow);
+}
+
+.docs-search-clear {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: #5a7080;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 0 2px;
+}
+.docs-search-clear:hover { color: #cdd6e0; }
+
+.docs-index {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.docs-index::-webkit-scrollbar { width: 4px; }
+.docs-index::-webkit-scrollbar-track { background: #141417; }
+.docs-index::-webkit-scrollbar-thumb { background: #2e2e38; border-radius: 2px; }
+
+.docs-index-item {
+  background: transparent;
+  border: none;
+  color: #80a0b0;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  padding: 7px 14px;
+  text-align: left;
+  cursor: pointer;
+  letter-spacing: 0.02em;
+  transition: background 0.1s, color 0.1s;
+  border-left: 2px solid transparent;
+}
+
+.docs-index-item:hover {
+  background: #1f1f23;
+  color: #cdd6e0;
+  border-left-color: var(--cyber-dim);
+}
+
+.docs-index-dim {
+  opacity: 0.3;
+}
+
+.docs-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 32px 52px 64px;
+  min-width: 0;
+}
+
+.docs-content::-webkit-scrollbar { width: 8px; }
+.docs-content::-webkit-scrollbar-track { background: #18181b; }
+.docs-content::-webkit-scrollbar-thumb { background: #2e2e38; border-radius: 4px; }
+.docs-content::-webkit-scrollbar-thumb:hover { background: #3a4050; }
+
+.docs-section {
+  margin-bottom: 52px;
+  max-width: 740px;
+}
+
+.docs-section-title {
+  font-family: var(--font-heading);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--cyber-cyan);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #2e2e38;
+  text-shadow: 0 0 14px var(--cyber-glow);
+}
+
+.docs-h3 {
+  font-family: var(--font-heading);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--cyber-blue);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin: 22px 0 8px;
+}
+
+.docs-p {
+  color: #b8ccd8;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  line-height: 1.75;
+  margin: 8px 0;
+}
+
+.docs-ul {
+  color: #b8ccd8;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  line-height: 1.75;
+  padding-left: 20px;
+  margin: 8px 0;
+}
+
+.docs-ul li { margin: 4px 0; }
+
+.docs-code {
+  background: #111113;
+  border: 1px solid #2e2e38;
+  border-left: 3px solid var(--cyber-dim);
+  border-radius: 4px;
+  padding: 12px 16px;
+  margin: 12px 0;
+  font-family: var(--font-code);
+  font-size: 12px;
+  color: #cdd6e0;
+  overflow-x: auto;
+  white-space: pre;
+  line-height: 1.6;
+}
+
+.docs-shortcuts {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 8px 0;
+}
+
+.docs-shortcuts tr { border-bottom: 1px solid #1f1f23; }
+.docs-shortcuts tr:hover td { background: rgba(196, 150, 74, 0.04); }
+
+.docs-shortcut-keys {
+  padding: 7px 16px 7px 0;
+  white-space: nowrap;
+  width: 180px;
+  vertical-align: middle;
+}
+
+.docs-shortcut-keys kbd {
+  background: #1f1f23;
+  border: 1px solid #2e2e38;
+  border-bottom-width: 2px;
+  color: var(--cyber-cyan);
+  font-family: var(--font-ui);
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 3px;
+  letter-spacing: 0.04em;
+}
+
+.docs-shortcut-desc {
+  color: #b8ccd8;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  padding: 7px 0;
+  vertical-align: middle;
+}
+
+.docs-highlight {
+  background: rgba(196, 150, 74, 0.30);
+  color: #f0d090;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+.docs-no-results {
+  color: #5a7080;
+  font-size: 13px;
+  padding: 64px;
+  text-align: center;
+  font-family: var(--font-ui);
+}
+
+/* ── Notebooks container + panes ─────────────────────────────────────────── */
+
+#notebooks-container {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.notebook-pane {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}

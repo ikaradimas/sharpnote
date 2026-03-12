@@ -5,11 +5,13 @@ const fs = require('fs');
 const readline = require('readline');
 
 let mainWindow = null;
-let kernelProcess = null;
-let kernelReady = false;
-let pendingMessages = [];
 
-const logDir = path.join(__dirname, 'logs');
+// Multi-kernel map: notebookId -> { process, ready, pending[] }
+const kernels = new Map();
+
+const logDir = app.isPackaged
+  ? path.join(app.getPath('userData'), 'logs')
+  : path.join(__dirname, 'logs');
 
 let fontSize = 12.6;
 const FONT_SIZE_MIN = 10;
@@ -29,7 +31,6 @@ function buildMenu() {
       click: () => applyFontSize(1),
     },
     {
-      // catches Ctrl++ (shift+=) without showing a duplicate menu entry
       label: 'Increase Font Size',
       accelerator: 'CmdOrCtrl+Shift+=',
       visible: false,
@@ -108,6 +109,13 @@ function buildMenu() {
     ],
   });
 
+  template.push({
+    label: 'Help',
+    submenu: [
+      { label: 'Documentation', accelerator: 'F1', click: () => send('docs') },
+    ],
+  });
+
   return Menu.buildFromTemplate(template);
 }
 
@@ -148,32 +156,51 @@ function createWindow() {
 
   mainWindow.on('closed', () => {
     mainWindow = null;
-    killKernel();
+    killAllKernels();
   });
 }
 
-function startKernel() {
+function getKernelSpawnArgs() {
+  if (app.isPackaged) {
+    const rid = process.platform === 'win32' ? 'win-x64'
+              : process.arch === 'arm64'     ? 'osx-arm64'
+              :                                'osx-x64';
+    const ext = process.platform === 'win32' ? '.exe' : '';
+    const bin = path.join(process.resourcesPath, 'kernel', rid, `kernel${ext}`);
+    return { cmd: bin, args: [], cwd: path.dirname(bin) };
+  }
   const kernelDir = path.join(__dirname, 'kernel');
+  return { cmd: 'dotnet', args: ['run', '--project', kernelDir], cwd: kernelDir };
+}
 
-  writeLog('NOTEBOOK', 'Kernel starting');
+function startKernelForId(notebookId) {
+  writeLog('NOTEBOOK', `Kernel starting for ${notebookId}`);
 
+  const entry = { process: null, ready: false, pending: [] };
+  kernels.set(notebookId, entry);
+
+  const { cmd, args, cwd } = getKernelSpawnArgs();
+
+  let kernelProcess;
   try {
-    kernelProcess = spawn('dotnet', ['run', '--project', kernelDir], {
-      cwd: kernelDir,
+    kernelProcess = spawn(cmd, args, {
+      cwd,
       stdio: ['pipe', 'pipe', 'pipe'],
     });
   } catch (err) {
     console.error('Failed to start kernel:', err);
-    writeLog('NOTEBOOK', `Failed to start kernel: ${err.message}`);
+    writeLog('NOTEBOOK', `Failed to start kernel ${notebookId}: ${err.message}`);
     if (mainWindow) {
       mainWindow.webContents.send('kernel-message', {
-        type: 'error',
-        id: null,
-        message: 'Failed to start kernel: ' + err.message,
+        notebookId,
+        message: { type: 'error', id: null, message: 'Failed to start kernel: ' + err.message },
       });
     }
+    kernels.delete(notebookId);
     return;
   }
+
+  entry.process = kernelProcess;
 
   const rl = readline.createInterface({ input: kernelProcess.stdout });
 
@@ -183,15 +210,14 @@ function startKernel() {
       const msg = JSON.parse(line);
 
       if (msg.type === 'ready') {
-        kernelReady = true;
-        writeLog('NOTEBOOK', 'Kernel ready');
-        for (const pending of pendingMessages) {
+        entry.ready = true;
+        writeLog('NOTEBOOK', `Kernel ready: ${notebookId}`);
+        for (const pending of entry.pending) {
           kernelProcess.stdin.write(pending + '\n');
         }
-        pendingMessages = [];
+        entry.pending = [];
       }
 
-      // Intercept log messages — write to file and forward as log-entry, not kernel-message
       if (msg.type === 'log') {
         writeLog(msg.tag || 'USER', msg.message || '');
         return;
@@ -201,11 +227,11 @@ function startKernel() {
         writeLog('NOTEBOOK', `Cell complete: id=${msg.id} success=${msg.success}`);
       }
       if (msg.type === 'error' && !msg.id) {
-        writeLog('NOTEBOOK', `Kernel error: ${msg.message}`);
+        writeLog('NOTEBOOK', `Kernel error (${notebookId}): ${msg.message}`);
       }
 
       if (mainWindow) {
-        mainWindow.webContents.send('kernel-message', msg);
+        mainWindow.webContents.send('kernel-message', { notebookId, message: msg });
       }
     } catch (e) {
       console.error('Failed to parse kernel message:', line, e);
@@ -213,77 +239,106 @@ function startKernel() {
   });
 
   kernelProcess.stderr.on('data', (data) => {
-    console.error('Kernel stderr:', data.toString());
+    console.error(`Kernel stderr (${notebookId}):`, data.toString());
   });
 
   kernelProcess.on('exit', (code) => {
-    kernelReady = false;
-    console.log('Kernel exited with code:', code);
-    writeLog('NOTEBOOK', `Kernel exited with code ${code}`);
+    entry.ready = false;
+    console.log(`Kernel exited (${notebookId}) with code:`, code);
+    writeLog('NOTEBOOK', `Kernel exited (${notebookId}) with code ${code}`);
     if (mainWindow) {
       mainWindow.webContents.send('kernel-message', {
-        type: 'error',
-        id: null,
-        message: `Kernel process exited with code ${code}`,
+        notebookId,
+        message: { type: 'error', id: null, message: `Kernel process exited with code ${code}` },
       });
     }
   });
 
   kernelProcess.on('error', (err) => {
-    kernelReady = false;
-    console.error('Kernel process error:', err);
-    writeLog('NOTEBOOK', `Kernel process error: ${err.message}`);
+    entry.ready = false;
+    console.error(`Kernel process error (${notebookId}):`, err);
+    writeLog('NOTEBOOK', `Kernel process error (${notebookId}): ${err.message}`);
     if (mainWindow) {
       mainWindow.webContents.send('kernel-message', {
-        type: 'error',
-        id: null,
-        message: 'Kernel process error: ' + err.message,
+        notebookId,
+        message: { type: 'error', id: null, message: 'Kernel process error: ' + err.message },
       });
     }
   });
 }
 
-function killKernel() {
-  if (kernelProcess) {
-    try {
-      kernelProcess.stdin.write(JSON.stringify({ type: 'exit' }) + '\n');
-    } catch (_) {}
-    setTimeout(() => {
-      if (kernelProcess) {
-        kernelProcess.kill();
-        kernelProcess = null;
-      }
-    }, 500);
+function killKernelForId(notebookId) {
+  const entry = kernels.get(notebookId);
+  if (!entry || !entry.process) return;
+  try {
+    entry.process.stdin.write(JSON.stringify({ type: 'exit' }) + '\n');
+  } catch (_) {}
+  setTimeout(() => {
+    if (entry.process) {
+      entry.process.kill();
+    }
+    kernels.delete(notebookId);
+  }, 500);
+}
+
+function killAllKernels() {
+  for (const [id] of kernels) {
+    killKernelForId(id);
   }
 }
 
-function sendToKernel(message) {
+function sendToKernel(notebookId, message) {
+  const entry = kernels.get(notebookId);
+  if (!entry) return;
   const line = JSON.stringify(message);
-  if (kernelReady && kernelProcess) {
-    kernelProcess.stdin.write(line + '\n');
+  if (entry.ready && entry.process) {
+    entry.process.stdin.write(line + '\n');
   } else {
-    pendingMessages.push(line);
+    entry.pending.push(line);
   }
 }
 
 // IPC handlers
-ipcMain.on('kernel-send', (_event, message) => {
-  if (message.type === 'execute') {
-    writeLog('NOTEBOOK', `Executing cell: ${message.id}`);
-  }
-  sendToKernel(message);
+ipcMain.handle('start-kernel', (_event, notebookId) => {
+  startKernelForId(notebookId);
+  return { success: true };
 });
 
-ipcMain.on('kernel-reset', (_event) => {
-  writeLog('NOTEBOOK', 'Kernel reset');
-  sendToKernel({ type: 'reset' });
+ipcMain.handle('stop-kernel', (_event, notebookId) => {
+  killKernelForId(notebookId);
+  return { success: true };
+});
+
+ipcMain.on('kernel-send', (_event, { notebookId, message }) => {
+  if (message.type === 'execute') {
+    writeLog('NOTEBOOK', `Executing cell: ${message.id} (notebook: ${notebookId})`);
+  }
+  sendToKernel(notebookId, message);
+});
+
+ipcMain.on('kernel-reset', (_event, notebookId) => {
+  writeLog('NOTEBOOK', `Kernel reset: ${notebookId}`);
+  sendToKernel(notebookId, { type: 'reset' });
+});
+
+ipcMain.handle('new-notebook-dialog', async () => {
+  const { response } = await dialog.showMessageBox(mainWindow, {
+    type: 'question',
+    title: 'New Notebook',
+    message: 'Start with a template?',
+    buttons: ['Examples', 'Blank', 'Cancel'],
+    defaultId: 0,
+    cancelId: 2,
+  });
+  // 0 = Examples, 1 = Blank, 2 = Cancel
+  return response;
 });
 
 ipcMain.handle('save-notebook', async (_event, data) => {
   const { filePath, canceled } = await dialog.showSaveDialog(mainWindow, {
     title: 'Save Notebook',
-    defaultPath: data.title ? `${data.title}.polyglot` : 'notebook.polyglot',
-    filters: [{ name: 'Notebook', extensions: ['polyglot'] }],
+    defaultPath: data.title ? `${data.title}.cnb` : 'notebook.cnb',
+    filters: [{ name: 'Notebook', extensions: ['cnb'] }],
   });
 
   if (canceled || !filePath) return { success: false };
@@ -334,6 +389,15 @@ ipcMain.handle('delete-log-file', async (_event, filename) => {
   } catch (e) { return { success: false, error: e.message }; }
 });
 
+ipcMain.handle('rename-file', async (_event, { oldPath, newPath }) => {
+  try {
+    fs.renameSync(oldPath, newPath);
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
 ipcMain.handle('save-notebook-to', async (_event, { filePath, data }) => {
   try {
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
@@ -346,7 +410,7 @@ ipcMain.handle('save-notebook-to', async (_event, { filePath, data }) => {
 ipcMain.handle('load-notebook', async (_event) => {
   const { filePaths, canceled } = await dialog.showOpenDialog(mainWindow, {
     title: 'Open Notebook',
-    filters: [{ name: 'Notebook', extensions: ['polyglot'] }],
+    filters: [{ name: 'Notebook', extensions: ['cnb'] }],
     properties: ['openFile'],
   });
 
@@ -364,7 +428,7 @@ ipcMain.handle('load-notebook', async (_event) => {
 app.whenReady().then(() => {
   Menu.setApplicationMenu(buildMenu());
   createWindow();
-  startKernel();
+  // Renderer requests kernel start per-notebook via 'start-kernel' IPC
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -374,10 +438,10 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => {
-  killKernel();
+  killAllKernels();
   app.quit();
 });
 
 app.on('before-quit', () => {
-  killKernel();
+  killAllKernels();
 });

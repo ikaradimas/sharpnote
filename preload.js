@@ -1,18 +1,36 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
+// WeakMaps to track wrapper functions so removeListener works correctly
+const kernelMessageWrappers = new WeakMap();
+const logEntryWrappers = new WeakMap();
+
 contextBridge.exposeInMainWorld('electronAPI', {
-  // Kernel communication
+  // Dialogs
+  showNewNotebookDialog: () => ipcRenderer.invoke('new-notebook-dialog'),
+  renameFile: (oldPath, newPath) => ipcRenderer.invoke('rename-file', { oldPath, newPath }),
+
+  // Kernel lifecycle
+  startKernel: (notebookId) => ipcRenderer.invoke('start-kernel', notebookId),
+  stopKernel: (notebookId) => ipcRenderer.invoke('stop-kernel', notebookId),
+
+  // Kernel communication — payload is { notebookId, message }
   onKernelMessage: (callback) => {
-    ipcRenderer.on('kernel-message', (_event, message) => callback(message));
+    const wrapper = (_event, payload) => callback(payload);
+    kernelMessageWrappers.set(callback, wrapper);
+    ipcRenderer.on('kernel-message', wrapper);
   },
   offKernelMessage: (callback) => {
-    ipcRenderer.removeListener('kernel-message', callback);
+    const wrapper = kernelMessageWrappers.get(callback);
+    if (wrapper) {
+      ipcRenderer.removeListener('kernel-message', wrapper);
+      kernelMessageWrappers.delete(callback);
+    }
   },
-  sendToKernel: (message) => {
-    ipcRenderer.send('kernel-send', message);
+  sendToKernel: (notebookId, message) => {
+    ipcRenderer.send('kernel-send', { notebookId, message });
   },
-  resetKernel: () => {
-    ipcRenderer.send('kernel-reset');
+  resetKernel: (notebookId) => {
+    ipcRenderer.send('kernel-reset', notebookId);
   },
 
   // File operations
@@ -33,10 +51,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Log operations
   onLogEntry: (callback) => {
-    ipcRenderer.on('log-entry', (_event, entry) => callback(entry));
+    const wrapper = (_event, entry) => callback(entry);
+    logEntryWrappers.set(callback, wrapper);
+    ipcRenderer.on('log-entry', wrapper);
   },
   offLogEntry: (callback) => {
-    ipcRenderer.removeListener('log-entry', callback);
+    const wrapper = logEntryWrappers.get(callback);
+    if (wrapper) {
+      ipcRenderer.removeListener('log-entry', wrapper);
+      logEntryWrappers.delete(callback);
+    }
   },
   getLogFiles: () => ipcRenderer.invoke('get-log-files'),
   readLogFile: (filename) => ipcRenderer.invoke('read-log-file', filename),
