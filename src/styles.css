@@ -1,4 +1,16 @@
-/* VS Code Dark Theme */
+/* Cyberpunk Nerd Theme */
+
+:root {
+  --base-font-size: 12.6;
+  --cyber-cyan:   #00e5cc;
+  --cyber-blue:   #4fc3f7;
+  --cyber-dim:    #007a6e;
+  --cyber-glow:   rgba(0, 229, 204, 0.25);
+  --cyber-blue-glow: rgba(79, 195, 247, 0.25);
+  --font-ui:      'Share Tech Mono', 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  --font-heading: 'Orbitron', 'Share Tech Mono', monospace;
+  --font-code:    'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+}
 
 *, *::before, *::after {
   box-sizing: border-box;
@@ -7,10 +19,10 @@
 }
 
 body {
-  background: #1e1e1e;
-  color: #d4d4d4;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 14px;
+  background: #111318;
+  color: #cdd6e0;
+  font-family: var(--font-ui);
+  font-size: calc(var(--base-font-size) * 1px);
   height: 100vh;
   overflow: hidden;
 }
@@ -31,8 +43,9 @@ body {
 /* ── Toolbar ─────────────────────────────────────────────────────────────── */
 
 .toolbar {
-  background: #252526;
-  border-bottom: 1px solid #3c3c3c;
+  background: #161a22;
+  border-bottom: 1px solid #1e2d3d;
+  box-shadow: 0 1px 0 rgba(0, 229, 204, 0.06);
   padding: 6px 12px;
   display: flex;
   align-items: center;
@@ -43,38 +56,46 @@ body {
 }
 
 .toolbar-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: #cccccc;
+  font-family: var(--font-heading);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--cyber-cyan);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  text-shadow: 0 0 10px var(--cyber-glow);
   margin-right: 4px;
   -webkit-app-region: drag;
 }
 
 .toolbar button {
   -webkit-app-region: no-drag;
-  background: #3a3d41;
-  border: 1px solid #555;
-  color: #cccccc;
+  background: #1a2030;
+  border: 1px solid #2a3a4a;
+  color: #8ab4cc;
   padding: 4px 10px;
   border-radius: 3px;
   cursor: pointer;
+  font-family: var(--font-ui);
   font-size: 12px;
   white-space: nowrap;
-  transition: background 0.15s;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
 }
 
 .toolbar button:hover {
-  background: #4a4d51;
+  background: #1e2d3d;
+  border-color: #3a5a6a;
+  color: var(--cyber-blue);
+  box-shadow: 0 0 6px var(--cyber-blue-glow);
 }
 
 .toolbar button:active {
-  background: #555;
+  background: #1a2a3a;
 }
 
 .toolbar-separator {
   width: 1px;
   height: 20px;
-  background: #3c3c3c;
+  background: #1e2d3d;
   margin: 0 4px;
 }
 
@@ -83,21 +104,22 @@ body {
   align-items: center;
   gap: 6px;
   margin-left: auto;
-  font-size: 12px;
-  color: #888;
+  font-size: 11px;
+  color: #4a6a7a;
   -webkit-app-region: no-drag;
+  letter-spacing: 0.05em;
 }
 
 .kernel-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #888;
+  background: #555;
 }
 
-.kernel-dot.ready { background: #4ec9b0; }
-.kernel-dot.starting { background: #dcdcaa; }
-.kernel-dot.error { background: #f44747; }
+.kernel-dot.ready   { background: var(--cyber-cyan); box-shadow: 0 0 6px var(--cyber-glow); }
+.kernel-dot.starting { background: #dcdcaa;           box-shadow: 0 0 6px rgba(220,220,170,0.35); }
+.kernel-dot.error   { background: #f44747;            box-shadow: 0 0 6px rgba(244,71,71,0.4); }
 
 /* ── Notebook ────────────────────────────────────────────────────────────── */
 
@@ -109,17 +131,21 @@ body {
   flex-direction: column;
   gap: 0;
   min-height: 0;
+  background: #111318;
 }
 
 .notebook::-webkit-scrollbar {
   width: 8px;
 }
 .notebook::-webkit-scrollbar-track {
-  background: #1e1e1e;
+  background: #111318;
 }
 .notebook::-webkit-scrollbar-thumb {
-  background: #424242;
+  background: #1e2d3d;
   border-radius: 4px;
+}
+.notebook::-webkit-scrollbar-thumb:hover {
+  background: #2a4050;
 }
 
 /* ── Cell ────────────────────────────────────────────────────────────────── */
@@ -151,18 +177,22 @@ body {
 }
 
 .cell-add-btn {
-  background: #2d2d2d;
-  border: 1px solid #444;
-  color: #888;
+  background: #0e1218;
+  border: 1px solid #1e2d3d;
+  color: #2a4050;
+  font-family: var(--font-ui);
   font-size: 11px;
   padding: 1px 8px;
   border-radius: 10px;
   cursor: pointer;
   line-height: 16px;
+  letter-spacing: 0.04em;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 .cell-add-btn:hover {
-  background: #3a3d41;
-  color: #ccc;
+  background: #141820;
+  border-color: var(--cyber-dim);
+  color: var(--cyber-cyan);
 }
 
 .cell {
@@ -170,15 +200,16 @@ body {
   border-radius: 4px;
   position: relative;
   margin: 2px 0;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 
 .cell:hover {
-  border-color: #3c3c3c;
+  border-color: #1e3040;
 }
 
 .cell.running {
-  border-color: #569cd6 !important;
+  border-color: var(--cyber-cyan) !important;
+  box-shadow: 0 0 12px rgba(0, 229, 204, 0.12) !important;
 }
 
 /* Cell controls */
@@ -198,9 +229,9 @@ body {
 }
 
 .cell-ctrl-btn {
-  background: #3a3d41;
-  border: 1px solid #555;
-  color: #888;
+  background: #161c28;
+  border: 1px solid #1e3040;
+  color: #4a7090;
   width: 22px;
   height: 22px;
   border-radius: 3px;
@@ -210,69 +241,160 @@ body {
   align-items: center;
   justify-content: center;
   line-height: 1;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 .cell-ctrl-btn:hover {
-  background: #4a4d51;
-  color: #ccc;
+  background: #1e2d3d;
+  border-color: #2a4a5a;
+  color: var(--cyber-blue);
 }
 
 .cell-ctrl-danger {
-  background: #6e2020;
-  border-color: #a33;
-  color: #f99;
+  background: #2a1020;
+  border-color: #6a1a2a;
+  color: #e05070;
 }
 
 .cell-ctrl-danger:hover {
-  background: #8a2a2a;
-  color: #fcc;
+  background: #3a1828;
+  color: #ff4070;
+  box-shadow: 0 0 6px rgba(255, 40, 80, 0.3);
 }
 
 .delete-confirm-label {
   font-size: 10px;
-  color: #e07070;
-  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  color: #e05070;
+  font-family: var(--font-ui);
   user-select: none;
   white-space: nowrap;
+  letter-spacing: 0.03em;
 }
 
 /* ── Markdown Cell ───────────────────────────────────────────────────────── */
 
 .markdown-cell {
-  background: #1e1e1e;
+  background: #111318;
   padding: 8px 12px;
   min-height: 40px;
 }
 
+.markdown-render-wrap {
+  position: relative;
+}
+
 .markdown-render {
-  cursor: text;
-  line-height: 1.6;
-  color: #d4d4d4;
+  cursor: default;
+  line-height: 1.7;
+  color: #b8ccd8;
   padding: 4px 0;
   min-height: 28px;
+  user-select: text;
+  font-family: var(--font-ui);
 }
 
-.markdown-render:hover {
-  background: rgba(255,255,255,0.02);
+/* Edit button shown on cell hover, positioned bottom-right */
+.md-view-actions {
+  position: absolute;
+  right: 6px;
+  bottom: 4px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.cell:hover .md-view-actions {
+  opacity: 1;
+}
+
+/* OK / Cancel buttons pinned to bottom-right below the editor */
+.md-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  padding: 4px 6px;
+}
+
+.md-action-btn {
+  background: #161c28;
+  border: 1px solid #1e3040;
+  color: #4a7090;
+  padding: 2px 10px;
   border-radius: 3px;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  transition: background 0.15s, color 0.15s;
+}
+.md-action-btn:hover { background: #1e2d3d; color: #8ab4cc; }
+
+.md-ok-btn { background: #0a3a50; border-color: #0e639c; color: var(--cyber-cyan); }
+.md-ok-btn:hover { background: #0e4d6a; box-shadow: 0 0 8px var(--cyber-glow); }
+
+.md-cancel-btn { }
+
+.md-edit-btn { }
+
+/* ── Cell lock button ─────────────────────────────────────────────────────── */
+
+.cell-lock-btn {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  padding: 2px 3px;
+  border-radius: 3px;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 10;
 }
 
-.markdown-render h1 { font-size: 1.8em; font-weight: 600; margin: 0.6em 0 0.3em; color: #4ec9b0; border-bottom: 1px solid #3c3c3c; padding-bottom: 4px; }
-.markdown-render h2 { font-size: 1.4em; font-weight: 600; margin: 0.5em 0 0.3em; color: #4ec9b0; }
-.markdown-render h3 { font-size: 1.15em; font-weight: 600; margin: 0.4em 0 0.2em; color: #9cdcfe; }
+.cell:hover .cell-lock-btn {
+  opacity: 0.45;
+}
+
+.cell:hover .cell-lock-btn:hover {
+  opacity: 1;
+  background: rgba(0, 229, 204, 0.08);
+  color: var(--cyber-cyan);
+}
+
+/* Always visible when locked */
+.cell-lock-btn-on {
+  opacity: 1 !important;
+  color: var(--cyber-cyan) !important;
+  text-shadow: 0 0 6px var(--cyber-glow);
+}
+
+/* Subtle tint on locked cells */
+.cell-locked .cm-editor {
+  background: #0a0e14 !important;
+}
+
+.cell-locked .cm-content {
+  cursor: not-allowed;
+}
+
+.markdown-render h1 { font-family: var(--font-heading); font-size: 1.6em; font-weight: 700; margin: 0.6em 0 0.3em; color: var(--cyber-cyan); border-bottom: 1px solid #1e3040; padding-bottom: 4px; letter-spacing: 0.06em; text-shadow: 0 0 14px var(--cyber-glow); }
+.markdown-render h2 { font-family: var(--font-heading); font-size: 1.25em; font-weight: 600; margin: 0.5em 0 0.3em; color: var(--cyber-cyan); letter-spacing: 0.05em; }
+.markdown-render h3 { font-family: var(--font-heading); font-size: 1.05em; font-weight: 600; margin: 0.4em 0 0.2em; color: var(--cyber-blue); letter-spacing: 0.04em; }
 .markdown-render p { margin: 0.3em 0; }
-.markdown-render code { background: #2d2d2d; padding: 1px 5px; border-radius: 3px; font-family: 'Cascadia Code', 'Fira Code', monospace; font-size: 0.9em; color: #ce9178; }
-.markdown-render pre { background: #2d2d2d; padding: 10px; border-radius: 4px; overflow-x: auto; margin: 0.5em 0; }
-.markdown-render pre code { background: none; padding: 0; }
+.markdown-render code { background: #141820; padding: 1px 5px; border-radius: 3px; font-family: var(--font-code); font-size: 0.9em; color: #e8a87a; border: 1px solid #1e2d3d; }
+.markdown-render pre { background: #0e1218; padding: 10px; border-radius: 4px; overflow-x: auto; margin: 0.5em 0; border: 1px solid #1e2d3d; }
+.markdown-render pre code { background: none; padding: 0; border: none; }
 .markdown-render ul, .markdown-render ol { padding-left: 1.5em; margin: 0.3em 0; }
 .markdown-render li { margin: 0.2em 0; }
-.markdown-render blockquote { border-left: 3px solid #569cd6; padding-left: 12px; color: #888; margin: 0.5em 0; }
-.markdown-render a { color: #569cd6; }
+.markdown-render blockquote { border-left: 3px solid var(--cyber-dim); padding-left: 12px; color: #5a7a8a; margin: 0.5em 0; }
+.markdown-render a { color: var(--cyber-blue); text-decoration: none; }
+.markdown-render a:hover { color: var(--cyber-cyan); text-shadow: 0 0 8px var(--cyber-glow); }
 .markdown-render table { border-collapse: collapse; width: 100%; margin: 0.5em 0; }
-.markdown-render th { background: #2d2d2d; padding: 6px 10px; text-align: left; border: 1px solid #3c3c3c; }
-.markdown-render td { padding: 5px 10px; border: 1px solid #3c3c3c; }
+.markdown-render th { background: #141820; padding: 6px 10px; text-align: left; border: 1px solid #1e2d3d; color: var(--cyber-blue); font-family: var(--font-heading); font-size: 0.85em; letter-spacing: 0.06em; }
+.markdown-render td { padding: 5px 10px; border: 1px solid #1a2530; }
 
 .markdown-placeholder {
-  color: #555;
+  color: #2a4050;
   font-style: italic;
   font-size: 13px;
 }
@@ -280,44 +402,58 @@ body {
 /* ── Code Cell ───────────────────────────────────────────────────────────── */
 
 .code-cell {
-  background: #1e1e1e;
+  background: #111318;
 }
 
 .code-cell-header {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 8px;
-  background: #252526;
-  border-bottom: 1px solid #3c3c3c;
+  padding: 4px 8px 4px 12px;
+  background: #141820;
+  border-bottom: 1px solid #1e2d3d;
+  border-left: 2px solid var(--cyber-dim);
   border-radius: 4px 4px 0 0;
+  transition: border-left-color 0.2s;
+}
+
+.cell.running .code-cell-header {
+  border-left-color: var(--cyber-cyan);
 }
 
 .cell-lang-label {
-  font-size: 11px;
-  color: #569cd6;
+  font-family: var(--font-heading);
+  font-size: 10px;
   font-weight: 600;
-  font-family: 'Cascadia Code', monospace;
+  color: var(--cyber-blue);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   user-select: none;
 }
 
 .run-btn {
-  background: #0e639c;
-  border: none;
-  color: white;
+  background: #0a2a3a;
+  border: 1px solid #0e639c;
+  color: var(--cyber-cyan);
   padding: 2px 12px;
   border-radius: 2px;
   cursor: pointer;
+  font-family: var(--font-ui);
   font-size: 12px;
-  transition: background 0.15s;
+  letter-spacing: 0.04em;
+  transition: background 0.15s, box-shadow 0.15s;
 }
 
-.run-btn:hover { background: #1177bb; }
-.run-btn:disabled { background: #2d5a7c; cursor: not-allowed; opacity: 0.7; }
+.run-btn:hover {
+  background: #0e3a50;
+  box-shadow: 0 0 10px var(--cyber-glow);
+}
+.run-btn:disabled { background: #0a1a28; border-color: #1e3040; color: #2a5060; cursor: not-allowed; box-shadow: none; }
 
 .running-spinner {
   font-size: 11px;
-  color: #569cd6;
+  color: var(--cyber-cyan);
+  text-shadow: 0 0 6px var(--cyber-glow);
 }
 
 .code-editor-wrap {
@@ -327,8 +463,8 @@ body {
 
 /* CodeMirror overrides */
 .cm-editor {
-  background: #1e1e1e !important;
-  font-size: 13px;
+  background: #0e1218 !important;
+  font-size: calc((var(--base-font-size) - 1) * 1px) !important;
 }
 
 .cm-editor.cm-focused { outline: none !important; }
@@ -349,33 +485,34 @@ body {
 /* ── Cell Output ─────────────────────────────────────────────────────────── */
 
 .cell-output {
-  background: #141414;
-  border-top: 1px solid #2d2d2d;
+  background: #0c1016;
+  border-top: 1px solid #1a2530;
   padding: 8px 12px;
-  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
-  font-size: 12.5px;
+  font-family: var(--font-code);
+  font-size: calc((var(--base-font-size) - 1.5) * 1px);
 }
 
 .output-stdout {
   white-space: pre-wrap;
-  color: #d4d4d4;
+  color: #b8ccd8;
 }
 
 .output-error {
-  color: #f44747;
+  color: #ff4060;
   white-space: pre-wrap;
+  text-shadow: 0 0 8px rgba(255, 40, 60, 0.4);
 }
 
 .output-error-stack {
-  color: #888;
+  color: #4a5a6a;
   white-space: pre-wrap;
   font-size: 11px;
   margin-top: 4px;
 }
 
 .output-html {
-  color: #d4d4d4;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: #b8ccd8;
+  font-family: var(--font-ui);
   font-size: 13px;
 }
 
@@ -383,39 +520,44 @@ body {
 
 .data-table-wrap {
   overflow-x: auto;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--font-ui);
 }
 
 .data-table {
   border-collapse: collapse;
-  font-size: 12.5px;
+  font-size: calc((var(--base-font-size) - 1.5) * 1px);
   width: 100%;
   min-width: max-content;
 }
 
 .data-table th {
-  background: #252526;
-  color: #9cdcfe;
+  background: #141820;
+  color: var(--cyber-blue);
   padding: 5px 12px;
   text-align: left;
-  border: 1px solid #3c3c3c;
+  border: 1px solid #1e2d3d;
+  font-family: var(--font-heading);
+  font-size: 10px;
   font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   white-space: nowrap;
 }
 
 .data-table td {
   padding: 4px 12px;
-  border: 1px solid #2d2d2d;
-  color: #d4d4d4;
+  border: 1px solid #1a2530;
+  color: #a0b8c8;
   white-space: nowrap;
 }
 
 .data-table tr:nth-child(even) td {
-  background: rgba(255,255,255,0.02);
+  background: rgba(0, 229, 204, 0.02);
 }
 
 .data-table tr:hover td {
-  background: rgba(86,156,214,0.08);
+  background: rgba(0, 229, 204, 0.05);
+  color: #cde0ea;
 }
 
 /* ── Graph ───────────────────────────────────────────────────────────────── */
@@ -439,14 +581,16 @@ body {
   justify-content: center;
   gap: 12px;
   padding: 60px;
-  color: #555;
+  color: #1e3040;
   text-align: center;
 }
 
 .empty-notebook h2 {
-  color: #666;
-  font-size: 18px;
+  font-family: var(--font-heading);
+  color: #2a4a5a;
+  font-size: 16px;
   font-weight: 400;
+  letter-spacing: 0.1em;
 }
 
 .empty-notebook p {
@@ -457,7 +601,7 @@ body {
 /* ── CodeMirror lint + autocomplete theming ─────────────────────────────── */
 
 .cm-lintRange-error {
-  text-decoration: underline wavy #f44747;
+  text-decoration: underline wavy #ff4060;
 }
 
 .cm-lintRange-warning {
@@ -465,26 +609,28 @@ body {
 }
 
 .cm-tooltip.cm-tooltip-lint {
-  background: #252526;
-  border: 1px solid #3c3c3c;
-  color: #d4d4d4;
+  background: #141820;
+  border: 1px solid #1e2d3d;
+  color: #b8ccd8;
   font-size: 12px;
   max-width: 400px;
 }
 
 .cm-tooltip-autocomplete {
-  background: #252526 !important;
-  border: 1px solid #3c3c3c !important;
+  background: #141820 !important;
+  border: 1px solid #1e2d3d !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5), 0 0 12px var(--cyber-glow) !important;
 }
 
 .cm-tooltip-autocomplete ul li {
-  color: #d4d4d4;
-  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  color: #a0b8c8;
+  font-family: var(--font-code);
   font-size: 12px;
 }
 
 .cm-tooltip-autocomplete ul li[aria-selected] {
-  background: #094771 !important;
+  background: #0a2a3a !important;
+  color: var(--cyber-cyan) !important;
 }
 
 /* ── Export Button ───────────────────────────────────────────────────────── */
@@ -497,9 +643,9 @@ body {
   position: absolute;
   top: 4px;
   right: 4px;
-  background: #2d2d2d;
-  border: 1px solid #444;
-  color: #666;
+  background: #141820;
+  border: 1px solid #1e2d3d;
+  color: #2a4050;
   width: 20px;
   height: 20px;
   border-radius: 3px;
@@ -519,8 +665,8 @@ body {
 }
 
 .export-btn:hover {
-  background: #3a3d41;
-  color: #ccc;
+  background: #1e2d3d;
+  color: var(--cyber-blue);
 }
 
 /* ── Output Mode Dropdown ────────────────────────────────────────────────── */
@@ -534,19 +680,20 @@ body {
 
 .output-mode-label {
   font-size: 10px;
-  color: #555;
-  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  color: #2a4050;
+  font-family: var(--font-ui);
   user-select: none;
+  letter-spacing: 0.05em;
 }
 
 .output-mode-select {
-  background: #2d2d2d;
-  border: 1px solid #3c3c3c;
-  color: #888;
+  background: #0e1218;
+  border: 1px solid #1e2d3d;
+  color: #4a7090;
   padding: 1px 4px;
   border-radius: 3px;
   font-size: 11px;
-  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  font-family: var(--font-ui);
   cursor: pointer;
   outline: none;
   appearance: none;
@@ -555,10 +702,651 @@ body {
 }
 
 .output-mode-select:hover {
-  border-color: #555;
-  color: #aaa;
+  border-color: #2a4a5a;
+  color: var(--cyber-blue);
 }
 
 .output-mode-select:focus {
-  border-color: #0e639c;
+  border-color: var(--cyber-dim);
+  box-shadow: 0 0 4px var(--cyber-glow);
+}
+
+/* ── Main area (content row + nuget panel below) ─────────────────────────── */
+
+#main-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+#content-area {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ── Log Panel ───────────────────────────────────────────────────────────── */
+
+.log-panel {
+  width: 320px;
+  flex-shrink: 0;
+  background: #0e1218;
+  border-left: 1px solid #1e2d3d;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.log-panel-header {
+  background: #141820;
+  border-bottom: 1px solid #1e2d3d;
+  padding: 5px 6px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.log-file-select {
+  background: #0e1218;
+  border: 1px solid #1e2d3d;
+  color: #4a7090;
+  padding: 2px 5px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-family: var(--font-ui);
+  cursor: pointer;
+  outline: none;
+  flex: 1;
+  min-width: 0;
+}
+
+.log-file-select:hover { border-color: #2a4a5a; color: var(--cyber-blue); }
+.log-file-select:focus { border-color: var(--cyber-dim); }
+
+.log-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--cyber-cyan);
+  flex-shrink: 0;
+  box-shadow: 0 0 5px var(--cyber-glow);
+  animation: log-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes log-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 5px var(--cyber-glow); }
+  50% { opacity: 0.3; box-shadow: none; }
+}
+
+.log-header-btn {
+  background: transparent;
+  border: none;
+  color: #2a4050;
+  width: 22px;
+  height: 22px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+  transition: background 0.15s, color 0.15s;
+}
+
+.log-header-btn:hover { background: #1e2d3d; color: var(--cyber-blue); }
+.log-header-danger:hover { background: #2a1020 !important; color: #ff4060 !important; }
+
+.log-close-btn {
+  background: transparent;
+  border: none;
+  color: #2a4050;
+  width: 22px;
+  height: 22px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.log-close-btn:hover { background: #1e2d3d; color: #8ab4cc; }
+
+.log-entries {
+  flex: 1;
+  overflow-y: auto;
+  padding: 2px 0;
+}
+
+.log-entries::-webkit-scrollbar { width: 6px; }
+.log-entries::-webkit-scrollbar-track { background: #0e1218; }
+.log-entries::-webkit-scrollbar-thumb { background: #1e2d3d; border-radius: 3px; }
+
+.log-entry {
+  display: grid;
+  grid-template-columns: 68px 60px 1fr;
+  gap: 5px;
+  padding: 2px 8px;
+  align-items: baseline;
+  border-bottom: 1px solid rgba(0, 229, 204, 0.03);
+}
+
+.log-entry:hover { background: rgba(0, 229, 204, 0.03); }
+
+.log-time {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  color: #1e3040;
+  white-space: nowrap;
+}
+
+.log-tag {
+  font-family: var(--font-ui);
+  font-size: 9px;
+  font-weight: 700;
+  white-space: nowrap;
+  padding: 1px 4px;
+  border-radius: 2px;
+  text-align: center;
+  letter-spacing: 0.05em;
+}
+
+.log-tag-notebook {
+  color: var(--cyber-blue);
+  background: rgba(79, 195, 247, 0.1);
+}
+
+.log-tag-user {
+  color: var(--cyber-cyan);
+  background: rgba(0, 229, 204, 0.1);
+}
+
+.log-message {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: #5a8090;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.log-empty {
+  color: #1e3040;
+  font-size: 11px;
+  text-align: center;
+  padding: 24px 12px;
+  font-family: var(--font-ui);
+}
+
+/* ── NuGet Panel ─────────────────────────────────────────────────────────── */
+
+.nuget-panel {
+  flex-shrink: 0;
+  background: #0e1218;
+  border-top: 1px solid #1e2d3d;
+  display: flex;
+  flex-direction: column;
+  max-height: 300px;
+}
+
+.nuget-panel-header {
+  background: #141820;
+  border-bottom: 1px solid #1e2d3d;
+  padding: 5px 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.nuget-panel-title {
+  font-family: var(--font-heading);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--cyber-blue);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+}
+
+.nuget-panel-hint {
+  font-size: 11px;
+  color: #2a4050;
+  white-space: nowrap;
+}
+
+.nuget-kernel-badge {
+  margin-left: auto;
+  font-size: 10px;
+  font-family: var(--font-ui);
+  letter-spacing: 0.04em;
+}
+
+.nuget-close-btn {
+  background: transparent;
+  border: none;
+  color: #2a4050;
+  width: 22px;
+  height: 22px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+}
+.nuget-close-btn:hover { background: #1e2d3d; color: #8ab4cc; }
+
+.nuget-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.nuget-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.nuget-list::-webkit-scrollbar { width: 6px; }
+.nuget-list::-webkit-scrollbar-track { background: #0e1218; }
+.nuget-list::-webkit-scrollbar-thumb { background: #1e2d3d; border-radius: 3px; }
+
+.nuget-empty {
+  color: #1e3040;
+  font-size: 11px;
+  font-family: var(--font-ui);
+  padding: 8px 4px;
+}
+
+.nuget-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px;
+  border-radius: 3px;
+  background: #141820;
+  border: 1px solid #1a2530;
+}
+
+.nuget-item:hover { border-color: #1e3a4a; }
+
+.nuget-dot {
+  font-size: 11px;
+  font-weight: 700;
+  width: 14px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.nuget-dot-pending { color: #2a4050; }
+.nuget-dot-loading { color: #dcdcaa; animation: nuget-spin 1s linear infinite; }
+.nuget-dot-loaded  { color: var(--cyber-cyan); text-shadow: 0 0 6px var(--cyber-glow); }
+.nuget-dot-error   { color: #ff4060; }
+
+@keyframes nuget-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.nuget-id {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--cyber-blue);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nuget-version {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: #2a4050;
+  white-space: nowrap;
+}
+
+.nuget-action-btn {
+  background: #141820;
+  border: 1px solid #1e2d3d;
+  color: #4a7090;
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+}
+.nuget-action-btn:hover { background: #1e2d3d; color: var(--cyber-cyan); }
+
+.nuget-remove-btn {
+  background: transparent;
+  border: none;
+  color: #2a4050;
+  width: 18px;
+  height: 18px;
+  border-radius: 2px;
+  cursor: pointer;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+}
+.nuget-remove-btn:hover { background: #2a1020; color: #ff4060; }
+
+.nuget-add-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-top: 1px solid #1a2530;
+  flex-shrink: 0;
+}
+
+.nuget-input {
+  background: #0e1218;
+  border: 1px solid #1e2d3d;
+  color: #a0b8c8;
+  padding: 4px 8px;
+  border-radius: 3px;
+  font-size: 12px;
+  font-family: var(--font-ui);
+  outline: none;
+  height: 26px;
+}
+
+.nuget-input:focus { border-color: var(--cyber-dim); box-shadow: 0 0 6px var(--cyber-glow); }
+
+.nuget-id-input { flex: 1; min-width: 0; }
+.nuget-ver-input { width: 100px; }
+
+.nuget-add-btn {
+  background: #0a2a3a;
+  border: 1px solid #0e639c;
+  color: var(--cyber-cyan);
+  padding: 0 12px;
+  height: 26px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+.nuget-add-btn:hover { background: #0e3a50; box-shadow: 0 0 8px var(--cyber-glow); }
+
+/* ── NuGet Panel tabs ────────────────────────────────────────────────────── */
+
+.nuget-tabs {
+  display: flex;
+  gap: 2px;
+}
+
+.nuget-tab {
+  background: transparent;
+  border: 1px solid transparent;
+  color: #2a4050;
+  padding: 2px 10px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-family: var(--font-heading);
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  transition: color 0.15s, background 0.15s;
+}
+
+.nuget-tab:hover { color: #6a9ab0; background: rgba(0, 229, 204, 0.04); }
+
+.nuget-tab-active {
+  color: var(--cyber-cyan);
+  background: #0a2a38;
+  border-color: var(--cyber-dim);
+}
+
+.nuget-sources-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: #2a4050;
+  width: 24px;
+  height: 24px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+  margin-left: 4px;
+  transition: color 0.15s, background 0.15s;
+}
+
+.nuget-sources-btn:hover { color: var(--cyber-blue); background: rgba(0, 229, 204, 0.04); }
+
+.nuget-sources-btn-active {
+  color: var(--cyber-cyan);
+  background: #0a2a38;
+  border-color: var(--cyber-dim);
+}
+
+/* ── NuGet tab content ───────────────────────────────────────────────────── */
+
+.nuget-tab-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ── NuGet Browse tab ────────────────────────────────────────────────────── */
+
+.nuget-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-bottom: 1px solid #1a2530;
+  flex-shrink: 0;
+}
+
+.nuget-search-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.nuget-search-btn {
+  background: #141820;
+  border: 1px solid #1e2d3d;
+  color: #4a7090;
+  width: 28px;
+  height: 26px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+  transition: background 0.15s, color 0.15s;
+}
+
+.nuget-search-btn:hover { background: #1e2d3d; color: var(--cyber-cyan); box-shadow: 0 0 6px var(--cyber-glow); }
+.nuget-search-btn:disabled { opacity: 0.4; cursor: default; box-shadow: none; }
+
+.nuget-results {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nuget-results::-webkit-scrollbar { width: 6px; }
+.nuget-results::-webkit-scrollbar-track { background: #0e1218; }
+.nuget-results::-webkit-scrollbar-thumb { background: #1e2d3d; border-radius: 3px; }
+
+.nuget-result-item {
+  padding: 4px 6px;
+  border-radius: 3px;
+  border: 1px solid #141820;
+  background: #0e1218;
+  transition: border-color 0.12s;
+}
+
+.nuget-result-item:hover { border-color: #1e3040; background: #111822; }
+
+.nuget-result-main {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nuget-result-id {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--cyber-blue);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nuget-result-version {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: #2a4050;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.nuget-result-dl {
+  font-size: 10px;
+  color: #1e3040;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.nuget-result-add {
+  background: #0a2a3a;
+  border: 1px solid #0e639c;
+  color: var(--cyber-cyan);
+  padding: 1px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+
+.nuget-result-add:hover { background: #0e3a50; box-shadow: 0 0 6px var(--cyber-glow); }
+
+.nuget-result-added {
+  background: #0a2030;
+  border-color: var(--cyber-dim);
+  color: var(--cyber-dim);
+  cursor: default;
+}
+
+.nuget-result-added:hover { background: #0a2030; box-shadow: none; }
+
+.nuget-result-desc {
+  font-size: 10px;
+  color: #2a4050;
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nuget-search-error {
+  color: #ff4060;
+  font-size: 11px;
+  padding: 6px 4px;
+  font-family: var(--font-ui);
+}
+
+/* ── NuGet Sources tab ───────────────────────────────────────────────────── */
+
+.nuget-sources-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.nuget-sources-list::-webkit-scrollbar { width: 6px; }
+.nuget-sources-list::-webkit-scrollbar-track { background: #0e1218; }
+.nuget-sources-list::-webkit-scrollbar-thumb { background: #1e2d3d; border-radius: 3px; }
+
+.nuget-source-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: 3px;
+  background: #141820;
+  border: 1px solid #1a2530;
+}
+
+.nuget-source-item:hover { border-color: #1e3a4a; }
+
+.nuget-source-check {
+  flex-shrink: 0;
+  cursor: pointer;
+  accent-color: var(--cyber-cyan);
+}
+
+.nuget-source-name {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: var(--cyber-blue);
+  white-space: nowrap;
+  min-width: 80px;
+}
+
+.nuget-source-url {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  color: #2a4050;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

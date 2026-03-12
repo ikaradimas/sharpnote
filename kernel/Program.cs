@@ -22,6 +22,24 @@ public static class DisplayContext
     public static DisplayHelper? Current { get; internal set; }
 }
 
+// ── LogContext ────────────────────────────────────────────────────────────────
+
+public static class LogContext
+{
+    internal static TextWriter? Output { get; set; }
+
+    internal static void WriteNotebook(string message)
+    {
+        Output?.WriteLine(JsonSerializer.Serialize(new
+        {
+            type = "log",
+            tag = "NOTEBOOK",
+            message,
+            timestamp = DateTime.UtcNow.ToString("O"),
+        }));
+    }
+}
+
 // ── DisplayHandle ────────────────────────────────────────────────────────────
 
 public class DisplayHandle
@@ -172,6 +190,35 @@ public static class PolyglotExtensions
         DisplayContext.Current?.Graph(chartConfig);
     }
 
+    public static T Log<T>(this T obj, string? label = null)
+    {
+        var output = LogContext.Output;
+        if (output != null)
+        {
+            string msg;
+            if (obj == null)
+                msg = "null";
+            else if (obj is string s)
+                msg = s;
+            else if (obj.GetType().IsPrimitive || obj is decimal)
+                msg = obj.ToString() ?? "";
+            else
+            {
+                try { msg = JsonSerializer.Serialize(obj); }
+                catch { msg = obj.ToString() ?? ""; }
+            }
+
+            output.WriteLine(JsonSerializer.Serialize(new
+            {
+                type = "log",
+                tag = "USER",
+                message = label != null ? $"{label}: {msg}" : msg,
+                timestamp = DateTime.UtcNow.ToString("O"),
+            }));
+        }
+        return obj;
+    }
+
     internal static void AutoDisplay(DisplayHelper d, object? obj)
     {
         if (obj == null) return;
@@ -241,6 +288,7 @@ class Program
     {
         var realStdout = new StreamWriter(Console.OpenStandardOutput()) { AutoFlush = true };
         Console.OutputEncoding = Encoding.UTF8;
+        LogContext.Output = realStdout;
 
         var display = new DisplayHelper(realStdout);
         var globals = new ScriptGlobals { Display = display };
@@ -290,6 +338,9 @@ class Program
                     var outputMode = msg.TryGetProperty("outputMode", out var omProp)
                         ? omProp.GetString() ?? "auto"
                         : "auto";
+                    var execSources = msg.TryGetProperty("sources", out var esProp)
+                        ? esProp.EnumerateArray().Select(s => s.GetString()!).ToList()
+                        : (List<string>?)null;
 
                     // ── Parse #r "nuget: ..." directives ────────────────────
                     var (cleanCode, nugetRefs) = ParseNugetDirectives(code);
@@ -307,14 +358,16 @@ class Program
                             id,
                             content = $"📦 Installing {pkgId}{(pkgVer != null ? $" {pkgVer}" : " (latest)")}…"
                         }));
+                        LogContext.WriteNotebook($"NuGet: Installing {pkgId}{(pkgVer != null ? $" {pkgVer}" : " (latest)")}");
 
                         var (updatedOptions, nugetError) =
-                            await LoadNuGetAsync(pkgId, pkgVer, options, id, realStdout);
+                            await LoadNuGetAsync(pkgId, pkgVer, options, id, realStdout, execSources);
 
                         if (nugetError != null)
                         {
                             success = false;
                             errorMessage = nugetError;
+                            LogContext.WriteNotebook($"NuGet: Failed {pkgId}: {nugetError}");
                             break;
                         }
 
@@ -325,6 +378,7 @@ class Program
                             id,
                             content = $"✓ {pkgId} loaded"
                         }));
+                        LogContext.WriteNotebook($"NuGet: Loaded {pkgId}");
                     }
 
                     if (!success)
@@ -422,6 +476,45 @@ class Program
                     var items     = GetAutocompletions(acCode, acPos, state);
                     realStdout.WriteLine(JsonSerializer.Serialize(new
                     { type = "autocomplete_result", requestId, items }));
+                    break;
+                }
+
+                case "preload_nugets":
+                {
+                    var preloadSources = msg.TryGetProperty("sources", out var psProp)
+                        ? psProp.EnumerateArray().Select(s => s.GetString()!).ToList()
+                        : (List<string>?)null;
+                    var pkgList = msg.GetProperty("packages").EnumerateArray().ToList();
+                    foreach (var pkgEl in pkgList)
+                    {
+                        var pkgId  = pkgEl.GetProperty("id").GetString()!;
+                        var pkgVer = pkgEl.TryGetProperty("version", out var vProp)
+                            && vProp.ValueKind == JsonValueKind.String
+                            ? vProp.GetString() : null;
+
+                        realStdout.WriteLine(JsonSerializer.Serialize(new
+                        { type = "nuget_status", id = pkgId, version = pkgVer, status = "loading" }));
+                        LogContext.WriteNotebook($"NuGet preload: {pkgId} {pkgVer ?? "latest"}");
+
+                        var (updatedOpts, nugetErr) =
+                            await LoadNuGetAsync(pkgId, pkgVer, options, "__preload__", realStdout, preloadSources);
+
+                        if (nugetErr != null)
+                        {
+                            realStdout.WriteLine(JsonSerializer.Serialize(new
+                            { type = "nuget_status", id = pkgId, version = pkgVer,
+                              status = "error", message = nugetErr }));
+                            LogContext.WriteNotebook($"NuGet preload error: {pkgId}: {nugetErr}");
+                        }
+                        else
+                        {
+                            options = updatedOpts;
+                            realStdout.WriteLine(JsonSerializer.Serialize(new
+                            { type = "nuget_status", id = pkgId, version = pkgVer, status = "loaded" }));
+                            LogContext.WriteNotebook($"NuGet preload loaded: {pkgId}");
+                        }
+                    }
+                    realStdout.WriteLine(JsonSerializer.Serialize(new { type = "nuget_preload_complete" }));
                     break;
                 }
 
@@ -631,7 +724,7 @@ class Program
 
     private static async Task<(ScriptOptions opts, string? error)> LoadNuGetAsync(
         string packageId, string? version, ScriptOptions options,
-        string cellId, TextWriter realStdout)
+        string cellId, TextWriter realStdout, IEnumerable<string>? sourceUrls = null)
     {
         var key = $"{packageId.ToLower()}/{version ?? "*"}";
         if (_loadedNugetKeys.Contains(key)) return (options, null);
@@ -656,9 +749,15 @@ class Program
                 </Project>
                 """);
 
+            var srcArgs = sourceUrls?
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .Select(s => $"--source \"{s}\"")
+                .ToList() ?? new List<string>();
+            var srcArgStr = srcArgs.Count > 0 ? " " + string.Join(" ", srcArgs) : "";
+
             using var proc = new Process
             {
-                StartInfo = new ProcessStartInfo("dotnet", "restore r.csproj --nologo -v q")
+                StartInfo = new ProcessStartInfo("dotnet", $"restore r.csproj --nologo -v q{srcArgStr}")
                 {
                     WorkingDirectory = tempDir,
                     RedirectStandardOutput = true,

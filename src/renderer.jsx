@@ -11,7 +11,7 @@ import { marked } from 'marked';
 import Chart from 'chart.js/auto';
 
 // CodeMirror
-import { EditorState } from '@codemirror/state';
+import { EditorState, Compartment } from '@codemirror/state';
 import { EditorView, keymap, lineNumbers, highlightActiveLine } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 import { oneDark } from '@codemirror/theme-one-dark';
@@ -38,24 +38,33 @@ const CSHARP_KEYWORDS = [
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function makeCell(type = 'code', content = '') {
-  return { id: uuidv4(), type, content, ...(type === 'code' ? { outputMode: 'auto' } : {}) };
+  return { id: uuidv4(), type, content, ...(type === 'code' ? { outputMode: 'auto', locked: false } : {}) };
 }
 
 // ── CodeMirror Editor ────────────────────────────────────────────────────────
 
 function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
-                      onRequestCompletions, onRequestLint }) {
+                      onRequestCompletions, onRequestLint, readOnly = false }) {
   const containerRef = useRef(null);
   const viewRef = useRef(null);
   const onChangeRef = useRef(onChange);
   const onCtrlEnterRef = useRef(onCtrlEnter);
   const completionsRef = useRef(onRequestCompletions);
   const lintRef = useRef(onRequestLint);
+  const readOnlyCompartmentRef = useRef(null);
 
   useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
   useEffect(() => { onCtrlEnterRef.current = onCtrlEnter; }, [onCtrlEnter]);
   useEffect(() => { completionsRef.current = onRequestCompletions; }, [onRequestCompletions]);
   useEffect(() => { lintRef.current = onRequestLint; }, [onRequestLint]);
+
+  // Toggle read-only without recreating the editor
+  useEffect(() => {
+    const view = viewRef.current;
+    const compartment = readOnlyCompartmentRef.current;
+    if (!view || !compartment) return;
+    view.dispatch({ effects: compartment.reconfigure(EditorState.readOnly.of(readOnly)) });
+  }, [readOnly]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -75,6 +84,9 @@ function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
       }
     });
 
+    const readOnlyCompartment = new Compartment();
+    readOnlyCompartmentRef.current = readOnlyCompartment;
+
     const extensions = [
       history(),
       lineNumbers(),
@@ -85,6 +97,7 @@ function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
       keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
       updateListener,
       EditorView.lineWrapping,
+      readOnlyCompartment.of(EditorState.readOnly.of(readOnly)),
     ];
 
     if (language === 'csharp') {
@@ -216,6 +229,124 @@ function parseCsv(csv) {
     headers.forEach((h, i) => { obj[h] = vals[i]?.trim() ?? ''; });
     return obj;
   });
+}
+
+// ── Log Panel ────────────────────────────────────────────────────────────────
+
+function parseLogContent(text) {
+  return text.split('\n').filter(Boolean).map((line) => {
+    const m = line.match(/^(\S+)\s+\[([^\]]+)\]\s+(.*)$/);
+    if (m) return { timestamp: m[1], tag: m[2], message: m[3] };
+    return { timestamp: '', tag: '', message: line };
+  });
+}
+
+function LogEntry({ entry }) {
+  const time = entry.timestamp
+    ? new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    : '';
+  const tagClass = `log-tag log-tag-${(entry.tag || '').toLowerCase()}`;
+  return (
+    <div className="log-entry">
+      <span className="log-time">{time}</span>
+      <span className={tagClass}>{entry.tag}</span>
+      <span className="log-message">{entry.message}</span>
+    </div>
+  );
+}
+
+function LogPanel({ isOpen, onToggle }) {
+  const [logFiles, setLogFiles] = useState([]);
+  const [selectedFile, setSelectedFile] = useState('live');
+  const [fileEntries, setFileEntries] = useState([]);
+  const [liveEntries, setLiveEntries] = useState([]);
+  const scrollRef = useRef(null);
+
+  // Load file list when panel opens
+  useEffect(() => {
+    if (!isOpen || !window.electronAPI) return;
+    window.electronAPI.getLogFiles().then(setLogFiles);
+  }, [isOpen]);
+
+  // Subscribe to live log entries always (accumulate even when panel is closed)
+  useEffect(() => {
+    if (!window.electronAPI) return;
+    const handler = (entry) => setLiveEntries((prev) => [...prev, entry]);
+    window.electronAPI.onLogEntry(handler);
+    return () => window.electronAPI.offLogEntry(handler);
+  }, []);
+
+  // Load file content when selection changes
+  useEffect(() => {
+    if (!isOpen || selectedFile === 'live' || !window.electronAPI) return;
+    window.electronAPI.readLogFile(selectedFile).then((text) => {
+      setFileEntries(parseLogContent(text || ''));
+    });
+  }, [isOpen, selectedFile]);
+
+  // Auto-scroll to bottom on new entries
+  useEffect(() => {
+    if (scrollRef.current && isOpen) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [liveEntries, fileEntries, isOpen]);
+
+  const entries = selectedFile === 'live' ? liveEntries : fileEntries;
+
+  const handleDelete = async () => {
+    if (selectedFile === 'live' || !window.electronAPI) return;
+    await window.electronAPI.deleteLogFile(selectedFile);
+    setLogFiles((prev) => prev.filter((f) => f !== selectedFile));
+    setSelectedFile('live');
+    setFileEntries([]);
+  };
+
+  const handleExport = async () => {
+    if (!window.electronAPI) return;
+    let content;
+    if (selectedFile === 'live') {
+      content = liveEntries.map((e) => `${e.timestamp} [${e.tag}] ${e.message}`).join('\n');
+    } else {
+      content = await window.electronAPI.readLogFile(selectedFile);
+    }
+    if (content) {
+      await window.electronAPI.saveFile({
+        content,
+        defaultName: selectedFile === 'live' ? 'live.log' : selectedFile,
+        filters: [{ name: 'Log', extensions: ['log'] }],
+      });
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="log-panel">
+      <div className="log-panel-header">
+        <select
+          className="log-file-select"
+          value={selectedFile}
+          onChange={(e) => setSelectedFile(e.target.value)}
+        >
+          <option value="live">Live</option>
+          {logFiles.map((f) => <option key={f} value={f}>{f}</option>)}
+        </select>
+        {selectedFile === 'live' && <span className="log-live-dot" title="Live" />}
+        <button className="log-header-btn" title="Export log" onClick={handleExport}>⬇</button>
+        {selectedFile === 'live'
+          ? <button className="log-header-btn" title="Clear live log" onClick={() => setLiveEntries([])}>⌫</button>
+          : <button className="log-header-btn log-header-danger" title="Delete log file" onClick={handleDelete}>✕</button>
+        }
+        <button className="log-close-btn" title="Close logs" onClick={onToggle}>×</button>
+      </div>
+      <div className="log-entries" ref={scrollRef}>
+        {entries.length === 0
+          ? <div className="log-empty">No entries</div>
+          : entries.map((e, i) => <LogEntry key={i} entry={e} />)
+        }
+      </div>
+    </div>
+  );
 }
 
 // ── GraphOutput ──────────────────────────────────────────────────────────────
@@ -375,13 +506,23 @@ function CellControls({ onMoveUp, onMoveDown, onDelete }) {
 
 // ── MarkdownCell ─────────────────────────────────────────────────────────────
 
-function MarkdownCell({ cell, onUpdate, onDelete, onMoveUp, onMoveDown, onAddAbove, onAddBelow }) {
+function MarkdownCell({ cell, onUpdate, onDelete, onMoveUp, onMoveDown }) {
   const [editing, setEditing] = useState(!cell.content);
+  const [draft, setDraft] = useState(cell.content);
 
-  const handleRenderClick = () => setEditing(true);
-  const handleBlur = () => { if (cell.content) setEditing(false); };
-  const handleKeyDown = (e) => {
-    if (e.key === 'Escape') { setEditing(false); }
+  const enterEdit = () => {
+    setDraft(cell.content);
+    setEditing(true);
+  };
+
+  const handleOk = () => {
+    onUpdate(draft);
+    setEditing(false);
+  };
+
+  const handleCancel = () => {
+    setDraft(cell.content);
+    setEditing(false);
   };
 
   const renderedHtml = useMemo(
@@ -394,22 +535,30 @@ function MarkdownCell({ cell, onUpdate, onDelete, onMoveUp, onMoveDown, onAddAbo
       <div className="cell-controls">
         <CellControls onMoveUp={onMoveUp} onMoveDown={onMoveDown} onDelete={onDelete} />
       </div>
-      <div onKeyDown={handleKeyDown}>
-        {editing ? (
+      {editing ? (
+        <div onKeyDown={(e) => { if (e.key === 'Escape') handleCancel(); }}>
           <CodeEditor
-            value={cell.content}
-            onChange={(val) => onUpdate(val)}
+            value={draft}
+            onChange={setDraft}
             language="markdown"
-            onCtrlEnter={() => setEditing(false)}
+            onCtrlEnter={handleOk}
           />
-        ) : (
+          <div className="md-edit-actions">
+            <button className="md-action-btn md-ok-btn" onClick={handleOk} title="Commit (Ctrl+Enter)">OK</button>
+            <button className="md-action-btn md-cancel-btn" onClick={handleCancel} title="Discard (Escape)">Cancel</button>
+          </div>
+        </div>
+      ) : (
+        <div className="markdown-render-wrap" onDoubleClick={enterEdit}>
           <div
             className="markdown-render"
-            onClick={handleRenderClick}
-            dangerouslySetInnerHTML={{ __html: renderedHtml || '<span class="markdown-placeholder">Click to edit markdown...</span>' }}
+            dangerouslySetInnerHTML={{ __html: renderedHtml || '<span class="markdown-placeholder">Double-click or click Edit to write markdown…</span>' }}
           />
-        )}
-      </div>
+          <div className="md-view-actions">
+            <button className="md-action-btn md-edit-btn" onClick={enterEdit} title="Edit">Edit</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -426,12 +575,14 @@ function CodeCell({
   onMoveUp,
   onMoveDown,
   onOutputModeChange,
+  onToggleLock,
   requestCompletions,
   requestLint,
 }) {
   const outputMode = cell.outputMode || 'auto';
+  const locked = cell.locked || false;
   return (
-    <div className={`cell code-cell${isRunning ? ' running' : ''}`}>
+    <div className={`cell code-cell${isRunning ? ' running' : ''}${locked ? ' cell-locked' : ''}`}>
       <div className="code-cell-header">
         <span className="cell-lang-label">C#</span>
         <button
@@ -467,8 +618,16 @@ function CodeCell({
         onCtrlEnter={onRun}
         onRequestCompletions={requestCompletions}
         onRequestLint={requestLint}
+        readOnly={locked}
       />
       <CellOutput messages={outputs} />
+      <button
+        className={`cell-lock-btn${locked ? ' cell-lock-btn-on' : ''}`}
+        onClick={onToggleLock}
+        title={locked ? 'Unlock cell' : 'Lock cell (read-only)'}
+      >
+        {locked ? '🔒' : '🔓'}
+      </button>
     </div>
   );
 }
@@ -486,6 +645,276 @@ function AddBar({ onAddMarkdown, onAddCode }) {
   );
 }
 
+// ── NuGet Panel ──────────────────────────────────────────────────────────────
+
+const DEFAULT_NUGET_SOURCES = [
+  { name: 'nuget.org', url: 'https://api.nuget.org/v3/index.json', enabled: true },
+];
+
+const NUGET_STATUS_ICONS = {
+  pending: { icon: '○', cls: 'nuget-dot-pending', title: 'Will load on kernel start' },
+  loading: { icon: '⟳', cls: 'nuget-dot-loading', title: 'Loading…' },
+  loaded:  { icon: '✓', cls: 'nuget-dot-loaded',  title: 'Loaded' },
+  error:   { icon: '✕', cls: 'nuget-dot-error',   title: 'Error' },
+};
+
+function NugetStatusDot({ status, error }) {
+  const s = NUGET_STATUS_ICONS[status] || NUGET_STATUS_ICONS.pending;
+  return <span className={`nuget-dot ${s.cls}`} title={status === 'error' && error ? error : s.title}>{s.icon}</span>;
+}
+
+function formatDownloads(n) {
+  if (!n) return '';
+  if (n >= 1e9) return `${(n / 1e9).toFixed(1)}B`;
+  if (n >= 1e6) return `${(n / 1e6).toFixed(0)}M`;
+  if (n >= 1e3) return `${(n / 1e3).toFixed(0)}K`;
+  return String(n);
+}
+
+// Resolve the SearchQueryService URL from a NuGet v3 service index
+const _serviceIndexCache = {};
+async function resolveSearchEndpoint(sourceUrl) {
+  if (_serviceIndexCache[sourceUrl] !== undefined) return _serviceIndexCache[sourceUrl];
+  try {
+    const res = await fetch(sourceUrl, { signal: AbortSignal.timeout(6000) });
+    const index = await res.json();
+    const resource = (index.resources || []).find((r) =>
+      typeof r['@type'] === 'string' && r['@type'].startsWith('SearchQueryService')
+    );
+    _serviceIndexCache[sourceUrl] = resource?.['@id'] ?? null;
+  } catch {
+    _serviceIndexCache[sourceUrl] = null;
+  }
+  return _serviceIndexCache[sourceUrl];
+}
+
+async function searchNuget(sources, query) {
+  const enabled = sources.filter((s) => s.enabled);
+  const results = [];
+  const seen = new Set();
+  await Promise.all(enabled.map(async (source) => {
+    const searchUrl = await resolveSearchEndpoint(source.url);
+    if (!searchUrl) return;
+    try {
+      const res = await fetch(
+        `${searchUrl}?q=${encodeURIComponent(query)}&take=25&prerelease=false`,
+        { signal: AbortSignal.timeout(8000) }
+      );
+      const data = await res.json();
+      for (const pkg of (data.data || [])) {
+        const key = pkg.id.toLowerCase();
+        if (!seen.has(key)) {
+          seen.add(key);
+          results.push({ id: pkg.id, version: pkg.version, description: pkg.description,
+                         totalDownloads: pkg.totalDownloads, source: source.name });
+        }
+      }
+    } catch { /* source unavailable */ }
+  }));
+  return results;
+}
+
+// ── Installed tab ─────────────────────────────────────────────────────────────
+
+function InstalledTab({ packages, kernelStatus, onAdd, onRemove, onRetry }) {
+  const [newId, setNewId] = useState('');
+  const [newVersion, setNewVersion] = useState('');
+  const idRef = useRef(null);
+  const isReady = kernelStatus === 'ready';
+
+  const handleAdd = () => {
+    const id = newId.trim();
+    if (!id) return;
+    onAdd(id, newVersion.trim() || null);
+    setNewId(''); setNewVersion('');
+    idRef.current?.focus();
+  };
+
+  return (
+    <div className="nuget-tab-content">
+      <div className="nuget-list">
+        {packages.length === 0 && <span className="nuget-empty">No startup packages — add one below or browse</span>}
+        {packages.map((pkg) => (
+          <div key={pkg.id} className="nuget-item">
+            <NugetStatusDot status={pkg.status} error={pkg.error} />
+            <span className="nuget-id">{pkg.id}</span>
+            <span className="nuget-version">{pkg.version || 'latest'}</span>
+            {pkg.status === 'error' && (
+              <button className="nuget-action-btn" title={`Retry: ${pkg.error || ''}`}
+                onClick={() => onRetry(pkg.id, pkg.version)}>↺</button>
+            )}
+            {pkg.status === 'pending' && isReady && (
+              <button className="nuget-action-btn" title="Install now"
+                onClick={() => onRetry(pkg.id, pkg.version)}>▶</button>
+            )}
+            <button className="nuget-remove-btn" title="Remove" onClick={() => onRemove(pkg.id)}>×</button>
+          </div>
+        ))}
+      </div>
+      <div className="nuget-add-row">
+        <input ref={idRef} className="nuget-input nuget-id-input" placeholder="Package ID"
+          value={newId} onChange={(e) => setNewId(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleAdd()} spellCheck={false} />
+        <input className="nuget-input nuget-ver-input" placeholder="Version"
+          value={newVersion} onChange={(e) => setNewVersion(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleAdd()} spellCheck={false} />
+        <button className="nuget-add-btn" onClick={handleAdd}>{isReady ? '▶ Install' : '+ Add'}</button>
+      </div>
+    </div>
+  );
+}
+
+// ── Browse tab ────────────────────────────────────────────────────────────────
+
+function BrowseTab({ sources, onAdd, installedPackages }) {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState(null);
+
+  const doSearch = async () => {
+    const q = query.trim();
+    if (!q) return;
+    setSearching(true); setSearchError(null);
+    try {
+      setResults(await searchNuget(sources, q));
+    } catch (e) {
+      setSearchError(e.message);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const isInstalled = (id) => installedPackages.some((p) => p.id.toLowerCase() === id.toLowerCase());
+
+  return (
+    <div className="nuget-tab-content">
+      <div className="nuget-search-bar">
+        <input className="nuget-input nuget-search-input" placeholder="Search packages…"
+          value={query} onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && doSearch()} spellCheck={false} />
+        <button className="nuget-search-btn" onClick={doSearch} disabled={searching}>
+          {searching ? '…' : '⌕'}
+        </button>
+      </div>
+      <div className="nuget-results">
+        {searchError && <div className="nuget-search-error">{searchError}</div>}
+        {!searchError && results.length === 0 && !searching && (
+          <div className="nuget-empty">{query.trim() ? 'No results' : 'Type a package name above and press Enter'}</div>
+        )}
+        {results.map((pkg) => {
+          const installed = isInstalled(pkg.id);
+          return (
+            <div key={pkg.id} className="nuget-result-item">
+              <div className="nuget-result-main">
+                <span className="nuget-result-id">{pkg.id}</span>
+                <span className="nuget-result-version">{pkg.version}</span>
+                {pkg.totalDownloads > 0 && (
+                  <span className="nuget-result-dl" title={`${pkg.totalDownloads.toLocaleString()} downloads`}>
+                    ↓{formatDownloads(pkg.totalDownloads)}
+                  </span>
+                )}
+                <button
+                  className={`nuget-result-add${installed ? ' nuget-result-added' : ''}`}
+                  onClick={() => !installed && onAdd(pkg.id, pkg.version)}
+                  title={installed ? 'Already added' : `Add ${pkg.id} ${pkg.version}`}
+                >
+                  {installed ? '✓' : '+ Add'}
+                </button>
+              </div>
+              {pkg.description && <div className="nuget-result-desc">{pkg.description}</div>}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── Sources tab ───────────────────────────────────────────────────────────────
+
+function SourcesTab({ sources, onAdd, onRemove, onToggle }) {
+  const [name, setName] = useState('');
+  const [url, setUrl] = useState('');
+
+  const handleAdd = () => {
+    if (!name.trim() || !url.trim()) return;
+    onAdd(name.trim(), url.trim());
+    setName(''); setUrl('');
+  };
+
+  return (
+    <div className="nuget-tab-content">
+      <div className="nuget-sources-list">
+        {sources.map((s) => (
+          <div key={s.url} className="nuget-source-item">
+            <input type="checkbox" className="nuget-source-check" checked={s.enabled}
+              onChange={() => onToggle(s.url)} />
+            <span className="nuget-source-name">{s.name}</span>
+            <span className="nuget-source-url">{s.url}</span>
+            <button className="nuget-remove-btn" title="Remove source" onClick={() => onRemove(s.url)}>×</button>
+          </div>
+        ))}
+      </div>
+      <div className="nuget-add-row">
+        <input className="nuget-input" style={{ width: 90 }} placeholder="Name"
+          value={name} onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleAdd()} spellCheck={false} />
+        <input className="nuget-input" style={{ flex: 1 }} placeholder="Feed URL (v3 index.json)"
+          value={url} onChange={(e) => setUrl(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleAdd()} spellCheck={false} />
+        <button className="nuget-add-btn" onClick={handleAdd}>+ Add</button>
+      </div>
+    </div>
+  );
+}
+
+// ── NuGet Panel (tabbed) ──────────────────────────────────────────────────────
+
+function NugetPanel({ isOpen, onToggle, packages, kernelStatus, sources,
+                      onAdd, onRemove, onRetry,
+                      onAddSource, onRemoveSource, onToggleSource }) {
+  const [tab, setTab] = useState('installed');
+  if (!isOpen) return null;
+
+  return (
+    <div className="nuget-panel">
+      <div className="nuget-panel-header">
+        <div className="nuget-tabs">
+          {['installed', 'browse'].map((t) => (
+            <button key={t} className={`nuget-tab${tab === t ? ' nuget-tab-active' : ''}`}
+              onClick={() => setTab(t)}>
+              {t === 'installed' ? 'Installed' : 'Browse'}
+            </button>
+          ))}
+        </div>
+        <div className="nuget-kernel-badge" style={{ color: kernelStatus === 'ready' ? '#4ec9b0' : '#888' }}>
+          kernel {kernelStatus}
+        </div>
+        <button
+          className={`nuget-sources-btn${tab === 'sources' ? ' nuget-sources-btn-active' : ''}`}
+          onClick={() => setTab((prev) => prev === 'sources' ? 'installed' : 'sources')}
+          title="Configure NuGet sources"
+        >⚙</button>
+        <button className="nuget-close-btn" onClick={onToggle} title="Close">×</button>
+      </div>
+      <div className="nuget-body">
+        {tab === 'installed' && (
+          <InstalledTab packages={packages} kernelStatus={kernelStatus}
+            onAdd={onAdd} onRemove={onRemove} onRetry={onRetry} />
+        )}
+        {tab === 'browse' && (
+          <BrowseTab sources={sources} onAdd={onAdd} installedPackages={packages} />
+        )}
+        {tab === 'sources' && (
+          <SourcesTab sources={sources}
+            onAdd={onAddSource} onRemove={onRemoveSource} onToggle={onToggleSource} />
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Toolbar ───────────────────────────────────────────────────────────────────
 
 function Toolbar({
@@ -497,6 +926,10 @@ function Toolbar({
   onSave,
   onLoad,
   onReset,
+  logPanelOpen,
+  onToggleLogs,
+  nugetPanelOpen,
+  onToggleNuget,
 }) {
   const filename = notebookPath
     ? notebookPath.split(/[\\/]/).pop()
@@ -514,6 +947,21 @@ function Toolbar({
       <button onClick={onLoad} title="Open notebook">Open</button>
       <div className="toolbar-separator" />
       <button onClick={onReset} title="Reset kernel state">Reset Kernel</button>
+      <div className="toolbar-separator" />
+      <button
+        onClick={onToggleNuget}
+        title="Toggle NuGet panel"
+        style={nugetPanelOpen ? { background: '#094771', borderColor: '#0e639c' } : undefined}
+      >
+        Packages
+      </button>
+      <button
+        onClick={onToggleLogs}
+        title="Toggle log panel"
+        style={logPanelOpen ? { background: '#094771', borderColor: '#0e639c' } : undefined}
+      >
+        Logs
+      </button>
       <div className="kernel-status">
         <div className={`kernel-dot ${kernelStatus}`} />
         <span>{kernelStatus}</span>
@@ -530,7 +978,7 @@ function makeExampleCells() {
     ({ ...makeCell('code', content), outputMode });
 
   return [
-    md(`# Polyglot Notebook
+    md(`# Notebook
 
 An interactive C# notebook. Press **Ctrl+Enter** to run a cell, or click **▶ Run**.
 
@@ -541,6 +989,7 @@ An interactive C# notebook. Press **Ctrl+Enter** to run a cell, or click **▶ R
 | Table | \`Display.Table(rows)\` · \`.DisplayTable()\` |
 | Chart | \`Display.Graph(chartJsConfig)\` |
 | NuGet | \`#r "nuget: Package, Version"\` |
+| Logging | \`value.Log()\` · \`value.Log("label")\` |
 | Auto-render | Return a value — type is detected automatically |`),
 
     md('## 1 · Basic C#'),
@@ -697,6 +1146,50 @@ for (int frame = 0; frame < 15; frame++) {
         options = new { responsive = true, animation = new { duration = 150 } },
     });
 }`, 'graph'),
+
+    md(`## 8 · Logging
+
+\`.Log()\` writes an entry to the **Logs panel** (open it with the **Logs** button in the toolbar)
+and to a daily rotating file in \`logs/YYYY-MM-DD.log\` beside the app.
+
+- \`value.Log()\` — logs the value and returns it, so it can be chained inline
+- \`value.Log("label")\` — prefixes the entry with a label
+- Entries tagged **USER** appear in teal; notebook activity tagged **NOTEBOOK** appears in blue`),
+
+    cs(`// Plain string
+"Starting data pipeline".Log();
+
+// Label + value (returns the value, so chaining works)
+var threshold = 0.75.Log("threshold");
+
+// Log inside a LINQ chain without breaking it
+var scores = new[] { 0.42, 0.81, 0.67, 0.91, 0.55 };
+var passing = scores
+    .Where(s => s >= threshold)
+    .Select(s => s.Log("pass"))   // logs each passing score
+    .ToList();
+
+// Log a complex object — serialised to JSON automatically
+var summary = new { Total = scores.Length, Passing = passing.Count, Threshold = threshold };
+summary.Log("summary");
+
+// Display the result too
+Display.Html($@"<p style='color:#4ec9b0'>
+  {passing.Count} of {scores.Length} scores passed (threshold {threshold:P0})
+</p>");`),
+
+    cs(`// Logging inside an async loop — useful for tracking long-running work
+var results = new List<(int Step, double Value)>();
+var rng2 = new Random(7);
+
+for (int i = 1; i <= 8; i++) {
+    await Task.Delay(120);
+    var v = Math.Round(rng2.NextDouble() * 100, 1);
+    results.Add((i, v));
+    $"step {i}: {v}".Log("loop");
+}
+
+results.DisplayTable();`),
   ];
 }
 
@@ -708,6 +1201,39 @@ function App() {
   const [runningCells, setRunningCells] = useState(new Set());
   const [kernelStatus, setKernelStatus] = useState('starting');
   const [notebookPath, setNotebookPath] = useState(null);
+  const [logPanelOpen, setLogPanelOpen] = useState(false);
+  const [nugetPanelOpen, setNugetPanelOpen] = useState(false);
+  const [nugetPackages, setNugetPackages] = useState([]);
+  const [nugetSources, setNugetSources] = useState(DEFAULT_NUGET_SOURCES);
+
+  // Refs so callbacks can read current state without stale closure
+  const nugetPackagesRef = useRef(nugetPackages);
+  useEffect(() => { nugetPackagesRef.current = nugetPackages; }, [nugetPackages]);
+  const nugetSourcesRef = useRef(nugetSources);
+  useEffect(() => { nugetSourcesRef.current = nugetSources; }, [nugetSources]);
+
+  // When kernel becomes ready, preload any pending packages
+  useEffect(() => {
+    if (kernelStatus !== 'ready') return;
+    const pending = nugetPackagesRef.current.filter((p) => p.status === 'pending');
+    if (!pending.length || !window.electronAPI) return;
+    setNugetPackages((prev) => prev.map((p) =>
+      p.status === 'pending' ? { ...p, status: 'loading' } : p
+    ));
+    window.electronAPI.sendToKernel({
+      type: 'preload_nugets',
+      packages: pending.map(({ id, version }) => ({ id, version })),
+      sources: nugetSourcesRef.current.filter((s) => s.enabled).map((s) => s.url),
+    });
+  }, [kernelStatus]);
+
+  // Apply font size changes from main process
+  useEffect(() => {
+    if (!window.electronAPI?.onFontSizeChange) return;
+    window.electronAPI.onFontSizeChange((size) => {
+      document.documentElement.style.setProperty('--base-font-size', String(size));
+    });
+  }, []);
 
   // Queue of cells waiting to run (for Run All)
   const runQueueRef = useRef([]);
@@ -795,6 +1321,17 @@ function App() {
           break;
         }
 
+        case 'nuget_status':
+          setNugetPackages((prev) => prev.map((p) =>
+            p.id === msg.id
+              ? { ...p, status: msg.status, ...(msg.message ? { error: msg.message } : { error: undefined }) }
+              : p
+          ));
+          break;
+
+        case 'nuget_preload_complete':
+          break;
+
         case 'reset_complete':
           setKernelStatus('ready');
           break;
@@ -822,6 +1359,7 @@ function App() {
         id: cell.id,
         code: cell.content,
         outputMode: cell.outputMode || 'auto',
+        sources: nugetSourcesRef.current.filter((s) => s.enabled).map((s) => s.url),
       });
     });
   }, []);
@@ -872,26 +1410,55 @@ function App() {
     });
   }, []);
 
+  const buildNotebookData = useCallback(() => ({
+    version: '1.0',
+    title: notebookPath ? notebookPath.split(/[\\/]/).pop().replace('.polyglot', '') : 'notebook',
+    packages: nugetPackages.map(({ id, version }) => ({ id, version: version || null })),
+    sources: nugetSources,
+    cells: cells.map(({ id, type, content, outputMode, locked }) => ({ id, type, content, ...(type === 'code' ? { outputMode: outputMode || 'auto', locked: locked || false } : {}) })),
+  }), [cells, notebookPath, nugetPackages, nugetSources]);
+
+  // File > Save — writes to current path if known, else prompts
   const handleSave = useCallback(async () => {
     if (!window.electronAPI) return;
-    const data = {
-      version: '1.0',
-      title: notebookPath ? notebookPath.split(/[\\/]/).pop().replace('.polyglot', '') : 'notebook',
-      cells: cells.map(({ id, type, content, outputMode }) => ({ id, type, content, ...(type === 'code' ? { outputMode: outputMode || 'auto' } : {}) })),
-    };
-    const result = await window.electronAPI.saveNotebook(data);
+    const data = buildNotebookData();
+    if (notebookPath) {
+      await window.electronAPI.saveNotebookTo(notebookPath, data);
+    } else {
+      const result = await window.electronAPI.saveNotebook(data);
+      if (result.success) setNotebookPath(result.filePath);
+    }
+  }, [buildNotebookData, notebookPath]);
+
+  // File > Save As — always prompts
+  const handleSaveAs = useCallback(async () => {
+    if (!window.electronAPI) return;
+    const result = await window.electronAPI.saveNotebook(buildNotebookData());
     if (result.success) setNotebookPath(result.filePath);
-  }, [cells, notebookPath]);
+  }, [buildNotebookData]);
 
   const handleLoad = useCallback(async () => {
     if (!window.electronAPI) return;
     const result = await window.electronAPI.loadNotebook();
     if (result.success && result.data) {
+      const loadedPkgs = (result.data.packages || []).map((p) => ({ ...p, status: 'pending' }));
+      const loadedSources = result.data.sources || DEFAULT_NUGET_SOURCES;
       setCells(result.data.cells || []);
       setOutputs({});
       setNotebookPath(result.filePath);
+      setNugetPackages(loadedPkgs);
+      setNugetSources(loadedSources);
+      // If kernel is already ready, kick off preload immediately
+      if (kernelStatus === 'ready' && loadedPkgs.length > 0) {
+        setNugetPackages(loadedPkgs.map((p) => ({ ...p, status: 'loading' })));
+        window.electronAPI.sendToKernel({
+          type: 'preload_nugets',
+          packages: loadedPkgs.map(({ id, version }) => ({ id, version })),
+          sources: loadedSources.filter((s) => s.enabled).map((s) => s.url),
+        });
+      }
     }
-  }, []);
+  }, [kernelStatus]);
 
   const handleReset = useCallback(() => {
     if (!window.electronAPI) return;
@@ -900,6 +1467,52 @@ function App() {
     setRunningCells(new Set());
     pendingResolversRef.current = {};
     window.electronAPI.resetKernel();
+  }, []);
+
+  const addNugetPackage = useCallback((id, version) => {
+    const isReady = kernelStatus === 'ready';
+    setNugetPackages((prev) => {
+      if (prev.some((p) => p.id.toLowerCase() === id.toLowerCase())) return prev;
+      return [...prev, { id, version: version || null, status: isReady ? 'loading' : 'pending' }];
+    });
+    if (isReady && window.electronAPI) {
+      window.electronAPI.sendToKernel({
+        type: 'preload_nugets',
+        packages: [{ id, version: version || null }],
+        sources: nugetSourcesRef.current.filter((s) => s.enabled).map((s) => s.url),
+      });
+    }
+  }, [kernelStatus]);
+
+  const removeNugetPackage = useCallback((id) => {
+    setNugetPackages((prev) => prev.filter((p) => p.id !== id));
+  }, []);
+
+  const retryNugetPackage = useCallback((id, version) => {
+    if (!window.electronAPI) return;
+    setNugetPackages((prev) => prev.map((p) =>
+      p.id === id ? { ...p, status: 'loading', error: undefined } : p
+    ));
+    window.electronAPI.sendToKernel({
+      type: 'preload_nugets',
+      packages: [{ id, version: version || null }],
+      sources: nugetSourcesRef.current.filter((s) => s.enabled).map((s) => s.url),
+    });
+  }, []);
+
+  const addNugetSource = useCallback((name, url) => {
+    setNugetSources((prev) => {
+      if (prev.some((s) => s.url === url)) return prev;
+      return [...prev, { name, url, enabled: true }];
+    });
+  }, []);
+
+  const removeNugetSource = useCallback((url) => {
+    setNugetSources((prev) => prev.filter((s) => s.url !== url));
+  }, []);
+
+  const toggleNugetSource = useCallback((url) => {
+    setNugetSources((prev) => prev.map((s) => s.url === url ? { ...s, enabled: !s.enabled } : s));
   }, []);
 
   const requestCompletions = useCallback((code, position) => {
@@ -932,6 +1545,38 @@ function App() {
     });
   }, []);
 
+  const handleNew = useCallback(() => {
+    if (cells.length > 0 && !window.confirm('Create a new notebook? Unsaved changes will be lost.')) return;
+    setCells([]);
+    setOutputs({});
+    setRunningCells(new Set());
+    setNotebookPath(null);
+    setNugetPackages([]);
+    setNugetSources(DEFAULT_NUGET_SOURCES);
+    pendingResolversRef.current = {};
+  }, [cells]);
+
+  const clearAllOutputs = useCallback(() => setOutputs({}), []);
+
+  // Menu action dispatch — use a ref so the handler always sees fresh callbacks
+  const menuHandlersRef = useRef({});
+  menuHandlersRef.current = {
+    new: handleNew,
+    open: handleLoad,
+    save: handleSave,
+    'save-as': handleSaveAs,
+    'run-all': runAll,
+    reset: handleReset,
+    'clear-output': clearAllOutputs,
+  };
+
+  useEffect(() => {
+    if (!window.electronAPI?.onMenuAction) return;
+    window.electronAPI.onMenuAction((action) => {
+      menuHandlersRef.current[action]?.();
+    });
+  }, []);
+
   return (
     <div id="app">
       <Toolbar
@@ -943,7 +1588,13 @@ function App() {
         onSave={handleSave}
         onLoad={handleLoad}
         onReset={handleReset}
+        logPanelOpen={logPanelOpen}
+        onToggleLogs={() => setLogPanelOpen((v) => !v)}
+        nugetPanelOpen={nugetPanelOpen}
+        onToggleNuget={() => setNugetPanelOpen((v) => !v)}
       />
+      <div id="main-area">
+      <div id="content-area">
       <div className="notebook">
         {cells.length === 0 && (
           <div className="empty-notebook">
@@ -981,6 +1632,7 @@ function App() {
                 onMoveUp={() => moveCell(cell.id, -1)}
                 onMoveDown={() => moveCell(cell.id, 1)}
                 onOutputModeChange={(mode) => updateCellProp(cell.id, 'outputMode', mode)}
+                onToggleLock={() => updateCellProp(cell.id, 'locked', !(cell.locked || false))}
                 requestCompletions={requestCompletions}
                 requestLint={requestLint}
               />
@@ -992,6 +1644,22 @@ function App() {
           </div>
         ))}
       </div>
+      <LogPanel isOpen={logPanelOpen} onToggle={() => setLogPanelOpen((v) => !v)} />
+      </div>{/* #content-area */}
+      <NugetPanel
+        isOpen={nugetPanelOpen}
+        onToggle={() => setNugetPanelOpen((v) => !v)}
+        packages={nugetPackages}
+        kernelStatus={kernelStatus}
+        sources={nugetSources}
+        onAdd={addNugetPackage}
+        onRemove={removeNugetPackage}
+        onRetry={retryNugetPackage}
+        onAddSource={addNugetSource}
+        onRemoveSource={removeNugetSource}
+        onToggleSource={toggleNugetSource}
+      />
+      </div>{/* #main-area */}
     </div>
   );
 }

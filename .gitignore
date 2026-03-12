@@ -19,3 +19,6 @@ kernel/obj/
 # Electron packager output
 out/
 release/
+
+# Daily log files
+logs/
