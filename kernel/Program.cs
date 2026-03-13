@@ -10,6 +10,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Threading;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
@@ -308,6 +309,11 @@ public class ScriptGlobals
     public ConfigHelper Config => ConfigContext.Current;
 }
 
+// ── DB connection info record ─────────────────────────────────────────────────
+
+record DbConnectionInfo(string Id, string Name, string Provider,
+    string ConnectionString, string VarName, MetadataReference MetaRef, DbSchema Schema);
+
 // ── Kernel entry point ───────────────────────────────────────────────────────
 
 class Program
@@ -321,6 +327,14 @@ class Program
         var realStdout = new StreamWriter(Console.OpenStandardOutput()) { AutoFlush = true };
         Console.OutputEncoding = Encoding.UTF8;
         LogContext.Output = realStdout;
+
+        // Allow Roslyn scripts to resolve dynamically compiled in-memory assemblies
+        AppDomain.CurrentDomain.AssemblyResolve += (_, args) =>
+        {
+            var name = new AssemblyName(args.Name).Name;
+            return AppDomain.CurrentDomain.GetAssemblies()
+                .FirstOrDefault(a => a.GetName().Name == name);
+        };
 
         var display = new DisplayHelper(realStdout);
         var globals = new ScriptGlobals { Display = display };
@@ -345,6 +359,25 @@ class Program
             );
 
         ScriptState<object?>? state = null;
+
+        // ── DB connection state ───────────────────────────────────────────────
+        var attachedDbs = new Dictionary<string, DbConnectionInfo>();
+        var dbMetaRefs  = new List<MetadataReference>();
+
+        // Helper: inject a DbContext variable into the script state
+        async Task InjectDbContextAsync(DbConnectionInfo info)
+        {
+            var opts    = options.AddReferences(dbMetaRefs);
+            var ns      = $"DynDb_{DbCodeGen.SanitizeTypeName(info.Name)}";
+            var ctx     = $"{ns}.{DbCodeGen.SanitizeTypeName(info.Name)}DbContext";
+            var code    = $"var {info.VarName} = new {ctx}({S(info.ConnectionString)}, {S(info.Provider)});";
+            state = state == null
+                ? await CSharpScript.RunAsync<object?>(code, opts, globals, typeof(ScriptGlobals))
+                : await state.ContinueWithAsync<object?>(code, opts);
+        }
+
+        // Safe C# string literal
+        string S(string value) => JsonSerializer.Serialize(value);
 
         realStdout.WriteLine(JsonSerializer.Serialize(new { type = "ready" }));
 
@@ -464,16 +497,17 @@ class Program
                     using var captureWriter = new StringWriter(captureBuffer);
                     Console.SetOut(captureWriter);
 
+                    var effectiveOptions = options.AddReferences(dbMetaRefs);
                     try
                     {
                         if (state == null)
                         {
                             state = await CSharpScript.RunAsync<object?>(
-                                cleanCode, options, globals, typeof(ScriptGlobals));
+                                cleanCode, effectiveOptions, globals, typeof(ScriptGlobals));
                         }
                         else
                         {
-                            state = await state.ContinueWithAsync<object?>(cleanCode, options);
+                            state = await state.ContinueWithAsync<object?>(cleanCode, effectiveOptions);
                         }
                     }
                     catch (CompilationErrorException ex)
@@ -580,7 +614,130 @@ class Program
                 case "reset":
                 {
                     state = null;
+                    foreach (var info in attachedDbs.Values)
+                    {
+                        try { await InjectDbContextAsync(info); }
+                        catch { /* best-effort; kernel was reset */ }
+                    }
                     realStdout.WriteLine(JsonSerializer.Serialize(new { type = "reset_complete" }));
+                    break;
+                }
+
+                case "db_connect":
+                {
+                    var connectionId  = msg.GetProperty("connectionId").GetString()!;
+                    var connName      = msg.GetProperty("name").GetString()!;
+                    var providerKey   = msg.GetProperty("provider").GetString()!;
+                    var connString    = msg.GetProperty("connectionString").GetString()!;
+                    var varName       = msg.TryGetProperty("varName", out var vnProp)
+                        ? vnProp.GetString() ?? DbCodeGen.SanitizeVarName(connName)
+                        : DbCodeGen.SanitizeVarName(connName);
+
+                    try
+                    {
+                        var provider = DbProviders.Get(providerKey);
+
+                        // 1. Introspect schema
+                        var schema = await provider.IntrospectAsync(connectionId, connString);
+
+                        // 2. Send schema to renderer for tree display
+                        var schemaPayload = new
+                        {
+                            type         = "db_schema",
+                            connectionId,
+                            databaseName = schema.DatabaseName,
+                            tables       = schema.Tables.Select(t => new
+                            {
+                                schema   = t.Schema,
+                                name     = t.Name,
+                                columns  = t.Columns.Select(c => new
+                                {
+                                    name        = c.Name,
+                                    dbType      = c.DbType,
+                                    csharpType  = c.CSharpType,
+                                    isPrimaryKey= c.IsPrimaryKey,
+                                    isNullable  = c.IsNullable,
+                                    isIdentity  = c.IsIdentity,
+                                }).ToList(),
+                            }).ToList(),
+                        };
+                        lock (realStdout) { realStdout.WriteLine(JsonSerializer.Serialize(schemaPayload)); }
+
+                        // 3. Generate + compile
+                        var source = DbCodeGen.GenerateSource(connName, provider, schema);
+                        var (_, metaRef) = DbCodeGen.Compile(source, provider);
+
+                        // 4. Update state
+                        if (attachedDbs.TryGetValue(connectionId, out var existing))
+                            dbMetaRefs.Remove(existing.MetaRef);
+                        dbMetaRefs.Add(metaRef);
+
+                        var info = new DbConnectionInfo(connectionId, connName, providerKey, connString, varName, metaRef, schema);
+                        attachedDbs[connectionId] = info;
+
+                        // 5. Inject variable
+                        await InjectDbContextAsync(info);
+
+                        // 6. Confirm ready
+                        lock (realStdout) { realStdout.WriteLine(JsonSerializer.Serialize(new { type = "db_ready", connectionId, varName })); }
+                    }
+                    catch (Exception ex)
+                    {
+                        lock (realStdout) { realStdout.WriteLine(JsonSerializer.Serialize(new { type = "db_error", connectionId, message = ex.Message })); }
+                    }
+                    break;
+                }
+
+                case "db_disconnect":
+                {
+                    var connectionId = msg.GetProperty("connectionId").GetString()!;
+                    if (attachedDbs.TryGetValue(connectionId, out var info))
+                    {
+                        dbMetaRefs.Remove(info.MetaRef);
+                        attachedDbs.Remove(connectionId);
+                    }
+                    lock (realStdout) { realStdout.WriteLine(JsonSerializer.Serialize(new { type = "db_disconnected", connectionId })); }
+                    break;
+                }
+
+                case "db_refresh":
+                {
+                    var connectionId = msg.GetProperty("connectionId").GetString()!;
+                    if (!attachedDbs.TryGetValue(connectionId, out var info))
+                        break;
+
+                    try
+                    {
+                        var provider = DbProviders.Get(info.Provider);
+                        var schema   = await provider.IntrospectAsync(connectionId, info.ConnectionString);
+
+                        var schemaPayload = new
+                        {
+                            type         = "db_schema",
+                            connectionId,
+                            databaseName = schema.DatabaseName,
+                            tables       = schema.Tables.Select(t => new
+                            {
+                                schema   = t.Schema,
+                                name     = t.Name,
+                                columns  = t.Columns.Select(c => new
+                                {
+                                    name        = c.Name,
+                                    dbType      = c.DbType,
+                                    csharpType  = c.CSharpType,
+                                    isPrimaryKey= c.IsPrimaryKey,
+                                    isNullable  = c.IsNullable,
+                                    isIdentity  = c.IsIdentity,
+                                }).ToList(),
+                            }).ToList(),
+                        };
+                        lock (realStdout) { realStdout.WriteLine(JsonSerializer.Serialize(schemaPayload)); }
+                        attachedDbs[connectionId] = info with { Schema = schema };
+                    }
+                    catch (Exception ex)
+                    {
+                        lock (realStdout) { realStdout.WriteLine(JsonSerializer.Serialize(new { type = "db_error", connectionId, message = ex.Message })); }
+                    }
                     break;
                 }
 

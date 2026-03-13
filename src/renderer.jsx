@@ -527,7 +527,18 @@ function DataTable({ rows }) {
   if (!Array.isArray(rows) || rows.length === 0) {
     return <div className="output-stdout">(empty table)</div>;
   }
-  const columns = Object.keys(rows[0]);
+  const [page, setPage]         = useState(0);
+  const [pageSize, setPageSize] = useState(20);
+
+  const columns   = Object.keys(rows[0]);
+  const total     = rows.length;
+  const pageCount = Math.ceil(total / pageSize);
+  const start     = page * pageSize;
+  const end       = Math.min(start + pageSize, total);
+  const pageRows  = rows.slice(start, end);
+
+  const onPageSize = (e) => { setPageSize(Number(e.target.value)); setPage(0); };
+
   return (
     <div className="data-table-wrap">
       <table className="data-table">
@@ -535,13 +546,32 @@ function DataTable({ rows }) {
           <tr>{columns.map((c) => <th key={c}>{c}</th>)}</tr>
         </thead>
         <tbody>
-          {rows.map((row, i) => (
-            <tr key={i}>
+          {pageRows.map((row, i) => (
+            <tr key={start + i}>
               {columns.map((c) => <td key={c}>{String(row[c] ?? '')}</td>)}
             </tr>
           ))}
         </tbody>
       </table>
+      {total > 20 && (
+        <div className="table-pager">
+          <span className="table-pager-info">
+            {start + 1}–{end} of <strong>{total}</strong> rows
+          </span>
+          <div className="table-pager-controls">
+            <button className="table-pager-btn" onClick={() => setPage(0)}        disabled={page === 0}>«</button>
+            <button className="table-pager-btn" onClick={() => setPage(p => p-1)} disabled={page === 0}>‹</button>
+            <span className="table-pager-page">page {page + 1} / {pageCount}</span>
+            <button className="table-pager-btn" onClick={() => setPage(p => p+1)} disabled={page >= pageCount - 1}>›</button>
+            <button className="table-pager-btn" onClick={() => setPage(pageCount-1)} disabled={page >= pageCount - 1}>»</button>
+          </div>
+          <select className="table-pager-size" value={pageSize} onChange={onPageSize}>
+            <option value={20}>20 / page</option>
+            <option value={50}>50 / page</option>
+            <option value={100}>100 / page</option>
+          </select>
+        </div>
+      )}
     </div>
   );
 }
@@ -592,8 +622,9 @@ function LogEntry({ entry }) {
 }
 
 // ── Resize hook ───────────────────────────────────────────────────────────────
-// side: 'left'  → handle on left edge, dragging left increases width
-//       'top'   → handle on top edge, dragging up increases height
+// side: 'left'  → handle on left edge,  dragging left  increases width
+//       'right' → handle on right edge, dragging right increases width
+//       'top'   → handle on top edge,   dragging up    increases height
 
 function useResize(defaultSize, side) {
   const [size, setSize] = useState(defaultSize);
@@ -602,13 +633,15 @@ function useResize(defaultSize, side) {
 
   const onMouseDown = useCallback((e) => {
     e.preventDefault();
-    const startPos = side === 'left' ? e.clientX : e.clientY;
+    const startPos = side === 'top' ? e.clientY : e.clientX;
     const startSize = sizeRef.current;
     const min = 150;
-    const max = side === 'left' ? 700 : 540;
+    const max = side === 'top' ? 540 : 700;
 
     const onMove = (ev) => {
-      const delta = side === 'left' ? startPos - ev.clientX : startPos - ev.clientY;
+      const delta = side === 'left'  ? startPos - ev.clientX
+                  : side === 'right' ? ev.clientX - startPos
+                  :                    startPos - ev.clientY; // 'top'
       setSize(Math.max(min, Math.min(max, startSize + delta)));
     };
     const onUp = () => {
@@ -618,7 +651,7 @@ function useResize(defaultSize, side) {
       document.body.style.cursor = '';
     };
     document.body.style.userSelect = 'none';
-    document.body.style.cursor = side === 'left' ? 'col-resize' : 'row-resize';
+    document.body.style.cursor = side === 'top' ? 'row-resize' : 'col-resize';
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onUp);
   }, [side]);
@@ -1339,6 +1372,208 @@ function ConfigPanel({ isOpen, onToggle, config, onAdd, onRemove, onUpdate }) {
   );
 }
 
+// ── DB Panel components ────────────────────────────────────────────────────────
+
+const DB_PROVIDERS = [
+  { key: 'sqlite',     label: 'SQLite' },
+  { key: 'sqlserver',  label: 'SQL Server' },
+  { key: 'postgresql', label: 'PostgreSQL' },
+];
+
+function DbStatusDot({ status }) {
+  return <span className={`db-status-dot db-status-${status || 'none'}`} />;
+}
+
+function DbSchemaTree({ schema }) {
+  const [expanded, setExpanded] = useState({});
+  if (!schema) return null;
+  const toggle = (name) => setExpanded((prev) => ({ ...prev, [name]: !prev[name] }));
+  return (
+    <div className="db-schema-tree">
+      {schema.tables.map((table) => (
+        <div key={`${table.schema}.${table.name}`} className="db-table-node">
+          <div className="db-table-header" onClick={() => toggle(`${table.schema}.${table.name}`)}>
+            <span className="db-table-arrow">{expanded[`${table.schema}.${table.name}`] ? '▾' : '▸'}</span>
+            <span className="db-table-name">{table.schema ? `${table.schema}.${table.name}` : table.name}</span>
+            <span className="db-col-count">{table.columns.length}</span>
+          </div>
+          {expanded[`${table.schema}.${table.name}`] && (
+            <div className="db-columns-list">
+              {table.columns.map((col) => (
+                <div key={col.name} className={`db-column-node${col.isPrimaryKey ? ' db-col-pk' : ''}`}>
+                  <span className="db-col-name">{col.name}</span>
+                  <span className="db-col-type">{col.csharpType}</span>
+                  {col.isPrimaryKey && <span className="db-pk-badge">PK</span>}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function DbConnectionForm({ connection, onSave, onCancel }) {
+  const [name, setName] = useState(connection?.name ?? '');
+  const [provider, setProvider] = useState(connection?.provider ?? 'sqlite');
+  const [connStr, setConnStr] = useState(connection?.connectionString ?? '');
+
+  const handleSave = () => {
+    const n = name.trim();
+    const cs = connStr.trim();
+    if (!n || !cs) return;
+    onSave({
+      id: connection?.id ?? uuidv4(),
+      name: n,
+      provider,
+      connectionString: cs,
+    });
+  };
+
+  return (
+    <div className="db-connection-form">
+      <input
+        className="nuget-input"
+        placeholder="Connection name"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        spellCheck={false}
+      />
+      <select
+        className="nuget-input db-provider-select"
+        value={provider}
+        onChange={(e) => setProvider(e.target.value)}
+      >
+        {DB_PROVIDERS.map((p) => (
+          <option key={p.key} value={p.key}>{p.label}</option>
+        ))}
+      </select>
+      <input
+        className="nuget-input db-connstr-input"
+        placeholder="Connection string"
+        value={connStr}
+        onChange={(e) => setConnStr(e.target.value)}
+        spellCheck={false}
+      />
+      <div className="db-form-actions">
+        <button className="nuget-remove-btn db-form-btn" onClick={onCancel}>Cancel</button>
+        <button className="nuget-add-btn db-form-btn" onClick={handleSave}>Save</button>
+      </div>
+    </div>
+  );
+}
+
+function DbPanel({
+  isOpen, onToggle,
+  connections, attachedDbs, notebookId,
+  onAttach, onDetach, onRefresh,
+  onAdd, onUpdate, onRemove,
+}) {
+  const [height, onResizeMouseDown] = useResize(280, 'top');
+  const [leftWidth, onColResizeMouseDown] = useResize(260, 'right');
+  const [editingConn, setEditingConn] = useState(null); // null | 'new' | connection object
+
+  if (!isOpen) return null;
+
+  const handleSaveConn = (conn) => {
+    if (editingConn === 'new') onAdd(conn);
+    else onUpdate(conn.id, conn);
+    setEditingConn(null);
+  };
+
+  return (
+    <div className="db-panel" style={{ height }}>
+      <div className="resize-handle resize-v" onMouseDown={onResizeMouseDown} />
+      <div className="db-panel-header">
+        <span className="db-panel-title">Databases</span>
+        <button className="nuget-add-btn db-add-btn" onClick={() => setEditingConn('new')} title="Add connection">+ Add</button>
+        <button className="nuget-close-btn" onClick={onToggle} title="Close">×</button>
+      </div>
+      <div className="db-panel-body">
+        {/* Left: global connection list */}
+        <div className="db-connections-col" style={{ width: leftWidth, minWidth: leftWidth }}>
+          {connections.length === 0 && (
+            <span className="config-empty" style={{ padding: '10px 12px', display: 'block' }}>
+              No connections — click + Add
+            </span>
+          )}
+          {connections.map((conn) => {
+            const attached = attachedDbs.find((d) => d.connectionId === conn.id);
+            const prov = DB_PROVIDERS.find((p) => p.key === conn.provider);
+            return (
+              <div
+                key={conn.id}
+                className={`db-connection-item${attached ? ' db-connection-attached' : ''}`}
+              >
+                <div className="db-conn-top">
+                  <DbStatusDot status={attached?.status ?? 'none'} />
+                  <span className="db-conn-name">{conn.name}</span>
+                  <span className="db-provider-badge">{prov?.label ?? conn.provider}</span>
+                </div>
+                <div className="db-conn-actions">
+                  {!attached ? (
+                    <button className="db-action-btn db-attach-btn" onClick={() => onAttach(conn.id)} title="Attach to notebook">
+                      Attach
+                    </button>
+                  ) : (
+                    <button className="db-action-btn db-detach-btn" onClick={() => onDetach(conn.id)} title="Detach">
+                      Detach
+                    </button>
+                  )}
+                  <button className="db-icon-btn db-edit-btn" onClick={() => setEditingConn(conn)} title="Edit">✎</button>
+                  <button className="db-icon-btn" onClick={() => { if (window.confirm(`Remove connection "${conn.name}"?`)) onRemove(conn.id); }} title="Remove">×</button>
+                </div>
+              </div>
+            );
+          })}
+          {editingConn && (
+            <DbConnectionForm
+              connection={editingConn === 'new' ? null : editingConn}
+              onSave={handleSaveConn}
+              onCancel={() => setEditingConn(null)}
+            />
+          )}
+        </div>
+
+        {/* Draggable column divider */}
+        <div className="db-col-divider" onMouseDown={onColResizeMouseDown} />
+
+        {/* Right: schema tree for attached DBs */}
+        <div className="db-schema-col">
+          {attachedDbs.length === 0 && (
+            <span className="config-empty" style={{ padding: '10px 12px', display: 'block' }}>
+              No databases attached — click Attach
+            </span>
+          )}
+          {attachedDbs.map((db) => {
+            const conn = connections.find((c) => c.id === db.connectionId);
+            return (
+              <div key={db.connectionId} className="db-schema-section">
+                <div className="db-schema-header">
+                  <DbStatusDot status={db.status} />
+                  <span className="db-conn-name">{conn?.name ?? db.connectionId}</span>
+                  {db.varName && <span className="db-var-badge">{db.varName}</span>}
+                  <button
+                    className="db-icon-btn"
+                    onClick={() => onRefresh(db.connectionId)}
+                    title="Refresh schema"
+                    disabled={db.status === 'connecting'}
+                  >↻</button>
+                </div>
+                {db.status === 'error' && (
+                  <div className="db-error-msg">{db.error}</div>
+                )}
+                {db.schema && <DbSchemaTree schema={db.schema} />}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Toolbar ───────────────────────────────────────────────────────────────────
 
 function Toolbar({
@@ -1359,6 +1594,8 @@ function Toolbar({
   configPanelOpen,
   onToggleConfig,
   configCount,
+  dbPanelOpen,
+  onToggleDb,
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
@@ -1418,6 +1655,9 @@ function Toolbar({
       <button onClick={onToggleLogs} title="Toggle log panel" className={logPanelOpen ? 'panel-active' : undefined}>
         Logs
       </button>
+      <button onClick={onToggleDb} title="Toggle database panel" className={dbPanelOpen ? 'panel-active' : undefined}>
+        DB
+      </button>
       <div className="kernel-status">
         <div className={`kernel-dot ${kernelStatus}`} />
         <span>{kernelStatus}</span>
@@ -1447,6 +1687,7 @@ An interactive C# notebook. Press **Ctrl+Enter** to run a cell, or click **▶ R
 | NuGet | \`#r "nuget: Package, Version"\` |
 | Logging | \`value.Log()\` · \`value.Log("label")\` |
 | Config | \`Config["Key"]\` · \`Config.Get("Key", "default")\` |
+| Database | Attach via **DB** panel → \`mydb.Users.ToList()\` |
 | Auto-render | Return a value — type is detected automatically |`),
 
     md('## 1 · Basic C#'),
@@ -1677,6 +1918,81 @@ Display.Html($@"
   <tr><td style='padding:3px 12px'>NonExistent</td><td style='padding:3px 12px;color:#555'>{missing}</td></tr>
   <tr><td style='padding:3px 12px;color:#555'>All entries</td><td style='padding:3px 12px;color:#555'>{Config.All.Count} defined</td></tr>
 </table>");`),
+
+    md(`## 10 · Databases
+
+Use the **DB** button in the toolbar to open the database panel.
+
+1. Click **+ Add** to register a named connection (SQLite, SQL Server, or PostgreSQL)
+2. Click **Attach** to connect it to this notebook — the kernel introspects the schema and injects a typed \`DbContext\` variable
+3. The variable name is derived from the connection name (e.g. *"My CRM"* → \`myCrm\`)
+4. All tables appear as strongly-typed \`DbSet<T>\` properties — autocomplete works out of the box
+
+| Task | Expression |
+|------|------------|
+| Fetch all rows | \`mydb.Users.ToList()\` |
+| Filter | \`mydb.Orders.Where(o => o.Total > 100).ToList()\` |
+| Project | \`mydb.Products.Select(p => new { p.Name, p.Price }).ToList()\` |
+| Count | \`mydb.Users.Count()\` |
+| Raw SQL | \`mydb.Users.FromSqlRaw("SELECT * FROM users WHERE active=1").ToList()\` |
+| Async | \`await mydb.Orders.ToListAsync()\` |
+
+The connection string stored in the DB panel is passed directly to EF Core — no code changes needed when switching environments.`),
+
+    cs(`// ── Replace "mydb" with your actual connection variable name ──────────────
+
+// 1. List all rows as a table
+// mydb.Users.ToList().DisplayTable();
+
+// 2. Filter and project
+// mydb.Orders
+//     .Where(o => o.Total > 100)
+//     .Select(o => new { o.Id, o.CustomerName, o.Total, o.CreatedAt })
+//     .OrderByDescending(o => o.Total)
+//     .Take(20)
+//     .ToList()
+//     .DisplayTable();
+
+// 3. Aggregate stats
+// var stats = new {
+//     Total  = mydb.Orders.Count(),
+//     Revenue = mydb.Orders.Sum(o => (decimal?)o.Total) ?? 0,
+//     Avg     = mydb.Orders.Average(o => (decimal?)o.Total) ?? 0,
+// };
+// stats.Display();
+
+// 4. Raw SQL (useful for complex queries or non-EF operations)
+// mydb.Database.ExecuteSqlRaw("UPDATE settings SET value='1' WHERE key='maintenance'");
+
+Display.Html(@"
+<p style='color:#5a7080;font-style:italic;font-size:12px'>
+  Attach a database in the <strong style='color:#c4964a'>DB panel</strong> to run these examples.<br>
+  The variable name shown in the schema panel (e.g. <code style='color:#6889a0'>mydb</code>)
+  is what you use in code.
+</p>");`),
+
+    cs(`// ── Connection string examples ────────────────────────────────────────────
+//
+// SQLite  (file path):
+//   Data Source=/path/to/database.db
+//
+// SQL Server:
+//   Server=localhost;Database=MyDb;User Id=sa;Password=secret;TrustServerCertificate=True
+//
+// PostgreSQL:
+//   Host=localhost;Database=mydb;Username=postgres;Password=secret
+//
+// ── Multiple databases in the same notebook ───────────────────────────────
+// Attach more than one connection — each gets its own variable:
+//
+//   crm.Customers.ToList()          // "CRM" connection
+//   analytics.PageViews.Count()     // "Analytics" connection
+//
+// ── Reset-safe ────────────────────────────────────────────────────────────
+// All attached databases are automatically re-injected after a kernel reset,
+// so your variables are always available without re-attaching.
+
+Display.Html(@"<pre style='color:#6889a0;margin:0'>// Ready — attach a DB and start querying</pre>");`),
   ];
 }
 
@@ -1716,6 +2032,8 @@ function createNotebook(withExamples = false) {
     logPanelOpen: false,
     nugetPanelOpen: false,
     configPanelOpen: false,
+    attachedDbs: [],   // [{ connectionId, status, varName, schema, error }]
+    dbPanelOpen: false,
   };
 }
 
@@ -2037,9 +2355,17 @@ function NotebookView({
   onAddNugetPackage,
   onRemoveNugetPackage,
   onRetryNugetPackage,
+  dbConnections,
+  onAttachDb,
+  onDetachDb,
+  onRefreshDb,
+  onAddDbConnection,
+  onUpdateDbConnection,
+  onRemoveDbConnection,
 }) {
   const { cells, outputs, running, kernelStatus, nugetPackages, nugetSources,
-          config, logPanelOpen, nugetPanelOpen, configPanelOpen, path: notebookPath } = nb;
+          config, logPanelOpen, nugetPanelOpen, configPanelOpen,
+          attachedDbs, dbPanelOpen, path: notebookPath } = nb;
 
   const addCell = (type, afterIndex = -1) => {
     const newCell = makeCell(type, '');
@@ -2097,6 +2423,8 @@ function NotebookView({
         configPanelOpen={configPanelOpen}
         onToggleConfig={() => onSetNb((n) => ({ configPanelOpen: !n.configPanelOpen }))}
         configCount={config.length}
+        dbPanelOpen={dbPanelOpen}
+        onToggleDb={() => onSetNb((n) => ({ dbPanelOpen: !n.dbPanelOpen }))}
       />
       <div className="main-area">
         <div className="content-area">
@@ -2185,6 +2513,19 @@ function NotebookView({
           onUpdate={(i, val) => onSetNbDirty((n) => ({
             config: n.config.map((e, idx) => idx === i ? { ...e, value: val } : e),
           }))}
+        />
+        <DbPanel
+          isOpen={dbPanelOpen}
+          onToggle={() => onSetNb((n) => ({ dbPanelOpen: !n.dbPanelOpen }))}
+          connections={dbConnections}
+          attachedDbs={attachedDbs}
+          notebookId={nb.id}
+          onAttach={onAttachDb}
+          onDetach={onDetachDb}
+          onRefresh={onRefreshDb}
+          onAdd={onAddDbConnection}
+          onUpdate={onUpdateDbConnection}
+          onRemove={onRemoveDbConnection}
         />
       </div>{/* .main-area */}
     </div>
@@ -2417,6 +2758,7 @@ function App() {
   const [docsOpen, setDocsOpen] = useState(false);
   const [libraryPanelOpen, setLibraryPanelOpen] = useState(false);
   const [libEditors, setLibEditors] = useState([]);
+  const [dbConnections, setDbConnections] = useState([]);
 
   // Synchronized ref pair — callbacks read fresh state without stale closures
   const notebooksRef = useRef(notebooks);
@@ -2425,6 +2767,41 @@ function App() {
   useEffect(() => { activeIdRef.current = activeId; }, [activeId]);
   const libEditorsRef = useRef(libEditors);
   useEffect(() => { libEditorsRef.current = libEditors; }, [libEditors]);
+  const dbConnectionsRef = useRef(dbConnections);
+  useEffect(() => { dbConnectionsRef.current = dbConnections; }, [dbConnections]);
+
+  // Auto-save the notebook file whenever DB attachment state changes (ready/detached),
+  // so users don't need to manually save to persist which DBs are attached.
+  const prevDbReadyRef = useRef({});
+  useEffect(() => {
+    for (const nb of notebooks) {
+      if (!nb.path) continue;
+      const curr = nb.attachedDbs
+        .filter((d) => d.status === 'ready')
+        .map((d) => d.connectionId)
+        .sort()
+        .join(',');
+      const prev = prevDbReadyRef.current[nb.id];
+      if (prev !== undefined && prev !== curr) {
+        // Build data directly from nb (not via notebooksRef, which may lag)
+        const data = {
+          version: '1.0',
+          title: getNotebookDisplayName(nb.path, nb.title, 'notebook'),
+          packages: nb.nugetPackages.map(({ id, version }) => ({ id, version: version || null })),
+          sources: nb.nugetSources,
+          config: nb.config.filter((e) => e.key.trim()),
+          attachedDbIds: nb.attachedDbs.filter((d) => d.status === 'ready').map((d) => d.connectionId),
+          cells: nb.cells.map(({ id, type, content, outputMode, locked }) => ({
+            id, type, content,
+            ...(type === 'code' ? { outputMode: outputMode || 'auto', locked: locked || false } : {}),
+          })),
+        };
+        window.electronAPI?.saveNotebookTo(nb.path, data);
+      }
+      prevDbReadyRef.current[nb.id] = curr;
+    }
+  }, [notebooks]);
+
   const prevNbIdRef = useRef(notebooks[0].id);
 
   // ── State helpers ──────────────────────────────────────────────────────────
@@ -2455,6 +2832,48 @@ function App() {
       }
     });
   }, []);
+
+  // ── DB connections load/save ───────────────────────────────────────────────
+  useEffect(() => {
+    window.electronAPI?.loadDbConnections().then((list) => {
+      if (Array.isArray(list)) setDbConnections(list);
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    window.electronAPI?.saveDbConnections(dbConnections);
+  }, [dbConnections]);
+
+  // When dbConnections first loads, send db_connect for any notebooks whose
+  // saved DBs are still 'connecting' (kernel was already ready before connections loaded).
+  useEffect(() => {
+    if (dbConnections.length === 0) return;
+    for (const nb of notebooksRef.current) {
+      if (nb.kernelStatus !== 'ready') continue;
+      const toReattach = nb.attachedDbs.filter((d) => d.status === 'connecting');
+      for (const d of toReattach) {
+        const conn = dbConnections.find((c) => c.id === d.connectionId);
+        if (!conn) continue;
+        const varName = conn.name
+          .replace(/[^a-zA-Z0-9]+(.)/g, (_, ch) => ch.toUpperCase())
+          .replace(/^[A-Z]/, (ch) => ch.toLowerCase())
+          .replace(/^[^a-zA-Z]/, 'db');
+        setNb(nb.id, (n) => ({
+          attachedDbs: n.attachedDbs.map((a) =>
+            a.connectionId === d.connectionId ? { ...a, varName } : a
+          ),
+        }));
+        window.electronAPI?.sendToKernel(nb.id, {
+          type: 'db_connect',
+          connectionId: conn.id,
+          name: conn.name,
+          provider: conn.provider,
+          connectionString: conn.connectionString,
+          varName,
+        });
+      }
+    }
+  }, [dbConnections, setNb]);
 
   // ── Start kernels on mount ─────────────────────────────────────────────────
   useEffect(() => {
@@ -2488,6 +2907,29 @@ function App() {
                   type: 'preload_nugets',
                   packages: pending.map(({ id, version }) => ({ id, version })),
                   sources: nb.nugetSources.filter((s) => s.enabled).map((s) => s.url),
+                });
+              }
+              // Re-attach saved DBs
+              const toReattach = nb.attachedDbs.filter((d) => d.status === 'connecting');
+              for (const d of toReattach) {
+                const conn = dbConnectionsRef.current.find((c) => c.id === d.connectionId);
+                if (!conn) continue; // connections may not be loaded yet — leave as 'connecting'
+                const varName = conn.name
+                  .replace(/[^a-zA-Z0-9]+(.)/g, (_, ch) => ch.toUpperCase())
+                  .replace(/^[A-Z]/, (ch) => ch.toLowerCase())
+                  .replace(/^[^a-zA-Z]/, 'db');
+                setNb(notebookId, (n) => ({
+                  attachedDbs: n.attachedDbs.map((a) =>
+                    a.connectionId === d.connectionId ? { ...a, varName } : a
+                  ),
+                }));
+                window.electronAPI?.sendToKernel(notebookId, {
+                  type: 'db_connect',
+                  connectionId: conn.id,
+                  name: conn.name,
+                  provider: conn.provider,
+                  connectionString: conn.connectionString,
+                  varName,
                 });
               }
             }
@@ -2582,6 +3024,42 @@ function App() {
           setNb(notebookId, { kernelStatus: 'ready' });
           break;
 
+        case 'db_schema':
+          setNb(notebookId, (n) => ({
+            attachedDbs: n.attachedDbs.map((d) =>
+              d.connectionId === msg.connectionId
+                ? { ...d, schema: { databaseName: msg.databaseName, tables: msg.tables } }
+                : d
+            ),
+          }));
+          break;
+
+        case 'db_ready':
+          setNb(notebookId, (n) => ({
+            attachedDbs: n.attachedDbs.map((d) =>
+              d.connectionId === msg.connectionId
+                ? { ...d, status: 'ready', varName: msg.varName, error: undefined }
+                : d
+            ),
+          }));
+          break;
+
+        case 'db_error':
+          setNb(notebookId, (n) => ({
+            attachedDbs: n.attachedDbs.map((d) =>
+              d.connectionId === msg.connectionId
+                ? { ...d, status: 'error', error: msg.message }
+                : d
+            ),
+          }));
+          break;
+
+        case 'db_disconnected':
+          setNb(notebookId, (n) => ({
+            attachedDbs: n.attachedDbs.filter((d) => d.connectionId !== msg.connectionId),
+          }));
+          break;
+
         default:
           break;
       }
@@ -2655,6 +3133,7 @@ function App() {
       packages: nb.nugetPackages.map(({ id, version }) => ({ id, version: version || null })),
       sources: nb.nugetSources,
       config: nb.config.filter((e) => e.key.trim()),
+      attachedDbIds: nb.attachedDbs.filter((d) => d.status === 'ready').map((d) => d.connectionId),
       cells: nb.cells.map(({ id, type, content, outputMode, locked }) => ({
         id, type, content,
         ...(type === 'code' ? { outputMode: outputMode || 'auto', locked: locked || false } : {}),
@@ -2692,6 +3171,7 @@ function App() {
 
     const nb = createNotebook(false);
     const loadedPkgs = (result.data.packages || []).map((p) => ({ ...p, status: 'pending' }));
+    const savedDbIds = result.data.attachedDbIds || [];
     const nbWithData = {
       ...nb,
       path: result.filePath,
@@ -2699,6 +3179,7 @@ function App() {
       nugetPackages: loadedPkgs,
       nugetSources: result.data.sources || [...DEFAULT_NUGET_SOURCES],
       config: result.data.config || [],
+      attachedDbs: savedDbIds.map((id) => ({ connectionId: id, status: 'connecting', varName: '', schema: null, error: undefined })),
       isDirty: false,
     };
 
@@ -2717,6 +3198,7 @@ function App() {
     }
     const nb = createNotebook(false);
     const loadedPkgs = (result.data.packages || []).map((p) => ({ ...p, status: 'pending' }));
+    const savedDbIds2 = result.data.attachedDbIds || [];
     setNotebooks((prev) => [...prev, {
       ...nb,
       path: result.filePath,
@@ -2724,6 +3206,7 @@ function App() {
       nugetPackages: loadedPkgs,
       nugetSources: result.data.sources || [...DEFAULT_NUGET_SOURCES],
       config: result.data.config || [],
+      attachedDbs: savedDbIds2.map((id) => ({ connectionId: id, status: 'connecting', varName: '', schema: null, error: undefined })),
       isDirty: false,
     }]);
     setActiveId(nb.id);
@@ -2935,6 +3418,57 @@ function App() {
     });
   }, [setNb]);
 
+  // ── DB connection management ───────────────────────────────────────────────
+
+  const handleAddDbConnection = useCallback((conn) => {
+    setDbConnections((prev) => [...prev, conn]);
+  }, []);
+
+  const handleUpdateDbConnection = useCallback((id, updates) => {
+    setDbConnections((prev) => prev.map((c) => c.id === id ? { ...c, ...updates } : c));
+  }, []);
+
+  const handleRemoveDbConnection = useCallback((id) => {
+    setDbConnections((prev) => prev.filter((c) => c.id !== id));
+  }, []);
+
+  const handleAttachDb = useCallback((notebookId, connectionId) => {
+    const conn = dbConnections.find((c) => c.id === connectionId);
+    if (!conn) return;
+    const varName = conn.name
+      .replace(/[^a-zA-Z0-9]+(.)/g, (_, ch) => ch.toUpperCase())
+      .replace(/^[A-Z]/, (ch) => ch.toLowerCase())
+      .replace(/^[^a-zA-Z]/, 'db');
+    setNb(notebookId, (n) => {
+      if (n.attachedDbs.some((d) => d.connectionId === connectionId)) return {};
+      return { attachedDbs: [...n.attachedDbs, { connectionId, status: 'connecting', varName, schema: null, error: undefined }] };
+    });
+    window.electronAPI?.sendToKernel(notebookId, {
+      type: 'db_connect',
+      connectionId,
+      name: conn.name,
+      provider: conn.provider,
+      connectionString: conn.connectionString,
+      varName,
+    });
+  }, [setNb, dbConnections]);
+
+  const handleDetachDb = useCallback((notebookId, connectionId) => {
+    window.electronAPI?.sendToKernel(notebookId, { type: 'db_disconnect', connectionId });
+    setNb(notebookId, (n) => ({
+      attachedDbs: n.attachedDbs.filter((d) => d.connectionId !== connectionId),
+    }));
+  }, [setNb]);
+
+  const handleRefreshDb = useCallback((notebookId, connectionId) => {
+    setNb(notebookId, (n) => ({
+      attachedDbs: n.attachedDbs.map((d) =>
+        d.connectionId === connectionId ? { ...d, status: 'connecting' } : d
+      ),
+    }));
+    window.electronAPI?.sendToKernel(notebookId, { type: 'db_refresh', connectionId });
+  }, [setNb]);
+
   // ── Completions & lint ─────────────────────────────────────────────────────
 
   const requestCompletions = useCallback((notebookId, code, position) => {
@@ -3048,6 +3582,13 @@ function App() {
                 onAddNugetPackage={addNugetPackage}
                 onRemoveNugetPackage={removeNugetPackage}
                 onRetryNugetPackage={retryNugetPackage}
+                dbConnections={dbConnections}
+                onAttachDb={(connId) => handleAttachDb(notebook.id, connId)}
+                onDetachDb={(connId) => handleDetachDb(notebook.id, connId)}
+                onRefreshDb={(connId) => handleRefreshDb(notebook.id, connId)}
+                onAddDbConnection={handleAddDbConnection}
+                onUpdateDbConnection={handleUpdateDbConnection}
+                onRemoveDbConnection={handleRemoveDbConnection}
               />
             </div>
           ))}

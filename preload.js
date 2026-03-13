@@ -71,6 +71,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   clearRecentFiles: () => ipcRenderer.invoke('clear-recent-files'),
   openRecentFile: (filePath) => ipcRenderer.invoke('open-recent-file', filePath),
 
+  // DB connections
+  loadDbConnections:  () => ipcRenderer.invoke('db-connections-load'),
+  saveDbConnections: (list) => ipcRenderer.invoke('db-connections-save', list),
+
   // Code library
   getLibraryFiles: (subfolder) => ipcRenderer.invoke('get-library-files', subfolder || ''),
   readLibraryFile: (filePath) => ipcRenderer.invoke('read-library-file', filePath),

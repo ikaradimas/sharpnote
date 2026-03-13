@@ -41,6 +41,23 @@ function addRecentFile(filePath) {
   Menu.setApplicationMenu(buildMenu());
 }
 
+// ── DB connections ────────────────────────────────────────────────────────────
+
+const dbConnectionsPath = path.join(app.getPath('userData'), 'db-connections.json');
+
+function loadDbConnections() {
+  try {
+    return JSON.parse(fs.readFileSync(dbConnectionsPath, 'utf-8'));
+  } catch { return []; }
+}
+
+function saveDbConnections(list) {
+  try {
+    fs.mkdirSync(path.dirname(dbConnectionsPath), { recursive: true });
+    fs.writeFileSync(dbConnectionsPath, JSON.stringify(list, null, 2), 'utf-8');
+  } catch {}
+}
+
 // ── Code Library ──────────────────────────────────────────────────────────────
 
 const libraryDir = path.join(app.getPath('documents'), 'Polyglot Notebooks', 'Library');
@@ -568,6 +585,9 @@ ipcMain.handle('delete-library-file', async (_event, filePath) => {
     return { success: true };
   } catch (err) { return { success: false, error: err.message }; }
 });
+
+ipcMain.handle('db-connections-load', () => loadDbConnections());
+ipcMain.handle('db-connections-save', (_event, list) => saveDbConnections(list));
 
 ipcMain.handle('open-library-folder', async () => {
   fs.mkdirSync(libraryDir, { recursive: true });
