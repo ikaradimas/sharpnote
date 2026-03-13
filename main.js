@@ -45,6 +45,13 @@ function addRecentFile(filePath) {
 
 const libraryDir = path.join(app.getPath('documents'), 'Polyglot Notebooks', 'Library');
 
+// Resolves a library file path to an absolute path within libraryDir.
+// Returns null if the resolved path would escape the library directory.
+function resolveLibraryPath(filePath) {
+  const full = path.isAbsolute(filePath) ? filePath : path.join(libraryDir, filePath);
+  return full.startsWith(libraryDir) ? full : null;
+}
+
 let fontSize = 12.6;
 const FONT_SIZE_MIN = 10;
 const FONT_SIZE_MAX = 28;
@@ -389,6 +396,12 @@ ipcMain.handle('new-notebook-dialog', async () => {
   return response;
 });
 
+function writeNotebookFile(filePath, data) {
+  fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
+  addRecentFile(filePath);
+  return { success: true, filePath };
+}
+
 ipcMain.handle('save-notebook', async (_event, data) => {
   const { filePath, canceled } = await dialog.showSaveDialog(mainWindow, {
     title: 'Save Notebook',
@@ -399,9 +412,7 @@ ipcMain.handle('save-notebook', async (_event, data) => {
   if (canceled || !filePath) return { success: false };
 
   try {
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
-    addRecentFile(filePath);
-    return { success: true, filePath };
+    return writeNotebookFile(filePath, data);
   } catch (err) {
     return { success: false, error: err.message };
   }
@@ -456,9 +467,7 @@ ipcMain.handle('rename-file', async (_event, { oldPath, newPath }) => {
 
 ipcMain.handle('save-notebook-to', async (_event, { filePath, data }) => {
   try {
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
-    addRecentFile(filePath);
-    return { success: true, filePath };
+    return writeNotebookFile(filePath, data);
   } catch (err) {
     return { success: false, error: err.message };
   }
@@ -535,16 +544,15 @@ ipcMain.handle('get-library-files', async (_event, subfolder = '') => {
 });
 
 ipcMain.handle('read-library-file', async (_event, filePath) => {
-  // Accept absolute path (returned by get-library-files) or relative to libraryDir
-  const full = path.isAbsolute(filePath) ? filePath : path.join(libraryDir, filePath);
-  if (!full.startsWith(libraryDir)) return '';
+  const full = resolveLibraryPath(filePath);
+  if (!full) return '';
   try { return fs.readFileSync(full, 'utf-8'); }
   catch { return ''; }
 });
 
 ipcMain.handle('save-library-file', async (_event, { filePath, content }) => {
-  const full = path.isAbsolute(filePath) ? filePath : path.join(libraryDir, filePath);
-  if (!full.startsWith(libraryDir)) return { success: false, error: 'Path outside library' };
+  const full = resolveLibraryPath(filePath);
+  if (!full) return { success: false, error: 'Path outside library' };
   try {
     fs.mkdirSync(path.dirname(full), { recursive: true });
     fs.writeFileSync(full, content, 'utf-8');
@@ -553,8 +561,8 @@ ipcMain.handle('save-library-file', async (_event, { filePath, content }) => {
 });
 
 ipcMain.handle('delete-library-file', async (_event, filePath) => {
-  const full = path.isAbsolute(filePath) ? filePath : path.join(libraryDir, filePath);
-  if (!full.startsWith(libraryDir)) return { success: false, error: 'Path outside library' };
+  const full = resolveLibraryPath(filePath);
+  if (!full) return { success: false, error: 'Path outside library' };
   try {
     fs.unlinkSync(full);
     return { success: true };

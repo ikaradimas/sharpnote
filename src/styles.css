@@ -10,6 +10,8 @@
   --font-ui:      'Share Tech Mono', 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
   --font-heading: 'Orbitron', 'Share Tech Mono', monospace;
   --font-code:    'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+
+  --panel-active-bg: #0a2a38;
 }
 
 *, *::before, *::after {
@@ -112,6 +114,12 @@ body {
 
 .toolbar button:active {
   background: #272730;
+}
+
+.toolbar button.panel-active {
+  background: var(--panel-active-bg);
+  border-color: var(--cyber-dim);
+  color: var(--cyber-cyan);
 }
 
 .toolbar-separator {

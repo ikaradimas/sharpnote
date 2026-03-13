@@ -40,6 +40,28 @@ const CSHARP_KEYWORDS = [
 const DOCS_TAB_ID = '__docs__';
 const LIB_EDITOR_ID_PREFIX = '__libed__';
 
+// ── Tab ID helpers ─────────────────────────────────────────────────────────────
+const makeLibEditorId = (fullPath) => `${LIB_EDITOR_ID_PREFIX}${fullPath}`;
+const isLibEditorId  = (id) => id?.startsWith(LIB_EDITOR_ID_PREFIX) ?? false;
+const isNotebookId   = (id) => !!(id && id !== DOCS_TAB_ID && !isLibEditorId(id));
+
+// ── Kernel request timeouts ───────────────────────────────────────────────────
+const COMPLETION_TIMEOUT = 2000; // autocomplete — fast turnaround expected
+const LINT_TIMEOUT       = 5000; // lint — Roslyn compilation can be slower
+
+// ── Notebook display name ──────────────────────────────────────────────────────
+// Returns the human-readable name for a notebook given its saved path and/or title.
+function getNotebookDisplayName(notebookPath, title, fallback = 'Untitled') {
+  if (notebookPath) return notebookPath.split(/[\\/]/).pop().replace(/\.cnb$/, '');
+  return title || fallback;
+}
+
+// ── Log timestamp formatting ───────────────────────────────────────────────────
+function formatLogTime(timestamp) {
+  if (!timestamp) return '';
+  return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
 const DOCS_SECTIONS = [
   {
     id: 'overview', title: 'Overview',
@@ -540,9 +562,7 @@ function parseLogContent(text) {
 }
 
 function LogEntry({ entry }) {
-  const time = entry.timestamp
-    ? new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-    : '';
+  const time = formatLogTime(entry.timestamp);
   const tagClass = `log-tag log-tag-${(entry.tag || '').toLowerCase()}`;
   return (
     <div className="log-entry">
@@ -1321,9 +1341,7 @@ function Toolbar({
   const [draft, setDraft] = useState('');
   const inputRef = useRef(null);
 
-  const displayName = notebookPath
-    ? notebookPath.split(/[\\/]/).pop().replace(/\.cnb$/, '')
-    : (notebookTitle || 'Untitled Notebook');
+  const displayName = getNotebookDisplayName(notebookPath, notebookTitle, 'Untitled Notebook');
 
   useEffect(() => {
     if (editing && inputRef.current) {
@@ -1368,25 +1386,13 @@ function Toolbar({
       <div className="toolbar-separator" />
       <button onClick={onReset} title="Reset kernel state">Reset Kernel</button>
       <div className="toolbar-separator" />
-      <button
-        onClick={onToggleConfig}
-        title="Toggle config panel"
-        style={configPanelOpen ? { background: '#0a2a38', borderColor: 'var(--cyber-dim)', color: 'var(--cyber-cyan)' } : undefined}
-      >
+      <button onClick={onToggleConfig} title="Toggle config panel" className={configPanelOpen ? 'panel-active' : undefined}>
         Config{configCount > 0 ? ` (${configCount})` : ''}
       </button>
-      <button
-        onClick={onToggleNuget}
-        title="Toggle NuGet panel"
-        style={nugetPanelOpen ? { background: '#0a2a38', borderColor: 'var(--cyber-dim)', color: 'var(--cyber-cyan)' } : undefined}
-      >
+      <button onClick={onToggleNuget} title="Toggle NuGet panel" className={nugetPanelOpen ? 'panel-active' : undefined}>
         Packages
       </button>
-      <button
-        onClick={onToggleLogs}
-        title="Toggle log panel"
-        style={logPanelOpen ? { background: '#0a2a38', borderColor: 'var(--cyber-dim)', color: 'var(--cyber-cyan)' } : undefined}
-      >
+      <button onClick={onToggleLogs} title="Toggle log panel" className={logPanelOpen ? 'panel-active' : undefined}>
         Logs
       </button>
       <div className="kernel-status">
@@ -1791,9 +1797,7 @@ function Tab({ notebook, isActive, isDragOver, onActivate, onClose, onRename,
   const [draft, setDraft] = useState('');
   const inputRef = useRef(null);
 
-  const name = notebook.path
-    ? notebook.path.split(/[\\/]/).pop().replace(/\.cnb$/, '')
-    : (notebook.title || 'Untitled');
+  const name = getNotebookDisplayName(notebook.path, notebook.title);
 
   useEffect(() => {
     if (editing && inputRef.current) {
@@ -2342,9 +2346,20 @@ function App() {
     [setNb]);
 
   // ── Pending resolver maps ──────────────────────────────────────────────────
-  const pendingResolversRef = useRef({});   // cellId -> resolveFn
+  const pendingResolversRef = useRef({});    // cellId -> resolveFn
   const pendingCompletionsRef = useRef({});  // requestId -> resolveFn
   const pendingLintRef = useRef({});         // requestId -> resolveFn
+
+  // Cancel all pending cell executions for a given cell list (e.g. on reset or tab close)
+  const cancelPendingCells = useCallback((cells) => {
+    cells.forEach((cell) => {
+      const resolve = pendingResolversRef.current[cell.id];
+      if (resolve) {
+        delete pendingResolversRef.current[cell.id];
+        resolve({ success: false });
+      }
+    });
+  }, []);
 
   // ── Start kernels on mount ─────────────────────────────────────────────────
   useEffect(() => {
@@ -2523,15 +2538,7 @@ function App() {
   const handleReset = useCallback((notebookId) => {
     if (!window.electronAPI) return;
     const nb = notebooksRef.current.find((n) => n.id === notebookId);
-    if (nb) {
-      nb.cells.forEach((cell) => {
-        const resolve = pendingResolversRef.current[cell.id];
-        if (resolve) {
-          delete pendingResolversRef.current[cell.id];
-          resolve({ success: false });
-        }
-      });
-    }
+    if (nb) cancelPendingCells(nb.cells);
     setNb(notebookId, { kernelStatus: 'starting', outputs: {}, running: new Set() });
     window.electronAPI.resetKernel(notebookId);
   }, [setNb]);
@@ -2543,7 +2550,7 @@ function App() {
     if (!nb) return null;
     return {
       version: '1.0',
-      title: nb.path ? nb.path.split(/[\\/]/).pop().replace('.cnb', '') : (nb.title || 'notebook'),
+      title: getNotebookDisplayName(nb.path, nb.title, 'notebook'),
       packages: nb.nugetPackages.map(({ id, version }) => ({ id, version: version || null })),
       sources: nb.nugetSources,
       config: nb.config.filter((e) => e.key.trim()),
@@ -2625,7 +2632,7 @@ function App() {
   // Insert a library snippet at the current scroll position of the active notebook
   const handleInsertLibraryFile = useCallback((content) => {
     const nbId = activeIdRef.current;
-    if (!nbId || nbId === DOCS_TAB_ID || nbId.startsWith(LIB_EDITOR_ID_PREFIX)) return;
+    if (!isNotebookId(nbId)) return;
 
     // Find the last cell whose top edge is within the visible viewport of the scroll container
     let insertAfterIndex = -1; // -1 = prepend before all cells (edge case: empty or scrolled to top)
@@ -2664,7 +2671,7 @@ function App() {
   // Open a library file in an editor tab
   const handleOpenLibraryFile = useCallback(async (file) => {
     if (!window.electronAPI) return;
-    const id = `${LIB_EDITOR_ID_PREFIX}${file.fullPath}`;
+    const id = makeLibEditorId(file.fullPath);
     const existing = libEditorsRef.current.find((e) => e.id === id);
     if (existing) { setActiveId(id); return; }
     const content = await window.electronAPI.readLibraryFile(file.fullPath);
@@ -2729,21 +2736,14 @@ function App() {
     if (!nb) return;
 
     if (nb.isDirty) {
-      const name = nb.path ? nb.path.split(/[\\/]/).pop() : 'Untitled';
-      if (!window.confirm(`Close "${name}" without saving?`)) return;
+      if (!window.confirm(`Close "${getNotebookDisplayName(nb.path, nb.title)}" without saving?`)) return;
     }
 
     // Stop kernel
     window.electronAPI?.stopKernel(tabId);
 
     // Resolve any pending cell executions with failure
-    nb.cells.forEach((cell) => {
-      const resolve = pendingResolversRef.current[cell.id];
-      if (resolve) {
-        delete pendingResolversRef.current[cell.id];
-        resolve({ success: false });
-      }
-    });
+    cancelPendingCells(nb.cells);
 
     const remaining = currentNotebooks.filter((n) => n.id !== tabId);
 
@@ -2843,7 +2843,7 @@ function App() {
           delete pendingCompletionsRef.current[requestId];
           resolve([]);
         }
-      }, 2000);
+      }, COMPLETION_TIMEOUT);
     });
   }, []);
 
@@ -2858,24 +2858,21 @@ function App() {
           delete pendingLintRef.current[requestId];
           resolve([]);
         }
-      }, 5000);
+      }, LINT_TIMEOUT);
     });
   }, []);
 
   // ── Menu action dispatch ───────────────────────────────────────────────────
 
   const menuHandlersRef = useRef({});
-  const isNotebook = () => {
-    const id = activeIdRef.current;
-    return id && id !== DOCS_TAB_ID && !id.startsWith(LIB_EDITOR_ID_PREFIX);
-  };
+  const isNotebook = () => isNotebookId(activeIdRef.current);
 
   menuHandlersRef.current = {
     new: handleNew,
     open: handleLoad,
     save: () => {
       const id = activeIdRef.current;
-      if (id?.startsWith(LIB_EDITOR_ID_PREFIX)) handleSaveLibEditor(id);
+      if (isLibEditorId(id)) handleSaveLibEditor(id);
       else handleSave(id);
     },
     'save-as': () => { if (isNotebook()) handleSaveAs(activeIdRef.current); },
