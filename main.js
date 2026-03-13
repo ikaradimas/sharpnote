@@ -589,6 +589,25 @@ ipcMain.handle('delete-library-file', async (_event, filePath) => {
 ipcMain.handle('db-connections-load', () => loadDbConnections());
 ipcMain.handle('db-connections-save', (_event, list) => saveDbConnections(list));
 
+// ── App settings ───────────────────────────────────────────────────────────────
+
+const appSettingsPath = path.join(app.getPath('userData'), 'app-settings.json');
+
+function loadAppSettings() {
+  try { return JSON.parse(fs.readFileSync(appSettingsPath, 'utf-8')); }
+  catch { return { theme: 'kl1nt' }; }
+}
+
+function saveAppSettings(s) {
+  try {
+    fs.mkdirSync(path.dirname(appSettingsPath), { recursive: true });
+    fs.writeFileSync(appSettingsPath, JSON.stringify(s, null, 2), 'utf-8');
+  } catch {}
+}
+
+ipcMain.handle('app-settings-load', () => loadAppSettings());
+ipcMain.handle('app-settings-save', (_e, s) => saveAppSettings(s));
+
 ipcMain.handle('open-library-folder', async () => {
   fs.mkdirSync(libraryDir, { recursive: true });
   await shell.openPath(libraryDir);

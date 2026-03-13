@@ -1574,6 +1574,78 @@ function DbPanel({
   );
 }
 
+// ── ThemePicker ───────────────────────────────────────────────────────────────
+
+const THEMES = [
+  { id: 'kl1nt',         name: 'kl1nt',          swatches: ['#18181b', '#c4964a', '#6889a0'] },
+  { id: 'nord',          name: 'Nord',            swatches: ['#2e3440', '#88c0d0', '#81a1c1'] },
+  { id: 'dracula',       name: 'Dracula',         swatches: ['#282a36', '#bd93f9', '#ff79c6'] },
+  { id: 'tokyo-night',   name: 'Tokyo Night',     swatches: ['#1a1b2e', '#7aa2f7', '#bb9af7'] },
+  { id: 'monokai',       name: 'Monokai',         swatches: ['#272822', '#a6e22e', '#66d9e8'] },
+  { id: 'catppuccin',    name: 'Catppuccin',      swatches: ['#1e1e2e', '#cba6f7', '#89b4fa'] },
+  { id: 'solarized-dark', name: 'Solarized Dark', swatches: ['#002b36', '#268bd2', '#2aa198'] },
+  { id: 'github-light',  name: 'GitHub Light',    swatches: ['#ffffff', '#0969da', '#1a7f37'] },
+];
+
+function ThemePicker({ theme, onSelect }) {
+  const [open, setOpen] = useState(false);
+  const btnRef = useRef(null);
+  const popupRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e) => {
+      if (popupRef.current && !popupRef.current.contains(e.target) &&
+          btnRef.current && !btnRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  // Calculate popup position anchored to button
+  const [popupStyle, setPopupStyle] = useState({});
+  useEffect(() => {
+    if (open && btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect();
+      setPopupStyle({ top: r.bottom + 4, left: r.left });
+    }
+  }, [open]);
+
+  return (
+    <div className="theme-picker-wrap">
+      <button
+        ref={btnRef}
+        onClick={() => setOpen((v) => !v)}
+        title="Switch theme"
+        className={open ? 'panel-active' : undefined}
+      >
+        Theme
+      </button>
+      {open && createPortal(
+        <div ref={popupRef} className="theme-picker-popup" style={popupStyle}>
+          {THEMES.map((t) => (
+            <div
+              key={t.id}
+              className={`theme-picker-item${theme === t.id ? ' active' : ''}`}
+              onClick={() => { onSelect(t.id); setOpen(false); }}
+            >
+              <div className="theme-picker-swatches">
+                {t.swatches.map((c, i) => (
+                  <span key={i} className="theme-picker-swatch" style={{ background: c }} />
+                ))}
+              </div>
+              <span className="theme-picker-name">{t.name}</span>
+            </div>
+          ))}
+        </div>,
+        document.body
+      )}
+    </div>
+  );
+}
+
 // ── Toolbar ───────────────────────────────────────────────────────────────────
 
 function Toolbar({
@@ -1598,6 +1670,8 @@ function Toolbar({
   onToggleDb,
   libraryPanelOpen,
   onToggleLibrary,
+  theme,
+  onThemeChange,
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
@@ -1663,6 +1737,7 @@ function Toolbar({
       <button onClick={onToggleLibrary} title="Toggle library panel" className={libraryPanelOpen ? 'panel-active' : undefined}>
         Library
       </button>
+      <ThemePicker theme={theme} onSelect={onThemeChange} />
       <div className="kernel-status">
         <div className={`kernel-dot ${kernelStatus}`} />
         <span>{kernelStatus}</span>
@@ -2361,6 +2436,8 @@ function NotebookView({
   onRemoveDbConnection,
   libraryPanelOpen,
   onToggleLibrary,
+  theme,
+  onThemeChange,
 }) {
   const { cells, outputs, running, kernelStatus, nugetPackages, nugetSources,
           config, logPanelOpen, nugetPanelOpen, configPanelOpen,
@@ -2426,6 +2503,8 @@ function NotebookView({
         onToggleDb={() => onSetNb((n) => ({ dbPanelOpen: !n.dbPanelOpen }))}
         libraryPanelOpen={libraryPanelOpen}
         onToggleLibrary={onToggleLibrary}
+        theme={theme}
+        onThemeChange={onThemeChange}
       />
       <div className="main-area">
         <div className="content-area">
@@ -2760,6 +2839,8 @@ function App() {
   const [libraryPanelOpen, setLibraryPanelOpen] = useState(false);
   const [libEditors, setLibEditors] = useState([]);
   const [dbConnections, setDbConnections] = useState([]);
+  const [theme, setTheme] = useState('kl1nt');
+  const isFirstThemeRender = useRef(true);
 
   // Synchronized ref pair — callbacks read fresh state without stale closures
   const notebooksRef = useRef(notebooks);
@@ -2844,6 +2925,20 @@ function App() {
   useEffect(() => {
     window.electronAPI?.saveDbConnections(dbConnections);
   }, [dbConnections]);
+
+  // ── Theme load/apply/save ──────────────────────────────────────────────────
+  useEffect(() => {
+    window.electronAPI?.loadAppSettings().then((s) => {
+      if (s?.theme) setTheme(s.theme);
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => { document.documentElement.dataset.theme = theme; }, [theme]);
+
+  useEffect(() => {
+    if (isFirstThemeRender.current) { isFirstThemeRender.current = false; return; }
+    window.electronAPI?.saveAppSettings({ theme });
+  }, [theme]);
 
   // When dbConnections first loads, send db_connect for any notebooks whose
   // saved DBs are still 'connecting' (kernel was already ready before connections loaded).
@@ -3593,6 +3688,8 @@ function App() {
                 onRemoveDbConnection={handleRemoveDbConnection}
                 libraryPanelOpen={libraryPanelOpen}
                 onToggleLibrary={() => setLibraryPanelOpen((v) => !v)}
+                theme={theme}
+                onThemeChange={setTheme}
               />
             </div>
           ))}
@@ -3658,7 +3755,7 @@ function MemorySparkline({ history }) {
           <rect
             key={i}
             x={x} y={y} width={BAR_W} height={barH}
-            fill="var(--cyber-cyan)"
+            fill="var(--accent-primary)"
             opacity={isLatest(i) ? 1 : 0.45}
             rx="0.5"
           />

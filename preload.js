@@ -75,6 +75,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   loadDbConnections:  () => ipcRenderer.invoke('db-connections-load'),
   saveDbConnections: (list) => ipcRenderer.invoke('db-connections-save', list),
 
+  // App settings
+  loadAppSettings:  () => ipcRenderer.invoke('app-settings-load'),
+  saveAppSettings: (s) => ipcRenderer.invoke('app-settings-save', s),
+
   // Code library
   getLibraryFiles: (subfolder) => ipcRenderer.invoke('get-library-files', subfolder || ''),
   readLibraryFile: (filePath) => ipcRenderer.invoke('read-library-file', filePath),

@@ -354,29 +354,54 @@ public class PostgreSqlProvider : IDbProvider
     {
         var cs = dataType.ToLowerInvariant() switch
         {
-            "integer"                    => "int",
-            "bigint"                     => "long",
-            "smallint"                   => "short",
-            "boolean"                    => "bool",
-            "character varying"          => "string",
-            "text"                       => "string",
-            "character"                  => "string",
-            "timestamp without time zone"=> "DateTime",
-            "timestamp with time zone"   => "DateTimeOffset",
-            "date"                       => "DateTime",
-            "uuid"                       => "Guid",
-            "bytea"                      => "byte[]",
-            "numeric"                    => "decimal",
-            "double precision"           => "double",
-            "real"                       => "float",
-            "json"                       => "string",
-            "jsonb"                      => "string",
-            "xml"                        => "string",
-            _                            => "string",
+            "integer"                     => "int",
+            "bigint"                      => "long",
+            "smallint"                    => "short",
+            "boolean"                     => "bool",
+            "character varying"           => "string",
+            "text"                        => "string",
+            "character"                   => "string",
+            "timestamp without time zone" => "DateTime",
+            "timestamp with time zone"    => "DateTimeOffset",
+            "date"                        => "DateTime",
+            "uuid"                        => "Guid",
+            "bytea"                       => "byte[]",
+            "numeric"                     => "decimal",
+            "double precision"            => "double",
+            "real"                        => "float",
+            "json"                        => "string",
+            "jsonb"                       => "string",
+            "xml"                         => "string",
+            "array"                       => MapPgArrayType(udtName),
+            _                             => "string",
         };
-        if (isNullable && !isPk && cs != "string" && cs != "byte[]")
+        // Arrays and reference types (string, byte[], T[]) don't need nullable marker
+        if (isNullable && !isPk && cs != "string" && !cs.EndsWith("[]"))
             cs += "?";
         return cs;
+    }
+
+    private static string MapPgArrayType(string udtName)
+    {
+        // PostgreSQL udt_name for arrays starts with '_'; strip it to get element type
+        var elem = udtName.TrimStart('_').ToLowerInvariant();
+        var elemCs = elem switch
+        {
+            "int4" or "integer" => "int",
+            "int8"              => "long",
+            "int2"              => "short",
+            "varchar" or "text" or "bpchar" => "string",
+            "bool"              => "bool",
+            "float4"            => "float",
+            "float8"            => "double",
+            "numeric"           => "decimal",
+            "uuid"              => "Guid",
+            "timestamptz"       => "DateTimeOffset",
+            "timestamp"         => "DateTime",
+            "date"              => "DateTime",
+            _                   => "string",
+        };
+        return elemCs + "[]";
     }
 }
 
