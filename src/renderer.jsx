@@ -1596,6 +1596,8 @@ function Toolbar({
   configCount,
   dbPanelOpen,
   onToggleDb,
+  libraryPanelOpen,
+  onToggleLibrary,
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
@@ -1657,6 +1659,9 @@ function Toolbar({
       </button>
       <button onClick={onToggleDb} title="Toggle database panel" className={dbPanelOpen ? 'panel-active' : undefined}>
         DB
+      </button>
+      <button onClick={onToggleLibrary} title="Toggle library panel" className={libraryPanelOpen ? 'panel-active' : undefined}>
+        Library
       </button>
       <div className="kernel-status">
         <div className={`kernel-dot ${kernelStatus}`} />
@@ -2270,7 +2275,6 @@ function Tab({ notebook, isActive, isDragOver, onActivate, onClose, onRename,
 function TabBar({ notebooks, activeId, onActivate, onClose, onNew, onRename,
                   onReorder, onSetColor, activeTabColor,
                   docsOpen, onActivateDocs, onCloseDocs,
-                  libraryPanelOpen, onToggleLibrary,
                   libEditors, onCloseLibEditor }) {
   const [dragId, setDragId] = useState(null);
   const [dragOverId, setDragOverId] = useState(null);
@@ -2327,13 +2331,6 @@ function TabBar({ notebooks, activeId, onActivate, onClose, onNew, onRename,
         </div>
       )}
       <button className="tab-new" onClick={onNew} title="New notebook">+</button>
-      <button
-        className={`tab-library-btn${libraryPanelOpen ? ' active' : ''}`}
-        onClick={onToggleLibrary}
-        title="Code Library"
-      >
-        Library
-      </button>
     </div>
   );
 }
@@ -2362,6 +2359,8 @@ function NotebookView({
   onAddDbConnection,
   onUpdateDbConnection,
   onRemoveDbConnection,
+  libraryPanelOpen,
+  onToggleLibrary,
 }) {
   const { cells, outputs, running, kernelStatus, nugetPackages, nugetSources,
           config, logPanelOpen, nugetPanelOpen, configPanelOpen,
@@ -2425,6 +2424,8 @@ function NotebookView({
         configCount={config.length}
         dbPanelOpen={dbPanelOpen}
         onToggleDb={() => onSetNb((n) => ({ dbPanelOpen: !n.dbPanelOpen }))}
+        libraryPanelOpen={libraryPanelOpen}
+        onToggleLibrary={onToggleLibrary}
       />
       <div className="main-area">
         <div className="content-area">
@@ -3130,6 +3131,7 @@ function App() {
     return {
       version: '1.0',
       title: getNotebookDisplayName(nb.path, nb.title, 'notebook'),
+      color: nb.color || null,
       packages: nb.nugetPackages.map(({ id, version }) => ({ id, version: version || null })),
       sources: nb.nugetSources,
       config: nb.config.filter((e) => e.key.trim()),
@@ -3175,6 +3177,7 @@ function App() {
     const nbWithData = {
       ...nb,
       path: result.filePath,
+      color: result.data.color || null,
       cells: result.data.cells || [],
       nugetPackages: loadedPkgs,
       nugetSources: result.data.sources || [...DEFAULT_NUGET_SOURCES],
@@ -3202,6 +3205,7 @@ function App() {
     setNotebooks((prev) => [...prev, {
       ...nb,
       path: result.filePath,
+      color: result.data.color || null,
       cells: result.data.cells || [],
       nugetPackages: loadedPkgs,
       nugetSources: result.data.sources || [...DEFAULT_NUGET_SOURCES],
@@ -3553,8 +3557,6 @@ function App() {
         docsOpen={docsOpen}
         onActivateDocs={handleOpenDocs}
         onCloseDocs={handleCloseDocs}
-        libraryPanelOpen={libraryPanelOpen}
-        onToggleLibrary={() => setLibraryPanelOpen((v) => !v)}
         libEditors={libEditors}
         onCloseLibEditor={handleCloseLibEditor}
       />
@@ -3589,6 +3591,8 @@ function App() {
                 onAddDbConnection={handleAddDbConnection}
                 onUpdateDbConnection={handleUpdateDbConnection}
                 onRemoveDbConnection={handleRemoveDbConnection}
+                libraryPanelOpen={libraryPanelOpen}
+                onToggleLibrary={() => setLibraryPanelOpen((v) => !v)}
               />
             </div>
           ))}
