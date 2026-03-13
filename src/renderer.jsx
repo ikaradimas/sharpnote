@@ -6,6 +6,7 @@ import React, {
   useMemo,
 } from 'react';
 import { createRoot } from 'react-dom/client';
+import { createPortal } from 'react-dom';
 import { v4 as uuidv4 } from 'uuid';
 import { marked } from 'marked';
 import Chart from 'chart.js/auto';
@@ -1659,12 +1660,30 @@ Display.Html($@"
 
 // ── Notebook factory ──────────────────────────────────────────────────────────
 
+// Preset palette shown in the tab color picker (null = clear color)
+const TAB_COLORS = [null, '#e05a6e', '#e0884e', '#c4c44a', '#5bb870', '#4eb8c4', '#6889a0', '#8b6ec4', '#c46e88'];
+
+function TabColorIcon() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 20 20" fill="currentColor" style={{ display: 'block' }}>
+      {/* Classic paint-palette shape */}
+      <path d="M10 2C5.58 2 2 5.58 2 10s3.58 8 8 8c1.1 0 2-.9 2-2 0-.52-.2-1-.52-1.36-.3-.36-.5-.84-.5-1.36 0-1.1.9-2 2-2h2.36C17.82 13.52 19.82 11.52 19.82 9 19.82 5.18 15.28 2 10 2z"/>
+      <circle cx="6"  cy="10"  r="1.4" fill="white" opacity="0.7"/>
+      <circle cx="7.5" cy="6.5" r="1.4" fill="white" opacity="0.7"/>
+      <circle cx="12" cy="6.5" r="1.4" fill="white" opacity="0.7"/>
+      <circle cx="14" cy="10"  r="1.4" fill="white" opacity="0.7"/>
+    </svg>
+  );
+}
+
 function createNotebook(withExamples = false) {
   return {
     id: uuidv4(),
     title: 'Untitled',
     path: null,
     isDirty: false,
+    color: null,
+    memoryHistory: [],
     cells: withExamples ? makeExampleCells() : [],
     outputs: {},
     running: new Set(),
@@ -1792,10 +1811,13 @@ function DocsPanel() {
 // ── Tab & TabBar ──────────────────────────────────────────────────────────────
 
 function Tab({ notebook, isActive, isDragOver, onActivate, onClose, onRename,
-               onDragStart, onDragOver, onDrop, onDragEnd }) {
+               onDragStart, onDragOver, onDrop, onDragEnd, onSetColor }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
+  const [pickerPos, setPickerPos] = useState(null); // {top, left} when open
   const inputRef = useRef(null);
+  const pickerRef = useRef(null);
+  const colorBtnRef = useRef(null);
 
   const name = getNotebookDisplayName(notebook.path, notebook.title);
 
@@ -1805,6 +1827,16 @@ function Tab({ notebook, isActive, isDragOver, onActivate, onClose, onRename,
       inputRef.current.select();
     }
   }, [editing]);
+
+  // Close picker on outside click
+  useEffect(() => {
+    if (!pickerPos) return;
+    const handler = (e) => {
+      if (pickerRef.current && !pickerRef.current.contains(e.target)) setPickerPos(null);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [pickerPos]);
 
   const startEdit = (e) => {
     e.stopPropagation();
@@ -1820,9 +1852,13 @@ function Tab({ notebook, isActive, isDragOver, onActivate, onClose, onRename,
 
   const cancel = () => setEditing(false);
 
+  const color = notebook.color;
+  const tabStyle = color ? { borderTopColor: color, borderTopWidth: '2px' } : undefined;
+
   return (
     <div
       className={`tab${isActive ? ' tab-active' : ''}${isDragOver ? ' tab-drag-over' : ''}`}
+      style={tabStyle}
       draggable={!editing}
       onDragStart={() => onDragStart(notebook.id)}
       onDragOver={(e) => { e.preventDefault(); onDragOver(notebook.id); }}
@@ -1849,17 +1885,51 @@ function Tab({ notebook, isActive, isDragOver, onActivate, onClose, onRename,
         <span className="tab-title" onDoubleClick={startEdit}>{name}</span>
       )}
       {notebook.isDirty && <span className="tab-dirty" title="Unsaved changes">•</span>}
+      {onSetColor && (
+        <button
+          ref={colorBtnRef}
+          className={`tab-color-btn${color ? ' has-color' : ''}`}
+          style={color ? { color } : undefined}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (pickerPos) { setPickerPos(null); return; }
+            const rect = colorBtnRef.current.getBoundingClientRect();
+            setPickerPos({ top: rect.bottom + 4, left: rect.left });
+          }}
+          title="Set tab color"
+        ><TabColorIcon /></button>
+      )}
       <button
         className="tab-close"
         onClick={(e) => { e.stopPropagation(); onClose(); }}
         title="Close tab"
       >×</button>
+      {pickerPos && createPortal(
+        <div
+          ref={pickerRef}
+          className="tab-color-picker"
+          style={{ position: 'fixed', top: pickerPos.top, left: pickerPos.left }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {TAB_COLORS.map((c, i) => (
+            <button
+              key={i}
+              className={`tab-color-swatch${c === color ? ' selected' : ''}${c === null ? ' swatch-clear' : ''}`}
+              style={c ? { background: c } : undefined}
+              title={c ?? 'Clear color'}
+              onClick={() => { onSetColor(c); setPickerPos(null); }}
+            />
+          ))}
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
 
 function TabBar({ notebooks, activeId, onActivate, onClose, onNew, onRename,
-                  onReorder, docsOpen, onActivateDocs, onCloseDocs,
+                  onReorder, onSetColor, activeTabColor,
+                  docsOpen, onActivateDocs, onCloseDocs,
                   libraryPanelOpen, onToggleLibrary,
                   libEditors, onCloseLibEditor }) {
   const [dragId, setDragId] = useState(null);
@@ -1875,7 +1945,7 @@ function TabBar({ notebooks, activeId, onActivate, onClose, onNew, onRename,
   const handleDragEnd = () => { setDragId(null); setDragOverId(null); };
 
   return (
-    <div className="tab-bar">
+    <div className="tab-bar" style={activeTabColor ? { borderBottomColor: activeTabColor } : undefined}>
       {notebooks.map((nb) => (
         <Tab
           key={nb.id}
@@ -1885,6 +1955,7 @@ function TabBar({ notebooks, activeId, onActivate, onClose, onNew, onRename,
           onActivate={() => onActivate(nb.id)}
           onClose={() => onClose(nb.id)}
           onRename={(newName) => onRename(nb.id, newName)}
+          onSetColor={(color) => onSetColor(nb.id, color)}
           onDragStart={handleDragStart}
           onDragOver={handleDragOver}
           onDrop={handleDrop}
@@ -2474,6 +2545,12 @@ function App() {
           }));
           break;
 
+        case 'memory_mb':
+          setNb(notebookId, (n) => ({
+            memoryHistory: [...n.memoryHistory.slice(-59), msg.mb],
+          }));
+          break;
+
         case 'nuget_preload_complete':
           break;
 
@@ -2715,6 +2792,10 @@ function App() {
     window.electronAPI.startKernel(nb.id);
   }, []);
 
+  const handleSetTabColor = useCallback((notebookId, color) => {
+    setNb(notebookId, { color });
+  }, [setNb]);
+
   const handleRenameTab = useCallback(async (notebookId, newName) => {
     const nb = notebooksRef.current.find((n) => n.id === notebookId);
     const title = newName.trim();
@@ -2909,6 +2990,8 @@ function App() {
         onNew={handleNew}
         onRename={handleRenameTab}
         onReorder={handleReorder}
+        onSetColor={handleSetTabColor}
+        activeTabColor={notebooks.find((n) => n.id === activeId)?.color ?? null}
         docsOpen={docsOpen}
         onActivateDocs={handleOpenDocs}
         onCloseDocs={handleCloseDocs}
@@ -2974,6 +3057,64 @@ function App() {
           />
         )}
       </div>
+      <StatusBar notebooks={notebooks} activeId={activeId} />
+    </div>
+  );
+}
+
+// ── Status Bar ────────────────────────────────────────────────────────────────
+
+function MemorySparkline({ history }) {
+  const W = 80, H = 22, PAD = 2;
+  const BAR_W = 2, GAP = 1;
+  const n = Math.min(history.length, Math.floor((W - PAD * 2) / (BAR_W + GAP)));
+  const slice = history.slice(-n);
+
+  if (slice.length === 0) {
+    return <svg width={W} height={H} style={{ display: 'block', opacity: 0.2 }}><rect x={0} y={H/2} width={W} height={1} fill="currentColor"/></svg>;
+  }
+
+  const max = Math.max(...slice);
+  const min = Math.min(...slice);
+  const range = max - min || 1;
+  const isLatest = (i) => i === slice.length - 1;
+
+  return (
+    <svg width={W} height={H} style={{ display: 'block' }}>
+      {slice.map((v, i) => {
+        const barH = Math.max(2, ((v - min) / range) * (H - PAD * 2));
+        const x = PAD + i * (BAR_W + GAP);
+        const y = H - PAD - barH;
+        return (
+          <rect
+            key={i}
+            x={x} y={y} width={BAR_W} height={barH}
+            fill="var(--cyber-cyan)"
+            opacity={isLatest(i) ? 1 : 0.45}
+            rx="0.5"
+          />
+        );
+      })}
+    </svg>
+  );
+}
+
+function StatusBar({ notebooks, activeId }) {
+  const nb = isNotebookId(activeId) ? notebooks.find((n) => n.id === activeId) : null;
+  const history = nb?.memoryHistory ?? [];
+  const current = history.length > 0 ? history[history.length - 1] : null;
+  const peak    = history.length > 0 ? Math.max(...history) : null;
+
+  return (
+    <div className="status-bar">
+      <span className="status-label">MEM</span>
+      <MemorySparkline history={history} />
+      <span className="status-mem-value">
+        {current != null ? `${current.toFixed(1)} MB` : '— MB'}
+      </span>
+      {peak != null && (
+        <span className="status-mem-peak">peak {peak.toFixed(1)}</span>
+      )}
     </div>
   );
 }

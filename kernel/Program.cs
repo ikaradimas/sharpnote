@@ -348,6 +348,26 @@ class Program
 
         realStdout.WriteLine(JsonSerializer.Serialize(new { type = "ready" }));
 
+        // ── Background memory reporter ───────────────────────────────────────
+        var memCts = new System.Threading.CancellationTokenSource();
+        _ = Task.Run(async () =>
+        {
+            var proc = Process.GetCurrentProcess();
+            while (!memCts.Token.IsCancellationRequested)
+            {
+                try
+                {
+                    await Task.Delay(3000, memCts.Token);
+                    proc.Refresh();
+                    var mb = Math.Round(proc.WorkingSet64 / (1024.0 * 1024.0), 1);
+                    var json = JsonSerializer.Serialize(new { type = "memory_mb", mb });
+                    lock (realStdout) { realStdout.WriteLine(json); }
+                }
+                catch (OperationCanceledException) { break; }
+                catch { /* ignore transient errors */ }
+            }
+        });
+
         var stdin = new StreamReader(Console.OpenStandardInput());
         string? line;
 
@@ -565,6 +585,7 @@ class Program
                 }
 
                 case "exit":
+                    memCts.Cancel();
                     return;
             }
         }

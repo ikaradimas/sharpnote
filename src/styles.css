@@ -1598,8 +1598,9 @@ body {
   display: flex;
   flex-direction: row;
   align-items: flex-end;
-  background: #16161a;
-  border-bottom: 1px solid #2e2e38;
+  background: #0e0e12;
+  border-bottom: 2px solid #2e2e38;
+  transition: border-bottom-color 0.2s;
   -webkit-app-region: drag;
   overflow-x: auto;
   flex-shrink: 0;
@@ -1618,17 +1619,17 @@ body {
   height: 28px;
   padding: 0 8px 0 12px;
   border-radius: 4px 4px 0 0;
-  background: #1c1c22;
-  border: 1px solid #2e2e38;
-  border-bottom-color: #1c1c22;
+  background: #141418;
+  border: 1px solid #1e1e26;
+  border-bottom-color: #141418;
   position: relative;
-  bottom: -1px;
+  bottom: -2px;
   cursor: pointer;
   user-select: none;
   -webkit-app-region: no-drag;
   font-family: var(--font-ui);
   font-size: 11px;
-  color: #7a9aaa;
+  color: #3e5868;
   white-space: nowrap;
   min-width: 80px;
   max-width: 200px;
@@ -1637,15 +1638,15 @@ body {
 }
 
 .tab:hover {
-  background: #202028;
-  color: #a0c0cc;
+  background: #18181e;
+  color: #7a9aaa;
 }
 
 .tab.tab-active {
   background: #18181b;
-  border-color: #2e2e38;
+  border-color: #383848;
   border-bottom-color: #18181b;
-  color: #cdd6e0;
+  color: #dde8f8;
 }
 
 .tab-title {
@@ -1690,6 +1691,39 @@ body {
 .tab-close:hover {
   background: #3a1828;
   color: #ff4060;
+}
+
+.tab-color-btn {
+  background: transparent;
+  border: none;
+  color: #3a4a58;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 10px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s;
+}
+
+.tab:hover .tab-color-btn,
+.tab.tab-active .tab-color-btn {
+  opacity: 1;
+}
+
+/* When a color is already set, always show the dot */
+.tab-color-btn.has-color {
+  opacity: 1;
+}
+
+.tab-color-btn:hover {
+  color: #fff !important;
 }
 
 .tab-new {
@@ -1738,6 +1772,59 @@ body {
   background: #222230 !important;
   border-color: var(--cyber-dim) !important;
   color: var(--cyber-cyan) !important;
+}
+
+/* ── Tab color picker ────────────────────────────────────────────────────── */
+
+.tab-color-picker {
+  /* position/top/left set inline via portal (fixed) */
+  z-index: 9999;
+  background: #1c1c22;
+  border: 1px solid #2e2e38;
+  border-radius: 5px;
+  padding: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  width: 112px; /* 4 swatches per row */
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+}
+
+.tab-color-swatch {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: border-color 0.1s, transform 0.1s;
+}
+
+.tab-color-swatch:hover {
+  border-color: rgba(255,255,255,0.5);
+  transform: scale(1.15);
+}
+
+.tab-color-swatch.selected {
+  border-color: #fff;
+}
+
+/* "clear color" swatch — shows an × */
+.tab-color-swatch.swatch-clear {
+  background: #2a2a34;
+  position: relative;
+}
+.tab-color-swatch.swatch-clear::after {
+  content: '×';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #7a9aaa;
+  font-size: 13px;
+  line-height: 1;
 }
 
 /* ── Docs Panel ──────────────────────────────────────────────────────────── */
@@ -2224,10 +2311,20 @@ body {
   display: flex;
   flex-direction: column;
 }
+.library-preview-editor .code-editor-wrap {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
 .library-preview-editor .cm-editor {
   flex: 1;
   min-height: 0;
   font-size: 11px !important;
+}
+.library-preview-editor .cm-scroller {
+  overflow: auto !important;
 }
 
 .library-insert-row {
@@ -2332,3 +2429,38 @@ body {
 }
 .tab-library-btn:hover { color: #c0ccd8; border-color: #3a4a5a; }
 .tab-library-btn.active { color: var(--cyber-cyan); border-color: var(--cyber-dim); background: #1a2830; }
+
+/* ── Status Bar ──────────────────────────────────────────────────────────── */
+
+.status-bar {
+  height: 24px;
+  background: #111116;
+  border-top: 1px solid #222228;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  font-family: var(--font-ui);
+  font-size: 10px;
+  color: #4a6070;
+  flex-shrink: 0;
+  -webkit-app-region: no-drag;
+}
+
+.status-label {
+  font-family: var(--font-heading);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  color: #3a5060;
+  text-transform: uppercase;
+}
+
+.status-mem-value {
+  color: var(--cyber-cyan);
+  min-width: 56px;
+}
+
+.status-mem-peak {
+  color: #3a5060;
+  font-size: 9px;
+}
