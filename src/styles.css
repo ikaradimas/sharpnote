@@ -247,6 +247,21 @@ body {
   border-color: #303038;
 }
 
+.cell-index-badge {
+  position: absolute;
+  left: -20px;
+  top: 50%;
+  transform: translateX(-50%) translateY(-50%);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  line-height: 1;
+  color: #3a4858;
+  pointer-events: none;
+  user-select: none;
+  z-index: 1;
+  white-space: nowrap;
+}
+
 .cell.running {
   border-color: var(--cyber-cyan) !important;
   box-shadow: 0 0 12px rgba(0, 229, 204, 0.12) !important;
@@ -2463,4 +2478,11 @@ body {
 .status-mem-peak {
   color: #3a5060;
   font-size: 9px;
+}
+
+.status-cursor-pos {
+  margin-left: auto;
+  color: #6a8898;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
 }

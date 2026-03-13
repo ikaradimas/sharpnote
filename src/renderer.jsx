@@ -50,6 +50,10 @@ const isNotebookId   = (id) => !!(id && id !== DOCS_TAB_ID && !isLibEditorId(id)
 const COMPLETION_TIMEOUT = 2000; // autocomplete — fast turnaround expected
 const LINT_TIMEOUT       = 5000; // lint — Roslyn compilation can be slower
 
+// ── Cursor position broadcast ─────────────────────────────────────────────────
+// Any focused CodeEditor writes here; StatusBar subscribes via register fn.
+let _setCursorPos = null;
+
 // ── Notebook display name ──────────────────────────────────────────────────────
 // Returns the human-readable name for a notebook given its saved path and/or title.
 function getNotebookDisplayName(notebookPath, title, fallback = 'Untitled') {
@@ -369,7 +373,8 @@ function makeCell(type = 'code', content = '') {
 // ── CodeMirror Editor ────────────────────────────────────────────────────────
 
 function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
-                      onRequestCompletions, onRequestLint, readOnly = false }) {
+                      onRequestCompletions, onRequestLint, readOnly = false,
+                      cellIndex = null }) {
   const containerRef = useRef(null);
   const viewRef = useRef(null);
   const onChangeRef = useRef(onChange);
@@ -377,11 +382,13 @@ function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
   const completionsRef = useRef(onRequestCompletions);
   const lintRef = useRef(onRequestLint);
   const readOnlyCompartmentRef = useRef(null);
+  const cellIndexRef = useRef(cellIndex);
 
   useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
   useEffect(() => { onCtrlEnterRef.current = onCtrlEnter; }, [onCtrlEnter]);
   useEffect(() => { completionsRef.current = onRequestCompletions; }, [onRequestCompletions]);
   useEffect(() => { lintRef.current = onRequestLint; }, [onRequestLint]);
+  useEffect(() => { cellIndexRef.current = cellIndex; }, [cellIndex]);
 
   // Toggle read-only without recreating the editor
   useEffect(() => {
@@ -407,6 +414,15 @@ function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
       if (update.docChanged) {
         onChangeRef.current(update.state.doc.toString());
       }
+      if ((update.selectionSet || update.focusChanged) && update.view.hasFocus) {
+        const pos  = update.state.selection.main.head;
+        const line = update.state.doc.lineAt(pos);
+        _setCursorPos?.({ line: line.number, col: pos - line.from + 1, cellIndex: cellIndexRef.current });
+      }
+    });
+
+    const blurHandler = EditorView.domEventHandlers({
+      blur: () => { _setCursorPos?.(null); },
     });
 
     const readOnlyCompartment = new Compartment();
@@ -422,6 +438,7 @@ function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
       ctrlEnterKey,
       keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
       updateListener,
+      blurHandler,
       EditorView.lineWrapping,
       readOnlyCompartment.of(EditorState.readOnly.of(readOnly)),
     ];
@@ -856,7 +873,7 @@ function CellControls({ onMoveUp, onMoveDown, onDelete }) {
 
 // ── MarkdownCell ─────────────────────────────────────────────────────────────
 
-function MarkdownCell({ cell, onUpdate, onDelete, onMoveUp, onMoveDown }) {
+function MarkdownCell({ cell, cellIndex, onUpdate, onDelete, onMoveUp, onMoveDown }) {
   const [editing, setEditing] = useState(!cell.content);
   const [draft, setDraft] = useState(cell.content);
 
@@ -882,6 +899,7 @@ function MarkdownCell({ cell, onUpdate, onDelete, onMoveUp, onMoveDown }) {
 
   return (
     <div className="cell markdown-cell">
+      {cellIndex != null && <span className="cell-index-badge">[{String(cellIndex + 1).padStart(2, '0')}]</span>}
       <div className="cell-controls">
         <CellControls onMoveUp={onMoveUp} onMoveDown={onMoveDown} onDelete={onDelete} />
       </div>
@@ -892,6 +910,7 @@ function MarkdownCell({ cell, onUpdate, onDelete, onMoveUp, onMoveDown }) {
             onChange={setDraft}
             language="markdown"
             onCtrlEnter={handleOk}
+            cellIndex={cellIndex}
           />
           <div className="md-edit-actions">
             <button className="md-action-btn md-ok-btn" onClick={handleOk} title="Commit (Ctrl+Enter)">OK</button>
@@ -917,6 +936,7 @@ function MarkdownCell({ cell, onUpdate, onDelete, onMoveUp, onMoveDown }) {
 
 function CodeCell({
   cell,
+  cellIndex,
   outputs,
   isRunning,
   onUpdate,
@@ -933,6 +953,7 @@ function CodeCell({
   const locked = cell.locked || false;
   return (
     <div className={`cell code-cell${isRunning ? ' running' : ''}${locked ? ' cell-locked' : ''}`}>
+      {cellIndex != null && <span className="cell-index-badge">[{String(cellIndex + 1).padStart(2, '0')}]</span>}
       <div className="code-cell-header">
         <span className="cell-lang-label">C#</span>
         <button
@@ -969,6 +990,7 @@ function CodeCell({
         onRequestCompletions={requestCompletions}
         onRequestLint={requestLint}
         readOnly={locked}
+        cellIndex={cellIndex}
       />
       <CellOutput messages={outputs} />
       <button
@@ -2098,6 +2120,7 @@ function NotebookView({
                 {cell.type === 'markdown' ? (
                   <MarkdownCell
                     cell={cell}
+                    cellIndex={index}
                     onUpdate={(val) => updateCell(cell.id, val)}
                     onDelete={() => deleteCell(cell.id)}
                     onMoveUp={() => moveCell(cell.id, -1)}
@@ -2106,6 +2129,7 @@ function NotebookView({
                 ) : (
                   <CodeCell
                     cell={cell}
+                    cellIndex={index}
                     outputs={outputs[cell.id]}
                     isRunning={running.has(cell.id)}
                     onUpdate={(val) => updateCell(cell.id, val)}
@@ -3105,6 +3129,12 @@ function StatusBar({ notebooks, activeId }) {
   const current = history.length > 0 ? history[history.length - 1] : null;
   const peak    = history.length > 0 ? Math.max(...history) : null;
 
+  const [cursorPos, setCursorPos] = useState(null);
+  useEffect(() => {
+    _setCursorPos = setCursorPos;
+    return () => { _setCursorPos = null; };
+  }, []);
+
   return (
     <div className="status-bar">
       <span className="status-label">MEM</span>
@@ -3114,6 +3144,11 @@ function StatusBar({ notebooks, activeId }) {
       </span>
       {peak != null && (
         <span className="status-mem-peak">peak {peak.toFixed(1)}</span>
+      )}
+      {cursorPos && (
+        <span className="status-cursor-pos">
+          {cursorPos.cellIndex != null ? `Cell ${cursorPos.cellIndex + 1}  ` : ''}Ln {cursorPos.line}  Col {cursorPos.col}
+        </span>
       )}
     </div>
   );
