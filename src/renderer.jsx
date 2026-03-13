@@ -38,6 +38,7 @@ const CSHARP_KEYWORDS = [
 // ── Documentation data ────────────────────────────────────────────────────────
 
 const DOCS_TAB_ID = '__docs__';
+const LIB_EDITOR_ID_PREFIX = '__libed__';
 
 const DOCS_SECTIONS = [
   {
@@ -50,6 +51,7 @@ const DOCS_SECTIONS = [
         'Cell — a unit of code or markdown content',
         'Kernel — a .NET process that executes C# and persists variables across cells',
         'Tab — each open notebook has its own tab and fully independent kernel process',
+        'Code Library — a shared folder of reusable .cs/.csx snippets available to all notebooks',
       ]},
     ],
   },
@@ -60,6 +62,8 @@ const DOCS_SECTIONS = [
       { type: 'p', text: 'File → New Notebook (⌘N) or click the + button in the tab bar. A dialog asks whether to start from the Examples template or a blank notebook.' },
       { type: 'h3', text: 'Opening a Notebook' },
       { type: 'p', text: 'File → Open… (⌘O). The notebook always opens in a new tab — your existing tabs are unaffected.' },
+      { type: 'h3', text: 'Recent Files' },
+      { type: 'p', text: 'File → Open Recent shows up to 12 recently opened notebooks. Selecting one opens it in a new tab. If the file has moved, it is removed from the list automatically. The list is also maintained in the system-level recent documents menu (macOS Dock).' },
       { type: 'h3', text: 'Saving' },
       { type: 'ul', items: [
         'Save (⌘S) — saves to the current file path; prompts for a path if not yet saved',
@@ -72,6 +76,7 @@ const DOCS_SECTIONS = [
         'Drag a tab left or right to reorder it in the tab bar',
         'Close a tab with the × button; a confirmation appears if there are unsaved changes',
         'If the last tab is closed, a fresh blank notebook is created automatically',
+        'Library file editor tabs appear alongside notebook tabs; they show a ● when unsaved',
       ]},
       { type: 'h3', text: 'Renaming' },
       { type: 'p', text: 'Double-click the tab title or the notebook title in the toolbar to rename inline. Press Enter or click away to confirm; Escape to cancel. If the notebook has been saved, the file on disk is also renamed. Any characters are allowed in the display title; characters illegal in filenames ( / \\ : * ? " < > | ) are stripped from the saved filename.' },
@@ -90,11 +95,11 @@ const DOCS_SECTIONS = [
       { type: 'h3', text: 'Moving Cells' },
       { type: 'p', text: 'Hover over a cell to reveal ↑ ↓ arrows in the top-right corner. Click to move the cell one position up or down.' },
       { type: 'h3', text: 'Deleting Cells' },
-      { type: 'p', text: 'Hover over a cell to reveal the 🗑 delete button. Click once to enter confirmation mode (button turns red and shows "del?"), then click again to confirm deletion.' },
+      { type: 'p', text: 'Hover over a cell to reveal the delete button. Click once to enter confirmation mode (button turns red and shows "del?"), then click again to confirm deletion.' },
       { type: 'h3', text: 'Locking Cells' },
-      { type: 'p', text: 'Hover over a code cell and click the 🔓 lock icon in the bottom-right to toggle the lock. Locked cells (🔒) display a darker background and cannot be edited. Useful for protecting reference code or read-only examples.' },
+      { type: 'p', text: 'Hover over a code cell and click the lock icon in the bottom-right to toggle the lock. Locked cells display a darker background and cannot be edited. Useful for protecting reference code or read-only examples.' },
       { type: 'h3', text: 'Editing Markdown' },
-      { type: 'p', text: 'Click the ✏ pencil button on a rendered markdown cell, or double-click its content, to enter edit mode. Click OK or press Ctrl+Enter to render; click Cancel or press Escape to discard changes.' },
+      { type: 'p', text: 'Click the pencil button on a rendered markdown cell, or double-click its content, to enter edit mode. Click OK or press Ctrl+Enter to render; click Cancel or press Escape to discard changes.' },
     ],
   },
   {
@@ -137,8 +142,12 @@ const DOCS_SECTIONS = [
       ]},
       { type: 'h3', text: 'Using Directives' },
       { type: 'p', text: 'Standard C# using statements work across the notebook. Common namespaces are pre-imported: System, System.Linq, System.Collections.Generic. Add any additional namespace in any cell.' },
+      { type: 'h3', text: 'Loading Library Files with #load' },
+      { type: 'p', text: 'Use the #load directive to execute a .cs or .csx file from your Code Library (or any path) directly in the kernel, without copying its content into a cell:' },
+      { type: 'code', text: '#load "/Users/you/Documents/Polyglot Notebooks/Library/Helpers.cs"' },
+      { type: 'p', text: 'The Library panel can generate this directive automatically — select a file and click #load. The file is loaded at the kernel level and all its definitions become available to subsequent cells.' },
       { type: 'h3', text: 'NuGet References' },
-      { type: 'p', text: 'Add packages via the NuGet panel. After a package loads, reference its namespace in any cell with a standard using statement.' },
+      { type: 'p', text: 'Add packages via the NuGet panel (Tools → Packages or ⌘⇧P). After a package loads, reference its namespace in any cell with a standard using statement.' },
       { type: 'h3', text: 'Config Access' },
       { type: 'p', text: 'Key-value configuration entries (see Configuration) are available in scripts as a global Dictionary<string, string> named Config:' },
       { type: 'code', text: 'var connStr = Config["ConnectionString"];\nConsole.WriteLine(connStr);' },
@@ -159,14 +168,14 @@ const DOCS_SECTIONS = [
       { type: 'h3', text: 'Errors' },
       { type: 'p', text: 'Compilation and runtime errors appear in red. Stack traces are shown in a dimmer colour below the main error message. An error in one cell does not prevent other cells from running.' },
       { type: 'h3', text: 'Exporting Output' },
-      { type: 'p', text: 'Hover over any output block to reveal an export button (⬇) in the top-right corner. Click it to save the output to a file.' },
+      { type: 'p', text: 'Hover over any output block to reveal an export button in the top-right corner. Click it to save the output to a file.' },
     ],
   },
   {
     id: 'kernel', title: 'Kernel',
     content: [
       { type: 'h3', text: 'What Is the Kernel' },
-      { type: 'p', text: 'Each notebook tab spawns its own .NET kernel process (dotnet run). The kernel receives code snippets over stdin and returns structured results over stdout as newline-delimited JSON.' },
+      { type: 'p', text: 'Each notebook tab spawns its own .NET kernel process. The kernel receives code snippets over stdin and returns structured results over stdout as newline-delimited JSON.' },
       { type: 'h3', text: 'Status Indicator' },
       { type: 'p', text: 'The coloured dot in the toolbar shows kernel state:' },
       { type: 'ul', items: [
@@ -175,22 +184,73 @@ const DOCS_SECTIONS = [
         'Red — kernel error or process exited unexpectedly',
       ]},
       { type: 'h3', text: 'Resetting the Kernel' },
-      { type: 'p', text: 'Run → Reset Kernel sends a reset command to the kernel, clearing all accumulated state: variables, loaded assemblies, and using directives. Cell content and output are preserved.' },
+      { type: 'p', text: 'Run → Reset Kernel (or Tools → …) sends a reset command to the kernel, clearing all accumulated state: variables, loaded assemblies, and using directives. Cell content and output are preserved.' },
       { type: 'h3', text: 'Per-Notebook Isolation' },
       { type: 'p', text: 'Each tab runs a completely independent kernel process. Code in notebook A cannot see or affect state in notebook B. This lets you safely run conflicting experiments in parallel.' },
     ],
   },
   {
+    id: 'library', title: 'Code Library',
+    content: [
+      { type: 'p', text: 'The Code Library is a shared folder of reusable C# snippets accessible from all notebooks. Open it with Tools → Library (⌘⇧L) or the Library button in the tab bar.' },
+      { type: 'h3', text: 'Library Folder' },
+      { type: 'p', text: 'Files are stored in ~/Documents/Polyglot Notebooks/Library/ on disk. You can organise them into subfolders freely. Click the open-folder button in the panel header to open the directory in Finder/Explorer.' },
+      { type: 'h3', text: 'Browsing' },
+      { type: 'ul', items: [
+        'Subfolders are listed first with a triangle icon — click to enter',
+        'A breadcrumb trail at the top shows your current location; click any segment to navigate back',
+        'Only .cs and .csx files are shown',
+        'Click a file to see a syntax-highlighted preview',
+        'Double-click a file to open it directly in an editor tab',
+      ]},
+      { type: 'h3', text: 'Inserting into a Notebook' },
+      { type: 'p', text: 'Select a file in the library, then use one of the two insert buttons at the bottom of the preview:' },
+      { type: 'ul', items: [
+        'Insert as Cell — copies the file content into a new code cell, inserted at the current scroll position in the active notebook',
+        '#load — inserts a #load "absolute/path" directive instead, so the kernel loads the file from disk without copying its content',
+      ]},
+      { type: 'h3', text: 'Creating and Editing Files' },
+      { type: 'ul', items: [
+        'Click + in the panel header to create a new file in the current folder — type a name and press Enter (Enter confirms, Escape cancels; .cs is appended if no extension is given)',
+        'The new file opens immediately in an editor tab',
+        'Click Edit in the preview actions, or double-click a file, to open any existing file in an editor tab',
+        'Editor tabs show a dot (●) when there are unsaved changes; Save with ⌘S or the Save button',
+      ]},
+      { type: 'h3', text: 'Resizing the Panel' },
+      { type: 'p', text: 'Drag the left edge of the Library panel to resize its width. Drag the horizontal divider between the file list and the preview to adjust how much space each section gets.' },
+    ],
+  },
+  {
+    id: 'panels', title: 'Tool Panels',
+    content: [
+      { type: 'p', text: 'All tool panels are accessible from the Tools menu or from toolbar buttons. Each can be toggled open/closed independently per notebook.' },
+      { type: 'h3', text: 'Resizing Panels' },
+      { type: 'p', text: 'All panels are resizable by dragging their edge handle:' },
+      { type: 'ul', items: [
+        'Log panel — drag the left edge to resize its width',
+        'NuGet panel — drag the top edge to resize its height',
+        'Config panel — drag the top edge to resize its height',
+        'Library panel — drag the left edge; drag the internal divider to resize the preview area',
+      ]},
+      { type: 'h3', text: 'NuGet Packages (Tools → Packages  ⌘⇧P)' },
+      { type: 'p', text: 'The panel has three tabs: Installed, Browse, and Sources. Packages are saved with the notebook and reloaded automatically on open. Browse searches the NuGet gallery live. Sources lets you add private feeds.' },
+      { type: 'h3', text: 'Configuration (Tools → Config  ⌘⇧,)' },
+      { type: 'p', text: 'Per-notebook key/value pairs injected into the kernel at startup and after Reset, available as Config["key"] in scripts.' },
+      { type: 'h3', text: 'Log Panel (Tools → Logs  ⌘⇧G)' },
+      { type: 'p', text: 'Real-time log stream from all notebooks. Switch the dropdown to a past date to read historical logs. Delete old log files with the bin button.' },
+    ],
+  },
+  {
     id: 'nuget', title: 'NuGet Packages',
     content: [
-      { type: 'p', text: 'Open the NuGet panel with the NuGet button in the toolbar. The panel has three tabs: Installed, Browse, and Sources.' },
+      { type: 'p', text: 'Open the NuGet panel with Tools → Packages (⌘⇧P) or the Packages button in the toolbar.' },
       { type: 'h3', text: 'Installed Tab' },
       { type: 'p', text: 'Shows all packages added to this notebook. Each entry displays its ID, version, and current load status:' },
       { type: 'ul', items: [
         '● dim — package pending load',
         '● yellow / spinning — currently being restored and loaded',
         '● amber — loaded and ready to use',
-        '● red — failed to load (hover for error; use the retry button ↺)',
+        '● red — failed to load (hover for error; use the retry button)',
       ]},
       { type: 'p', text: 'Remove a package with the × button. Packages are saved in the .cnb file and reloaded automatically when the notebook is opened.' },
       { type: 'h3', text: 'Browse Tab' },
@@ -202,7 +262,7 @@ const DOCS_SECTIONS = [
   {
     id: 'config', title: 'Configuration',
     content: [
-      { type: 'p', text: 'Open the Config panel with the Config button in the toolbar. A badge shows the number of entries when the panel is closed.' },
+      { type: 'p', text: 'Open the Config panel with Tools → Config (⌘⇧,) or the Config button in the toolbar. A badge shows the number of entries when the panel is closed.' },
       { type: 'h3', text: 'Adding Entries' },
       { type: 'p', text: 'Enter a key and value in the input row at the bottom of the panel and press Enter or click Add. Keys and values are plain strings.' },
       { type: 'h3', text: 'Editing Entries' },
@@ -216,7 +276,7 @@ const DOCS_SECTIONS = [
   {
     id: 'logs', title: 'Log Panel',
     content: [
-      { type: 'p', text: 'Open the Log panel with the Log button in the toolbar.' },
+      { type: 'p', text: 'Open the Log panel with Tools → Logs (⌘⇧G) or the Logs button in the toolbar.' },
       { type: 'h3', text: 'Live Stream' },
       { type: 'p', text: 'When "Live" is selected in the dropdown, log entries appear in real time as the kernel and app produce them. The panel auto-scrolls to the latest entry.' },
       { type: 'h3', text: 'Log Tags' },
@@ -225,7 +285,7 @@ const DOCS_SECTIONS = [
         'USER — log output from running scripts (tagged by the kernel process)',
       ]},
       { type: 'h3', text: 'Historical Logs' },
-      { type: 'p', text: 'Log files are written per calendar day to the logs/ directory. Use the dropdown to select and read a past day\'s log. Use the 🗑 button to delete the selected log file.' },
+      { type: 'p', text: 'Log files are written per calendar day. Use the dropdown to select and read a past day\'s log. Use the bin button to delete the selected log file.' },
       { type: 'h3', text: 'Note' },
       { type: 'p', text: 'The live log panel shows an interleaved stream from all open notebooks. Use the NOTEBOOK tag and kernel IDs in the messages to distinguish output from different tabs.' },
     ],
@@ -236,9 +296,13 @@ const DOCS_SECTIONS = [
       { type: 'shortcuts', rows: [
         { keys: '⌘ N', desc: 'New notebook (prompts for template)' },
         { keys: '⌘ O', desc: 'Open notebook in a new tab' },
-        { keys: '⌘ S', desc: 'Save notebook' },
+        { keys: '⌘ S', desc: 'Save notebook or library file' },
         { keys: '⌘ ⇧ S', desc: 'Save As…' },
         { keys: '⌘ ⇧ ↩', desc: 'Run all cells' },
+        { keys: '⌘ ⇧ P', desc: 'Toggle NuGet Packages panel' },
+        { keys: '⌘ ⇧ ,', desc: 'Toggle Config panel' },
+        { keys: '⌘ ⇧ L', desc: 'Toggle Code Library panel' },
+        { keys: '⌘ ⇧ G', desc: 'Toggle Log panel' },
         { keys: '⌘ =  /  ⌘ +', desc: 'Increase font size' },
         { keys: '⌘ –', desc: 'Decrease font size' },
         { keys: '⌘ 0', desc: 'Reset font size to default' },
@@ -248,7 +312,7 @@ const DOCS_SECTIONS = [
         { keys: 'Ctrl+Z  (in editor)', desc: 'Undo' },
         { keys: 'Ctrl+Y  (in editor)', desc: 'Redo' },
         { keys: 'Enter  (in tab rename)', desc: 'Confirm rename' },
-        { keys: 'Escape  (in tab rename)', desc: 'Cancel rename' },
+        { keys: 'Escape  (in tab rename / new library file)', desc: 'Cancel' },
       ]},
     ],
   },
@@ -267,8 +331,8 @@ const DOCS_SECTIONS = [
       ]},
       { type: 'h3', text: 'Cell Object' },
       { type: 'code', text: '{\n  "id":      "uuid-v4",\n  "type":    "code",        // or "markdown"\n  "content": "Console.WriteLine(\\"hello\\");",\n  "locked":  false\n}' },
-      { type: 'h3', text: 'Example File' },
-      { type: 'code', text: '{\n  "version": 1,\n  "title": "My Analysis",\n  "cells": [ ... ],\n  "nugetPackages": [\n    { "id": "Newtonsoft.Json", "version": "13.0.3" }\n  ],\n  "nugetSources": [\n    { "name": "nuget.org",\n      "url": "https://api.nuget.org/v3/index.json",\n      "enabled": true }\n  ],\n  "config": [\n    { "key": "ApiKey", "value": "abc123" }\n  ]\n}' },
+      { type: 'h3', text: 'Library Files' },
+      { type: 'p', text: 'Library snippets are plain .cs or .csx files stored in ~/Documents/Polyglot Notebooks/Library/. They are not embedded in .cnb files — notebooks reference them at runtime via #load or by copying their content into a cell.' },
     ],
   },
 ];
@@ -489,7 +553,43 @@ function LogEntry({ entry }) {
   );
 }
 
+// ── Resize hook ───────────────────────────────────────────────────────────────
+// side: 'left'  → handle on left edge, dragging left increases width
+//       'top'   → handle on top edge, dragging up increases height
+
+function useResize(defaultSize, side) {
+  const [size, setSize] = useState(defaultSize);
+  const sizeRef = useRef(defaultSize);
+  useEffect(() => { sizeRef.current = size; }, [size]);
+
+  const onMouseDown = useCallback((e) => {
+    e.preventDefault();
+    const startPos = side === 'left' ? e.clientX : e.clientY;
+    const startSize = sizeRef.current;
+    const min = 150;
+    const max = side === 'left' ? 700 : 540;
+
+    const onMove = (ev) => {
+      const delta = side === 'left' ? startPos - ev.clientX : startPos - ev.clientY;
+      setSize(Math.max(min, Math.min(max, startSize + delta)));
+    };
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+    };
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = side === 'left' ? 'col-resize' : 'row-resize';
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  }, [side]);
+
+  return [size, onMouseDown];
+}
+
 function LogPanel({ isOpen, onToggle }) {
+  const [width, onResizeMouseDown] = useResize(320, 'left');
   const [logFiles, setLogFiles] = useState([]);
   const [selectedFile, setSelectedFile] = useState('live');
   const [fileEntries, setFileEntries] = useState([]);
@@ -551,7 +651,8 @@ function LogPanel({ isOpen, onToggle }) {
   if (!isOpen) return null;
 
   return (
-    <div className="log-panel">
+    <div className="log-panel" style={{ width }}>
+      <div className="resize-handle resize-h" onMouseDown={onResizeMouseDown} />
       <div className="log-panel-header">
         <select
           className="log-file-select"
@@ -1093,11 +1194,13 @@ function SourcesTab({ sources, onAdd, onRemove, onToggle }) {
 function NugetPanel({ isOpen, onToggle, packages, kernelStatus, sources,
                       onAdd, onRemove, onRetry,
                       onAddSource, onRemoveSource, onToggleSource }) {
+  const [height, onResizeMouseDown] = useResize(260, 'top');
   const [tab, setTab] = useState('installed');
   if (!isOpen) return null;
 
   return (
-    <div className="nuget-panel">
+    <div className="nuget-panel" style={{ height }}>
+      <div className="resize-handle resize-v" onMouseDown={onResizeMouseDown} />
       <div className="nuget-panel-header">
         <div className="nuget-tabs">
           {['installed', 'browse'].map((t) => (
@@ -1137,6 +1240,7 @@ function NugetPanel({ isOpen, onToggle, packages, kernelStatus, sources,
 // ── Config Panel ──────────────────────────────────────────────────────────────
 
 function ConfigPanel({ isOpen, onToggle, config, onAdd, onRemove, onUpdate }) {
+  const [height, onResizeMouseDown] = useResize(200, 'top');
   const [newKey, setNewKey] = useState('');
   const [newValue, setNewValue] = useState('');
   const keyRef = useRef(null);
@@ -1152,7 +1256,8 @@ function ConfigPanel({ isOpen, onToggle, config, onAdd, onRemove, onUpdate }) {
   };
 
   return (
-    <div className="config-panel">
+    <div className="config-panel" style={{ height }}>
+      <div className="resize-handle resize-v" onMouseDown={onResizeMouseDown} />
       <div className="config-panel-header">
         <span className="config-panel-title">Config</span>
         <span className="config-panel-hint">Access in scripts via <code>Config["key"]</code></span>
@@ -1705,7 +1810,7 @@ function Tab({ notebook, isActive, isDragOver, onActivate, onClose, onRename,
 
   const commit = () => {
     const trimmed = draft.trim();
-    if (trimmed && trimmed !== name) onRename(trimmed);
+    if (trimmed && trimmed !== name) onRename?.(trimmed);
     setEditing(false);
   };
 
@@ -1750,7 +1855,9 @@ function Tab({ notebook, isActive, isDragOver, onActivate, onClose, onRename,
 }
 
 function TabBar({ notebooks, activeId, onActivate, onClose, onNew, onRename,
-                  onReorder, docsOpen, onActivateDocs, onCloseDocs }) {
+                  onReorder, docsOpen, onActivateDocs, onCloseDocs,
+                  libraryPanelOpen, onToggleLibrary,
+                  libEditors, onCloseLibEditor }) {
   const [dragId, setDragId] = useState(null);
   const [dragOverId, setDragOverId] = useState(null);
 
@@ -1780,6 +1887,21 @@ function TabBar({ notebooks, activeId, onActivate, onClose, onNew, onRename,
           onDragEnd={handleDragEnd}
         />
       ))}
+      {(libEditors || []).map((e) => (
+        <Tab
+          key={e.id}
+          notebook={{ id: e.id, title: e.filename, isDirty: e.isDirty, path: e.fullPath }}
+          isActive={activeId === e.id}
+          isDragOver={false}
+          onActivate={() => onActivate(e.id)}
+          onClose={() => onCloseLibEditor(e.id)}
+          draggable={false}
+          onDragStart={() => {}}
+          onDragOver={() => {}}
+          onDrop={() => {}}
+          onDragEnd={() => {}}
+        />
+      ))}
       {docsOpen && (
         <div
           className={`tab${activeId === DOCS_TAB_ID ? ' tab-active' : ''}`}
@@ -1790,6 +1912,13 @@ function TabBar({ notebooks, activeId, onActivate, onClose, onNew, onRename,
         </div>
       )}
       <button className="tab-new" onClick={onNew} title="New notebook">+</button>
+      <button
+        className={`tab-library-btn${libraryPanelOpen ? ' active' : ''}`}
+        onClick={onToggleLibrary}
+        title="Code Library"
+      >
+        Library
+      </button>
     </div>
   );
 }
@@ -1963,6 +2092,221 @@ function NotebookView({
   );
 }
 
+// ── Library Panel ─────────────────────────────────────────────────────────────
+
+function LibraryPanel({ onInsert, onClose, onOpenFile }) {
+  const [width, onResizeMouseDown] = useResize(300, 'left');
+  const [previewHeight, onPreviewResizeMouseDown] = useResize(220, 'top');
+  const [currentPath, setCurrentPath] = useState([]);
+  const [folders, setFolders] = useState([]);
+  const [files, setFiles] = useState([]);
+  const [selected, setSelected] = useState(null); // { name, fullPath }
+  const [preview, setPreview] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [creatingNew, setCreatingNew] = useState(false);
+  const [newFileName, setNewFileName] = useState('');
+  const newFileInputRef = useRef(null);
+
+  const subfolder = currentPath.join('/');
+
+  const refresh = useCallback(async (keepSelected) => {
+    if (!window.electronAPI) return;
+    setLoading(true);
+    const result = await window.electronAPI.getLibraryFiles(subfolder);
+    setFolders(result.folders || []);
+    setFiles(result.files || []);
+    setLoading(false);
+    if (!keepSelected || !(result.files || []).find((f) => f.name === keepSelected?.name)) {
+      setSelected(null);
+      setPreview('');
+    }
+  }, [subfolder]);
+
+  useEffect(() => {
+    setSelected(null);
+    setPreview('');
+    refresh(null);
+  }, [currentPath]);
+
+  const handleSelectFile = useCallback(async (file) => {
+    setSelected(file);
+    const content = await window.electronAPI.readLibraryFile(file.fullPath);
+    setPreview(content);
+  }, []);
+
+  const handleDelete = useCallback(async (file, e) => {
+    e.stopPropagation();
+    if (!window.confirm(`Delete "${file.name}" from library?`)) return;
+    await window.electronAPI.deleteLibraryFile(file.fullPath);
+    if (selected?.name === file.name) { setSelected(null); setPreview(''); }
+    refresh(null);
+  }, [selected, refresh]);
+
+  const navigateTo = (idx) => {
+    if (idx < 0) setCurrentPath([]);
+    else setCurrentPath(currentPath.slice(0, idx + 1));
+  };
+
+  const handleStartNew = () => {
+    setCreatingNew(true);
+    setNewFileName('');
+    setTimeout(() => newFileInputRef.current?.focus(), 0);
+  };
+
+  const handleCreateNew = async () => {
+    let name = newFileName.trim();
+    if (!name) { setCreatingNew(false); return; }
+    if (!name.endsWith('.cs') && !name.endsWith('.csx')) name += '.cs';
+    const relativePath = subfolder ? `${subfolder}/${name}` : name;
+    const result = await window.electronAPI.saveLibraryFile(relativePath, '');
+    setCreatingNew(false);
+    setNewFileName('');
+    if (result?.success) {
+      await refresh(null);
+      onOpenFile({ name, fullPath: result.fullPath });
+    }
+  };
+
+  return (
+    <div className="library-panel" style={{ width }}>
+      <div className="resize-handle resize-h" onMouseDown={onResizeMouseDown} />
+      <div className="library-header">
+        <span className="library-title">Code Library</span>
+        <button onClick={handleStartNew} title="New file">+</button>
+        <button onClick={() => window.electronAPI?.openLibraryFolder()} title="Open in Finder/Explorer">&#8862;</button>
+        <button onClick={() => refresh(selected)} title="Refresh">&#8635;</button>
+        <button onClick={onClose} title="Close">&#215;</button>
+      </div>
+
+      {creatingNew && (
+        <div className="library-new-row">
+          <input
+            ref={newFileInputRef}
+            className="library-new-input"
+            placeholder="filename.cs"
+            value={newFileName}
+            onChange={(e) => setNewFileName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleCreateNew();
+              if (e.key === 'Escape') { setCreatingNew(false); setNewFileName(''); }
+            }}
+          />
+          <button className="library-new-confirm" onClick={handleCreateNew}>Create</button>
+          <button className="library-new-cancel" onClick={() => { setCreatingNew(false); setNewFileName(''); }}>&#215;</button>
+        </div>
+      )}
+
+      <div className="library-breadcrumb">
+        <span className="library-bc-seg" onClick={() => navigateTo(-1)}>Library</span>
+        {currentPath.map((seg, i) => (
+          <React.Fragment key={i}>
+            <span className="library-bc-sep">/</span>
+            <span className="library-bc-seg" onClick={() => navigateTo(i)}>{seg}</span>
+          </React.Fragment>
+        ))}
+      </div>
+
+      <div className="library-files">
+        {loading && <div className="library-empty">Loading&hellip;</div>}
+        {!loading && folders.length === 0 && files.length === 0 && (
+          <div className="library-empty">
+            {currentPath.length === 0 ? (
+              <>
+                <p>No snippets yet.</p>
+                <p>Add <code>.cs</code> or <code>.csx</code> files, or subfolders, to your library.</p>
+                <button className="library-folder-btn" onClick={() => window.electronAPI?.openLibraryFolder()}>
+                  Open Library Folder
+                </button>
+              </>
+            ) : (
+              <p>Empty folder.</p>
+            )}
+          </div>
+        )}
+        {folders.map((name) => (
+          <div key={name} className="library-folder" onClick={() => setCurrentPath([...currentPath, name])}>
+            <span className="library-folder-icon">&#9656;</span>
+            <span className="library-folder-name">{name}</span>
+          </div>
+        ))}
+        {files.map((f) => (
+          <div
+            key={f.name}
+            className={`library-file${selected?.name === f.name ? ' library-file-selected' : ''}`}
+            onClick={() => handleSelectFile(f)}
+            onDoubleClick={() => onOpenFile(f)}
+          >
+            <span className="library-file-name">{f.name}</span>
+            <span className="library-file-size">{f.size}</span>
+            <button className="library-file-delete" onClick={(e) => handleDelete(f, e)} title="Delete">&#215;</button>
+          </div>
+        ))}
+      </div>
+
+      {selected && (
+        <>
+        <div className="library-split-handle" onMouseDown={onPreviewResizeMouseDown} />
+        <div className="library-preview" style={{ height: previewHeight }}>
+          <div className="library-preview-header">
+            <span className="library-preview-name">{selected.name}</span>
+          </div>
+          <div className="library-preview-editor">
+            <CodeEditor value={preview} onChange={() => {}} language="csharp" readOnly={true} />
+          </div>
+          <div className="library-insert-row">
+            <button className="library-insert-btn" onClick={() => onInsert(preview)}>
+              Insert as Cell
+            </button>
+            <button
+              className="library-insert-btn library-load-btn"
+              onClick={() => onInsert(`#load "${selected.fullPath}"`)}
+              title="#load directive — Roslyn loads the file from disk"
+            >
+              #load
+            </button>
+            <button
+              className="library-insert-btn library-edit-btn"
+              onClick={() => onOpenFile(selected)}
+              title="Open file in editor tab"
+            >
+              Edit
+            </button>
+          </div>
+        </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ── Library File Editor ────────────────────────────────────────────────────────
+
+function LibraryEditorPane({ editor, onContentChange, onSave }) {
+  return (
+    <div className="lib-editor-pane">
+      <div className="lib-editor-toolbar">
+        <span className="lib-editor-filename">{editor.filename}</span>
+        {editor.isDirty && <span className="lib-editor-dirty">&#9679;</span>}
+        <span className="lib-editor-path">{editor.fullPath}</span>
+        <button
+          className="lib-editor-save-btn"
+          onClick={() => onSave(editor.id)}
+          title="Save (Ctrl+S)"
+        >
+          Save
+        </button>
+      </div>
+      <div className="lib-editor-content">
+        <CodeEditor
+          value={editor.content}
+          onChange={(val) => onContentChange(editor.id, val)}
+          language="csharp"
+        />
+      </div>
+    </div>
+  );
+}
+
 // ── App ───────────────────────────────────────────────────────────────────────
 
 function App() {
@@ -1972,12 +2316,16 @@ function App() {
   });
   const [activeId, setActiveId] = useState(notebooks[0].id);
   const [docsOpen, setDocsOpen] = useState(false);
+  const [libraryPanelOpen, setLibraryPanelOpen] = useState(false);
+  const [libEditors, setLibEditors] = useState([]);
 
   // Synchronized ref pair — callbacks read fresh state without stale closures
   const notebooksRef = useRef(notebooks);
   useEffect(() => { notebooksRef.current = notebooks; }, [notebooks]);
   const activeIdRef = useRef(activeId);
   useEffect(() => { activeIdRef.current = activeId; }, [activeId]);
+  const libEditorsRef = useRef(libEditors);
+  useEffect(() => { libEditorsRef.current = libEditors; }, [libEditors]);
   const prevNbIdRef = useRef(notebooks[0].id);
 
   // ── State helpers ──────────────────────────────────────────────────────────
@@ -2251,6 +2599,103 @@ function App() {
     window.electronAPI.startKernel(nb.id);
   }, []);
 
+  // Open a recently used file in a new tab
+  const handleOpenRecent = useCallback(async (filePath) => {
+    if (!window.electronAPI) return;
+    const result = await window.electronAPI.openRecentFile(filePath);
+    if (!result.success) {
+      alert(`Could not open file:\n${result.error || 'File not found'}`);
+      return;
+    }
+    const nb = createNotebook(false);
+    const loadedPkgs = (result.data.packages || []).map((p) => ({ ...p, status: 'pending' }));
+    setNotebooks((prev) => [...prev, {
+      ...nb,
+      path: result.filePath,
+      cells: result.data.cells || [],
+      nugetPackages: loadedPkgs,
+      nugetSources: result.data.sources || [...DEFAULT_NUGET_SOURCES],
+      config: result.data.config || [],
+      isDirty: false,
+    }]);
+    setActiveId(nb.id);
+    window.electronAPI.startKernel(nb.id);
+  }, []);
+
+  // Insert a library snippet at the current scroll position of the active notebook
+  const handleInsertLibraryFile = useCallback((content) => {
+    const nbId = activeIdRef.current;
+    if (!nbId || nbId === DOCS_TAB_ID || nbId.startsWith(LIB_EDITOR_ID_PREFIX)) return;
+
+    // Find the last cell whose top edge is within the visible viewport of the scroll container
+    let insertAfterIndex = -1; // -1 = prepend before all cells (edge case: empty or scrolled to top)
+    const notebook = document.querySelector(`.notebook-pane[data-nb="${nbId}"] .notebook`);
+    if (notebook) {
+      const wrappers = notebook.querySelectorAll('.cell-wrapper');
+      const viewportBottom = notebook.getBoundingClientRect().bottom;
+      for (let i = 0; i < wrappers.length; i++) {
+        if (wrappers[i].getBoundingClientRect().top < viewportBottom) insertAfterIndex = i;
+        else break;
+      }
+      // Default to end if all cells are visible or list is short
+      if (insertAfterIndex < 0 && wrappers.length > 0) insertAfterIndex = wrappers.length - 1;
+    }
+
+    const targetIndex = insertAfterIndex + 1;
+    setNbDirty(nbId, (n) => {
+      const next = [...n.cells];
+      next.splice(targetIndex, 0, makeCell('code', content));
+      return { cells: next };
+    });
+
+    // After React re-renders, scroll to the new cell and flash it
+    setTimeout(() => {
+      const nb = document.querySelector(`.notebook-pane[data-nb="${nbId}"] .notebook`);
+      if (!nb) return;
+      const wrappers = nb.querySelectorAll('.cell-wrapper');
+      const target = wrappers[targetIndex];
+      if (!target) return;
+      target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      target.classList.add('cell-flash');
+      target.addEventListener('animationend', () => target.classList.remove('cell-flash'), { once: true });
+    }, 50);
+  }, [setNbDirty]);
+
+  // Open a library file in an editor tab
+  const handleOpenLibraryFile = useCallback(async (file) => {
+    if (!window.electronAPI) return;
+    const id = `${LIB_EDITOR_ID_PREFIX}${file.fullPath}`;
+    const existing = libEditorsRef.current.find((e) => e.id === id);
+    if (existing) { setActiveId(id); return; }
+    const content = await window.electronAPI.readLibraryFile(file.fullPath);
+    setLibEditors((prev) => [...prev, {
+      id, fullPath: file.fullPath, filename: file.name, content, isDirty: false,
+    }]);
+    setActiveId(id);
+  }, []);
+
+  const handleCloseLibEditor = useCallback((id) => {
+    const editor = libEditorsRef.current.find((e) => e.id === id);
+    if (!editor) return;
+    if (editor.isDirty && !window.confirm(`Close "${editor.filename}" without saving?`)) return;
+    setLibEditors((prev) => prev.filter((e) => e.id !== id));
+    if (activeIdRef.current === id) {
+      const nbs = notebooksRef.current;
+      setActiveId(nbs[nbs.length - 1]?.id ?? null);
+    }
+  }, []);
+
+  const handleLibEditorChange = useCallback((id, newContent) => {
+    setLibEditors((prev) => prev.map((e) => e.id === id ? { ...e, content: newContent, isDirty: true } : e));
+  }, []);
+
+  const handleSaveLibEditor = useCallback(async (id) => {
+    const editor = libEditorsRef.current.find((e) => e.id === id);
+    if (!editor || !window.electronAPI) return;
+    await window.electronAPI.saveLibraryFile(editor.fullPath, editor.content);
+    setLibEditors((prev) => prev.map((e) => e.id === id ? { ...e, isDirty: false } : e));
+  }, []);
+
   // ── Tab management ─────────────────────────────────────────────────────────
 
   const handleNew = useCallback(async () => {
@@ -2420,23 +2865,40 @@ function App() {
   // ── Menu action dispatch ───────────────────────────────────────────────────
 
   const menuHandlersRef = useRef({});
+  const isNotebook = () => {
+    const id = activeIdRef.current;
+    return id && id !== DOCS_TAB_ID && !id.startsWith(LIB_EDITOR_ID_PREFIX);
+  };
+
   menuHandlersRef.current = {
     new: handleNew,
     open: handleLoad,
-    save: () => handleSave(activeIdRef.current),
-    'save-as': () => handleSaveAs(activeIdRef.current),
-    'run-all': () => runAll(activeIdRef.current),
-    reset: () => handleReset(activeIdRef.current),
-    'clear-output': () => setNb(activeIdRef.current, { outputs: {} }),
+    save: () => {
+      const id = activeIdRef.current;
+      if (id?.startsWith(LIB_EDITOR_ID_PREFIX)) handleSaveLibEditor(id);
+      else handleSave(id);
+    },
+    'save-as': () => { if (isNotebook()) handleSaveAs(activeIdRef.current); },
+    'run-all': () => { if (isNotebook()) runAll(activeIdRef.current); },
+    reset: () => { if (isNotebook()) handleReset(activeIdRef.current); },
+    'clear-output': () => { if (isNotebook()) setNb(activeIdRef.current, { outputs: {} }); },
     docs: handleOpenDocs,
+    'toggle-packages': () => { if (isNotebook()) setNb(activeIdRef.current, (n) => ({ nugetPanelOpen: !n.nugetPanelOpen })); },
+    'toggle-config':   () => { if (isNotebook()) setNb(activeIdRef.current, (n) => ({ configPanelOpen: !n.configPanelOpen })); },
+    'toggle-logs':     () => { if (isNotebook()) setNb(activeIdRef.current, (n) => ({ logPanelOpen: !n.logPanelOpen })); },
+    'toggle-library':  () => setLibraryPanelOpen((v) => !v),
   };
 
   useEffect(() => {
     if (!window.electronAPI?.onMenuAction) return;
     window.electronAPI.onMenuAction((action) => {
+      if (action && typeof action === 'object') {
+        if (action.type === 'open-recent') handleOpenRecent(action.path);
+        return;
+      }
       menuHandlersRef.current[action]?.();
     });
-  }, []);
+  }, [handleOpenRecent]);
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -2453,39 +2915,66 @@ function App() {
         docsOpen={docsOpen}
         onActivateDocs={handleOpenDocs}
         onCloseDocs={handleCloseDocs}
+        libraryPanelOpen={libraryPanelOpen}
+        onToggleLibrary={() => setLibraryPanelOpen((v) => !v)}
+        libEditors={libEditors}
+        onCloseLibEditor={handleCloseLibEditor}
       />
-      <div id="notebooks-container">
-        {notebooks.map((notebook) => (
-          <div
-            key={notebook.id}
-            className="notebook-pane"
-            style={notebook.id === activeId ? undefined : { display: 'none' }}
-          >
-            <NotebookView
-              nb={notebook}
-              onSetNb={(updater) => setNb(notebook.id, updater)}
-              onSetNbDirty={(updater) => setNbDirty(notebook.id, updater)}
-              onRunCell={runCell}
-              onRunAll={runAll}
-              onSave={handleSave}
-              onLoad={handleLoad}
-              onReset={handleReset}
-              onRename={(newName) => handleRenameTab(notebook.id, newName)}
-              requestCompletions={requestCompletions}
-              requestLint={requestLint}
-              onAddNugetPackage={addNugetPackage}
-              onRemoveNugetPackage={removeNugetPackage}
-              onRetryNugetPackage={retryNugetPackage}
-            />
-          </div>
-        ))}
-        {docsOpen && (
-          <div
-            className="notebook-pane"
-            style={activeId === DOCS_TAB_ID ? undefined : { display: 'none' }}
-          >
-            <DocsPanel />
-          </div>
+      <div className="workspace">
+        <div id="notebooks-container">
+          {notebooks.map((notebook) => (
+            <div
+              key={notebook.id}
+              className="notebook-pane"
+              data-nb={notebook.id}
+              style={notebook.id === activeId ? undefined : { display: 'none' }}
+            >
+              <NotebookView
+                nb={notebook}
+                onSetNb={(updater) => setNb(notebook.id, updater)}
+                onSetNbDirty={(updater) => setNbDirty(notebook.id, updater)}
+                onRunCell={runCell}
+                onRunAll={runAll}
+                onSave={handleSave}
+                onLoad={handleLoad}
+                onReset={handleReset}
+                onRename={(newName) => handleRenameTab(notebook.id, newName)}
+                requestCompletions={requestCompletions}
+                requestLint={requestLint}
+                onAddNugetPackage={addNugetPackage}
+                onRemoveNugetPackage={removeNugetPackage}
+                onRetryNugetPackage={retryNugetPackage}
+              />
+            </div>
+          ))}
+          {libEditors.map((editor) => (
+            <div
+              key={editor.id}
+              className="notebook-pane"
+              style={editor.id === activeId ? undefined : { display: 'none' }}
+            >
+              <LibraryEditorPane
+                editor={editor}
+                onContentChange={handleLibEditorChange}
+                onSave={handleSaveLibEditor}
+              />
+            </div>
+          ))}
+          {docsOpen && (
+            <div
+              className="notebook-pane"
+              style={activeId === DOCS_TAB_ID ? undefined : { display: 'none' }}
+            >
+              <DocsPanel />
+            </div>
+          )}
+        </div>
+        {libraryPanelOpen && (
+          <LibraryPanel
+            onInsert={handleInsertLibraryFile}
+            onClose={() => setLibraryPanelOpen(false)}
+            onOpenFile={handleOpenLibraryFile}
+          />
         )}
       </div>
     </div>

@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, Menu, shell } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 const fs = require('fs');
@@ -12,6 +12,38 @@ const kernels = new Map();
 const logDir = app.isPackaged
   ? path.join(app.getPath('userData'), 'logs')
   : path.join(__dirname, 'logs');
+
+// ── Recent files ──────────────────────────────────────────────────────────────
+
+const recentFilesPath = path.join(app.getPath('userData'), 'recent-files.json');
+const MAX_RECENTS = 12;
+let recentFiles = []; // [{ path, name, date }]
+
+function loadRecentFiles() {
+  try {
+    recentFiles = JSON.parse(fs.readFileSync(recentFilesPath, 'utf-8'));
+  } catch { recentFiles = []; }
+}
+
+function saveRecentFiles() {
+  try {
+    fs.mkdirSync(path.dirname(recentFilesPath), { recursive: true });
+    fs.writeFileSync(recentFilesPath, JSON.stringify(recentFiles, null, 2), 'utf-8');
+  } catch {}
+}
+
+function addRecentFile(filePath) {
+  recentFiles = recentFiles.filter((r) => r.path !== filePath);
+  recentFiles.unshift({ path: filePath, name: path.basename(filePath), date: new Date().toISOString() });
+  recentFiles = recentFiles.slice(0, MAX_RECENTS);
+  saveRecentFiles();
+  try { app.addRecentDocument(filePath); } catch {}
+  Menu.setApplicationMenu(buildMenu());
+}
+
+// ── Code Library ──────────────────────────────────────────────────────────────
+
+const libraryDir = path.join(app.getPath('documents'), 'Polyglot Notebooks', 'Library');
 
 let fontSize = 12.6;
 const FONT_SIZE_MIN = 10;
@@ -69,12 +101,25 @@ function buildMenu() {
     });
   }
 
+  const recentSubmenu = recentFiles.length === 0
+    ? [{ label: 'No Recent Files', enabled: false }]
+    : [
+        ...recentFiles.map((r) => ({
+          label: r.name,
+          click: () => { if (mainWindow) mainWindow.webContents.send('menu-action', { type: 'open-recent', path: r.path }); },
+        })),
+        { type: 'separator' },
+        { label: 'Clear Recent Files', click: () => { recentFiles = []; saveRecentFiles(); Menu.setApplicationMenu(buildMenu()); } },
+      ];
+
   template.push({
     label: 'File',
     submenu: [
       { label: 'New Notebook',   accelerator: 'CmdOrCtrl+N', click: () => send('new') },
       { type: 'separator' },
       { label: 'Open…',          accelerator: 'CmdOrCtrl+O', click: () => send('open') },
+      { label: 'Open Recent',    submenu: recentSubmenu },
+      { type: 'separator' },
       { label: 'Save',           accelerator: 'CmdOrCtrl+S', click: () => send('save') },
       { label: 'Save As…',       accelerator: 'CmdOrCtrl+Shift+S', click: () => send('save-as') },
       ...( process.platform !== 'darwin' ? [
@@ -106,6 +151,16 @@ function buildMenu() {
       { label: 'Clear All Output', click: () => send('clear-output') },
       { type: 'separator' },
       { label: 'Reset Kernel',   click: () => send('reset') },
+    ],
+  });
+
+  template.push({
+    label: 'Tools',
+    submenu: [
+      { label: 'Packages',  accelerator: 'CmdOrCtrl+Shift+P', click: () => send('toggle-packages') },
+      { label: 'Config',    accelerator: 'CmdOrCtrl+Shift+,', click: () => send('toggle-config') },
+      { label: 'Library',   accelerator: 'CmdOrCtrl+Shift+L', click: () => send('toggle-library') },
+      { label: 'Logs',      accelerator: 'CmdOrCtrl+Shift+G', click: () => send('toggle-logs') },
     ],
   });
 
@@ -345,6 +400,7 @@ ipcMain.handle('save-notebook', async (_event, data) => {
 
   try {
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
+    addRecentFile(filePath);
     return { success: true, filePath };
   } catch (err) {
     return { success: false, error: err.message };
@@ -401,6 +457,7 @@ ipcMain.handle('rename-file', async (_event, { oldPath, newPath }) => {
 ipcMain.handle('save-notebook-to', async (_event, { filePath, data }) => {
   try {
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
+    addRecentFile(filePath);
     return { success: true, filePath };
   } catch (err) {
     return { success: false, error: err.message };
@@ -419,13 +476,100 @@ ipcMain.handle('load-notebook', async (_event) => {
   try {
     const content = fs.readFileSync(filePaths[0], 'utf-8');
     const data = JSON.parse(content);
+    addRecentFile(filePaths[0]);
     return { success: true, data, filePath: filePaths[0] };
   } catch (err) {
     return { success: false, error: err.message };
   }
 });
 
+// ── Recent files + Library IPC ────────────────────────────────────────────────
+
+ipcMain.handle('get-recent-files', () => recentFiles);
+
+ipcMain.handle('clear-recent-files', () => {
+  recentFiles = [];
+  saveRecentFiles();
+  Menu.setApplicationMenu(buildMenu());
+  return { success: true };
+});
+
+ipcMain.handle('open-recent-file', async (_event, filePath) => {
+  try {
+    const content = fs.readFileSync(filePath, 'utf-8');
+    const data = JSON.parse(content);
+    addRecentFile(filePath);
+    return { success: true, data, filePath };
+  } catch (err) {
+    // File may have moved — remove from recents
+    recentFiles = recentFiles.filter((r) => r.path !== filePath);
+    saveRecentFiles();
+    Menu.setApplicationMenu(buildMenu());
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('get-library-files', async (_event, subfolder = '') => {
+  // Resolve dir; guard against path traversal
+  const dir = subfolder
+    ? path.resolve(libraryDir, subfolder)
+    : libraryDir;
+  if (!dir.startsWith(libraryDir)) return { folders: [], files: [] };
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    const folders = entries
+      .filter((e) => e.isDirectory())
+      .map((e) => e.name)
+      .sort();
+    const files = entries
+      .filter((e) => e.isFile() && (e.name.endsWith('.cs') || e.name.endsWith('.csx')))
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((e) => {
+        const fullPath = path.join(dir, e.name);
+        const kb = (fs.statSync(fullPath).size / 1024).toFixed(1);
+        return { name: e.name, size: `${kb} KB`, fullPath };
+      });
+    return { folders, files };
+  } catch { return { folders: [], files: [] }; }
+});
+
+ipcMain.handle('read-library-file', async (_event, filePath) => {
+  // Accept absolute path (returned by get-library-files) or relative to libraryDir
+  const full = path.isAbsolute(filePath) ? filePath : path.join(libraryDir, filePath);
+  if (!full.startsWith(libraryDir)) return '';
+  try { return fs.readFileSync(full, 'utf-8'); }
+  catch { return ''; }
+});
+
+ipcMain.handle('save-library-file', async (_event, { filePath, content }) => {
+  const full = path.isAbsolute(filePath) ? filePath : path.join(libraryDir, filePath);
+  if (!full.startsWith(libraryDir)) return { success: false, error: 'Path outside library' };
+  try {
+    fs.mkdirSync(path.dirname(full), { recursive: true });
+    fs.writeFileSync(full, content, 'utf-8');
+    return { success: true, fullPath: full };
+  } catch (err) { return { success: false, error: err.message }; }
+});
+
+ipcMain.handle('delete-library-file', async (_event, filePath) => {
+  const full = path.isAbsolute(filePath) ? filePath : path.join(libraryDir, filePath);
+  if (!full.startsWith(libraryDir)) return { success: false, error: 'Path outside library' };
+  try {
+    fs.unlinkSync(full);
+    return { success: true };
+  } catch (err) { return { success: false, error: err.message }; }
+});
+
+ipcMain.handle('open-library-folder', async () => {
+  fs.mkdirSync(libraryDir, { recursive: true });
+  await shell.openPath(libraryDir);
+  return { success: true };
+});
+
 app.whenReady().then(() => {
+  loadRecentFiles();
+  fs.mkdirSync(libraryDir, { recursive: true });
   Menu.setApplicationMenu(buildMenu());
   createWindow();
   // Renderer requests kernel start per-notebook via 'start-kernel' IPC

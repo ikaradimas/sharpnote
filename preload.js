@@ -65,4 +65,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getLogFiles: () => ipcRenderer.invoke('get-log-files'),
   readLogFile: (filename) => ipcRenderer.invoke('read-log-file', filename),
   deleteLogFile: (filename) => ipcRenderer.invoke('delete-log-file', filename),
+
+  // Recent files
+  getRecentFiles: () => ipcRenderer.invoke('get-recent-files'),
+  clearRecentFiles: () => ipcRenderer.invoke('clear-recent-files'),
+  openRecentFile: (filePath) => ipcRenderer.invoke('open-recent-file', filePath),
+
+  // Code library
+  getLibraryFiles: (subfolder) => ipcRenderer.invoke('get-library-files', subfolder || ''),
+  readLibraryFile: (filePath) => ipcRenderer.invoke('read-library-file', filePath),
+  saveLibraryFile: (filePath, content) => ipcRenderer.invoke('save-library-file', { filePath, content }),
+  deleteLibraryFile: (filePath) => ipcRenderer.invoke('delete-library-file', filePath),
+  openLibraryFolder: () => ipcRenderer.invoke('open-library-folder'),
 });
