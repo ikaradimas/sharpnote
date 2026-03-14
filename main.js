@@ -392,6 +392,10 @@ function sendToKernel(notebookId, message) {
 }
 
 // IPC handlers
+ipcMain.on('renderer-log', (_event, { tag, message }) => {
+  writeLog(tag || 'UI', message);
+});
+
 ipcMain.handle('start-kernel', (_event, notebookId) => {
   startKernelForId(notebookId);
   return { success: true };

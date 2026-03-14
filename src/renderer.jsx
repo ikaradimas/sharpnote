@@ -700,10 +700,12 @@ function LogEntry({ entry }) {
 //       'right' → handle on right edge, dragging right increases width
 //       'top'   → handle on top edge,   dragging up    increases height
 
-function useResize(defaultSize, side) {
+function useResize(defaultSize, side, onEnd) {
   const [size, setSize] = useState(defaultSize);
   const sizeRef = useRef(defaultSize);
+  const onEndRef = useRef(onEnd);
   useEffect(() => { sizeRef.current = size; }, [size]);
+  useEffect(() => { onEndRef.current = onEnd; }, [onEnd]);
 
   const onMouseDown = useCallback((e) => {
     e.preventDefault();
@@ -723,6 +725,7 @@ function useResize(defaultSize, side) {
       document.removeEventListener('mouseup', onUp);
       document.body.style.userSelect = '';
       document.body.style.cursor = '';
+      onEndRef.current?.(sizeRef.current);
     };
     document.body.style.userSelect = 'none';
     document.body.style.cursor = side === 'top' ? 'row-resize' : 'col-resize';
@@ -1824,6 +1827,11 @@ function Toolbar({
   onToggleLibrary,
   theme,
   onThemeChange,
+  dockLayout,
+  savedLayouts,
+  onSaveLayout,
+  onLoadLayout,
+  onDeleteLayout,
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
@@ -1879,6 +1887,15 @@ function Toolbar({
       <button onClick={onToggleLogs} title="Logs" className={`toolbar-icon-btn${logPanelOpen ? ' panel-active' : ''}`}><IconLogs /></button>
       <button onClick={onToggleDb} title="DB" className={`toolbar-icon-btn${dbPanelOpen ? ' panel-active' : ''}`}><IconDB /></button>
       <button onClick={onToggleLibrary} title="Library" className={`toolbar-icon-btn${libraryPanelOpen ? ' panel-active' : ''}`}><IconLibrary /></button>
+      {dockLayout && (
+        <LayoutManager
+          dockLayout={dockLayout}
+          savedLayouts={savedLayouts ?? []}
+          onSave={onSaveLayout}
+          onLoad={onLoadLayout}
+          onDelete={onDeleteLayout}
+        />
+      )}
       <ThemePicker theme={theme} onSelect={onThemeChange} />
       <div className="kernel-status">
         <div className={`kernel-dot ${kernelStatus}`} />
@@ -2629,35 +2646,28 @@ function NotebookView({
   onRename,
   requestCompletions,
   requestLint,
-  onAddNugetPackage,
-  onRemoveNugetPackage,
-  onRetryNugetPackage,
-  dbConnections,
-  onAttachDb,
-  onDetachDb,
-  onRefreshDb,
-  onRetryDb,
-  onAddDbConnection,
-  onUpdateDbConnection,
-  onRemoveDbConnection,
   libraryPanelOpen,
   onToggleLibrary,
   theme,
   onThemeChange,
+  dockLayout,
+  savedLayouts,
+  onSaveLayout,
+  onLoadLayout,
+  onDeleteLayout,
 }) {
-  const { cells, outputs, running, kernelStatus, nugetPackages, nugetSources,
+  const { cells, outputs, running, kernelStatus,
           config, logPanelOpen, nugetPanelOpen, configPanelOpen,
-          attachedDbs, dbPanelOpen, path: notebookPath, memoryHistory } = nb;
-  const currentMemoryMb = memoryHistory?.length ? memoryHistory[memoryHistory.length - 1] : null;
+          dbPanelOpen, path: notebookPath } = nb;
 
   const addCell = (type, afterIndex = null) => {
     const newCell = makeCell(type, '');
     onSetNbDirty((n) => {
       const next = [...n.cells];
       let idx;
-      if (afterIndex === null || afterIndex === undefined) idx = next.length; // toolbar: append
-      else if (afterIndex < 0) idx = 0;                                       // top bar: before first
-      else idx = afterIndex + 1;                                              // between cells: after given
+      if (afterIndex === null || afterIndex === undefined) idx = next.length;
+      else if (afterIndex < 0) idx = 0;
+      else idx = afterIndex + 1;
       next.splice(idx, 0, newCell);
       return { cells: next };
     });
@@ -2715,111 +2725,62 @@ function NotebookView({
         onToggleLibrary={onToggleLibrary}
         theme={theme}
         onThemeChange={onThemeChange}
+        dockLayout={dockLayout}
+        savedLayouts={savedLayouts}
+        onSaveLayout={onSaveLayout}
+        onLoadLayout={onLoadLayout}
+        onDeleteLayout={onDeleteLayout}
       />
-      <div className="main-area">
-        <div className="content-area">
-          <div className="notebook">
-            {cells.length === 0 && (
-              <div className="empty-notebook">
-                <h2>Empty Notebook</h2>
-                <p>Add a markdown or code cell to get started.</p>
-              </div>
-            )}
+      <div className="notebook">
+        {cells.length === 0 && (
+          <div className="empty-notebook">
+            <h2>Empty Notebook</h2>
+            <p>Add a markdown or code cell to get started.</p>
+          </div>
+        )}
 
-            {cells.length > 0 && (
-              <AddBar
-                onAddMarkdown={() => addCell('markdown', -1)}
-                onAddCode={() => addCell('code', -1)}
+        {cells.length > 0 && (
+          <AddBar
+            onAddMarkdown={() => addCell('markdown', -1)}
+            onAddCode={() => addCell('code', -1)}
+          />
+        )}
+
+        {cells.map((cell, index) => (
+          <div key={cell.id} className="cell-wrapper">
+            {cell.type === 'markdown' ? (
+              <MarkdownCell
+                cell={cell}
+                cellIndex={index}
+                onUpdate={(val) => updateCell(cell.id, val)}
+                onDelete={() => deleteCell(cell.id)}
+                onMoveUp={() => moveCell(cell.id, -1)}
+                onMoveDown={() => moveCell(cell.id, 1)}
+              />
+            ) : (
+              <CodeCell
+                cell={cell}
+                cellIndex={index}
+                outputs={outputs[cell.id]}
+                isRunning={running.has(cell.id)}
+                onUpdate={(val) => updateCell(cell.id, val)}
+                onRun={() => onRunCell(nb.id, cell)}
+                onDelete={() => deleteCell(cell.id)}
+                onMoveUp={() => moveCell(cell.id, -1)}
+                onMoveDown={() => moveCell(cell.id, 1)}
+                onOutputModeChange={(mode) => updateCellProp(cell.id, 'outputMode', mode)}
+                onToggleLock={() => updateCellProp(cell.id, 'locked', !(cell.locked || false))}
+                requestCompletions={(code, pos) => requestCompletions(nb.id, code, pos)}
+                requestLint={(code) => requestLint(nb.id, code)}
               />
             )}
-
-            {cells.map((cell, index) => (
-              <div key={cell.id} className="cell-wrapper">
-                {cell.type === 'markdown' ? (
-                  <MarkdownCell
-                    cell={cell}
-                    cellIndex={index}
-                    onUpdate={(val) => updateCell(cell.id, val)}
-                    onDelete={() => deleteCell(cell.id)}
-                    onMoveUp={() => moveCell(cell.id, -1)}
-                    onMoveDown={() => moveCell(cell.id, 1)}
-                  />
-                ) : (
-                  <CodeCell
-                    cell={cell}
-                    cellIndex={index}
-                    outputs={outputs[cell.id]}
-                    isRunning={running.has(cell.id)}
-                    onUpdate={(val) => updateCell(cell.id, val)}
-                    onRun={() => onRunCell(nb.id, cell)}
-                    onDelete={() => deleteCell(cell.id)}
-                    onMoveUp={() => moveCell(cell.id, -1)}
-                    onMoveDown={() => moveCell(cell.id, 1)}
-                    onOutputModeChange={(mode) => updateCellProp(cell.id, 'outputMode', mode)}
-                    onToggleLock={() => updateCellProp(cell.id, 'locked', !(cell.locked || false))}
-                    requestCompletions={(code, pos) => requestCompletions(nb.id, code, pos)}
-                    requestLint={(code) => requestLint(nb.id, code)}
-                  />
-                )}
-                <AddBar
-                  onAddMarkdown={() => addCell('markdown', index)}
-                  onAddCode={() => addCell('code', index)}
-                />
-              </div>
-            ))}
+            <AddBar
+              onAddMarkdown={() => addCell('markdown', index)}
+              onAddCode={() => addCell('code', index)}
+            />
           </div>
-          <LogPanel
-            isOpen={logPanelOpen}
-            onToggle={() => onSetNb((n) => ({ logPanelOpen: !n.logPanelOpen }))}
-            currentMemoryMb={currentMemoryMb}
-          />
-        </div>{/* .content-area */}
-        <NugetPanel
-          isOpen={nugetPanelOpen}
-          onToggle={() => onSetNb((n) => ({ nugetPanelOpen: !n.nugetPanelOpen }))}
-          packages={nugetPackages}
-          kernelStatus={kernelStatus}
-          sources={nugetSources}
-          onAdd={(id, ver) => onAddNugetPackage(nb.id, id, ver)}
-          onRemove={(id) => onRemoveNugetPackage(nb.id, id)}
-          onRetry={(id, ver) => onRetryNugetPackage(nb.id, id, ver)}
-          onAddSource={(name, url) => onSetNbDirty((n) => ({
-            nugetSources: n.nugetSources.some((s) => s.url === url)
-              ? n.nugetSources
-              : [...n.nugetSources, { name, url, enabled: true }],
-          }))}
-          onRemoveSource={(url) => onSetNbDirty((n) => ({
-            nugetSources: n.nugetSources.filter((s) => s.url !== url),
-          }))}
-          onToggleSource={(url) => onSetNbDirty((n) => ({
-            nugetSources: n.nugetSources.map((s) => s.url === url ? { ...s, enabled: !s.enabled } : s),
-          }))}
-        />
-        <ConfigPanel
-          isOpen={configPanelOpen}
-          onToggle={() => onSetNb((n) => ({ configPanelOpen: !n.configPanelOpen }))}
-          config={config}
-          onAdd={(k, v) => onSetNbDirty((n) => ({ config: [...n.config, { key: k, value: v }] }))}
-          onRemove={(i) => onSetNbDirty((n) => ({ config: n.config.filter((_, idx) => idx !== i) }))}
-          onUpdate={(i, val) => onSetNbDirty((n) => ({
-            config: n.config.map((e, idx) => idx === i ? { ...e, value: val } : e),
-          }))}
-        />
-        <DbPanel
-          isOpen={dbPanelOpen}
-          onToggle={() => onSetNb((n) => ({ dbPanelOpen: !n.dbPanelOpen }))}
-          connections={dbConnections}
-          attachedDbs={attachedDbs}
-          notebookId={nb.id}
-          onAttach={onAttachDb}
-          onDetach={onDetachDb}
-          onRefresh={onRefreshDb}
-          onRetry={onRetryDb}
-          onAdd={onAddDbConnection}
-          onUpdate={onUpdateDbConnection}
-          onRemove={onRemoveDbConnection}
-        />
-      </div>{/* .main-area */}
+        ))}
+      </div>
     </div>
   );
 }
@@ -3039,6 +3000,298 @@ function LibraryEditorPane({ editor, onContentChange, onSave }) {
   );
 }
 
+// ── Dock Layout System ────────────────────────────────────────────────────────
+
+const DEFAULT_DOCK_LAYOUT = {
+  assignments: { log: 'right', nuget: 'bottom', config: 'bottom', db: 'bottom', library: 'left' },
+  order:       { log: 0, nuget: 0, config: 1, db: 2, library: 0 },
+  sizes:       { left: 300, right: 320, bottom: 280 },
+  floatPos:    {},
+  zoneTab:     { left: 'library', right: 'log', bottom: 'nuget' },
+};
+
+const DEFAULT_FLOAT_W = 360;
+const DEFAULT_FLOAT_H = 300;
+
+const PANEL_META = {
+  log:     { label: 'Logs',     icon: <IconLogs /> },
+  nuget:   { label: 'Packages', icon: <IconPackages /> },
+  config:  { label: 'Config',   icon: <IconConfig /> },
+  db:      { label: 'DB',       icon: <IconDB /> },
+  library: { label: 'Library',  icon: <IconLibrary /> },
+};
+
+function renderPanelContent(panelId, p) {
+  if (!p) return null;
+  switch (panelId) {
+    case 'log':     return <LogPanel {...p} />;
+    case 'nuget':   return <NugetPanel {...p} />;
+    case 'config':  return <ConfigPanel {...p} />;
+    case 'db':      return <DbPanel {...p} />;
+    case 'library': return <LibraryPanel {...p} />;
+    default:        return null;
+  }
+}
+
+function IconLayout() {
+  return <svg {..._ic} stroke="currentColor" strokeWidth="1.1" strokeLinecap="round">
+    <rect x="1.5" y="1.5" width="10" height="10" rx="1"/>
+    <line x1="4.5" y1="1.5" x2="4.5" y2="11.5"/>
+    <line x1="1.5" y1="6.5" x2="11.5" y2="6.5"/>
+  </svg>;
+}
+
+// ── Dock debug logging ────────────────────────────────────────────────────────
+// Logs appear in the app's Logs panel (tag: DOCK).  Remove when bug is resolved.
+const dockLog = (...args) => window.electronAPI?.rendererLog('DOCK', args.join(' '));
+
+// ── DockZone ──────────────────────────────────────────────────────────────────
+
+function DockZone({ zone, dockLayout, openFlags, panelProps,
+                    onTabChange, onPanelClose, onStartDrag, onResizeEnd }) {
+  const resizeSide = zone === 'left' ? 'right' : zone === 'right' ? 'left' : 'top';
+  const [size, onResizeMouseDown] = useResize(
+    dockLayout.sizes[zone] ?? 300,
+    resizeSide,
+    (newSize) => onResizeEnd?.(zone, newSize)
+  );
+
+  // Panels assigned to this zone, sorted by their order value
+  const assigned = Object.keys(dockLayout.assignments)
+    .filter((id) => dockLayout.assignments[id] === zone)
+    .sort((a, b) => (dockLayout.order[a] ?? 0) - (dockLayout.order[b] ?? 0));
+
+  // Only panels that are currently open (have their open flag set)
+  const openPanels = assigned.filter((id) => openFlags[id]);
+
+  // Active tab: prefer saved zoneTab, fall back to first open panel
+  let activeTab = dockLayout.zoneTab[zone];
+  if (!openPanels.includes(activeTab)) activeTab = openPanels[0] ?? null;
+
+  const visible = openPanels.length > 0;
+
+  // Always render the same root element regardless of visible state.
+  // This keeps hook state (useResize) stable and avoids reconciliation issues
+  // when the first panel is added to a previously-empty zone.
+  const zoneStyle = visible ? (zone === 'bottom' ? { height: size } : { width: size }) : undefined;
+
+  return (
+    <div
+      className={`dock-zone dock-zone-${zone}${visible ? '' : ' dock-zone-hidden'}`}
+      style={zoneStyle}
+    >
+      <div className="dock-zone-rh" onMouseDown={onResizeMouseDown} />
+      <div className="dock-zone-tabbar">
+        {openPanels.map((id) => (
+          <div
+            key={id}
+            className={`dock-zone-tab${id === activeTab ? ' active' : ''}`}
+            onMouseDown={(e) => {
+              if (e.button !== 0) return;
+              e.preventDefault();
+              onStartDrag(id, e.clientX, e.clientY);
+            }}
+            onClick={() => onTabChange(zone, id)}
+          >
+            {PANEL_META[id].icon}
+            <span>{PANEL_META[id].label}</span>
+            <span
+              className="dock-zone-tab-close"
+              onClick={(e) => { e.stopPropagation(); onPanelClose(id); }}
+            >×</span>
+          </div>
+        ))}
+      </div>
+      {/* All assigned panels are kept mounted to preserve state; only the active one is shown */}
+      {assigned.map((id) => (
+        <div
+          key={id}
+          className="dock-zone-content"
+          style={{ display: visible && id === activeTab && openFlags[id] ? undefined : 'none' }}
+        >
+          {panelProps[id] && renderPanelContent(id, { ...panelProps[id], isOpen: !!openFlags[id] })}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── FloatPanel ────────────────────────────────────────────────────────────────
+
+function FloatPanel({ panelId, pos, onMove, onClose, onStartDrag, children }) {
+  const posRef = useRef(pos);
+  useEffect(() => { posRef.current = pos; }, [pos]);
+
+  const handleHeaderDown = (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    const ox = e.clientX - posRef.current.x;
+    const oy = e.clientY - posRef.current.y;
+    const mv = (ev) => onMove(panelId, { ...posRef.current, x: ev.clientX - ox, y: ev.clientY - oy });
+    const up = () => { document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up); };
+    document.addEventListener('mousemove', mv);
+    document.addEventListener('mouseup', up);
+  };
+
+  const handleResizeDown = (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const sx = e.clientX, sy = e.clientY, sw = posRef.current.w, sh = posRef.current.h;
+    const mv = (ev) => onMove(panelId, {
+      ...posRef.current,
+      w: Math.max(260, sw + ev.clientX - sx),
+      h: Math.max(150, sh + ev.clientY - sy),
+    });
+    const up = () => { document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up); };
+    document.addEventListener('mousemove', mv);
+    document.addEventListener('mouseup', up);
+  };
+
+  return (
+    <div className="float-panel" style={{ left: pos.x, top: pos.y, width: pos.w, height: pos.h }}>
+      <div className="float-panel-header" onMouseDown={handleHeaderDown}>
+        <div
+          className="float-panel-drag-handle"
+          title="Drag to dock"
+          onMouseDown={(e) => {
+            if (e.button !== 0) return;
+            e.stopPropagation();
+            onStartDrag?.(panelId, e.clientX, e.clientY);
+          }}
+        >⠿</div>
+        {PANEL_META[panelId]?.icon}
+        <span>{PANEL_META[panelId]?.label ?? panelId}</span>
+        <button
+          className="dock-zone-tab-close"
+          style={{ marginLeft: 'auto' }}
+          onClick={() => onClose(panelId)}
+        >×</button>
+      </div>
+      <div className="float-panel-body">{children}</div>
+      <div className="float-panel-resize" onMouseDown={handleResizeDown} />
+    </div>
+  );
+}
+
+// ── DockDropOverlay ───────────────────────────────────────────────────────────
+
+// Pure visual overlay — no drag events. Zone hover state is driven by
+// document-level mousemove in App computing cursor position against edge thresholds.
+const DOCK_DROP_ZONES = [
+  { key: 'left',   label: '← Left'   },
+  { key: 'right',  label: 'Right →'  },
+  { key: 'bottom', label: '↓ Bottom' },
+  { key: 'float',  label: 'Float'    },
+];
+function DockDropOverlay({ sourceZone, active, hovered }) {
+  return (
+    <div className={`dock-drop-overlay${active ? ' dock-drop-overlay-active' : ''}`}>
+      {DOCK_DROP_ZONES.map(({ key, label }) => {
+        const isSame = active && key === sourceZone;
+        return (
+          <div
+            key={key}
+            className={`dock-drop-zone dock-drop-${key}${hovered === key ? ' drag-over' : ''}${isSame ? ' same-zone' : ''}`}
+          >
+            <span className="dock-drop-label">{label}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── LayoutManager ─────────────────────────────────────────────────────────────
+
+function LayoutManager({ dockLayout, savedLayouts, onSave, onLoad, onDelete }) {
+  const [open, setOpen] = useState(false);
+  const [saveName, setSaveName] = useState('');
+  const btnRef = useRef(null);
+  const popupRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e) => {
+      if (popupRef.current && !popupRef.current.contains(e.target) &&
+          btnRef.current && !btnRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  const [popupStyle, setPopupStyle] = useState({});
+  useEffect(() => {
+    if (open && btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect();
+      setPopupStyle({ top: r.bottom + 4, left: r.left });
+    }
+  }, [open]);
+
+  const handleSave = () => {
+    const name = saveName.trim();
+    if (!name) return;
+    onSave(name, dockLayout);
+    setSaveName('');
+    setOpen(false);
+  };
+
+  return (
+    <div className="theme-picker-wrap">
+      <button
+        ref={btnRef}
+        onClick={() => setOpen((v) => !v)}
+        title="Layout Manager"
+        className={`toolbar-icon-btn${open ? ' panel-active' : ''}`}
+      >
+        <IconLayout />
+      </button>
+      {open && createPortal(
+        <div ref={popupRef} className="layout-manager-popup" style={popupStyle}>
+          {savedLayouts.length === 0 && (
+            <div style={{ padding: '4px 8px', fontSize: '11px', color: 'var(--text-muted)' }}>No saved layouts</div>
+          )}
+          {savedLayouts.map((sl) => (
+            <div key={sl.name} className="layout-entry">
+              <span style={{ flex: 1, fontSize: '11px' }}>{sl.name}</span>
+              <button
+                className="toolbar-icon-btn"
+                onClick={() => { onLoad(sl); setOpen(false); }}
+                title="Load layout"
+                style={{ fontSize: '10px', padding: '2px 6px' }}
+              >Load</button>
+              <button
+                className="toolbar-icon-btn"
+                onClick={() => onDelete(sl.name)}
+                title="Delete layout"
+                style={{ fontSize: '10px', padding: '2px 4px', color: 'var(--status-error)' }}
+              >×</button>
+            </div>
+          ))}
+          <div className="layout-save-row">
+            <input
+              className="toolbar-rename-input"
+              style={{ flex: 1, fontSize: '11px', padding: '2px 6px' }}
+              placeholder="Layout name…"
+              value={saveName}
+              onChange={(e) => setSaveName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setOpen(false); }}
+            />
+            <button
+              className="toolbar-icon-btn"
+              onClick={handleSave}
+              style={{ fontSize: '10px', padding: '2px 6px' }}
+            >Save</button>
+          </div>
+        </div>,
+        document.body
+      )}
+    </div>
+  );
+}
+
 // ── App ───────────────────────────────────────────────────────────────────────
 
 function App() {
@@ -3057,6 +3310,20 @@ function App() {
   useEffect(() => { themeRef.current = theme; }, [theme]);
   const [pinnedPaths, setPinnedPaths] = useState(() => new Set());
   const initialNbIdRef = useRef(notebooks[0].id);
+
+  // Dock layout state
+  const [dockLayout, setDockLayout] = useState(DEFAULT_DOCK_LAYOUT);
+  const [savedLayouts, setSavedLayouts] = useState([]);
+  const [draggingPanel, setDraggingPanel] = useState(null);
+  const [hoveredDropZone, setHoveredDropZone] = useState(null);
+  const [layoutKey, setLayoutKey] = useState(0);
+  const dockLayoutRef = useRef(DEFAULT_DOCK_LAYOUT);
+  const savedLayoutsRef = useRef([]);
+  const draggingPanelRef = useRef(null);
+  const hoveredDropZoneRef = useRef(null);
+  const pendingDragRef = useRef(null); // { panelId, startX, startY } | null
+  useEffect(() => { dockLayoutRef.current = dockLayout; }, [dockLayout]);
+  useEffect(() => { savedLayoutsRef.current = savedLayouts; }, [savedLayouts]);
 
   // Synchronized ref pair — callbacks read fresh state without stale closures
   const notebooksRef = useRef(notebooks);
@@ -3149,6 +3416,15 @@ function App() {
   useEffect(() => {
     window.electronAPI?.loadAppSettings().then((s) => {
       if (s?.theme) setTheme(s.theme);
+      if (s?.dockLayout) {
+        const loaded = { ...DEFAULT_DOCK_LAYOUT, ...s.dockLayout };
+        setDockLayout(loaded);
+        dockLayoutRef.current = loaded;
+      }
+      if (Array.isArray(s?.savedLayouts)) {
+        setSavedLayouts(s.savedLayouts);
+        savedLayoutsRef.current = s.savedLayouts;
+      }
       const pinned = Array.isArray(s?.pinnedTabs) ? s.pinnedTabs : [];
       if (pinned.length === 0) return;
       setPinnedPaths(new Set(pinned));
@@ -3198,7 +3474,7 @@ function App() {
 
   useEffect(() => {
     if (isFirstThemeRender.current) { isFirstThemeRender.current = false; return; }
-    window.electronAPI?.saveAppSettings({ theme, pinnedTabs: [...pinnedPathsRef.current] });
+    window.electronAPI?.saveAppSettings({ theme, pinnedTabs: [...pinnedPathsRef.current], dockLayout: dockLayoutRef.current, savedLayouts: savedLayoutsRef.current });
   }, [theme]); // pinnedPathsRef is stable ref, no dep needed
 
   // When dbConnections first loads, send db_connect for any notebooks whose
@@ -3687,7 +3963,7 @@ function App() {
     setPinnedPaths((prev) => {
       const next = new Set(prev);
       if (next.has(filePath)) next.delete(filePath); else next.add(filePath);
-      window.electronAPI?.saveAppSettings({ theme: themeRef.current, pinnedTabs: [...next] });
+      window.electronAPI?.saveAppSettings({ theme: themeRef.current, pinnedTabs: [...next], dockLayout: dockLayoutRef.current, savedLayouts: savedLayoutsRef.current });
       return next;
     });
   }, []);
@@ -3867,6 +4143,185 @@ function App() {
     });
   }, [setNb, dbConnections]);
 
+  // ── Dock layout handlers ───────────────────────────────────────────────────
+
+  const handlePanelZoneChange = useCallback((panelId, newZone) => {
+    setDockLayout((prev) => {
+      const newAssignments = { ...prev.assignments, [panelId]: newZone };
+      const newZoneTab = { ...prev.zoneTab, [newZone]: panelId };
+      let newFloatPos = prev.floatPos;
+      if (newZone === 'float' && !prev.floatPos[panelId]) {
+        newFloatPos = { ...prev.floatPos, [panelId]: { x: 200, y: 100, w: DEFAULT_FLOAT_W, h: DEFAULT_FLOAT_H } };
+      }
+      const updated = { ...prev, assignments: newAssignments, zoneTab: newZoneTab, floatPos: newFloatPos };
+      dockLayoutRef.current = updated;
+      return updated;
+    });
+  }, []);
+
+  const handleZoneTabChange = useCallback((zone, panelId) => {
+    setDockLayout((prev) => {
+      const updated = { ...prev, zoneTab: { ...prev.zoneTab, [zone]: panelId } };
+      dockLayoutRef.current = updated;
+      return updated;
+    });
+  }, []);
+
+  const handlePanelClose = useCallback((panelId) => {
+    if (panelId === 'library') {
+      setLibraryPanelOpen(false);
+    } else {
+      const nbId = activeIdRef.current;
+      if (isNotebookId(nbId)) {
+        const flagMap = { log: 'logPanelOpen', nuget: 'nugetPanelOpen', config: 'configPanelOpen', db: 'dbPanelOpen' };
+        const flag = flagMap[panelId];
+        if (flag) setNb(nbId, { [flag]: false });
+      }
+    }
+  }, [setNb]);
+
+  const handleZoneResizeEnd = useCallback((zone, newSize) => {
+    setDockLayout((prev) => {
+      const updated = { ...prev, sizes: { ...prev.sizes, [zone]: newSize } };
+      dockLayoutRef.current = updated;
+      window.electronAPI?.saveAppSettings({
+        theme: themeRef.current,
+        pinnedTabs: [...pinnedPathsRef.current],
+        dockLayout: updated,
+        savedLayouts: savedLayoutsRef.current,
+      });
+      return updated;
+    });
+  }, []);
+
+  const handleFloatMove = useCallback((panelId, newPos) => {
+    setDockLayout((prev) => {
+      const updated = { ...prev, floatPos: { ...prev.floatPos, [panelId]: newPos } };
+      dockLayoutRef.current = updated;
+      return updated;
+    });
+  }, []);
+
+  // handleStartDrag: called from DockZone tab onMouseDown and FloatPanel grip onMouseDown.
+  // Stores the pending drag start position; actual drag is activated after a 6px threshold.
+  const handleStartDrag = useCallback((panelId, startX, startY) => {
+    pendingDragRef.current = panelId ? { panelId, startX, startY } : null;
+  }, []);
+
+  // Document-level mousemove/mouseup replace HTML5 DnD.
+  // Avoids the Electron/Chromium bug where dragend fires immediately after dragstart
+  // for elements near the bottom edge of the window.
+  useEffect(() => {
+    const THRESHOLD = 6;
+
+    function getDropZone(x, y) {
+      const vw = window.innerWidth, vh = window.innerHeight;
+      if (x < 100) return 'left';
+      if (x > vw - 100) return 'right';
+      if (y > vh - 100) return 'bottom';
+      if (Math.abs(x - vw / 2) < 52 && Math.abs(y - vh / 2) < 36) return 'float';
+      return null;
+    }
+
+    const onMouseMove = (e) => {
+      const pending = pendingDragRef.current;
+      if (!pending) return;
+
+      if (!draggingPanelRef.current) {
+        const dx = e.clientX - pending.startX;
+        const dy = e.clientY - pending.startY;
+        if (dx * dx + dy * dy < THRESHOLD * THRESHOLD) return;
+        dockLog('drag-start panel=' + pending.panelId);
+        document.body.classList.add('dock-panel-dragging');
+        setDraggingPanel(pending.panelId);
+        draggingPanelRef.current = pending.panelId;
+      }
+
+      const zone = getDropZone(e.clientX, e.clientY);
+      if (zone !== hoveredDropZoneRef.current) {
+        hoveredDropZoneRef.current = zone;
+        setHoveredDropZone(zone);
+      }
+    };
+
+    const onMouseUp = () => {
+      const panelId = draggingPanelRef.current;
+      pendingDragRef.current = null;
+      document.body.classList.remove('dock-panel-dragging');
+
+      if (panelId !== null) {
+        const zone = hoveredDropZoneRef.current;
+        dockLog('drop panel=' + panelId + ' zone=' + (zone ?? 'none'));
+        hoveredDropZoneRef.current = null;
+        setHoveredDropZone(null);
+        setDraggingPanel(null);
+        draggingPanelRef.current = null;
+        if (zone && zone !== dockLayoutRef.current.assignments[panelId]) {
+          handlePanelZoneChange(panelId, zone);
+          setTimeout(() => {
+            window.electronAPI?.saveAppSettings({
+              theme: themeRef.current,
+              pinnedTabs: [...pinnedPathsRef.current],
+              dockLayout: dockLayoutRef.current,
+              savedLayouts: savedLayoutsRef.current,
+            });
+          }, 50);
+        }
+      }
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup',   onMouseUp);
+    return () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup',   onMouseUp);
+    };
+  }, [handlePanelZoneChange]);
+
+  const handleSaveLayout = useCallback((name, layout) => {
+    setSavedLayouts((prev) => {
+      const exists = prev.findIndex((sl) => sl.name === name);
+      const updated = exists >= 0
+        ? prev.map((sl, i) => i === exists ? { name, layout } : sl)
+        : [...prev, { name, layout }];
+      savedLayoutsRef.current = updated;
+      window.electronAPI?.saveAppSettings({
+        theme: themeRef.current,
+        pinnedTabs: [...pinnedPathsRef.current],
+        dockLayout: dockLayoutRef.current,
+        savedLayouts: updated,
+      });
+      return updated;
+    });
+  }, []);
+
+  const handleLoadLayout = useCallback((savedLayout) => {
+    const layout = { ...DEFAULT_DOCK_LAYOUT, ...savedLayout.layout };
+    setDockLayout(layout);
+    dockLayoutRef.current = layout;
+    setLayoutKey((k) => k + 1);
+    window.electronAPI?.saveAppSettings({
+      theme: themeRef.current,
+      pinnedTabs: [...pinnedPathsRef.current],
+      dockLayout: layout,
+      savedLayouts: savedLayoutsRef.current,
+    });
+  }, []);
+
+  const handleDeleteLayout = useCallback((name) => {
+    setSavedLayouts((prev) => {
+      const updated = prev.filter((sl) => sl.name !== name);
+      savedLayoutsRef.current = updated;
+      window.electronAPI?.saveAppSettings({
+        theme: themeRef.current,
+        pinnedTabs: [...pinnedPathsRef.current],
+        dockLayout: dockLayoutRef.current,
+        savedLayouts: updated,
+      });
+      return updated;
+    });
+  }, []);
+
   // ── Completions & lint ─────────────────────────────────────────────────────
 
   const requestCompletions = useCallback((notebookId, code, position) => {
@@ -3935,7 +4390,87 @@ function App() {
     });
   }, [handleOpenRecent]);
 
+  // ── Panel props + open flags ───────────────────────────────────────────────
+
+  const activeNb = notebooks.find((n) => n.id === activeId) ?? null;
+
+  const openFlags = useMemo(() => ({
+    log:     isNotebookId(activeId) ? (activeNb?.logPanelOpen ?? false) : false,
+    nuget:   isNotebookId(activeId) ? (activeNb?.nugetPanelOpen ?? false) : false,
+    config:  isNotebookId(activeId) ? (activeNb?.configPanelOpen ?? false) : false,
+    db:      isNotebookId(activeId) ? (activeNb?.dbPanelOpen ?? false) : false,
+    library: libraryPanelOpen,
+  }), [activeId, activeNb, libraryPanelOpen]);
+
+  const panelPropsMap = useMemo(() => {
+    const nbId = activeNb?.id ?? null;
+    return {
+      log: {
+        onToggle: nbId ? () => setNb(nbId, (n) => ({ logPanelOpen: !n.logPanelOpen })) : () => {},
+        currentMemoryMb: activeNb?.memoryHistory?.length
+          ? activeNb.memoryHistory[activeNb.memoryHistory.length - 1] : null,
+      },
+      nuget: {
+        onToggle: nbId ? () => setNb(nbId, (n) => ({ nugetPanelOpen: !n.nugetPanelOpen })) : () => {},
+        packages: activeNb?.nugetPackages ?? [],
+        kernelStatus: activeNb?.kernelStatus ?? 'starting',
+        sources: activeNb?.nugetSources ?? [],
+        onAdd: nbId ? (id, ver) => addNugetPackage(nbId, id, ver) : () => {},
+        onRemove: nbId ? (id) => removeNugetPackage(nbId, id) : () => {},
+        onRetry: nbId ? (id, ver) => retryNugetPackage(nbId, id, ver) : () => {},
+        onAddSource: nbId ? (name, url) => setNbDirty(nbId, (n) => ({
+          nugetSources: n.nugetSources.some((s) => s.url === url)
+            ? n.nugetSources : [...n.nugetSources, { name, url, enabled: true }],
+        })) : () => {},
+        onRemoveSource: nbId ? (url) => setNbDirty(nbId, (n) => ({
+          nugetSources: n.nugetSources.filter((s) => s.url !== url),
+        })) : () => {},
+        onToggleSource: nbId ? (url) => setNbDirty(nbId, (n) => ({
+          nugetSources: n.nugetSources.map((s) => s.url === url ? { ...s, enabled: !s.enabled } : s),
+        })) : () => {},
+      },
+      config: {
+        onToggle: nbId ? () => setNb(nbId, (n) => ({ configPanelOpen: !n.configPanelOpen })) : () => {},
+        config: activeNb?.config ?? [],
+        onAdd: nbId ? (k, v) => setNbDirty(nbId, (n) => ({ config: [...n.config, { key: k, value: v }] })) : () => {},
+        onRemove: nbId ? (i) => setNbDirty(nbId, (n) => ({ config: n.config.filter((_, idx) => idx !== i) })) : () => {},
+        onUpdate: nbId ? (i, val) => setNbDirty(nbId, (n) => ({
+          config: n.config.map((e, idx) => idx === i ? { ...e, value: val } : e),
+        })) : () => {},
+      },
+      db: {
+        onToggle: nbId ? () => setNb(nbId, (n) => ({ dbPanelOpen: !n.dbPanelOpen })) : () => {},
+        connections: dbConnections,
+        attachedDbs: activeNb?.attachedDbs ?? [],
+        notebookId: nbId,
+        onAttach: nbId ? (connId) => handleAttachDb(nbId, connId) : () => {},
+        onDetach: nbId ? (connId) => handleDetachDb(nbId, connId) : () => {},
+        onRefresh: nbId ? (connId) => handleRefreshDb(nbId, connId) : () => {},
+        onRetry: nbId ? (connId) => handleRetryDb(nbId, connId) : () => {},
+        onAdd: handleAddDbConnection,
+        onUpdate: handleUpdateDbConnection,
+        onRemove: handleRemoveDbConnection,
+      },
+      library: {
+        onInsert: handleInsertLibraryFile,
+        onClose: () => setLibraryPanelOpen(false),
+        onOpenFile: handleOpenLibraryFile,
+      },
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeNb, dbConnections]);
+
   // ── Render ─────────────────────────────────────────────────────────────────
+
+  const dockZoneProps = {
+    dockLayout,
+    openFlags,
+    panelProps: panelPropsMap,
+    onTabChange: handleZoneTabChange,
+    onPanelClose: handlePanelClose,
+    onStartDrag: handleStartDrag,
+    onResizeEnd: handleZoneResizeEnd,
+  };
 
   return (
     <div id="app">
@@ -3957,76 +4492,87 @@ function App() {
         pinnedPaths={pinnedPaths}
         onTogglePin={handleTogglePin}
       />
-      <div className="workspace">
-        <div id="notebooks-container">
-          {notebooks.map((notebook) => (
-            <div
-              key={notebook.id}
-              className="notebook-pane"
-              data-nb={notebook.id}
-              style={notebook.id === activeId ? undefined : { display: 'none' }}
-            >
-              <NotebookView
-                nb={notebook}
-                onSetNb={(updater) => setNb(notebook.id, updater)}
-                onSetNbDirty={(updater) => setNbDirty(notebook.id, updater)}
-                onRunCell={runCell}
-                onRunAll={runAll}
-                onSave={handleSave}
-                onLoad={handleLoad}
-                onReset={handleReset}
-                onRename={(newName) => handleRenameTab(notebook.id, newName)}
-                requestCompletions={requestCompletions}
-                requestLint={requestLint}
-                onAddNugetPackage={addNugetPackage}
-                onRemoveNugetPackage={removeNugetPackage}
-                onRetryNugetPackage={retryNugetPackage}
-                dbConnections={dbConnections}
-                onAttachDb={(connId) => handleAttachDb(notebook.id, connId)}
-                onDetachDb={(connId) => handleDetachDb(notebook.id, connId)}
-                onRefreshDb={(connId) => handleRefreshDb(notebook.id, connId)}
-                onRetryDb={(connId) => handleRetryDb(notebook.id, connId)}
-                onAddDbConnection={handleAddDbConnection}
-                onUpdateDbConnection={handleUpdateDbConnection}
-                onRemoveDbConnection={handleRemoveDbConnection}
-                libraryPanelOpen={libraryPanelOpen}
-                onToggleLibrary={() => setLibraryPanelOpen((v) => !v)}
-                theme={theme}
-                onThemeChange={setTheme}
-              />
+      <div className="dock-workspace" key={layoutKey}>
+        <DockZone zone="left" {...dockZoneProps} />
+        <div className="dock-center-col">
+          <div className="dock-content-row">
+            <div id="notebooks-container">
+              {notebooks.map((notebook) => (
+                <div
+                  key={notebook.id}
+                  className="notebook-pane"
+                  data-nb={notebook.id}
+                  style={notebook.id === activeId ? undefined : { display: 'none' }}
+                >
+                  <NotebookView
+                    nb={notebook}
+                    onSetNb={(updater) => setNb(notebook.id, updater)}
+                    onSetNbDirty={(updater) => setNbDirty(notebook.id, updater)}
+                    onRunCell={runCell}
+                    onRunAll={runAll}
+                    onSave={handleSave}
+                    onLoad={handleLoad}
+                    onReset={handleReset}
+                    onRename={(newName) => handleRenameTab(notebook.id, newName)}
+                    requestCompletions={requestCompletions}
+                    requestLint={requestLint}
+                    libraryPanelOpen={libraryPanelOpen}
+                    onToggleLibrary={() => setLibraryPanelOpen((v) => !v)}
+                    theme={theme}
+                    onThemeChange={setTheme}
+                    dockLayout={dockLayout}
+                    savedLayouts={savedLayouts}
+                    onSaveLayout={handleSaveLayout}
+                    onLoadLayout={handleLoadLayout}
+                    onDeleteLayout={handleDeleteLayout}
+                  />
+                </div>
+              ))}
+              {libEditors.map((editor) => (
+                <div
+                  key={editor.id}
+                  className="notebook-pane"
+                  style={editor.id === activeId ? undefined : { display: 'none' }}
+                >
+                  <LibraryEditorPane
+                    editor={editor}
+                    onContentChange={handleLibEditorChange}
+                    onSave={handleSaveLibEditor}
+                  />
+                </div>
+              ))}
+              {docsOpen && (
+                <div
+                  className="notebook-pane"
+                  style={activeId === DOCS_TAB_ID ? undefined : { display: 'none' }}
+                >
+                  <DocsPanel />
+                </div>
+              )}
             </div>
-          ))}
-          {libEditors.map((editor) => (
-            <div
-              key={editor.id}
-              className="notebook-pane"
-              style={editor.id === activeId ? undefined : { display: 'none' }}
-            >
-              <LibraryEditorPane
-                editor={editor}
-                onContentChange={handleLibEditorChange}
-                onSave={handleSaveLibEditor}
-              />
-            </div>
-          ))}
-          {docsOpen && (
-            <div
-              className="notebook-pane"
-              style={activeId === DOCS_TAB_ID ? undefined : { display: 'none' }}
-            >
-              <DocsPanel />
-            </div>
-          )}
+            <DockZone zone="right" {...dockZoneProps} />
+          </div>
+          <DockZone zone="bottom" {...dockZoneProps} />
         </div>
-        {libraryPanelOpen && (
-          <LibraryPanel
-            onInsert={handleInsertLibraryFile}
-            onClose={() => setLibraryPanelOpen(false)}
-            onOpenFile={handleOpenLibraryFile}
-          />
-        )}
       </div>
       <StatusBar notebooks={notebooks} activeId={activeId} />
+      {Object.entries(dockLayout.assignments)
+        .filter(([panelId, z]) => z === 'float' && !!openFlags[panelId])
+        .map(([panelId]) => {
+          const p = panelPropsMap[panelId];
+          if (!p) return null;
+          const pos = dockLayout.floatPos[panelId] ?? { x: 200, y: 100, w: DEFAULT_FLOAT_W, h: DEFAULT_FLOAT_H };
+          return (
+            <FloatPanel key={panelId} panelId={panelId} pos={pos} onMove={handleFloatMove} onClose={handlePanelClose} onStartDrag={handleStartDrag}>
+              {renderPanelContent(panelId, { ...p, isOpen: true })}
+            </FloatPanel>
+          );
+        })}
+      <DockDropOverlay
+        active={!!draggingPanel}
+        sourceZone={draggingPanel ? dockLayout.assignments[draggingPanel] : null}
+        hovered={hoveredDropZone}
+      />
     </div>
   );
 }

@@ -79,6 +79,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   loadAppSettings:  () => ipcRenderer.invoke('app-settings-load'),
   saveAppSettings: (s) => ipcRenderer.invoke('app-settings-save', s),
 
+  // Renderer-side logging (appears in Logs panel)
+  rendererLog: (tag, message) => ipcRenderer.send('renderer-log', { tag, message }),
+
   // Code library
   getLibraryFiles: (subfolder) => ipcRenderer.invoke('get-library-files', subfolder || ''),
   readLibraryFile: (filePath) => ipcRenderer.invoke('read-library-file', filePath),
