@@ -2146,6 +2146,38 @@ Display.Html(@"<pre style='color:#6889a0;margin:0'>// Ready — attach a DB and 
 // Preset palette shown in the tab color picker (null = clear color)
 const TAB_COLORS = [null, '#e05a6e', '#e0884e', '#c4c44a', '#5bb870', '#4eb8c4', '#6889a0', '#8b6ec4', '#c46e88'];
 
+function TabPinIcon() {
+  return (
+    <svg width="9" height="9" viewBox="0 0 9 9" style={{ display: 'block' }}>
+      <circle cx="4.5" cy="3.2" r="2.2" fill="currentColor" />
+      <line x1="4.5" y1="5.4" x2="4.5" y2="8.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// 4 pixel-ghost variants; 5×5 grid, 0=empty 1=body (gaps become eyes/bottom)
+const GHOST_PATTERNS = [
+  [[0,1,1,1,0],[1,1,1,1,1],[1,0,1,0,1],[1,1,1,1,1],[1,0,1,0,1]], // normal
+  [[0,1,1,1,0],[1,1,1,1,1],[0,1,0,1,0],[1,1,1,1,1],[1,0,1,0,1]], // wide-eyed
+  [[0,1,1,1,0],[1,1,1,1,1],[1,1,0,1,1],[1,1,1,1,1],[1,0,1,0,1]], // cyclops
+  [[0,1,1,1,0],[1,0,1,0,1],[1,1,1,1,1],[1,1,1,1,1],[1,0,1,0,1]], // top-eyes
+];
+
+function PixelGhostIcon({ seed = 0 }) {
+  const s = 2;
+  const grid = GHOST_PATTERNS[seed % GHOST_PATTERNS.length];
+  const rects = [];
+  grid.forEach((row, y) => row.forEach((cell, x) => {
+    if (cell === 1) rects.push(<rect key={`${x}-${y}`} x={x * s} y={y * s} width={s} height={s} fill="currentColor" />);
+  }));
+  return (
+    <svg width={5 * s} height={5 * s} viewBox={`0 0 ${5 * s} ${5 * s}`}
+      style={{ display: 'block', imageRendering: 'pixelated' }}>
+      {rects}
+    </svg>
+  );
+}
+
 function TabColorIcon() {
   return (
     <svg width="11" height="11" viewBox="0 0 20 20" fill="currentColor" style={{ display: 'block' }}>
@@ -2296,7 +2328,8 @@ function DocsPanel() {
 // ── Tab & TabBar ──────────────────────────────────────────────────────────────
 
 function Tab({ notebook, isActive, isDragOver, onActivate, onClose, onRename,
-               onDragStart, onDragOver, onDrop, onDragEnd, onSetColor }) {
+               onDragStart, onDragOver, onDrop, onDragEnd, onSetColor,
+               isPinned = false, onTogglePin }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
   const [pickerPos, setPickerPos] = useState(null); // {top, left} when open
@@ -2305,6 +2338,9 @@ function Tab({ notebook, isActive, isDragOver, onActivate, onClose, onRename,
   const colorBtnRef = useRef(null);
 
   const name = getNotebookDisplayName(notebook.path, notebook.title);
+  const ghostSeed = isPinned && notebook.path
+    ? [...notebook.path].reduce((a, c) => a + c.charCodeAt(0), 0)
+    : 0;
 
   useEffect(() => {
     if (editing && inputRef.current) {
@@ -2352,6 +2388,11 @@ function Tab({ notebook, isActive, isDragOver, onActivate, onClose, onRename,
       onClick={editing ? undefined : onActivate}
       title={notebook.path || name}
     >
+      {isPinned && notebook.path && (
+        <span className="tab-ghost-icon" style={color ? { color } : undefined}>
+          <PixelGhostIcon seed={ghostSeed} />
+        </span>
+      )}
       {editing ? (
         <input
           ref={inputRef}
@@ -2384,11 +2425,21 @@ function Tab({ notebook, isActive, isDragOver, onActivate, onClose, onRename,
           title="Set tab color"
         ><TabColorIcon /></button>
       )}
-      <button
-        className="tab-close"
-        onClick={(e) => { e.stopPropagation(); onClose(); }}
-        title="Close tab"
-      >×</button>
+      {notebook.path && (
+        <button
+          className={`tab-pin-btn${isPinned ? ' pinned' : ''}`}
+          style={isPinned && color ? { color } : undefined}
+          onClick={(e) => { e.stopPropagation(); onTogglePin?.(); }}
+          title={isPinned ? 'Unpin tab' : 'Pin tab'}
+        ><TabPinIcon /></button>
+      )}
+      {!isPinned && (
+        <button
+          className="tab-close"
+          onClick={(e) => { e.stopPropagation(); onClose(); }}
+          title="Close tab"
+        >×</button>
+      )}
       {pickerPos && createPortal(
         <div
           ref={pickerRef}
@@ -2415,7 +2466,8 @@ function Tab({ notebook, isActive, isDragOver, onActivate, onClose, onRename,
 function TabBar({ notebooks, activeId, onActivate, onClose, onNew, onRename,
                   onReorder, onSetColor, activeTabColor,
                   docsOpen, onActivateDocs, onCloseDocs,
-                  libEditors, onCloseLibEditor }) {
+                  libEditors, onCloseLibEditor,
+                  pinnedPaths, onTogglePin }) {
   const [dragId, setDragId] = useState(null);
   const [dragOverId, setDragOverId] = useState(null);
 
@@ -2428,24 +2480,35 @@ function TabBar({ notebooks, activeId, onActivate, onClose, onNew, onRename,
   };
   const handleDragEnd = () => { setDragId(null); setDragOverId(null); };
 
+  const pinnedNbs  = notebooks.filter((nb) => nb.path && pinnedPaths?.has(nb.path));
+  const regularNbs = notebooks.filter((nb) => !nb.path || !pinnedPaths?.has(nb.path));
+
+  const renderNb = (nb) => (
+    <Tab
+      key={nb.id}
+      notebook={nb}
+      isActive={nb.id === activeId}
+      isDragOver={dragOverId === nb.id}
+      onActivate={() => onActivate(nb.id)}
+      onClose={() => onClose(nb.id)}
+      onRename={(newName) => onRename(nb.id, newName)}
+      onSetColor={(color) => onSetColor(nb.id, color)}
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+      onDragEnd={handleDragEnd}
+      isPinned={nb.path ? pinnedPaths?.has(nb.path) : false}
+      onTogglePin={nb.path ? () => onTogglePin?.(nb.path) : undefined}
+    />
+  );
+
   return (
     <div className="tab-bar" style={activeTabColor ? { borderBottomColor: activeTabColor } : undefined}>
-      {notebooks.map((nb) => (
-        <Tab
-          key={nb.id}
-          notebook={nb}
-          isActive={nb.id === activeId}
-          isDragOver={dragOverId === nb.id}
-          onActivate={() => onActivate(nb.id)}
-          onClose={() => onClose(nb.id)}
-          onRename={(newName) => onRename(nb.id, newName)}
-          onSetColor={(color) => onSetColor(nb.id, color)}
-          onDragStart={handleDragStart}
-          onDragOver={handleDragOver}
-          onDrop={handleDrop}
-          onDragEnd={handleDragEnd}
-        />
-      ))}
+      {pinnedNbs.map(renderNb)}
+      {pinnedNbs.length > 0 && regularNbs.length > 0 && (
+        <div className="tab-bar-pin-spacer" />
+      )}
+      {regularNbs.map(renderNb)}
       {(libEditors || []).map((e) => (
         <Tab
           key={e.id}
@@ -2508,11 +2571,14 @@ function NotebookView({
           config, logPanelOpen, nugetPanelOpen, configPanelOpen,
           attachedDbs, dbPanelOpen, path: notebookPath } = nb;
 
-  const addCell = (type, afterIndex = -1) => {
+  const addCell = (type, afterIndex = null) => {
     const newCell = makeCell(type, '');
     onSetNbDirty((n) => {
       const next = [...n.cells];
-      const idx = afterIndex >= 0 ? afterIndex + 1 : next.length;
+      let idx;
+      if (afterIndex === null || afterIndex === undefined) idx = next.length; // toolbar: append
+      else if (afterIndex < 0) idx = 0;                                       // top bar: before first
+      else idx = afterIndex + 1;                                              // between cells: after given
       next.splice(idx, 0, newCell);
       return { cells: next };
     });
@@ -2906,6 +2972,10 @@ function App() {
   const [dbConnections, setDbConnections] = useState([]);
   const [theme, setTheme] = useState('kl1nt');
   const isFirstThemeRender = useRef(true);
+  const themeRef = useRef('kl1nt');
+  useEffect(() => { themeRef.current = theme; }, [theme]);
+  const [pinnedPaths, setPinnedPaths] = useState(() => new Set());
+  const initialNbIdRef = useRef(notebooks[0].id);
 
   // Synchronized ref pair — callbacks read fresh state without stale closures
   const notebooksRef = useRef(notebooks);
@@ -2916,6 +2986,8 @@ function App() {
   useEffect(() => { libEditorsRef.current = libEditors; }, [libEditors]);
   const dbConnectionsRef = useRef(dbConnections);
   useEffect(() => { dbConnectionsRef.current = dbConnections; }, [dbConnections]);
+  const pinnedPathsRef = useRef(pinnedPaths);
+  useEffect(() => { pinnedPathsRef.current = pinnedPaths; }, [pinnedPaths]);
 
   // Auto-save the notebook file whenever DB attachment state changes (ready/detached),
   // so users don't need to manually save to persist which DBs are attached.
@@ -2934,6 +3006,7 @@ function App() {
         const data = {
           version: '1.0',
           title: getNotebookDisplayName(nb.path, nb.title, 'notebook'),
+          color: nb.color || null,
           packages: nb.nugetPackages.map(({ id, version }) => ({ id, version: version || null })),
           sources: nb.nugetSources,
           config: nb.config.filter((e) => e.key.trim()),
@@ -2991,19 +3064,61 @@ function App() {
     window.electronAPI?.saveDbConnections(dbConnections);
   }, [dbConnections]);
 
-  // ── Theme load/apply/save ──────────────────────────────────────────────────
+  // ── Theme load/apply/save + pinned tabs restore ────────────────────────────
   useEffect(() => {
     window.electronAPI?.loadAppSettings().then((s) => {
       if (s?.theme) setTheme(s.theme);
+      const pinned = Array.isArray(s?.pinnedTabs) ? s.pinnedTabs : [];
+      if (pinned.length === 0) return;
+      setPinnedPaths(new Set(pinned));
+      // Open pinned files in new tabs on startup
+      Promise.allSettled(pinned.map((fp) => window.electronAPI.openRecentFile(fp)))
+        .then((results) => {
+          const toAdd = [];
+          results.forEach((r) => {
+            if (r.status !== 'fulfilled' || !r.value?.success) return;
+            const nb = createNotebook(false);
+            const loadedPkgs = (r.value.data.packages || []).map((p) => ({ ...p, status: 'pending' }));
+            const savedDbIds = r.value.data.attachedDbIds || [];
+            toAdd.push({
+              nb: {
+                ...nb,
+                path: r.value.filePath,
+                color: r.value.data.color || null,
+                cells: r.value.data.cells || [],
+                nugetPackages: loadedPkgs,
+                nugetSources: r.value.data.sources || [...DEFAULT_NUGET_SOURCES],
+                config: r.value.data.config || [],
+                attachedDbs: savedDbIds.map((id) => ({
+                  connectionId: id, status: 'connecting', varName: '', schema: null, error: undefined,
+                })),
+                isDirty: false,
+              },
+            });
+          });
+          if (toAdd.length === 0) return;
+          setNotebooks((prev) => {
+            // Remove initial blank tab if it was never touched
+            const initId = initialNbIdRef.current;
+            const initNb = prev.find((n) => n.id === initId);
+            const isBlank = initNb && !initNb.isDirty && !initNb.path
+              && initNb.cells.length <= 1 && !(initNb.cells[0]?.content);
+            const base = isBlank ? prev.filter((n) => n.id !== initId) : prev;
+            const existingPaths = new Set(base.map((n) => n.path).filter(Boolean));
+            const fresh = toAdd.filter(({ nb }) => !existingPaths.has(nb.path)).map(({ nb }) => nb);
+            return [...base, ...fresh];
+          });
+          toAdd.forEach(({ nb }) => window.electronAPI.startKernel(nb.id));
+        });
     }).catch(() => {});
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { document.documentElement.dataset.theme = theme; }, [theme]);
 
   useEffect(() => {
     if (isFirstThemeRender.current) { isFirstThemeRender.current = false; return; }
-    window.electronAPI?.saveAppSettings({ theme });
-  }, [theme]);
+    window.electronAPI?.saveAppSettings({ theme, pinnedTabs: [...pinnedPathsRef.current] });
+  }, [theme]); // pinnedPathsRef is stable ref, no dep needed
 
   // When dbConnections first loads, send db_connect for any notebooks whose
   // saved DBs are still 'connecting' (kernel was already ready before connections loaded).
@@ -3465,7 +3580,12 @@ function App() {
 
   const handleSetTabColor = useCallback((notebookId, color) => {
     setNb(notebookId, { color });
-  }, [setNb]);
+    const nb = notebooksRef.current.find((n) => n.id === notebookId);
+    if (nb?.path) {
+      const data = buildNotebookData(notebookId);
+      window.electronAPI?.saveNotebookTo(nb.path, { ...data, color: color || null });
+    }
+  }, [setNb, buildNotebookData]);
 
   const handleRenameTab = useCallback(async (notebookId, newName) => {
     const nb = notebooksRef.current.find((n) => n.id === notebookId);
@@ -3482,10 +3602,21 @@ function App() {
     }
   }, [setNb]);
 
+  const handleTogglePin = useCallback((filePath) => {
+    setPinnedPaths((prev) => {
+      const next = new Set(prev);
+      if (next.has(filePath)) next.delete(filePath); else next.add(filePath);
+      window.electronAPI?.saveAppSettings({ theme: themeRef.current, pinnedTabs: [...next] });
+      return next;
+    });
+  }, []);
+
   const handleCloseTab = useCallback((tabId) => {
     const currentNotebooks = notebooksRef.current;
     const nb = currentNotebooks.find((n) => n.id === tabId);
     if (!nb) return;
+
+    if (nb.path && pinnedPathsRef.current.has(nb.path)) return; // pinned — not closeable
 
     if (nb.isDirty) {
       if (!window.confirm(`Close "${getNotebookDisplayName(nb.path, nb.title)}" without saving?`)) return;
@@ -3719,6 +3850,8 @@ function App() {
         onCloseDocs={handleCloseDocs}
         libEditors={libEditors}
         onCloseLibEditor={handleCloseLibEditor}
+        pinnedPaths={pinnedPaths}
+        onTogglePin={handleTogglePin}
       />
       <div className="workspace">
         <div id="notebooks-container">
