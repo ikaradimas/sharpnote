@@ -185,6 +185,7 @@ function buildMenu() {
       { label: 'Config',    accelerator: 'CmdOrCtrl+Shift+,', click: () => send('toggle-config') },
       { label: 'Library',   accelerator: 'CmdOrCtrl+Shift+L', click: () => send('toggle-library') },
       { label: 'Logs',      accelerator: 'CmdOrCtrl+Shift+G', click: () => send('toggle-logs') },
+      { label: 'DB',        accelerator: 'CmdOrCtrl+Shift+D', click: () => send('toggle-db') },
     ],
   });
 

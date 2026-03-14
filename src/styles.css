@@ -145,10 +145,34 @@ body {
   background: #272730;
 }
 
+.toolbar button.toolbar-run-all {
+  color: var(--accent-primary);
+  border-color: var(--accent-primary-dim);
+}
+
+.toolbar button.toolbar-run-all:hover {
+  color: var(--accent-primary);
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 8px var(--accent-glow);
+}
+
 .toolbar button.panel-active {
   background: var(--panel-active-bg);
   border-color: var(--accent-primary-dim);
   color: var(--accent-primary);
+}
+
+.toolbar-icon-btn {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 7px !important;
+}
+
+.toolbar-icon-text-btn {
+  display: flex !important;
+  align-items: center;
+  gap: 5px;
 }
 
 .toolbar-separator {

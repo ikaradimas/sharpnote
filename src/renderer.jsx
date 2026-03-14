@@ -1684,9 +1684,9 @@ function ThemePicker({ theme, onSelect }) {
         ref={btnRef}
         onClick={() => setOpen((v) => !v)}
         title="Switch theme"
-        className={open ? 'panel-active' : undefined}
+        className={`toolbar-icon-btn${open ? ' panel-active' : ''}`}
       >
-        Theme
+        <IconTheme />
       </button>
       {open && createPortal(
         <div ref={popupRef} className="theme-picker-popup" style={popupStyle}>
@@ -1709,6 +1709,76 @@ function ThemePicker({ theme, onSelect }) {
       )}
     </div>
   );
+}
+
+// ── Toolbar icons ─────────────────────────────────────────────────────────────
+
+const _ic = { width: '13', height: '13', viewBox: '0 0 13 13', fill: 'none', style: { display: 'block', flexShrink: 0 } };
+
+function IconSave() {
+  return <svg {..._ic}>
+    <rect x="1.5" y="1.5" width="10" height="10" rx="1" stroke="currentColor" strokeWidth="1.1"/>
+    <rect x="3" y="1.5" width="4.5" height="4" fill="currentColor"/>
+    <rect x="3.5" y="7" width="6" height="4" rx="0.5" stroke="currentColor" strokeWidth="1"/>
+  </svg>;
+}
+function IconOpen() {
+  return <svg {..._ic} viewBox="0 0 14 13">
+    <path d="M1 4.5h3l1.2-1.8h5.3V4.5" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round"/>
+    <path d="M1 4.5v6.8h12l-2-6.8H1z" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round"/>
+  </svg>;
+}
+function IconReset() {
+  return <svg {..._ic} stroke="currentColor" strokeWidth="1.2" strokeLinecap="round">
+    <path d="M2.5 6.5A4 4 0 1 1 5.5 10.5"/>
+    <path d="M2.5 4v2.5H5"/>
+  </svg>;
+}
+function IconConfig() {
+  return <svg {..._ic} stroke="currentColor" strokeWidth="1.2" strokeLinecap="round">
+    <line x1="2" y1="3.5" x2="11" y2="3.5"/>
+    <circle cx="4.5" cy="3.5" r="1.3" fill="currentColor" stroke="none"/>
+    <line x1="2" y1="6.5" x2="11" y2="6.5"/>
+    <circle cx="8.5" cy="6.5" r="1.3" fill="currentColor" stroke="none"/>
+    <line x1="2" y1="9.5" x2="11" y2="9.5"/>
+    <circle cx="5" cy="9.5" r="1.3" fill="currentColor" stroke="none"/>
+  </svg>;
+}
+function IconPackages() {
+  return <svg {..._ic} stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round">
+    <path d="M6.5 1.5L11.5 4V9L6.5 11.5L1.5 9V4L6.5 1.5z"/>
+    <path d="M1.5 4L6.5 6.5L11.5 4"/>
+    <line x1="6.5" y1="6.5" x2="6.5" y2="11.5"/>
+  </svg>;
+}
+function IconLogs() {
+  return <svg {..._ic} stroke="currentColor" strokeWidth="1.1" strokeLinecap="round">
+    <rect x="1.5" y="1.5" width="10" height="10" rx="1" strokeWidth="1.1"/>
+    <path d="M4 5l2 1.5L4 8" strokeLinejoin="round"/>
+    <line x1="7" y1="8" x2="10" y2="8"/>
+  </svg>;
+}
+function IconDB() {
+  return <svg {..._ic} stroke="currentColor" strokeWidth="1.1">
+    <ellipse cx="6.5" cy="3.5" rx="4" ry="1.6"/>
+    <path d="M2.5 3.5v6c0 .9 1.8 1.6 4 1.6s4-.7 4-1.6v-6"/>
+    <path d="M2.5 6.5c0 .9 1.8 1.6 4 1.6s4-.7 4-1.6"/>
+  </svg>;
+}
+function IconLibrary() {
+  return <svg {..._ic} stroke="currentColor" strokeWidth="1.1" strokeLinecap="round">
+    <path d="M6.5 11V3.5a.5.5 0 00-.5-.5H2a.5.5 0 00-.5.5V11"/>
+    <path d="M6.5 11V3.5a.5.5 0 01.5-.5H11a.5.5 0 01.5.5V11"/>
+    <line x1="1.5" y1="11" x2="11.5" y2="11"/>
+  </svg>;
+}
+function IconTheme() {
+  return <svg {..._ic} stroke="currentColor" strokeWidth="1.1">
+    <circle cx="6.5" cy="6.5" r="5" />
+    <path d="M6.5 1.5v10" strokeLinecap="round"/>
+    <path d="M3.2 2.9A5 5 0 0 0 3.2 10.1" strokeLinecap="round"/>
+    <path d="M1.5 6.5h5" strokeLinecap="round"/>
+  </svg>;
 }
 
 // ── Toolbar ───────────────────────────────────────────────────────────────────
@@ -1778,30 +1848,20 @@ function Toolbar({
         <span className="toolbar-title" onDoubleClick={startEdit} title="Double-click to rename">{displayName}</span>
       )}
       <div className="toolbar-separator" />
-      <button onClick={onRunAll} title="Run all code cells">▶▶ Run All</button>
+      <button onClick={onRunAll} title="Run all code cells" className="toolbar-run-all">▶▶ Run All</button>
       <button onClick={onAddMarkdown} title="Add markdown cell">+ Markdown</button>
       <button onClick={onAddCode} title="Add code cell">+ Code</button>
       <div className="toolbar-separator" />
-      <button onClick={onSave} title="Save notebook">Save</button>
-      <button onClick={onLoad} title="Open notebook">Open</button>
+      <button className="toolbar-icon-btn" onClick={onSave} title="Save notebook"><IconSave /></button>
+      <button className="toolbar-icon-btn" onClick={onLoad} title="Open notebook"><IconOpen /></button>
       <div className="toolbar-separator" />
-      <button onClick={onReset} title="Reset kernel state">Reset Kernel</button>
+      <button className="toolbar-icon-btn" onClick={onReset} title="Reset kernel"><IconReset /></button>
       <div className="toolbar-separator" />
-      <button onClick={onToggleConfig} title="Toggle config panel" className={configPanelOpen ? 'panel-active' : undefined}>
-        Config{configCount > 0 ? ` (${configCount})` : ''}
-      </button>
-      <button onClick={onToggleNuget} title="Toggle NuGet panel" className={nugetPanelOpen ? 'panel-active' : undefined}>
-        Packages
-      </button>
-      <button onClick={onToggleLogs} title="Toggle log panel" className={logPanelOpen ? 'panel-active' : undefined}>
-        Logs
-      </button>
-      <button onClick={onToggleDb} title="Toggle database panel" className={dbPanelOpen ? 'panel-active' : undefined}>
-        DB
-      </button>
-      <button onClick={onToggleLibrary} title="Toggle library panel" className={libraryPanelOpen ? 'panel-active' : undefined}>
-        Library
-      </button>
+      <button onClick={onToggleConfig} title={`Config${configCount > 0 ? ` (${configCount})` : ''}`} className={`toolbar-icon-btn${configPanelOpen ? ' panel-active' : ''}`}><IconConfig /></button>
+      <button onClick={onToggleNuget} title="Packages" className={`toolbar-icon-btn${nugetPanelOpen ? ' panel-active' : ''}`}><IconPackages /></button>
+      <button onClick={onToggleLogs} title="Logs" className={`toolbar-icon-btn${logPanelOpen ? ' panel-active' : ''}`}><IconLogs /></button>
+      <button onClick={onToggleDb} title="DB" className={`toolbar-icon-btn${dbPanelOpen ? ' panel-active' : ''}`}><IconDB /></button>
+      <button onClick={onToggleLibrary} title="Library" className={`toolbar-icon-btn${libraryPanelOpen ? ' panel-active' : ''}`}><IconLibrary /></button>
       <ThemePicker theme={theme} onSelect={onThemeChange} />
       <div className="kernel-status">
         <div className={`kernel-dot ${kernelStatus}`} />
@@ -3818,6 +3878,7 @@ function App() {
     'toggle-config':   () => { if (isNotebook()) setNb(activeIdRef.current, (n) => ({ configPanelOpen: !n.configPanelOpen })); },
     'toggle-logs':     () => { if (isNotebook()) setNb(activeIdRef.current, (n) => ({ logPanelOpen: !n.logPanelOpen })); },
     'toggle-library':  () => setLibraryPanelOpen((v) => !v),
+    'toggle-db':       () => { if (isNotebook()) setNb(activeIdRef.current, (n) => ({ dbPanelOpen: !n.dbPanelOpen })); },
   };
 
   useEffect(() => {
