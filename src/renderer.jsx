@@ -431,8 +431,12 @@ const DOCS_SECTIONS = [
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
+function shortId() {
+  return Math.random().toString(36).slice(2, 10); // 8-char base-36
+}
+
 function makeCell(type = 'code', content = '') {
-  return { id: uuidv4(), type, content, ...(type === 'code' ? { outputMode: 'auto', locked: false } : {}) };
+  return { id: shortId(), type, content, ...(type === 'code' ? { outputMode: 'auto', locked: false } : {}) };
 }
 
 // ── CodeMirror Editor ────────────────────────────────────────────────────────
@@ -676,12 +680,17 @@ function parseLogContent(text) {
 
 function LogEntry({ entry }) {
   const time = formatLogTime(entry.timestamp);
-  const tagClass = `log-tag log-tag-${(entry.tag || '').toLowerCase()}`;
+  const tagClass = `log-tag log-tag-${(entry.tag || '').toLowerCase().replace(/[^a-z]/g, '')}`;
   return (
     <div className="log-entry">
       <span className="log-time">{time}</span>
       <span className={tagClass}>{entry.tag}</span>
-      <span className="log-message">{entry.message}</span>
+      <span className="log-message">
+        {entry.message}
+        {entry.memoryMb != null && (
+          <span className="log-memory"> · {entry.memoryMb.toFixed(0)} MB</span>
+        )}
+      </span>
     </div>
   );
 }
@@ -724,13 +733,15 @@ function useResize(defaultSize, side) {
   return [size, onMouseDown];
 }
 
-function LogPanel({ isOpen, onToggle }) {
+function LogPanel({ isOpen, onToggle, currentMemoryMb = null }) {
   const [width, onResizeMouseDown] = useResize(320, 'left');
   const [logFiles, setLogFiles] = useState([]);
   const [selectedFile, setSelectedFile] = useState('live');
   const [fileEntries, setFileEntries] = useState([]);
   const [liveEntries, setLiveEntries] = useState([]);
   const scrollRef = useRef(null);
+  const memoryRef = useRef(currentMemoryMb);
+  useEffect(() => { memoryRef.current = currentMemoryMb; }, [currentMemoryMb]);
 
   useEffect(() => {
     if (!isOpen || !window.electronAPI) return;
@@ -739,7 +750,10 @@ function LogPanel({ isOpen, onToggle }) {
 
   useEffect(() => {
     if (!window.electronAPI) return;
-    const handler = (entry) => setLiveEntries((prev) => [...prev, entry]);
+    const handler = (entry) => setLiveEntries((prev) => [
+      ...prev,
+      { ...entry, memoryMb: memoryRef.current },
+    ]);
     window.electronAPI.onLogEntry(handler);
     return () => window.electronAPI.offLogEntry(handler);
   }, []);
@@ -2629,7 +2643,8 @@ function NotebookView({
 }) {
   const { cells, outputs, running, kernelStatus, nugetPackages, nugetSources,
           config, logPanelOpen, nugetPanelOpen, configPanelOpen,
-          attachedDbs, dbPanelOpen, path: notebookPath } = nb;
+          attachedDbs, dbPanelOpen, path: notebookPath, memoryHistory } = nb;
+  const currentMemoryMb = memoryHistory?.length ? memoryHistory[memoryHistory.length - 1] : null;
 
   const addCell = (type, afterIndex = null) => {
     const newCell = makeCell(type, '');
@@ -2752,6 +2767,7 @@ function NotebookView({
           <LogPanel
             isOpen={logPanelOpen}
             onToggle={() => onSetNb((n) => ({ logPanelOpen: !n.logPanelOpen }))}
+            currentMemoryMb={currentMemoryMb}
           />
         </div>{/* .content-area */}
         <NugetPanel

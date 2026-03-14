@@ -1070,7 +1070,7 @@ body {
 
 .log-entry {
   display: grid;
-  grid-template-columns: 68px 60px 1fr;
+  grid-template-columns: 68px 56px 1fr;
   gap: 5px;
   padding: 2px 8px;
   align-items: baseline;
@@ -1097,15 +1097,14 @@ body {
   letter-spacing: 0.05em;
 }
 
-.log-tag-notebook {
-  color: var(--accent-secondary);
-  background: rgba(79, 195, 247, 0.1);
-}
-
-.log-tag-user {
-  color: var(--accent-primary);
-  background: rgba(0, 229, 204, 0.1);
-}
+.log-tag-notebook { color: var(--accent-secondary);  background: rgba(79,195,247,0.10); }
+.log-tag-kernel   { color: #7ec8e3;                  background: rgba(126,200,227,0.10); }
+.log-tag-cell     { color: #a8d8a8;                  background: rgba(168,216,168,0.10); }
+.log-tag-save     { color: #c9b97a;                  background: rgba(201,185,122,0.10); }
+.log-tag-load     { color: #b8a8d8;                  background: rgba(184,168,216,0.10); }
+.log-tag-nuget    { color: #e8a87a;                  background: rgba(232,168,122,0.10); }
+.log-tag-db       { color: #7adbb8;                  background: rgba(122,219,184,0.10); }
+.log-tag-user     { color: var(--accent-primary);    background: rgba(0,229,204,0.10); }
 
 .log-message {
   font-family: var(--font-ui);
@@ -1113,6 +1112,11 @@ body {
   color: #80a0b0;
   word-break: break-word;
   white-space: pre-wrap;
+}
+
+.log-memory {
+  color: #404858;
+  font-size: 10px;
 }
 
 .log-empty {

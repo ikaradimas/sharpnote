@@ -254,7 +254,7 @@ function getKernelSpawnArgs() {
 }
 
 function startKernelForId(notebookId) {
-  writeLog('NOTEBOOK', `Kernel starting for ${notebookId}`);
+  writeLog('KERNEL', `Starting kernel`);
 
   const entry = { process: null, ready: false, pending: [] };
   kernels.set(notebookId, entry);
@@ -269,7 +269,7 @@ function startKernelForId(notebookId) {
     });
   } catch (err) {
     console.error('Failed to start kernel:', err);
-    writeLog('NOTEBOOK', `Failed to start kernel ${notebookId}: ${err.message}`);
+    writeLog('KERNEL', `Failed to start: ${err.message}`);
     if (mainWindow) {
       mainWindow.webContents.send('kernel-message', {
         notebookId,
@@ -291,7 +291,8 @@ function startKernelForId(notebookId) {
 
       if (msg.type === 'ready') {
         entry.ready = true;
-        writeLog('NOTEBOOK', `Kernel ready: ${notebookId}`);
+        const queued = entry.pending.length;
+        writeLog('KERNEL', `Ready${queued ? ` — flushing ${queued} queued message${queued > 1 ? 's' : ''}` : ''}`);
         for (const pending of entry.pending) {
           kernelProcess.stdin.write(pending + '\n');
         }
@@ -304,10 +305,22 @@ function startKernelForId(notebookId) {
       }
 
       if (msg.type === 'complete') {
-        writeLog('NOTEBOOK', `Cell complete: id=${msg.id} success=${msg.success}`);
+        const status = msg.success ? 'completed' : 'failed';
+        const duration = msg.durationMs != null ? ` in ${msg.durationMs}ms` : '';
+        writeLog('CELL', `[${msg.id}] ${status}${duration}`);
       }
       if (msg.type === 'error' && !msg.id) {
-        writeLog('NOTEBOOK', `Kernel error (${notebookId}): ${msg.message}`);
+        writeLog('KERNEL', `Error: ${msg.message}`);
+      }
+      if (msg.type === 'nuget_status') {
+        const detail = msg.message ? ` — ${msg.message}` : '';
+        writeLog('NUGET', `${msg.id}: ${msg.status}${detail}`);
+      }
+      if (msg.type === 'db_ready') {
+        writeLog('DB', `Connected — variable: ${msg.varName}`);
+      }
+      if (msg.type === 'db_error') {
+        writeLog('DB', `Connection failed: ${msg.message}`);
       }
 
       if (mainWindow) {
@@ -325,7 +338,7 @@ function startKernelForId(notebookId) {
   kernelProcess.on('exit', (code) => {
     entry.ready = false;
     console.log(`Kernel exited (${notebookId}) with code:`, code);
-    writeLog('NOTEBOOK', `Kernel exited (${notebookId}) with code ${code}`);
+    writeLog('KERNEL', `Stopped (exit code ${code})`);
     if (mainWindow) {
       mainWindow.webContents.send('kernel-message', {
         notebookId,
@@ -337,7 +350,7 @@ function startKernelForId(notebookId) {
   kernelProcess.on('error', (err) => {
     entry.ready = false;
     console.error(`Kernel process error (${notebookId}):`, err);
-    writeLog('NOTEBOOK', `Kernel process error (${notebookId}): ${err.message}`);
+    writeLog('KERNEL', `Process error: ${err.message}`);
     if (mainWindow) {
       mainWindow.webContents.send('kernel-message', {
         notebookId,
@@ -391,13 +404,14 @@ ipcMain.handle('stop-kernel', (_event, notebookId) => {
 
 ipcMain.on('kernel-send', (_event, { notebookId, message }) => {
   if (message.type === 'execute') {
-    writeLog('NOTEBOOK', `Executing cell: ${message.id} (notebook: ${notebookId})`);
+    const preview = (message.code || '').trim().split('\n')[0].slice(0, 60);
+    writeLog('CELL', `[${message.id}] run — ${preview}${preview.length < (message.code || '').trim().split('\n')[0].length ? '…' : ''}`);
   }
   sendToKernel(notebookId, message);
 });
 
 ipcMain.on('kernel-reset', (_event, notebookId) => {
-  writeLog('NOTEBOOK', `Kernel reset: ${notebookId}`);
+  writeLog('KERNEL', `Reset — all state cleared`);
   sendToKernel(notebookId, { type: 'reset' });
 });
 
@@ -430,8 +444,11 @@ ipcMain.handle('save-notebook', async (_event, data) => {
   if (canceled || !filePath) return { success: false };
 
   try {
-    return writeNotebookFile(filePath, data);
+    const result = writeNotebookFile(filePath, data);
+    writeLog('SAVE', `Notebook saved: ${path.basename(filePath)}`);
+    return result;
   } catch (err) {
+    writeLog('SAVE', `Save failed: ${err.message}`);
     return { success: false, error: err.message };
   }
 });
@@ -485,7 +502,9 @@ ipcMain.handle('rename-file', async (_event, { oldPath, newPath }) => {
 
 ipcMain.handle('save-notebook-to', async (_event, { filePath, data }) => {
   try {
-    return writeNotebookFile(filePath, data);
+    const result = writeNotebookFile(filePath, data);
+    writeLog('SAVE', `Auto-saved: ${path.basename(filePath)}`);
+    return result;
   } catch (err) {
     return { success: false, error: err.message };
   }
@@ -504,8 +523,10 @@ ipcMain.handle('load-notebook', async (_event) => {
     const content = fs.readFileSync(filePaths[0], 'utf-8');
     const data = JSON.parse(content);
     addRecentFile(filePaths[0]);
+    writeLog('LOAD', `Notebook opened: ${path.basename(filePaths[0])}`);
     return { success: true, data, filePath: filePaths[0] };
   } catch (err) {
+    writeLog('LOAD', `Open failed: ${err.message}`);
     return { success: false, error: err.message };
   }
 });
@@ -526,6 +547,7 @@ ipcMain.handle('open-recent-file', async (_event, filePath) => {
     const content = fs.readFileSync(filePath, 'utf-8');
     const data = JSON.parse(content);
     addRecentFile(filePath);
+    writeLog('LOAD', `Opened: ${path.basename(filePath)}`);
     return { success: true, data, filePath };
   } catch (err) {
     // File may have moved — remove from recents
