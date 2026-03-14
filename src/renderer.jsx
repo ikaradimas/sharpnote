@@ -1546,7 +1546,7 @@ function DbConnectionForm({ connection, onSave, onCancel }) {
 function DbPanel({
   isOpen, onToggle,
   connections, attachedDbs, notebookId,
-  onAttach, onDetach, onRefresh,
+  onAttach, onDetach, onRefresh, onRetry,
   onAdd, onUpdate, onRemove,
 }) {
   const [height, onResizeMouseDown] = useResize(280, 'top');
@@ -1641,7 +1641,10 @@ function DbPanel({
                   >↻</button>
                 </div>
                 {db.status === 'error' && (
-                  <div className="db-error-msg">{db.error}</div>
+                  <div className="db-error-msg">
+                    <span>{db.error}</span>
+                    <button className="db-retry-btn" onClick={() => onRetry(db.connectionId)}>↺ Retry</button>
+                  </div>
                 )}
                 {db.schema && <DbSchemaTree schema={db.schema} />}
               </div>
@@ -2633,6 +2636,7 @@ function NotebookView({
   onAttachDb,
   onDetachDb,
   onRefreshDb,
+  onRetryDb,
   onAddDbConnection,
   onUpdateDbConnection,
   onRemoveDbConnection,
@@ -2810,6 +2814,7 @@ function NotebookView({
           onAttach={onAttachDb}
           onDetach={onDetachDb}
           onRefresh={onRefreshDb}
+          onRetry={onRetryDb}
           onAdd={onAddDbConnection}
           onUpdate={onUpdateDbConnection}
           onRemove={onRemoveDbConnection}
@@ -3840,6 +3845,28 @@ function App() {
     window.electronAPI?.sendToKernel(notebookId, { type: 'db_refresh', connectionId });
   }, [setNb]);
 
+  const handleRetryDb = useCallback((notebookId, connectionId) => {
+    const conn = dbConnections.find((c) => c.id === connectionId);
+    if (!conn) return;
+    const varName = conn.name
+      .replace(/[^a-zA-Z0-9]+(.)/g, (_, ch) => ch.toUpperCase())
+      .replace(/^[A-Z]/, (ch) => ch.toLowerCase())
+      .replace(/^[^a-zA-Z]/, 'db');
+    setNb(notebookId, (n) => ({
+      attachedDbs: n.attachedDbs.map((d) =>
+        d.connectionId === connectionId ? { ...d, status: 'connecting', error: undefined } : d
+      ),
+    }));
+    window.electronAPI?.sendToKernel(notebookId, {
+      type: 'db_connect',
+      connectionId,
+      name: conn.name,
+      provider: conn.provider,
+      connectionString: conn.connectionString,
+      varName,
+    });
+  }, [setNb, dbConnections]);
+
   // ── Completions & lint ─────────────────────────────────────────────────────
 
   const requestCompletions = useCallback((notebookId, code, position) => {
@@ -3958,6 +3985,7 @@ function App() {
                 onAttachDb={(connId) => handleAttachDb(notebook.id, connId)}
                 onDetachDb={(connId) => handleDetachDb(notebook.id, connId)}
                 onRefreshDb={(connId) => handleRefreshDb(notebook.id, connId)}
+                onRetryDb={(connId) => handleRetryDb(notebook.id, connId)}
                 onAddDbConnection={handleAddDbConnection}
                 onUpdateDbConnection={handleUpdateDbConnection}
                 onRemoveDbConnection={handleRemoveDbConnection}

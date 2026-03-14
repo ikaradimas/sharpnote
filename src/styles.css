@@ -2959,11 +2959,28 @@ body {
 }
 
 .db-error-msg {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   color: var(--status-error);
   font-style: italic;
   font-size: 10px;
   padding: 6px 10px;
 }
+.db-retry-btn {
+  flex-shrink: 0;
+  font-style: normal;
+  font-size: 10px;
+  padding: 2px 7px;
+  background: transparent;
+  border: 1px solid var(--status-error);
+  color: var(--status-error);
+  border-radius: 3px;
+  cursor: pointer;
+  opacity: 0.75;
+  transition: opacity 0.15s;
+}
+.db-retry-btn:hover { opacity: 1; }
 
 /* ── Theme overrides ─────────────────────────────────────────────────────────── */
 
