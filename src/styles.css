@@ -307,13 +307,13 @@ body {
 
 .cell-index-badge {
   position: absolute;
-  left: -20px;
-  top: 30px;
-  transform: translateX(-50%);
-  font-family: var(--font-mono);
+  right: calc(100% + 10px);
+  top: 13px;
+  font-family: var(--font-heading);
   font-size: 9px;
+  letter-spacing: 0.08em;
   line-height: 1;
-  color: #3a4858;
+  color: #4a6272;
   pointer-events: none;
   user-select: none;
   z-index: 1;
@@ -390,6 +390,9 @@ body {
   background: var(--bg-base);
   padding: 3px 12px;
   min-height: 24px;
+}
+.markdown-cell .cell-index-badge {
+  top: 15px;
 }
 
 .markdown-render-wrap {

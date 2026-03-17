@@ -1017,7 +1017,7 @@ function MarkdownCell({ cell, cellIndex, onUpdate, onDelete, onMoveUp, onMoveDow
 
   return (
     <div className="cell markdown-cell">
-      {cellIndex != null && <span className="cell-index-badge">[{String(cellIndex + 1).padStart(2, '0')}]</span>}
+      {cellIndex != null && <span className="cell-index-badge">{cellIndex + 1}</span>}
       <div className="cell-controls">
         <CellControls onMoveUp={onMoveUp} onMoveDown={onMoveDown} onDelete={onDelete} />
       </div>
@@ -1039,11 +1039,8 @@ function MarkdownCell({ cell, cellIndex, onUpdate, onDelete, onMoveUp, onMoveDow
         <div className="markdown-render-wrap" onDoubleClick={enterEdit}>
           <div
             className="markdown-render"
-            dangerouslySetInnerHTML={{ __html: renderedHtml || '<span class="markdown-placeholder">Double-click or click Edit to write markdown…</span>' }}
+            dangerouslySetInnerHTML={{ __html: renderedHtml || '<span class="markdown-placeholder">Double-click to write markdown…</span>' }}
           />
-          <div className="md-view-actions">
-            <button className="md-action-btn md-edit-btn" onClick={enterEdit} title="Edit">Edit</button>
-          </div>
         </div>
       )}
     </div>
@@ -1088,7 +1085,7 @@ function CodeCell({
 
   return (
     <div className={`cell code-cell${isRunning ? ' running' : ''}${locked ? ' cell-locked' : ''}`}>
-      {cellIndex != null && <span className="cell-index-badge">[{String(cellIndex + 1).padStart(2, '0')}]</span>}
+      {cellIndex != null && <span className="cell-index-badge">{cellIndex + 1}</span>}
       <div className="code-cell-header">
         <span className="cell-lang-label">C#</span>
         <div className="cell-run-group" ref={dropdownRef}>
