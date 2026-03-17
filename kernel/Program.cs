@@ -9,11 +9,14 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+using System.Runtime.InteropServices;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 using System.Threading;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Scripting;
 
 // ── DisplayContext ───────────────────────────────────────────────────────────
@@ -307,6 +310,47 @@ public class ScriptGlobals
 {
     public DisplayHelper Display { get; set; } = null!;
     public ConfigHelper Config => ConfigContext.Current;
+    // Injected per-execution so loop-injection checks can cancel tight loops.
+    // Named with underscores to discourage accidental use in user code.
+    public CancellationToken __ct__ { get; set; }
+}
+
+// ── Cancellation-check injector ───────────────────────────────────────────────
+// Rewrites user code by inserting __ct__.ThrowIfCancellationRequested() at the
+// top of every loop body so that SIGINT can stop tight synchronous loops cleanly.
+
+class CancellationCheckInjector : CSharpSyntaxRewriter
+{
+    private readonly StatementSyntax _check =
+        SyntaxFactory.ParseStatement("__ct__.ThrowIfCancellationRequested();");
+
+    private BlockSyntax Wrap(StatementSyntax body)
+    {
+        if (body is BlockSyntax block)
+            return block.WithStatements(block.Statements.Insert(0, _check));
+        return SyntaxFactory.Block(_check, body);
+    }
+
+    public override SyntaxNode? VisitWhileStatement(WhileStatementSyntax node)
+    {
+        var v = (WhileStatementSyntax)base.VisitWhileStatement(node)!;
+        return v.WithStatement(Wrap(v.Statement));
+    }
+    public override SyntaxNode? VisitForStatement(ForStatementSyntax node)
+    {
+        var v = (ForStatementSyntax)base.VisitForStatement(node)!;
+        return v.WithStatement(Wrap(v.Statement));
+    }
+    public override SyntaxNode? VisitDoStatement(DoStatementSyntax node)
+    {
+        var v = (DoStatementSyntax)base.VisitDoStatement(node)!;
+        return v.WithStatement(Wrap(v.Statement));
+    }
+    public override SyntaxNode? VisitForEachStatement(ForEachStatementSyntax node)
+    {
+        var v = (ForEachStatementSyntax)base.VisitForEachStatement(node)!;
+        return v.WithStatement(Wrap(v.Statement));
+    }
 }
 
 // ── DB connection info record ─────────────────────────────────────────────────
@@ -359,6 +403,7 @@ class Program
             );
 
         ScriptState<object?>? state = null;
+        CancellationTokenSource? _execCts = null;
 
         // ── DB connection state ───────────────────────────────────────────────
         var attachedDbs = new Dictionary<string, DbConnectionInfo>();
@@ -378,6 +423,23 @@ class Program
 
         // Safe C# string literal
         string S(string value) => JsonSerializer.Serialize(value);
+
+        // Safe ToString for variable inspector
+        static string SafeToString(object? value, string typeName)
+        {
+            if (value == null) return "null";
+            try { var s = value.ToString() ?? ""; return s.Length > 120 ? s[..120] + "…" : s; }
+            catch { return $"<{typeName}>"; }
+        }
+
+        // PosixSignalRegistration works for piped (non-terminal) processes,
+        // unlike Console.CancelKeyPress which requires stdin to be a TTY.
+        // The 'using var' keeps the registration alive for the kernel's lifetime.
+        using var _sigIntReg = PosixSignalRegistration.Create(PosixSignal.SIGINT, ctx =>
+        {
+            ctx.Cancel = true;  // prevent default process termination
+            _execCts?.Cancel();
+        });
 
         realStdout.WriteLine(JsonSerializer.Serialize(new { type = "ready" }));
 
@@ -402,17 +464,43 @@ class Program
         });
 
         var stdin = new StreamReader(Console.OpenStandardInput());
-        string? line;
 
-        while ((line = await stdin.ReadLineAsync()) != null)
+        // A channel decouples stdin reading from message processing.
+        // The background reader handles interrupt messages inline (cancels _execCts
+        // immediately without queuing), so signals arrive even while the main loop
+        // is blocked awaiting script execution.
+        var msgChannel = Channel.CreateUnbounded<JsonElement>(
+            new UnboundedChannelOptions { SingleReader = true });
+
+        _ = Task.Run(async () =>
         {
-            if (string.IsNullOrWhiteSpace(line)) continue;
+            try
+            {
+                string? rawLine;
+                while ((rawLine = await stdin.ReadLineAsync()) != null)
+                {
+                    if (string.IsNullOrWhiteSpace(rawLine)) continue;
+                    try
+                    {
+                        using var doc = JsonDocument.Parse(rawLine);
+                        var root = doc.RootElement.Clone();
+                        // Interrupt is handled inline so it fires even mid-execution.
+                        if (root.TryGetProperty("type", out var tp) && tp.GetString() == "interrupt")
+                            _execCts?.Cancel();
+                        else
+                            await msgChannel.Writer.WriteAsync(root);
+                    }
+                    catch { }
+                }
+            }
+            catch { }
+            finally { msgChannel.Writer.TryComplete(); }
+        });
 
-            JsonElement msg;
-            try { msg = JsonSerializer.Deserialize<JsonElement>(line); }
-            catch { continue; }
-
-            var msgType = msg.GetProperty("type").GetString();
+        await foreach (var msg in msgChannel.Reader.ReadAllAsync())
+        {
+            var msgType = msg.TryGetProperty("type", out var typeEl) ? typeEl.GetString() : null;
+            if (msgType == null) continue;
 
             switch (msgType)
             {
@@ -498,17 +586,34 @@ class Program
                     Console.SetOut(captureWriter);
 
                     var effectiveOptions = options.AddReferences(dbMetaRefs);
+                    _execCts = new CancellationTokenSource();
+                    var execToken = _execCts.Token;
+                    var interrupted = false;
+
+                    // Inject __ct__.ThrowIfCancellationRequested() into every loop body so
+                    // tight synchronous loops respond to Stop without killing the kernel.
+                    globals.__ct__ = execToken;
+                    var injectedCode = new CancellationCheckInjector()
+                        .Visit(CSharpSyntaxTree.ParseText(cleanCode,
+                            new CSharpParseOptions(LanguageVersion.Latest,
+                                DocumentationMode.None, SourceCodeKind.Script))
+                            .GetRoot())!.ToFullString();
+
                     try
                     {
-                        if (state == null)
-                        {
-                            state = await CSharpScript.RunAsync<object?>(
-                                cleanCode, effectiveOptions, globals, typeof(ScriptGlobals));
-                        }
-                        else
-                        {
-                            state = await state.ContinueWithAsync<object?>(cleanCode, effectiveOptions);
-                        }
+                        // WaitAsync handles async operations (await points); the injected checks
+                        // handle synchronous tight loops — together they cover all cases.
+                        Task<ScriptState<object?>> scriptTask = state == null
+                            ? CSharpScript.RunAsync<object?>(injectedCode, effectiveOptions, globals, typeof(ScriptGlobals))
+                            : state.ContinueWithAsync<object?>(injectedCode, effectiveOptions);
+                        state = await scriptTask.WaitAsync(execToken);
+                    }
+                    catch (OperationCanceledException) when (execToken.IsCancellationRequested)
+                    {
+                        interrupted = true;
+                        success = false;
+                        errorMessage = "Execution interrupted";
+                        // state left as-is
                     }
                     catch (CompilationErrorException ex)
                     {
@@ -523,8 +628,11 @@ class Program
                     }
                     finally
                     {
-                        Console.SetOut(realStdout);
+                        // If interrupted the orphaned script task may still be running; redirect
+                        // Console.Out to Null so it cannot corrupt the JSON protocol.
+                        Console.SetOut(interrupted ? TextWriter.Null : realStdout);
                         DisplayContext.Current = null;
+                        _execCts = null;
                     }
 
                     var captured = captureBuffer.ToString();
@@ -540,14 +648,30 @@ class Program
                         RenderReturnValue(display, state.ReturnValue, outputMode, id, realStdout);
                     }
 
-                    if (!success)
+                    if (!success && errorMessage != "Execution interrupted")
                     {
                         realStdout.WriteLine(JsonSerializer.Serialize(new
                         { type = "error", id, message = errorMessage, stackTrace }));
                     }
 
+                    if (success && state != null)
+                    {
+                        var vars = state.Variables
+                            .Where(v => !v.Name.StartsWith("<"))
+                            .Select(v => new {
+                                name         = v.Name,
+                                typeName     = v.Type.Name,
+                                fullTypeName = v.Type.FullName ?? v.Type.Name,
+                                value        = SafeToString(v.Value, v.Type.Name),
+                                isNull       = v.Value == null,
+                            })
+                            .ToList();
+                        realStdout.WriteLine(JsonSerializer.Serialize(new { type = "vars_update", vars }));
+                    }
+
+                    var wasCancelled = !success && errorMessage == "Execution interrupted";
                     realStdout.WriteLine(JsonSerializer.Serialize(new
-                    { type = "complete", id, success }));
+                    { type = "complete", id, success, cancelled = wasCancelled }));
                     break;
                 }
 

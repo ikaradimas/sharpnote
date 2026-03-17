@@ -415,8 +415,26 @@ ipcMain.on('kernel-send', (_event, { notebookId, message }) => {
 });
 
 ipcMain.on('kernel-reset', (_event, notebookId) => {
-  writeLog('KERNEL', `Reset — all state cleared`);
-  sendToKernel(notebookId, { type: 'reset' });
+  writeLog('KERNEL', 'Hard reset — killing and restarting process');
+  const entry = kernels.get(notebookId);
+  if (entry?.process) {
+    kernels.delete(notebookId);       // remove first so exit handler sees no entry
+    try { entry.process.kill(); } catch (_) {}
+  }
+  startKernelForId(notebookId);
+});
+
+ipcMain.on('kernel-interrupt', (_event, notebookId) => {
+  const entry = kernels.get(notebookId);
+  if (!entry?.process) return;
+  writeLog('KERNEL', 'Interrupt signal sent');
+  // Write an interrupt message to the kernel's stdin — the kernel's background
+  // stdin reader picks this up immediately and cancels the running execution.
+  // This is more reliable than SIGINT, which can be missed on some platforms
+  // when the process is deep in an async state machine.
+  if (entry.process.stdin?.writable) {
+    entry.process.stdin.write(JSON.stringify({ type: 'interrupt' }) + '\n');
+  }
 });
 
 ipcMain.handle('new-notebook-dialog', async () => {

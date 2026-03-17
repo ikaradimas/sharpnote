@@ -927,6 +927,8 @@ function OutputBlock({ msg, index }) {
     } else if (msg.format === 'graph') {
       inner = <GraphOutput config={msg.content} />;
     }
+  } else if (msg.type === 'interrupted') {
+    inner = <div className="output-interrupted">⏹ Execution interrupted</div>;
   }
 
   if (inner === null) return null;
@@ -1054,8 +1056,12 @@ function CodeCell({
   cellIndex,
   outputs,
   isRunning,
+  anyRunning,
   onUpdate,
   onRun,
+  onInterrupt,
+  onRunFrom,
+  onRunTo,
   onDelete,
   onMoveUp,
   onMoveDown,
@@ -1066,19 +1072,51 @@ function CodeCell({
 }) {
   const outputMode = cell.outputMode || 'auto';
   const locked = cell.locked || false;
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    if (!dropdownOpen) return;
+    const handler = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target))
+        setDropdownOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [dropdownOpen]);
+
   return (
     <div className={`cell code-cell${isRunning ? ' running' : ''}${locked ? ' cell-locked' : ''}`}>
       {cellIndex != null && <span className="cell-index-badge">[{String(cellIndex + 1).padStart(2, '0')}]</span>}
       <div className="code-cell-header">
         <span className="cell-lang-label">C#</span>
-        <button
-          className="run-btn"
-          onClick={onRun}
-          disabled={isRunning}
-          title="Run (Ctrl+Enter)"
-        >
-          {isRunning ? '◼ Running' : '▶ Run'}
-        </button>
+        <div className="cell-run-group" ref={dropdownRef}>
+          {isRunning ? (
+            <button className="cell-stop-btn" onClick={onInterrupt}
+                    title="Interrupt (stops async ops; use Reset for tight loops)">
+              ⏹ Stop
+            </button>
+          ) : (
+            <>
+              <button className="run-btn" onClick={onRun} disabled={anyRunning} title="Run (Ctrl+Enter)">▶ Run</button>
+              <button className="cell-run-chevron" onClick={() => setDropdownOpen(v => !v)}
+                      disabled={anyRunning} title="More run options">▾</button>
+            </>
+          )}
+          {dropdownOpen && !isRunning && (
+            <div className="cell-run-dropdown">
+              <button className="cell-run-dropdown-item" onClick={() => { onRun(); setDropdownOpen(false); }}>
+                ▶&nbsp; Run this cell
+              </button>
+              <button className="cell-run-dropdown-item" onClick={() => { onRunFrom(); setDropdownOpen(false); }}>
+                ▶▶ Run from here
+              </button>
+              <button className="cell-run-dropdown-item" onClick={() => { onRunTo(); setDropdownOpen(false); }}>
+                ▲▲ Run to here
+              </button>
+            </div>
+          )}
+        </div>
         {isRunning && <span className="running-spinner">executing…</span>}
         <div className="header-right">
           <label className="output-mode-label">output</label>
@@ -1800,6 +1838,14 @@ function IconTheme() {
     <path d="M1.5 6.5h5" strokeLinecap="round"/>
   </svg>;
 }
+function IconVars() {
+  return <svg {..._ic} stroke="currentColor" strokeWidth="1.1" strokeLinecap="round">
+    <rect x="1.5" y="2" width="4" height="9" rx="0.5"/>
+    <line x1="7" y1="4" x2="11.5" y2="4"/>
+    <line x1="7" y1="6.5" x2="11.5" y2="6.5"/>
+    <line x1="7" y1="9" x2="10" y2="9"/>
+  </svg>;
+}
 
 // ── Toolbar ───────────────────────────────────────────────────────────────────
 
@@ -1823,6 +1869,8 @@ function Toolbar({
   configCount,
   dbPanelOpen,
   onToggleDb,
+  varsPanelOpen,
+  onToggleVars,
   libraryPanelOpen,
   onToggleLibrary,
   theme,
@@ -1886,6 +1934,7 @@ function Toolbar({
       <button onClick={onToggleNuget} title="Packages" className={`toolbar-icon-btn${nugetPanelOpen ? ' panel-active' : ''}`}><IconPackages /></button>
       <button onClick={onToggleLogs} title="Logs" className={`toolbar-icon-btn${logPanelOpen ? ' panel-active' : ''}`}><IconLogs /></button>
       <button onClick={onToggleDb} title="DB" className={`toolbar-icon-btn${dbPanelOpen ? ' panel-active' : ''}`}><IconDB /></button>
+      <button onClick={onToggleVars} title="Variables" className={`toolbar-icon-btn${varsPanelOpen ? ' panel-active' : ''}`}><IconVars /></button>
       <button onClick={onToggleLibrary} title="Library" className={`toolbar-icon-btn${libraryPanelOpen ? ' panel-active' : ''}`}><IconLibrary /></button>
       {dockLayout && (
         <LayoutManager
@@ -2305,6 +2354,8 @@ function createNotebook(withExamples = false) {
     configPanelOpen: false,
     attachedDbs: [],   // [{ connectionId, status, varName, schema, error }]
     dbPanelOpen: false,
+    vars: [],
+    varsPanelOpen: false,
   };
 }
 
@@ -2643,6 +2694,9 @@ function NotebookView({
   onSave,
   onLoad,
   onReset,
+  onInterrupt,
+  onRunFrom,
+  onRunTo,
   onRename,
   requestCompletions,
   requestLint,
@@ -2658,7 +2712,7 @@ function NotebookView({
 }) {
   const { cells, outputs, running, kernelStatus,
           config, logPanelOpen, nugetPanelOpen, configPanelOpen,
-          dbPanelOpen, path: notebookPath } = nb;
+          dbPanelOpen, varsPanelOpen, path: notebookPath } = nb;
 
   const addCell = (type, afterIndex = null) => {
     const newCell = makeCell(type, '');
@@ -2721,6 +2775,8 @@ function NotebookView({
         configCount={config.length}
         dbPanelOpen={dbPanelOpen}
         onToggleDb={() => onSetNb((n) => ({ dbPanelOpen: !n.dbPanelOpen }))}
+        varsPanelOpen={varsPanelOpen}
+        onToggleVars={() => onSetNb((n) => ({ varsPanelOpen: !n.varsPanelOpen }))}
         libraryPanelOpen={libraryPanelOpen}
         onToggleLibrary={onToggleLibrary}
         theme={theme}
@@ -2763,8 +2819,12 @@ function NotebookView({
                 cellIndex={index}
                 outputs={outputs[cell.id]}
                 isRunning={running.has(cell.id)}
+                anyRunning={running.size > 0}
                 onUpdate={(val) => updateCell(cell.id, val)}
                 onRun={() => onRunCell(nb.id, cell)}
+                onInterrupt={() => onInterrupt(nb.id)}
+                onRunFrom={() => onRunFrom(nb.id, cell.id)}
+                onRunTo={() => onRunTo(nb.id, cell.id)}
                 onDelete={() => deleteCell(cell.id)}
                 onMoveUp={() => moveCell(cell.id, -1)}
                 onMoveDown={() => moveCell(cell.id, 1)}
@@ -2781,6 +2841,45 @@ function NotebookView({
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+// ── Variables Panel ───────────────────────────────────────────────────────────
+
+function VarsPanel({ vars }) {
+  const [search, setSearch] = useState('');
+  const filtered = search
+    ? vars.filter(v => v.name.toLowerCase().includes(search.toLowerCase()) ||
+                       v.typeName.toLowerCase().includes(search.toLowerCase()))
+    : vars;
+  return (
+    <div className="vars-panel">
+      <div className="vars-panel-header">
+        <span className="vars-panel-title">Variables</span>
+        <input className="vars-search" placeholder="filter…" value={search}
+               onChange={e => setSearch(e.target.value)} spellCheck={false} />
+      </div>
+      {filtered.length === 0 ? (
+        <div className="vars-empty">{vars.length === 0 ? 'No variables in scope yet' : 'No matches'}</div>
+      ) : (
+        <div className="vars-table-wrap">
+          <table className="vars-table">
+            <thead><tr><th>Name</th><th>Type</th><th>Value</th></tr></thead>
+            <tbody>
+              {filtered.map(v => (
+                <tr key={v.name} className="vars-row">
+                  <td className="vars-name">{v.name}</td>
+                  <td><span className="vars-type-badge">{v.typeName}</span></td>
+                  <td className="vars-value" title={v.value}>
+                    {v.isNull ? <span className="vars-null">null</span> : v.value}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
@@ -3003,8 +3102,8 @@ function LibraryEditorPane({ editor, onContentChange, onSave }) {
 // ── Dock Layout System ────────────────────────────────────────────────────────
 
 const DEFAULT_DOCK_LAYOUT = {
-  assignments: { log: 'right', nuget: 'bottom', config: 'bottom', db: 'bottom', library: 'left' },
-  order:       { log: 0, nuget: 0, config: 1, db: 2, library: 0 },
+  assignments: { log: 'right', nuget: 'bottom', config: 'bottom', db: 'bottom', library: 'left', vars: 'right' },
+  order:       { log: 0, nuget: 0, config: 1, db: 2, library: 0, vars: 1 },
   sizes:       { left: 300, right: 320, bottom: 280 },
   floatPos:    {},
   zoneTab:     { left: 'library', right: 'log', bottom: 'nuget' },
@@ -3014,11 +3113,12 @@ const DEFAULT_FLOAT_W = 360;
 const DEFAULT_FLOAT_H = 300;
 
 const PANEL_META = {
-  log:     { label: 'Logs',     icon: <IconLogs /> },
-  nuget:   { label: 'Packages', icon: <IconPackages /> },
-  config:  { label: 'Config',   icon: <IconConfig /> },
-  db:      { label: 'DB',       icon: <IconDB /> },
-  library: { label: 'Library',  icon: <IconLibrary /> },
+  log:     { label: 'Logs',      icon: <IconLogs /> },
+  nuget:   { label: 'Packages',  icon: <IconPackages /> },
+  config:  { label: 'Config',    icon: <IconConfig /> },
+  db:      { label: 'DB',        icon: <IconDB /> },
+  library: { label: 'Library',   icon: <IconLibrary /> },
+  vars:    { label: 'Variables', icon: <IconVars /> },
 };
 
 function renderPanelContent(panelId, p) {
@@ -3028,6 +3128,7 @@ function renderPanelContent(panelId, p) {
     case 'nuget':   return <NugetPanel {...p} />;
     case 'config':  return <ConfigPanel {...p} />;
     case 'db':      return <DbPanel {...p} />;
+    case 'vars':    return <VarsPanel {...p} />;
     case 'library': return <LibraryPanel {...p} />;
     default:        return null;
   }
@@ -3417,7 +3518,13 @@ function App() {
     window.electronAPI?.loadAppSettings().then((s) => {
       if (s?.theme) setTheme(s.theme);
       if (s?.dockLayout) {
-        const loaded = { ...DEFAULT_DOCK_LAYOUT, ...s.dockLayout };
+        const loaded = {
+          ...DEFAULT_DOCK_LAYOUT,
+          ...s.dockLayout,
+          // Deep-merge sub-objects so newly added panels (e.g. vars) are always present
+          assignments: { ...DEFAULT_DOCK_LAYOUT.assignments, ...(s.dockLayout.assignments || {}) },
+          order:       { ...DEFAULT_DOCK_LAYOUT.order,       ...(s.dockLayout.order       || {}) },
+        };
         setDockLayout(loaded);
         dockLayoutRef.current = loaded;
       }
@@ -3524,7 +3631,7 @@ function App() {
 
       switch (msg.type) {
         case 'ready':
-          setNb(notebookId, { kernelStatus: 'ready' });
+          setNb(notebookId, { kernelStatus: 'ready', vars: [] });
           // Kick pending NuGet preloads
           {
             const nb = notebooksRef.current.find((n) => n.id === notebookId);
@@ -3598,7 +3705,10 @@ function App() {
               outputs: { ...n.outputs, [msg.id]: [...(n.outputs[msg.id] || []), msg] },
             }));
           } else {
-            setNb(notebookId, { kernelStatus: 'error' });
+            // Ignore process-exit errors that arrive while we're already restarting
+            setNb(notebookId, (n) =>
+              n.kernelStatus === 'starting' ? {} : { kernelStatus: 'error' }
+            );
           }
           break;
 
@@ -3611,7 +3721,10 @@ function App() {
           setNb(notebookId, (n) => {
             const next = new Set(n.running);
             next.delete(msg.id);
-            return { running: next };
+            const extra = msg.cancelled
+              ? { outputs: { ...n.outputs, [msg.id]: [...(n.outputs[msg.id] || []), { type: 'interrupted' }] } }
+              : {};
+            return { running: next, ...extra };
           });
           break;
         }
@@ -3650,11 +3763,15 @@ function App() {
           }));
           break;
 
+        case 'vars_update':
+          setNb(notebookId, { vars: msg.vars });
+          break;
+
         case 'nuget_preload_complete':
           break;
 
         case 'reset_complete':
-          setNb(notebookId, { kernelStatus: 'ready' });
+          setNb(notebookId, { kernelStatus: 'ready', vars: [] });
           break;
 
         case 'db_schema':
@@ -3745,13 +3862,50 @@ function App() {
     }
   }, [runCell]);
 
+  const runFrom = useCallback(async (notebookId, cellId) => {
+    const nb = notebooksRef.current.find((n) => n.id === notebookId);
+    if (!nb || nb.running.size > 0) return;
+    const idx = nb.cells.findIndex((c) => c.id === cellId);
+    if (idx < 0) return;
+    for (const cell of nb.cells.slice(idx).filter((c) => c.type === 'code'))
+      await runCell(notebookId, cell);
+  }, [runCell]);
+
+  const runTo = useCallback(async (notebookId, cellId) => {
+    const nb = notebooksRef.current.find((n) => n.id === notebookId);
+    if (!nb || nb.running.size > 0) return;
+    const idx = nb.cells.findIndex((c) => c.id === cellId);
+    if (idx < 0) return;
+    for (const cell of nb.cells.slice(0, idx + 1).filter((c) => c.type === 'code'))
+      await runCell(notebookId, cell);
+  }, [runCell]);
+
+  // ── Kernel interrupt ───────────────────────────────────────────────────────
+
+  const handleInterrupt = useCallback((notebookId) => {
+    window.electronAPI?.interruptKernel(notebookId);
+  }, []);
+
   // ── Kernel reset ───────────────────────────────────────────────────────────
 
   const handleReset = useCallback((notebookId) => {
     if (!window.electronAPI) return;
     const nb = notebooksRef.current.find((n) => n.id === notebookId);
     if (nb) cancelPendingCells(nb.cells);
-    setNb(notebookId, { kernelStatus: 'starting', outputs: {}, running: new Set() });
+    setNb(notebookId, (n) => ({
+      kernelStatus: 'starting',
+      outputs: {},
+      running: new Set(),
+      vars: [],
+      // Reset loaded/loading packages to pending so the new kernel re-preloads them
+      nugetPackages: n.nugetPackages.map((p) =>
+        (p.status === 'loaded' || p.status === 'loading') ? { ...p, status: 'pending' } : p
+      ),
+      // Reset ready/connecting DBs to connecting so the new kernel re-attaches them
+      attachedDbs: n.attachedDbs.map((d) =>
+        d.status !== 'error' ? { ...d, status: 'connecting', schema: null } : d
+      ),
+    }));
     window.electronAPI.resetKernel(notebookId);
   }, [setNb]);
 
@@ -4173,7 +4327,7 @@ function App() {
     } else {
       const nbId = activeIdRef.current;
       if (isNotebookId(nbId)) {
-        const flagMap = { log: 'logPanelOpen', nuget: 'nugetPanelOpen', config: 'configPanelOpen', db: 'dbPanelOpen' };
+        const flagMap = { log: 'logPanelOpen', nuget: 'nugetPanelOpen', config: 'configPanelOpen', db: 'dbPanelOpen', vars: 'varsPanelOpen' };
         const flag = flagMap[panelId];
         if (flag) setNb(nbId, { [flag]: false });
       }
@@ -4296,7 +4450,12 @@ function App() {
   }, []);
 
   const handleLoadLayout = useCallback((savedLayout) => {
-    const layout = { ...DEFAULT_DOCK_LAYOUT, ...savedLayout.layout };
+    const layout = {
+      ...DEFAULT_DOCK_LAYOUT,
+      ...savedLayout.layout,
+      assignments: { ...DEFAULT_DOCK_LAYOUT.assignments, ...(savedLayout.layout.assignments || {}) },
+      order:       { ...DEFAULT_DOCK_LAYOUT.order,       ...(savedLayout.layout.order       || {}) },
+    };
     setDockLayout(layout);
     dockLayoutRef.current = layout;
     setLayoutKey((k) => k + 1);
@@ -4400,6 +4559,7 @@ function App() {
     config:  isNotebookId(activeId) ? (activeNb?.configPanelOpen ?? false) : false,
     db:      isNotebookId(activeId) ? (activeNb?.dbPanelOpen ?? false) : false,
     library: libraryPanelOpen,
+    vars:    isNotebookId(activeId) ? (activeNb?.varsPanelOpen ?? false) : false,
   }), [activeId, activeNb, libraryPanelOpen]);
 
   const panelPropsMap = useMemo(() => {
@@ -4456,6 +4616,10 @@ function App() {
         onClose: () => setLibraryPanelOpen(false),
         onOpenFile: handleOpenLibraryFile,
       },
+      vars: {
+        onToggle: nbId ? () => setNb(nbId, (n) => ({ varsPanelOpen: !n.varsPanelOpen })) : () => {},
+        vars: activeNb?.vars ?? [],
+      },
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeNb, dbConnections]);
@@ -4510,6 +4674,9 @@ function App() {
                     onSetNbDirty={(updater) => setNbDirty(notebook.id, updater)}
                     onRunCell={runCell}
                     onRunAll={runAll}
+                    onInterrupt={handleInterrupt}
+                    onRunFrom={runFrom}
+                    onRunTo={runTo}
                     onSave={handleSave}
                     onLoad={handleLoad}
                     onReset={handleReset}

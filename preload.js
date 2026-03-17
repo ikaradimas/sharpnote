@@ -32,6 +32,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   resetKernel: (notebookId) => {
     ipcRenderer.send('kernel-reset', notebookId);
   },
+  interruptKernel: (notebookId) => ipcRenderer.send('kernel-interrupt', notebookId),
 
   // File operations
   saveNotebook: (data) => ipcRenderer.invoke('save-notebook', data),
