@@ -1146,13 +1146,15 @@ function CodeCell({
         cellIndex={cellIndex}
       />
       <CellOutput messages={outputs} />
-      <button
-        className={`cell-lock-btn${locked ? ' cell-lock-btn-on' : ''}`}
-        onClick={onToggleLock}
-        title={locked ? 'Unlock cell' : 'Lock cell (read-only)'}
-      >
-        {locked ? '🔒' : '🔓'}
-      </button>
+      <div className="code-cell-footer">
+        <button
+          className={`cell-lock-btn${locked ? ' cell-lock-btn-on' : ''}`}
+          onClick={onToggleLock}
+          title={locked ? 'Unlock cell' : 'Lock cell (read-only)'}
+        >
+          {locked ? '🔒' : '🔓'}
+        </button>
+      </div>
     </div>
   );
 }
@@ -1846,6 +1848,14 @@ function IconVars() {
     <line x1="7" y1="9" x2="10" y2="9"/>
   </svg>;
 }
+function IconToC() {
+  return <svg {..._ic} stroke="currentColor" strokeWidth="1.1" strokeLinecap="round">
+    <line x1="1.5" y1="3" x2="11.5" y2="3"/>
+    <line x1="3.5" y1="6" x2="11.5" y2="6"/>
+    <line x1="3.5" y1="9" x2="11.5" y2="9"/>
+    <line x1="1.5" y1="3" x2="1.5" y2="9"/>
+  </svg>;
+}
 
 // ── Toolbar ───────────────────────────────────────────────────────────────────
 
@@ -1871,6 +1881,8 @@ function Toolbar({
   onToggleDb,
   varsPanelOpen,
   onToggleVars,
+  tocPanelOpen,
+  onToggleToC,
   libraryPanelOpen,
   onToggleLibrary,
   theme,
@@ -1935,6 +1947,7 @@ function Toolbar({
       <button onClick={onToggleLogs} title="Logs" className={`toolbar-icon-btn${logPanelOpen ? ' panel-active' : ''}`}><IconLogs /></button>
       <button onClick={onToggleDb} title="DB" className={`toolbar-icon-btn${dbPanelOpen ? ' panel-active' : ''}`}><IconDB /></button>
       <button onClick={onToggleVars} title="Variables" className={`toolbar-icon-btn${varsPanelOpen ? ' panel-active' : ''}`}><IconVars /></button>
+      <button onClick={onToggleToC} title="Table of Contents" className={`toolbar-icon-btn${tocPanelOpen ? ' panel-active' : ''}`}><IconToC /></button>
       <button onClick={onToggleLibrary} title="Library" className={`toolbar-icon-btn${libraryPanelOpen ? ' panel-active' : ''}`}><IconLibrary /></button>
       {dockLayout && (
         <LayoutManager
@@ -2356,6 +2369,7 @@ function createNotebook(withExamples = false) {
     dbPanelOpen: false,
     vars: [],
     varsPanelOpen: false,
+    tocPanelOpen: false,
   };
 }
 
@@ -2712,7 +2726,7 @@ function NotebookView({
 }) {
   const { cells, outputs, running, kernelStatus,
           config, logPanelOpen, nugetPanelOpen, configPanelOpen,
-          dbPanelOpen, varsPanelOpen, path: notebookPath } = nb;
+          dbPanelOpen, varsPanelOpen, tocPanelOpen, path: notebookPath } = nb;
 
   const addCell = (type, afterIndex = null) => {
     const newCell = makeCell(type, '');
@@ -2777,6 +2791,8 @@ function NotebookView({
         onToggleDb={() => onSetNb((n) => ({ dbPanelOpen: !n.dbPanelOpen }))}
         varsPanelOpen={varsPanelOpen}
         onToggleVars={() => onSetNb((n) => ({ varsPanelOpen: !n.varsPanelOpen }))}
+        tocPanelOpen={tocPanelOpen}
+        onToggleToC={() => onSetNb((n) => ({ tocPanelOpen: !n.tocPanelOpen }))}
         libraryPanelOpen={libraryPanelOpen}
         onToggleLibrary={onToggleLibrary}
         theme={theme}
@@ -2803,7 +2819,7 @@ function NotebookView({
         )}
 
         {cells.map((cell, index) => (
-          <div key={cell.id} className="cell-wrapper">
+          <div key={cell.id} className="cell-wrapper" data-cell-id={cell.id}>
             {cell.type === 'markdown' ? (
               <MarkdownCell
                 cell={cell}
@@ -2841,6 +2857,46 @@ function NotebookView({
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+// ── Table of Contents Panel ───────────────────────────────────────────────────
+
+function extractHeadings(cells) {
+  const headings = [];
+  cells.forEach((cell) => {
+    if (cell.type !== 'markdown') return;
+    (cell.content || '').split('\n').forEach((line) => {
+      const m = line.match(/^(#{1,3})\s+(.+)$/);
+      if (m) headings.push({ level: m[1].length, text: m[2].trim(), cellId: cell.id });
+    });
+  });
+  return headings;
+}
+
+function TocPanel({ cells }) {
+  const headings = useMemo(() => extractHeadings(cells), [cells]);
+  const scroll = (cellId) => {
+    document.querySelector(`[data-cell-id="${cellId}"]`)
+      ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+  return (
+    <div className="toc-panel">
+      <div className="toc-panel-header">
+        <span className="toc-panel-title">Contents</span>
+      </div>
+      {headings.length === 0 ? (
+        <div className="toc-empty">No headings found</div>
+      ) : (
+        <div className="toc-list">
+          {headings.map((h, i) => (
+            <button key={i} className={`toc-item toc-h${h.level}`} onClick={() => scroll(h.cellId)}>
+              {h.text}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -3102,8 +3158,8 @@ function LibraryEditorPane({ editor, onContentChange, onSave }) {
 // ── Dock Layout System ────────────────────────────────────────────────────────
 
 const DEFAULT_DOCK_LAYOUT = {
-  assignments: { log: 'right', nuget: 'bottom', config: 'bottom', db: 'bottom', library: 'left', vars: 'right' },
-  order:       { log: 0, nuget: 0, config: 1, db: 2, library: 0, vars: 1 },
+  assignments: { log: 'right', nuget: 'bottom', config: 'bottom', db: 'bottom', library: 'left', vars: 'right', toc: 'left' },
+  order:       { log: 0, nuget: 0, config: 1, db: 2, library: 0, vars: 1, toc: 1 },
   sizes:       { left: 300, right: 320, bottom: 280 },
   floatPos:    {},
   zoneTab:     { left: 'library', right: 'log', bottom: 'nuget' },
@@ -3119,6 +3175,7 @@ const PANEL_META = {
   db:      { label: 'DB',        icon: <IconDB /> },
   library: { label: 'Library',   icon: <IconLibrary /> },
   vars:    { label: 'Variables', icon: <IconVars /> },
+  toc:     { label: 'Contents',  icon: <IconToC /> },
 };
 
 function renderPanelContent(panelId, p) {
@@ -3129,6 +3186,7 @@ function renderPanelContent(panelId, p) {
     case 'config':  return <ConfigPanel {...p} />;
     case 'db':      return <DbPanel {...p} />;
     case 'vars':    return <VarsPanel {...p} />;
+    case 'toc':     return <TocPanel {...p} />;
     case 'library': return <LibraryPanel {...p} />;
     default:        return null;
   }
@@ -4327,7 +4385,7 @@ function App() {
     } else {
       const nbId = activeIdRef.current;
       if (isNotebookId(nbId)) {
-        const flagMap = { log: 'logPanelOpen', nuget: 'nugetPanelOpen', config: 'configPanelOpen', db: 'dbPanelOpen', vars: 'varsPanelOpen' };
+        const flagMap = { log: 'logPanelOpen', nuget: 'nugetPanelOpen', config: 'configPanelOpen', db: 'dbPanelOpen', vars: 'varsPanelOpen', toc: 'tocPanelOpen' };
         const flag = flagMap[panelId];
         if (flag) setNb(nbId, { [flag]: false });
       }
@@ -4560,6 +4618,7 @@ function App() {
     db:      isNotebookId(activeId) ? (activeNb?.dbPanelOpen ?? false) : false,
     library: libraryPanelOpen,
     vars:    isNotebookId(activeId) ? (activeNb?.varsPanelOpen ?? false) : false,
+    toc:     isNotebookId(activeId) ? (activeNb?.tocPanelOpen ?? false) : false,
   }), [activeId, activeNb, libraryPanelOpen]);
 
   const panelPropsMap = useMemo(() => {
@@ -4619,6 +4678,10 @@ function App() {
       vars: {
         onToggle: nbId ? () => setNb(nbId, (n) => ({ varsPanelOpen: !n.varsPanelOpen })) : () => {},
         vars: activeNb?.vars ?? [],
+      },
+      toc: {
+        onToggle: nbId ? () => setNb(nbId, (n) => ({ tocPanelOpen: !n.tocPanelOpen })) : () => {},
+        cells: activeNb?.cells ?? [],
       },
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
