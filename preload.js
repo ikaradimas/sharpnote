@@ -80,6 +80,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   loadAppSettings:  () => ipcRenderer.invoke('app-settings-load'),
   saveAppSettings: (s) => ipcRenderer.invoke('app-settings-save', s),
 
+  // Window menu tab sync
+  updateWindowTabs: (tabs) => ipcRenderer.send('update-window-tabs', tabs),
+
   // Renderer-side logging (appears in Logs panel)
   rendererLog: (tag, message) => ipcRenderer.send('renderer-log', { tag, message }),
 

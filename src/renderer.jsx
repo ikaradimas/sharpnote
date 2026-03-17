@@ -2493,6 +2493,142 @@ function DocsPanel() {
 
 // ── Tab & TabBar ──────────────────────────────────────────────────────────────
 
+// ── TabOverflowMenu ───────────────────────────────────────────────────────────
+
+function TabOverflowMenu({ items, activeId, onSelect }) {
+  const [open, setOpen] = useState(false);
+  const btnRef = useRef(null);
+  const popupRef = useRef(null);
+  const [popupStyle, setPopupStyle] = useState({});
+  const posRef = useRef({ top: 0, left: 0 });
+
+  const hasActive = items.some(it => it.id === activeId);
+
+  useEffect(() => {
+    if (!open) return;
+    const h = (e) => {
+      if (!popupRef.current?.contains(e.target) && !btnRef.current?.contains(e.target))
+        setOpen(false);
+    };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, [open]);
+
+  useLayoutEffect(() => {
+    if (!open || !btnRef.current) return;
+    const r = btnRef.current.getBoundingClientRect();
+    const top = r.bottom + 2, left = r.left;
+    if (top !== posRef.current.top || left !== posRef.current.left) {
+      posRef.current = { top, left };
+      setPopupStyle({ top, left });
+    }
+  });
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        className={`tab-overflow-btn${hasActive ? ' has-active' : ''}${open ? ' open' : ''}`}
+        onClick={() => setOpen(v => !v)}
+        title={`${items.length} more tab${items.length === 1 ? '' : 's'}`}
+      >
+        +{items.length}
+      </button>
+      {open && createPortal(
+        <div ref={popupRef} className="tab-overflow-popup" style={popupStyle}>
+          {items.map(item => (
+            <button
+              key={item.id}
+              className={`tab-overflow-item${item.id === activeId ? ' active' : ''}`}
+              onClick={() => { onSelect(item); setOpen(false); }}
+            >
+              {item.isDirty && <span className="tab-overflow-dirty">•</span>}
+              <span className="tab-overflow-title">{item._label}</span>
+            </button>
+          ))}
+        </div>,
+        document.body
+      )}
+    </>
+  );
+}
+
+// ── TabSection ────────────────────────────────────────────────────────────────
+
+function TabSection({ items, className, activeId, renderItem, onMoveToFront }) {
+  const sectionRef = useRef(null);
+  const widthCache = useRef(new Map());
+  const [overflowFrom, setOverflowFrom] = useState(null);
+  const [, forceUpdate] = useState(0);
+
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el) return;
+    const obs = new ResizeObserver(() => forceUpdate(n => n + 1));
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  useLayoutEffect(() => {
+    const el = sectionRef.current;
+    if (!el) return;
+
+    el.querySelectorAll(':scope > [data-tabid]').forEach(slot => {
+      const child = slot.firstElementChild;
+      if (child && child.offsetWidth > 0)
+        widthCache.current.set(slot.dataset.tabid, child.offsetWidth);
+    });
+
+    const OVERFLOW_W = 36;
+    const sectionW = el.offsetWidth;
+    let sum = 0, cut = null;
+
+    for (let i = 0; i < items.length; i++) {
+      sum += (widthCache.current.get(items[i].id) ?? 100) + 2;
+      const hasMore = i < items.length - 1;
+      if (sum + (hasMore ? OVERFLOW_W : 0) > sectionW) {
+        cut = Math.max(i, 1); // always show at least one tab
+        break;
+      }
+    }
+
+    setOverflowFrom(prev => prev === cut ? prev : cut);
+  });
+
+  const overflowItems = overflowFrom !== null ? items.slice(overflowFrom) : [];
+
+  return (
+    <div ref={sectionRef} className={`tab-section${className ? ` ${className}` : ''}`}>
+      {items.map((item, i) => (
+        <div
+          key={item.id}
+          data-tabid={item.id}
+          style={overflowFrom !== null && i >= overflowFrom
+            ? { display: 'none' }
+            : { display: 'contents' }}
+        >
+          {renderItem(item)}
+        </div>
+      ))}
+      {overflowItems.length > 0 && (
+        <TabOverflowMenu
+          items={overflowItems}
+          activeId={activeId}
+          onSelect={(item) => {
+            item._onActivate();
+            if (onMoveToFront && isNotebookId(item.id)) {
+              const firstNb = items.find(it => isNotebookId(it.id));
+              if (firstNb && firstNb.id !== item.id) onMoveToFront(item.id, firstNb.id);
+            }
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── Tab ───────────────────────────────────────────────────────────────────────
+
 function Tab({ notebook, isActive, isDragOver, onActivate, onClose, onRename,
                onDragStart, onDragOver, onDrop, onDragEnd, onSetColor,
                isPinned = false, onTogglePin }) {
@@ -2641,64 +2777,95 @@ function TabBar({ notebooks, activeId, onActivate, onClose, onNew, onRename,
   const handleDragOver = (id) => { if (id !== dragId) setDragOverId(id); };
   const handleDrop = (targetId) => {
     if (dragId && dragId !== targetId) onReorder(dragId, targetId);
-    setDragId(null);
-    setDragOverId(null);
+    setDragId(null); setDragOverId(null);
   };
   const handleDragEnd = () => { setDragId(null); setDragOverId(null); };
 
   const pinnedNbs  = notebooks.filter((nb) => nb.path && pinnedPaths?.has(nb.path));
   const regularNbs = notebooks.filter((nb) => !nb.path || !pinnedPaths?.has(nb.path));
 
-  const renderNb = (nb) => (
-    <Tab
-      key={nb.id}
-      notebook={nb}
-      isActive={nb.id === activeId}
-      isDragOver={dragOverId === nb.id}
-      onActivate={() => onActivate(nb.id)}
-      onClose={() => onClose(nb.id)}
-      onRename={(newName) => onRename(nb.id, newName)}
-      onSetColor={(color) => onSetColor(nb.id, color)}
-      onDragStart={handleDragStart}
-      onDragOver={handleDragOver}
-      onDrop={handleDrop}
-      onDragEnd={handleDragEnd}
-      isPinned={nb.path ? pinnedPaths?.has(nb.path) : false}
-      onTogglePin={nb.path ? () => onTogglePin?.(nb.path) : undefined}
-    />
-  );
+  const renderItem = (item) => {
+    if (item.id === DOCS_TAB_ID) return (
+      <div
+        className={`tab${activeId === DOCS_TAB_ID ? ' tab-active' : ''}`}
+        onClick={onActivateDocs}
+      >
+        <span className="tab-title">Documentation</span>
+        <button className="tab-close" onClick={(e) => { e.stopPropagation(); onCloseDocs(); }} title="Close">×</button>
+      </div>
+    );
+    if (isLibEditorId(item.id)) return (
+      <Tab
+        notebook={{ id: item.id, title: item.filename, isDirty: item.isDirty, path: item.fullPath }}
+        isActive={activeId === item.id}
+        isDragOver={false}
+        onActivate={() => onActivate(item.id)}
+        onClose={() => onCloseLibEditor(item.id)}
+        draggable={false}
+        onDragStart={() => {}} onDragOver={() => {}} onDrop={() => {}} onDragEnd={() => {}}
+      />
+    );
+    return (
+      <Tab
+        notebook={item}
+        isActive={item.id === activeId}
+        isDragOver={dragOverId === item.id}
+        onActivate={() => onActivate(item.id)}
+        onClose={() => onClose(item.id)}
+        onRename={(newName) => onRename(item.id, newName)}
+        onSetColor={(color) => onSetColor(item.id, color)}
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+        onDragEnd={handleDragEnd}
+        isPinned={item.path ? pinnedPaths?.has(item.path) : false}
+        onTogglePin={item.path ? () => onTogglePin?.(item.path) : undefined}
+      />
+    );
+  };
+
+  const pinnedItems = pinnedNbs.map(nb => ({
+    ...nb,
+    _label: getNotebookDisplayName(nb.path, nb.title),
+    _onActivate: () => onActivate(nb.id),
+  }));
+
+  const regularItems = [
+    ...regularNbs.map(nb => ({
+      ...nb,
+      _label: getNotebookDisplayName(nb.path, nb.title),
+      _onActivate: () => onActivate(nb.id),
+    })),
+    ...(libEditors || []).map(e => ({
+      ...e,
+      isDirty: e.isDirty,
+      _label: e.filename,
+      _onActivate: () => onActivate(e.id),
+    })),
+    ...(docsOpen ? [{ id: DOCS_TAB_ID, isDirty: false, _label: 'Documentation', _onActivate: onActivateDocs }] : []),
+  ];
 
   return (
     <div className="tab-bar" style={activeTabColor ? { borderBottomColor: activeTabColor } : undefined}>
-      {pinnedNbs.map(renderNb)}
-      {pinnedNbs.length > 0 && regularNbs.length > 0 && (
+      {pinnedItems.length > 0 && (
+        <TabSection
+          items={pinnedItems}
+          className="tab-section-pinned"
+          activeId={activeId}
+          renderItem={renderItem}
+          onMoveToFront={onReorder}
+        />
+      )}
+      {pinnedItems.length > 0 && regularItems.length > 0 && (
         <div className="tab-bar-pin-spacer" />
       )}
-      {regularNbs.map(renderNb)}
-      {(libEditors || []).map((e) => (
-        <Tab
-          key={e.id}
-          notebook={{ id: e.id, title: e.filename, isDirty: e.isDirty, path: e.fullPath }}
-          isActive={activeId === e.id}
-          isDragOver={false}
-          onActivate={() => onActivate(e.id)}
-          onClose={() => onCloseLibEditor(e.id)}
-          draggable={false}
-          onDragStart={() => {}}
-          onDragOver={() => {}}
-          onDrop={() => {}}
-          onDragEnd={() => {}}
-        />
-      ))}
-      {docsOpen && (
-        <div
-          className={`tab${activeId === DOCS_TAB_ID ? ' tab-active' : ''}`}
-          onClick={onActivateDocs}
-        >
-          <span className="tab-title">Documentation</span>
-          <button className="tab-close" onClick={(e) => { e.stopPropagation(); onCloseDocs(); }} title="Close">×</button>
-        </div>
-      )}
+      <TabSection
+        items={regularItems}
+        className="tab-section-regular"
+        activeId={activeId}
+        renderItem={renderItem}
+        onMoveToFront={onReorder}
+      />
       <button className="tab-new" onClick={onNew} title="New notebook">+</button>
     </div>
   );
@@ -4703,11 +4870,48 @@ function App() {
     'toggle-db':       () => { if (isNotebook()) setNb(activeIdRef.current, (n) => ({ dbPanelOpen: !n.dbPanelOpen })); },
   };
 
+  // Sync open tabs to main process so it can build the Window menu.
+  useEffect(() => {
+    if (!window.electronAPI?.updateWindowTabs) return;
+    const tabs = [
+      ...notebooks.map((nb) => ({
+        id: nb.id,
+        label: getNotebookDisplayName(nb.path, nb.title),
+        isDirty: nb.isDirty,
+        isActive: nb.id === activeId,
+      })),
+      ...libEditors.map((e) => ({
+        id: e.id,
+        label: e.filename,
+        isDirty: e.isDirty,
+        isActive: e.id === activeId,
+      })),
+      ...(docsOpen ? [{ id: DOCS_TAB_ID, label: 'Documentation', isDirty: false, isActive: activeId === DOCS_TAB_ID }] : []),
+    ];
+    window.electronAPI.updateWindowTabs(tabs);
+  }, [notebooks, libEditors, docsOpen, activeId]);
+
   useEffect(() => {
     if (!window.electronAPI?.onMenuAction) return;
     window.electronAPI.onMenuAction((action) => {
       if (action && typeof action === 'object') {
-        if (action.type === 'open-recent') handleOpenRecent(action.path);
+        if (action.type === 'open-recent') { handleOpenRecent(action.path); return; }
+        if (action.type === 'activate-tab') {
+          const { id } = action;
+          setActiveId(id);
+          if (isNotebookId(id)) {
+            const nbs = notebooksRef.current;
+            const nb = nbs.find((n) => n.id === id);
+            if (nb) {
+              const pinned = nb.path && pinnedPathsRef.current.has(nb.path);
+              const first = nbs.find((n) => pinned
+                ? (n.path && pinnedPathsRef.current.has(n.path))
+                : (!n.path || !pinnedPathsRef.current.has(n.path)));
+              if (first && first.id !== id) handleReorder(id, first.id);
+            }
+          }
+          return;
+        }
         return;
       }
       menuHandlersRef.current[action]?.();

@@ -1810,15 +1810,79 @@ body {
   border-bottom: 2px solid var(--border-default);
   transition: border-bottom-color 0.2s;
   -webkit-app-region: drag;
-  overflow-x: auto;
+  overflow: hidden;
   flex-shrink: 0;
   padding: 0 4px;
-  gap: 2px;
+  gap: 4px;
 }
 
-.tab-bar::-webkit-scrollbar { height: 3px; }
-.tab-bar::-webkit-scrollbar-track { background: #16161a; }
-.tab-bar::-webkit-scrollbar-thumb { background: var(--border-default); border-radius: 2px; }
+.tab-section {
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+  flex-shrink: 0;
+  gap: 2px;
+}
+.tab-section-pinned { flex: 1; max-width: 50%; min-width: 0; }
+.tab-section-regular { flex: 1; min-width: 0; }
+
+.tab-overflow-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  padding: 0 9px;
+  border-radius: 4px 4px 0 0;
+  background: #141418;
+  border: 1px solid #1e1e26;
+  border-bottom-color: #141418;
+  position: relative;
+  bottom: -2px;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-family: var(--font-heading);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  flex-shrink: 0;
+  -webkit-app-region: no-drag;
+  transition: background 0.1s, color 0.1s;
+}
+.tab-overflow-btn:hover { background: #18181e; color: #7a9aaa; }
+.tab-overflow-btn.open,
+.tab-overflow-btn.has-active { color: var(--accent-primary); border-color: var(--accent-primary-dim); }
+
+.tab-overflow-popup {
+  position: fixed;
+  z-index: 3000;
+  background: var(--bg-mid);
+  border: 1px solid var(--border-default);
+  border-radius: 0 0 4px 4px;
+  padding: 4px 0;
+  min-width: 180px;
+  max-height: 300px;
+  overflow-y: auto;
+  box-shadow: 0 8px 24px rgba(0,0,0,.5);
+}
+.tab-overflow-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: 11px;
+  padding: 5px 14px;
+  text-align: left;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+}
+.tab-overflow-item:hover { background: var(--bg-elevated); color: var(--accent-secondary); }
+.tab-overflow-item.active { color: var(--accent-primary); }
+.tab-overflow-dirty { color: var(--accent-primary); font-size: 14px; line-height: 1; flex-shrink: 0; }
+.tab-overflow-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .tab {
   display: flex;

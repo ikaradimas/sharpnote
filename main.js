@@ -5,6 +5,7 @@ const fs = require('fs');
 const readline = require('readline');
 
 let mainWindow = null;
+let windowTabs = []; // kept in sync by renderer via update-window-tabs IPC
 
 // Multi-kernel map: notebookId -> { process, ready, pending[] }
 const kernels = new Map();
@@ -188,6 +189,17 @@ function buildMenu() {
       { label: 'DB',        accelerator: 'CmdOrCtrl+Shift+D', click: () => send('toggle-db') },
     ],
   });
+
+  const windowSubmenu = windowTabs.length === 0
+    ? [{ label: 'No open tabs', enabled: false }]
+    : windowTabs.map((tab) => ({
+        label: tab.isDirty ? `${tab.label} •` : tab.label,
+        type: 'radio',
+        checked: tab.isActive,
+        click: () => send({ type: 'activate-tab', id: tab.id }),
+      }));
+
+  template.push({ label: 'Window', submenu: windowSubmenu });
 
   template.push({
     label: 'Help',
@@ -394,6 +406,11 @@ function sendToKernel(notebookId, message) {
 // IPC handlers
 ipcMain.on('renderer-log', (_event, { tag, message }) => {
   writeLog(tag || 'UI', message);
+});
+
+ipcMain.on('update-window-tabs', (_event, tabs) => {
+  windowTabs = Array.isArray(tabs) ? tabs : [];
+  Menu.setApplicationMenu(buildMenu());
 });
 
 ipcMain.handle('start-kernel', (_event, notebookId) => {
