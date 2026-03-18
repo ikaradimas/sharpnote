@@ -18,8 +18,10 @@
     "appId": "com.xe.polyglot-notebook",
     "productName": "Polyglot Notebook",
     "copyright": "Copyright © 2025 XE",
+    "icon": "assets/icon",
     "files": [
       "dist/**",
+      "assets/**",
       "index.html",
       "main.js",
       "preload.js",
@@ -41,12 +43,14 @@
       "output": "/tmp/polyglot-build"
     },
     "mac": {
+      "icon": "assets/icon.icns",
       "category": "public.app-category.developer-tools",
       "target": [
         { "target": "dmg", "arch": ["x64", "arm64"] }
       ]
     },
     "win": {
+      "icon": "assets/icon.png",
       "target": [
         { "target": "nsis", "arch": ["x64"] }
       ]
