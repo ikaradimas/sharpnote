@@ -409,13 +409,43 @@ class Program
         var attachedDbs = new Dictionary<string, DbConnectionInfo>();
         var dbMetaRefs  = new List<MetadataReference>();
 
-        // Helper: inject a DbContext variable into the script state
+        // Helper: inject a DB variable into the script state.
+        // Handles three cases:
+        //   1. Non-relational (Redis)     — injects ConnectionMultiplexer + IDatabase
+        //   2. Persistent-connection      — injects keeper SqliteConnection + connection-based DbContext
+        //   3. Regular relational (default) — injects string-based DbContext
         async Task InjectDbContextAsync(DbConnectionInfo info)
         {
-            var opts    = options.AddReferences(dbMetaRefs);
-            var ns      = $"DynDb_{DbCodeGen.SanitizeTypeName(info.Name)}";
-            var ctx     = $"{ns}.{DbCodeGen.SanitizeTypeName(info.Name)}DbContext";
-            var code    = $"var {info.VarName} = new {ctx}({S(info.ConnectionString)}, {S(info.Provider)});";
+            var provider = DbProviders.Get(info.Provider);
+            var opts     = options.AddReferences(dbMetaRefs);
+            string code;
+
+            if (!provider.IsRelational)
+            {
+                // Redis: inject a ConnectionMultiplexer and expose GetDatabase() as the variable
+                var muxVar = $"__{info.VarName}_mux";
+                code = $"var {muxVar} = StackExchange.Redis.ConnectionMultiplexer.Connect({S(info.ConnectionString)});\n" +
+                       $"var {info.VarName} = {muxVar}.GetDatabase();";
+            }
+            else if (provider.UsesPersistentConnection)
+            {
+                // In-memory SQLite: open a keeper connection to prevent the shared-cache DB from vanishing,
+                // then create a DbContext that reuses that same connection.
+                var ns        = $"DynDb_{DbCodeGen.SanitizeTypeName(info.Name)}";
+                var ctx       = $"{ns}.{DbCodeGen.SanitizeTypeName(info.Name)}DbContext";
+                var keeperVar = $"__{info.VarName}_conn";
+                code = $"var {keeperVar} = new Microsoft.Data.Sqlite.SqliteConnection({S(info.ConnectionString)});\n" +
+                       $"{keeperVar}.Open();\n" +
+                       $"var {info.VarName} = new {ctx}({keeperVar});";
+            }
+            else
+            {
+                // Regular relational: string-based DbContext
+                var ns  = $"DynDb_{DbCodeGen.SanitizeTypeName(info.Name)}";
+                var ctx = $"{ns}.{DbCodeGen.SanitizeTypeName(info.Name)}DbContext";
+                code = $"var {info.VarName} = new {ctx}({S(info.ConnectionString)}, {S(info.Provider)});";
+            }
+
             state = state == null
                 ? await CSharpScript.RunAsync<object?>(code, opts, globals, typeof(ScriptGlobals))
                 : await state.ContinueWithAsync<object?>(code, opts);
@@ -761,8 +791,11 @@ class Program
                     {
                         var provider = DbProviders.Get(providerKey);
 
+                        // Normalize the connection string (e.g. adds Mode=Memory for in-memory SQLite)
+                        var effectiveCs = provider.NormalizeConnectionString(connectionId, connString);
+
                         // 1. Introspect schema
-                        var schema = await provider.IntrospectAsync(connectionId, connString);
+                        var schema = await provider.IntrospectAsync(connectionId, effectiveCs);
 
                         // 2. Send schema to renderer for tree display
                         var schemaPayload = new
@@ -787,16 +820,29 @@ class Program
                         };
                         lock (realStdout) { realStdout.WriteLine(JsonSerializer.Serialize(schemaPayload)); }
 
-                        // 3. Generate + compile
-                        var source = DbCodeGen.GenerateSource(connName, provider, schema);
-                        var (_, metaRef) = DbCodeGen.Compile(source, provider);
+                        MetadataReference metaRef;
+                        if (!provider.IsRelational)
+                        {
+                            // Non-relational (Redis): skip EF Core codegen; add the provider's assembly
+                            // to the script references so StackExchange.Redis types resolve in user code.
+                            var provAsm = provider.RequiredAssemblies.FirstOrDefault();
+                            metaRef = provAsm != null && !string.IsNullOrEmpty(provAsm.Location)
+                                ? MetadataReference.CreateFromFile(provAsm.Location)
+                                : MetadataReference.CreateFromFile(typeof(object).Assembly.Location);
+                        }
+                        else
+                        {
+                            // 3. Generate + compile DbContext
+                            var source = DbCodeGen.GenerateSource(connName, provider, schema);
+                            (_, metaRef) = DbCodeGen.Compile(source, provider);
+                        }
 
                         // 4. Update state
                         if (attachedDbs.TryGetValue(connectionId, out var existing))
                             dbMetaRefs.Remove(existing.MetaRef);
                         dbMetaRefs.Add(metaRef);
 
-                        var info = new DbConnectionInfo(connectionId, connName, providerKey, connString, varName, metaRef, schema);
+                        var info = new DbConnectionInfo(connectionId, connName, providerKey, effectiveCs, varName, metaRef, schema);
                         attachedDbs[connectionId] = info;
 
                         // 5. Inject variable

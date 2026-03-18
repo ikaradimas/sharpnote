@@ -73,19 +73,37 @@ public static class DbCodeGen
         // Generate DbContext subclass
         sb.AppendLine($"    public class {ctxClass} : DbContext");
         sb.AppendLine("    {");
-        sb.AppendLine("        private readonly string _cs;");
-        sb.AppendLine("        private readonly string _provider;");
-        sb.AppendLine();
-        sb.AppendLine($"        public {ctxClass}(string cs, string provider)");
-        sb.AppendLine("        {");
-        sb.AppendLine("            _cs = cs;");
-        sb.AppendLine("            _provider = provider;");
-        sb.AppendLine("        }");
-        sb.AppendLine();
-        sb.AppendLine("        protected override void OnConfiguring(DbContextOptionsBuilder b)");
-        sb.AppendLine("        {");
-        sb.AppendLine($"            {provider.GetConfigureCallCode("_cs")};");
-        sb.AppendLine("        }");
+        if (provider.UsesPersistentConnection)
+        {
+            // In-memory SQLite: take a persistent SqliteConnection so the DB is not destroyed between queries
+            sb.AppendLine("        private readonly Microsoft.Data.Sqlite.SqliteConnection _conn;");
+            sb.AppendLine();
+            sb.AppendLine($"        public {ctxClass}(Microsoft.Data.Sqlite.SqliteConnection conn)");
+            sb.AppendLine("        {");
+            sb.AppendLine("            _conn = conn;");
+            sb.AppendLine("        }");
+            sb.AppendLine();
+            sb.AppendLine("        protected override void OnConfiguring(DbContextOptionsBuilder b)");
+            sb.AppendLine("        {");
+            sb.AppendLine("            b.UseSqlite(_conn);");
+            sb.AppendLine("        }");
+        }
+        else
+        {
+            sb.AppendLine("        private readonly string _cs;");
+            sb.AppendLine("        private readonly string _provider;");
+            sb.AppendLine();
+            sb.AppendLine($"        public {ctxClass}(string cs, string provider)");
+            sb.AppendLine("        {");
+            sb.AppendLine("            _cs = cs;");
+            sb.AppendLine("            _provider = provider;");
+            sb.AppendLine("        }");
+            sb.AppendLine();
+            sb.AppendLine("        protected override void OnConfiguring(DbContextOptionsBuilder b)");
+            sb.AppendLine("        {");
+            sb.AppendLine($"            {provider.GetConfigureCallCode("_cs")};");
+            sb.AppendLine("        }");
+        }
         sb.AppendLine();
 
         // OnModelCreating — explicit key + table mapping for every entity
@@ -176,7 +194,7 @@ public static class DbCodeGen
 
         // Also scan AppDomain for currently-loaded EF Core / data provider assemblies
         var efPrefixes = new[] { "Microsoft.EntityFrameworkCore", "Microsoft.Data.Sqlite",
-            "Microsoft.Data.SqlClient", "Npgsql" };
+            "Microsoft.Data.SqlClient", "Npgsql", "StackExchange.Redis" };
         foreach (var domainAsm in AppDomain.CurrentDomain.GetAssemblies())
         {
             var asmName = domainAsm.GetName().Name ?? "";

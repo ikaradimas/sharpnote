@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Microsoft.Data.SqlClient;
 using Npgsql;
+using StackExchange.Redis;
 
 // ── Schema models ─────────────────────────────────────────────────────────────
 
@@ -40,6 +41,15 @@ public interface IDbProvider
     string GetUsingDirectives();
     string GetConfigureCallCode(string csVar);
     Task<DbSchema> IntrospectAsync(string connectionId, string connectionString, CancellationToken ct = default);
+
+    /// <summary>True for SQL databases that use EF Core + DbContext codegen.</summary>
+    bool IsRelational => true;
+
+    /// <summary>True when the generated DbContext takes a persistent SqliteConnection instead of a string.</summary>
+    bool UsesPersistentConnection => false;
+
+    /// <summary>Normalizes a provider-specific connection string before it is stored and used.</summary>
+    string NormalizeConnectionString(string connectionId, string connectionString) => connectionString;
 }
 
 // ── SQLite provider ───────────────────────────────────────────────────────────
@@ -405,15 +415,190 @@ public class PostgreSqlProvider : IDbProvider
     }
 }
 
+// ── SQLite In-Memory provider ─────────────────────────────────────────────────
+
+public class SqliteInMemoryProvider : IDbProvider
+{
+    public string Key         => "sqlite_memory";
+    public string DisplayName => "SQLite (In-Memory)";
+    public bool UsesPersistentConnection => true;
+
+    public IEnumerable<Assembly> RequiredAssemblies
+    {
+        get
+        {
+            yield return typeof(Microsoft.EntityFrameworkCore.DbContext).Assembly;
+            yield return typeof(Microsoft.Data.Sqlite.SqliteConnection).Assembly;
+            var prov = AssemblyLoader.TryLoad("Microsoft.EntityFrameworkCore.Sqlite");
+            if (prov != null) yield return prov;
+        }
+    }
+
+    public string GetUsingDirectives()   => "using Microsoft.EntityFrameworkCore;";
+    public string GetConfigureCallCode(string csVar) => $"b.UseSqlite({csVar})";  // unused for persistent-connection path
+
+    /// <summary>
+    /// Ensures the connection string uses SQLite's in-memory shared-cache mode.
+    /// If the user leaves it blank, a unique named database is generated from the connectionId.
+    /// </summary>
+    public string NormalizeConnectionString(string connectionId, string connectionString)
+    {
+        if (string.IsNullOrWhiteSpace(connectionString))
+            return $"Data Source=__mem_{connectionId.Replace("-", "")};Mode=Memory;Cache=Shared";
+        if (!connectionString.Contains("Mode=Memory", StringComparison.OrdinalIgnoreCase))
+            return connectionString.TrimEnd(';') + ";Mode=Memory;Cache=Shared";
+        return connectionString;
+    }
+
+    public async Task<DbSchema> IntrospectAsync(string connectionId, string connectionString, CancellationToken ct = default)
+    {
+        var tables = new List<TableSchema>();
+        using var conn = new SqliteConnection(connectionString);
+        await conn.OpenAsync(ct);
+
+        var dbName = connectionString
+            .Split(';')
+            .FirstOrDefault(p => p.TrimStart().StartsWith("Data Source", StringComparison.OrdinalIgnoreCase))
+            ?.Split('=').LastOrDefault()?.Trim() ?? "memory";
+
+        var tableNames = new List<string>();
+        using (var cmd = conn.CreateCommand())
+        {
+            cmd.CommandText = "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name";
+            using var reader = await cmd.ExecuteReaderAsync(ct);
+            while (await reader.ReadAsync(ct))
+                tableNames.Add(reader.GetString(0));
+        }
+
+        foreach (var tableName in tableNames)
+        {
+            var pkCols = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            using (var pragmaCmd = conn.CreateCommand())
+            {
+                pragmaCmd.CommandText = $"PRAGMA table_info(\"{tableName.Replace("\"", "\"\"")}\")";
+                using var pkReader = await pragmaCmd.ExecuteReaderAsync(ct);
+                while (await pkReader.ReadAsync(ct))
+                    if (pkReader.GetInt32(5) > 0)
+                        pkCols.Add(pkReader.GetString(1));
+            }
+
+            var columns = new List<ColumnSchema>();
+            using (var pragmaCmd = conn.CreateCommand())
+            {
+                pragmaCmd.CommandText = $"PRAGMA table_info(\"{tableName.Replace("\"", "\"\"")}\")";
+                using var colReader = await pragmaCmd.ExecuteReaderAsync(ct);
+                while (await colReader.ReadAsync(ct))
+                {
+                    var colName = colReader.GetString(1);
+                    var dbType  = colReader.GetString(2).ToUpperInvariant();
+                    var notNull = colReader.GetInt32(3) != 0;
+                    var isPk    = pkCols.Contains(colName);
+                    var isNull  = !notNull && !isPk;
+                    var csType  = MapSqliteType(dbType, isNull, isPk);
+                    columns.Add(new ColumnSchema(colName, dbType, csType, isPk, isNull, isPk && dbType.Contains("INT")));
+                }
+            }
+            tables.Add(new TableSchema("", tableName, columns));
+        }
+
+        return new DbSchema(connectionId, dbName, tables);
+    }
+
+    private static string MapSqliteType(string affinity, bool isNullable, bool isPk)
+    {
+        string cs;
+        if      (affinity.Contains("INT"))                              cs = "long";
+        else if (affinity.Contains("CHAR") || affinity.Contains("TEXT") || affinity.Contains("CLOB")) cs = "string";
+        else if (affinity.Contains("REAL") || affinity.Contains("FLOA") || affinity.Contains("DOUB")) cs = "double";
+        else if (affinity.Contains("BLOB"))                             cs = "byte[]";
+        else                                                            cs = "string";
+
+        if (isNullable && !isPk && cs != "string" && cs != "byte[]")
+            cs += "?";
+        return cs;
+    }
+}
+
+// ── Redis provider ────────────────────────────────────────────────────────────
+
+public class RedisProvider : IDbProvider
+{
+    public string Key         => "redis";
+    public string DisplayName => "Redis";
+    public bool IsRelational  => false;
+
+    public IEnumerable<Assembly> RequiredAssemblies
+    {
+        get
+        {
+            var asm = AssemblyLoader.TryLoad("StackExchange.Redis");
+            if (asm != null) yield return asm;
+        }
+    }
+
+    public string GetUsingDirectives()              => "using StackExchange.Redis;";
+    public string GetConfigureCallCode(string csVar) => "";  // not used — non-relational provider
+
+    public async Task<DbSchema> IntrospectAsync(string connectionId, string connectionString, CancellationToken ct = default)
+    {
+        using var mux    = await ConnectionMultiplexer.ConnectAsync(connectionString);
+        var db           = mux.GetDatabase();
+        var endpoints    = mux.GetEndPoints();
+        var server       = mux.GetServer(endpoints.First());
+        var dbName       = endpoints.First().ToString() ?? connectionString;
+
+        // Sample up to 200 keys and group them by prefix (first colon-delimited segment)
+        var prefixTypes = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+        var count       = 0;
+
+        await foreach (var redisKey in server.KeysAsync(pattern: "*", pageSize: 200))
+        {
+            if (ct.IsCancellationRequested || ++count > 200) break;
+            var k      = redisKey.ToString();
+            var prefix = k.Contains(':') ? k[..k.IndexOf(':')] : "(no prefix)";
+            var ktype  = (await db.KeyTypeAsync(redisKey)).ToString().ToLowerInvariant();
+
+            if (!prefixTypes.TryGetValue(prefix, out var types))
+                prefixTypes[prefix] = types = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            types.Add(ktype);
+        }
+
+        var tables = prefixTypes
+            .OrderBy(kv => kv.Key)
+            .Select(kv => new TableSchema(
+                "",
+                kv.Key,
+                kv.Value
+                    .OrderBy(t => t)
+                    .Select(t => new ColumnSchema($"({t})", t, RedisTypeToCSharp(t), false, false, false))
+                    .ToList()))
+            .ToList();
+
+        return new DbSchema(connectionId, dbName, tables);
+    }
+
+    private static string RedisTypeToCSharp(string redisType) => redisType switch
+    {
+        "string" => "RedisValue",
+        "hash"   => "HashEntry[]",
+        "list"   => "RedisValue[]",
+        "set"    => "RedisValue[]",
+        "zset"   => "SortedSetEntry[]",
+        _        => "RedisValue",
+    };
+}
+
 // ── Provider registry ─────────────────────────────────────────────────────────
 
 public static class DbProviders
 {
     private static readonly Dictionary<string, IDbProvider> All = new()
     {
-        ["sqlite"]     = new SqliteProvider(),
-        ["sqlserver"]  = new SqlServerProvider(),
-        ["postgresql"] = new PostgreSqlProvider(),
+        ["sqlite"]        = new SqliteProvider(),
+        ["sqlite_memory"] = new SqliteInMemoryProvider(),
+        ["sqlserver"]     = new SqlServerProvider(),
+        ["postgresql"]    = new PostgreSqlProvider(),
+        ["redis"]         = new RedisProvider(),
     };
 
     public static IDbProvider Get(string key) => All[key];
