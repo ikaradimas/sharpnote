@@ -915,7 +915,7 @@ class Program
 
     // ── Lint handler ─────────────────────────────────────────────────────────
 
-    static List<object> GetLintDiagnostics(string code)
+    internal static List<object> GetLintDiagnostics(string code)
     {
         try
         {
@@ -1034,7 +1034,7 @@ class Program
 
     // ── #r "nuget: ..." parsing ──────────────────────────────────────────────
 
-    private static (string cleanCode, List<(string id, string? version)> refs)
+    internal static (string cleanCode, List<(string id, string? version)> refs)
         ParseNugetDirectives(string code)
     {
         var refs = new List<(string, string?)>();

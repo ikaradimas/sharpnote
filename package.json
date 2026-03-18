@@ -13,7 +13,11 @@
     "dist:mac": "npm run build:renderer && npm run build:kernel:mac && electron-builder --mac",
     "dist:win": "npm run build:renderer && npm run build:kernel:win && electron-builder --win",
     "dist:all": "npm run build:renderer && npm run build:kernel:all && electron-builder --mac --win",
-    "postinstall": "node scripts/patch-electron-icon.js"
+    "postinstall": "node scripts/patch-electron-icon.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:kernel": "dotnet test kernel/kernel.Tests/kernel.Tests.csproj --logger console"
   },
   "build": {
     "appId": "com.xe.polyglot-notebook",
@@ -36,7 +40,9 @@
       {
         "from": "kernel/bin",
         "to": "kernel",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       }
     ],
     "afterPack": "./afterPack.js",
@@ -47,13 +53,24 @@
       "icon": "assets/icon.icns",
       "category": "public.app-category.developer-tools",
       "target": [
-        { "target": "dmg", "arch": ["x64", "arm64"] }
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
       ]
     },
     "win": {
       "icon": "assets/icon.png",
       "target": [
-        { "target": "nsis", "arch": ["x64"] }
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
       ]
     },
     "nsis": {
@@ -79,8 +96,17 @@
     "uuid": "^11.1.0"
   },
   "devDependencies": {
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@vitejs/plugin-react": "^6.0.1",
+    "@vitest/coverage-v8": "^2.1.9",
     "electron": "^34.3.1",
     "electron-builder": "^26.8.1",
-    "esbuild": "^0.25.1"
+    "esbuild": "^0.25.1",
+    "happy-dom": "^20.8.4",
+    "jsdom": "^29.0.0",
+    "vitest": "^2.1.9"
   }
 }

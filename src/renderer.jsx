@@ -39,13 +39,13 @@ const CSHARP_KEYWORDS = [
 
 // ── Documentation data ────────────────────────────────────────────────────────
 
-const DOCS_TAB_ID = '__docs__';
-const LIB_EDITOR_ID_PREFIX = '__libed__';
+export const DOCS_TAB_ID = '__docs__';
+export const LIB_EDITOR_ID_PREFIX = '__libed__';
 
 // ── Tab ID helpers ─────────────────────────────────────────────────────────────
-const makeLibEditorId = (fullPath) => `${LIB_EDITOR_ID_PREFIX}${fullPath}`;
-const isLibEditorId  = (id) => id?.startsWith(LIB_EDITOR_ID_PREFIX) ?? false;
-const isNotebookId   = (id) => !!(id && id !== DOCS_TAB_ID && !isLibEditorId(id));
+export const makeLibEditorId = (fullPath) => `${LIB_EDITOR_ID_PREFIX}${fullPath}`;
+export const isLibEditorId  = (id) => id?.startsWith(LIB_EDITOR_ID_PREFIX) ?? false;
+export const isNotebookId   = (id) => !!(id && id !== DOCS_TAB_ID && !isLibEditorId(id));
 
 // ── Kernel request timeouts ───────────────────────────────────────────────────
 const COMPLETION_TIMEOUT = 2000; // autocomplete — fast turnaround expected
@@ -57,13 +57,13 @@ let _setCursorPos = null;
 
 // ── Notebook display name ──────────────────────────────────────────────────────
 // Returns the human-readable name for a notebook given its saved path and/or title.
-function getNotebookDisplayName(notebookPath, title, fallback = 'Untitled') {
+export function getNotebookDisplayName(notebookPath, title, fallback = 'Untitled') {
   if (notebookPath) return notebookPath.split(/[\\/]/).pop().replace(/\.cnb$/, '');
   return title || fallback;
 }
 
 // ── Log timestamp formatting ───────────────────────────────────────────────────
-function formatLogTime(timestamp) {
+export function formatLogTime(timestamp) {
   if (!timestamp) return '';
   // ISO string: "2026-03-18T12:34:56.789Z" — slice HH:MM:SS.mmm from the time part
   const t = new Date(timestamp);
@@ -599,7 +599,7 @@ function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
 
 // ── DataTable ────────────────────────────────────────────────────────────────
 
-function DataTable({ rows }) {
+export function DataTable({ rows }) {
   if (!Array.isArray(rows) || rows.length === 0) {
     return <div className="output-stdout">(empty table)</div>;
   }
@@ -652,7 +652,7 @@ function DataTable({ rows }) {
   );
 }
 
-function tableToCSV(rows) {
+export function tableToCSV(rows) {
   if (!rows || rows.length === 0) return '';
   const cols = Object.keys(rows[0]);
   const escape = (v) => {
@@ -663,7 +663,7 @@ function tableToCSV(rows) {
   return [cols.join(','), ...rows.map((r) => cols.map((c) => escape(r[c])).join(','))].join('\n');
 }
 
-function parseCsv(csv) {
+export function parseCsv(csv) {
   const lines = csv.trim().split('\n');
   if (lines.length < 1) return [];
   const headers = lines[0].split(',').map((h) => h.trim());
@@ -910,7 +910,7 @@ async function exportMsg(msg) {
   }
 }
 
-function OutputBlock({ msg, index }) {
+export function OutputBlock({ msg, index }) {
   const canExport = msg.type === 'stdout' ||
     (msg.type === 'display' && ['html', 'table', 'csv', 'graph'].includes(msg.format));
 
@@ -1056,7 +1056,7 @@ function MarkdownCell({ cell, cellIndex, onUpdate, onDelete, onMoveUp, onMoveDow
 
 // ── CodeCell ─────────────────────────────────────────────────────────────────
 
-function CodeCell({
+export function CodeCell({
   cell,
   cellIndex,
   outputs,
@@ -1394,7 +1394,7 @@ function SourcesTab({ sources, onAdd, onRemove, onToggle }) {
   );
 }
 
-function NugetPanel({ isOpen, onToggle, packages, kernelStatus, sources,
+export function NugetPanel({ isOpen, onToggle, packages, kernelStatus, sources,
                       onAdd, onRemove, onRetry,
                       onAddSource, onRemoveSource, onToggleSource }) {
   const [height, onResizeMouseDown] = useResize(260, 'top');
@@ -1442,7 +1442,7 @@ function NugetPanel({ isOpen, onToggle, packages, kernelStatus, sources,
 
 // ── Config Panel ──────────────────────────────────────────────────────────────
 
-function ConfigPanel({ isOpen, onToggle, config, onAdd, onRemove, onUpdate }) {
+export function ConfigPanel({ isOpen, onToggle, config, onAdd, onRemove, onUpdate }) {
   const [height, onResizeMouseDown] = useResize(200, 'top');
   const [newKey, setNewKey] = useState('');
   const [newValue, setNewValue] = useState('');
@@ -2783,7 +2783,7 @@ function Tab({ notebook, isActive, isDragOver, onActivate, onClose, onRename,
   );
 }
 
-function TabBar({ notebooks, activeId, onActivate, onClose, onNew, onRename,
+export function TabBar({ notebooks, activeId, onActivate, onClose, onNew, onRename,
                   onReorder, onSetColor, activeTabColor,
                   docsOpen, onActivateDocs, onCloseDocs,
                   libEditors, onCloseLibEditor,
@@ -3060,7 +3060,7 @@ function NotebookView({
 
 // ── Table of Contents Panel ───────────────────────────────────────────────────
 
-function extractHeadings(cells) {
+export function extractHeadings(cells) {
   const headings = [];
   cells.forEach((cell) => {
     if (cell.type !== 'markdown') return;
@@ -3100,7 +3100,7 @@ function TocPanel({ cells }) {
 
 // ── Variables Panel ───────────────────────────────────────────────────────────
 
-function VarsPanel({ vars }) {
+export function VarsPanel({ vars }) {
   const [search, setSearch] = useState('');
   const filtered = search
     ? vars.filter(v => v.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -3169,7 +3169,7 @@ function IconFileSvg({ isNotebook }) {
   );
 }
 
-function formatFileSize(bytes) {
+export function formatFileSize(bytes) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
@@ -3185,7 +3185,7 @@ function formatFileMtime(ms) {
   return d.toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
-function FilesPanel({ currentDir, onNavigate, onOpenNotebook, notebookDir }) {
+export function FilesPanel({ currentDir, onNavigate, onOpenNotebook, notebookDir }) {
   const [entries, setEntries]           = useState([]);
   const [parentDir, setParentDir]       = useState(null);
   const [loading, setLoading]           = useState(false);
@@ -4045,7 +4045,7 @@ function LayoutManager({ dockLayout, savedLayouts, onSave, onLoad, onDelete }) {
 
 // ── QuitDialog ────────────────────────────────────────────────────────────────
 
-function QuitDialog({ dirtyNbs, onSaveSelected, onDiscardAll, onCancel }) {
+export function QuitDialog({ dirtyNbs, onSaveSelected, onDiscardAll, onCancel }) {
   const [selected, setSelected] = useState(() => new Set(dirtyNbs.map((n) => n.id)));
 
   const toggle = (id) =>
@@ -5609,5 +5609,8 @@ function StatusBar({ notebooks, activeId }) {
 
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 
-const root = createRoot(document.getElementById('root'));
-root.render(<App />);
+const rootEl = document.getElementById('root');
+if (rootEl) {
+  const root = createRoot(rootEl);
+  root.render(<App />);
+}

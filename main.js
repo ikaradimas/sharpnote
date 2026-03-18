@@ -1,4 +1,5 @@
-const { app, BrowserWindow, ipcMain, dialog, Menu, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, Menu, shell } =
+  require(process.env.VITEST ? './__mocks__/electron.js' : 'electron');
 const path = require('path');
 const { spawn } = require('child_process');
 const fs = require('fs');
@@ -7,6 +8,16 @@ const readline = require('readline');
 let mainWindow = null;
 let windowTabs = []; // kept in sync by renderer via update-window-tabs IPC
 let allowQuit = false;
+
+// Capture IPC registrations for test access
+const _ipcHandlers = {};
+const _ipcEvents   = {};
+if (process.env.VITEST) {
+  const _origHandle = ipcMain.handle.bind(ipcMain);
+  const _origOn     = ipcMain.on.bind(ipcMain);
+  ipcMain.handle = (ch, fn) => { _ipcHandlers[ch] = fn; _origHandle(ch, fn); };
+  ipcMain.on     = (ch, fn) => { _ipcEvents[ch]   = fn; _origOn(ch, fn); };
+}
 
 // Multi-kernel map: notebookId -> { process, ready, pending[] }
 const kernels = new Map();
@@ -753,7 +764,7 @@ app.whenReady().then(() => {
   loadRecentFiles();
   fs.mkdirSync(libraryDir, { recursive: true });
   Menu.setApplicationMenu(buildMenu());
-  if (process.platform === 'darwin') {
+  if (process.platform === 'darwin' && !process.env.VITEST) {
     const { nativeImage } = require('electron');
     const dockIcon = nativeImage.createFromPath(path.join(__dirname, 'assets', 'icon.icns'));
     app.dock.setIcon(dockIcon);
@@ -776,3 +787,18 @@ app.on('window-all-closed', () => {
 app.on('before-quit', () => {
   killAllKernels();
 });
+
+// ── Test harness exports ───────────────────────────────────────────────────────
+// Active only when running under Vitest; allows unit tests to reach pure logic.
+if (process.env.VITEST) {
+  exports.resolveLibraryPath = resolveLibraryPath;
+  exports.addRecentFile = addRecentFile;
+  exports.getRecentFiles = () => recentFiles;
+  exports.clearRecentFiles = () => { recentFiles = []; };
+  exports.kernels = kernels;
+  exports.sendToKernel = sendToKernel;
+  exports.killKernelForId = killKernelForId;
+  exports._ipcHandlers = _ipcHandlers;
+  exports._ipcEvents   = _ipcEvents;
+  exports._shell       = shell;
+}
