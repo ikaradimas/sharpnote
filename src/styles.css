@@ -122,6 +122,30 @@ body {
   text-shadow: 0 0 16px var(--accent-glow);
 }
 
+.toolbar-title-group {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  -webkit-app-region: drag;
+  margin-right: 4px;
+}
+.toolbar-title-group .toolbar-title { margin-right: 0; -webkit-app-region: none; }
+.toolbar-path {
+  font-family: var(--font-code);
+  font-size: 9px;
+  color: var(--text-dim);
+  letter-spacing: 0;
+  text-transform: none;
+  font-weight: 400;
+  opacity: 0.6;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 260px;
+  cursor: default;
+}
+
 .toolbar button {
   -webkit-app-region: no-drag;
   background: #1a2030;
@@ -3854,3 +3878,100 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 }
 .quit-btn-save:hover { box-shadow: 0 0 8px rgba(196,150,74,0.3); }
 .quit-btn-save:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── File Explorer Panel ─────────────────────────────────────────────────── */
+.files-panel {
+  flex: 1; display: flex; flex-direction: column; overflow: hidden;
+  background: var(--bg-deep); outline: none;
+}
+
+.files-header {
+  display: flex; align-items: center; gap: 3px;
+  padding: 4px 6px; border-bottom: 1px solid var(--border-default);
+  background: var(--bg-mid); flex-shrink: 0;
+}
+
+.files-up-btn, .files-new-folder-btn, .files-refresh-btn {
+  background: none; border: none; color: var(--text-muted);
+  font-size: 13px; line-height: 1; padding: 2px 5px; border-radius: 2px;
+  cursor: pointer; flex-shrink: 0;
+}
+.files-up-btn:hover, .files-new-folder-btn:hover, .files-refresh-btn:hover {
+  background: var(--bg-elevated); color: var(--text-primary);
+}
+.files-up-btn:disabled { opacity: 0.25; cursor: not-allowed; }
+
+.files-breadcrumb {
+  flex: 1; min-width: 0; display: flex; align-items: center; flex-wrap: nowrap;
+  overflow: hidden; gap: 0;
+}
+.files-crumb {
+  font-family: var(--font-code); font-size: 10px; color: var(--text-muted);
+  cursor: pointer; white-space: nowrap; padding: 1px 2px; border-radius: 2px;
+  flex-shrink: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis;
+}
+.files-crumb:hover { color: var(--accent-primary); background: var(--accent-warm-bg); }
+.files-crumb-sep { font-size: 10px; color: var(--text-dim); padding: 0 1px; }
+
+.files-list {
+  flex: 1; overflow-y: auto; overflow-x: hidden;
+}
+
+.files-entry {
+  display: flex; align-items: center; gap: 5px;
+  padding: 3px 8px; cursor: default; user-select: none;
+  border-bottom: 1px solid transparent;
+}
+.files-entry:hover { background: var(--bg-elevated); }
+.files-selected { background: var(--accent-warm-bg) !important; }
+.files-unreadable { opacity: 0.4; }
+
+.files-icon { flex-shrink: 0; display: flex; align-items: center; color: var(--accent-primary); }
+
+.files-name {
+  flex: 1; min-width: 0; font-family: var(--font-ui); font-size: 12px;
+  color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.files-name-nb { color: var(--accent-primary); }
+
+.files-meta {
+  display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+}
+.files-size {
+  font-family: var(--font-code); font-size: 10px; color: var(--text-dim); min-width: 42px; text-align: right;
+}
+.files-mtime {
+  font-family: var(--font-code); font-size: 10px; color: var(--text-dim); min-width: 48px; text-align: right;
+}
+
+.files-actions {
+  display: none; align-items: center; gap: 2px; flex-shrink: 0; margin-left: 2px;
+}
+.files-entry:hover .files-actions { display: flex; }
+
+.files-action-btn {
+  background: none; border: none; color: var(--text-dim); font-size: 11px;
+  padding: 1px 4px; border-radius: 2px; cursor: pointer; line-height: 1;
+}
+.files-action-btn:hover { background: var(--bg-mid); color: var(--text-primary); }
+.files-action-delete:hover { color: #e06060; }
+
+.files-rename-input {
+  flex: 1; min-width: 0; background: var(--bg-deep);
+  border: 1px solid var(--accent-primary-dim); color: var(--text-primary);
+  font-family: var(--font-ui); font-size: 12px; padding: 1px 4px;
+  border-radius: 2px; outline: none;
+}
+.files-rename-input:focus { border-color: var(--accent-primary); }
+
+.files-entry-creating { background: var(--bg-elevated); }
+
+.files-empty {
+  padding: 16px 12px; font-size: 11px; color: var(--text-muted); font-style: italic;
+}
+.files-error {
+  padding: 10px 12px; font-size: 11px; color: var(--status-error); word-break: break-all;
+}
+
+/* Override: no per-panel resize handle inside DockZone for files */
+.dock-zone .files-panel { width: auto !important; height: auto !important; flex: 1; }

@@ -90,6 +90,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Renderer-side logging (appears in Logs panel)
   rendererLog: (tag, message) => ipcRenderer.send('renderer-log', { tag, message }),
 
+  // File explorer
+  fsReaddir:  (dirPath)           => ipcRenderer.invoke('fs-readdir', dirPath),
+  fsRename:   (oldPath, newPath)  => ipcRenderer.invoke('fs-rename', { oldPath, newPath }),
+  fsDelete:   (filePath)          => ipcRenderer.invoke('fs-delete', filePath),
+  fsMkdir:    (dirPath)           => ipcRenderer.invoke('fs-mkdir', dirPath),
+  fsOpenPath: (filePath)          => ipcRenderer.invoke('fs-open-path', filePath),
+  fsGetHome:  ()                  => ipcRenderer.invoke('fs-get-home'),
+
   // Code library
   getLibraryFiles: (subfolder) => ipcRenderer.invoke('get-library-files', subfolder || ''),
   readLibraryFile: (filePath) => ipcRenderer.invoke('read-library-file', filePath),

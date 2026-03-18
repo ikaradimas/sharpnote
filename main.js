@@ -467,6 +467,65 @@ ipcMain.on('confirm-quit', () => {
   app.quit();
 });
 
+// ── File Explorer IPC ─────────────────────────────────────────────────────────
+
+ipcMain.handle('fs-readdir', (_event, dirPath) => {
+  try {
+    const names = fs.readdirSync(dirPath);
+    const entries = names.map((name) => {
+      const full = path.join(dirPath, name);
+      try {
+        const stat = fs.statSync(full);
+        return { name, isDirectory: stat.isDirectory(), size: stat.size, mtime: stat.mtimeMs };
+      } catch {
+        return { name, isDirectory: false, size: 0, mtime: 0, unreadable: true };
+      }
+    });
+    entries.sort((a, b) => {
+      if (a.isDirectory !== b.isDirectory) return a.isDirectory ? -1 : 1;
+      return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+    });
+    const parent = path.dirname(dirPath);
+    return { success: true, entries, dirPath, parentDir: parent !== dirPath ? parent : null };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('fs-rename', (_event, { oldPath, newPath }) => {
+  try {
+    fs.renameSync(oldPath, newPath);
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('fs-delete', async (_event, filePath) => {
+  try {
+    await shell.trashItem(filePath);
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('fs-mkdir', (_event, dirPath) => {
+  try {
+    fs.mkdirSync(dirPath);
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('fs-open-path', async (_event, filePath) => {
+  const err = await shell.openPath(filePath);
+  return err ? { success: false, error: err } : { success: true };
+});
+
+ipcMain.handle('fs-get-home', () => app.getPath('home'));
+
 ipcMain.handle('new-notebook-dialog', async () => {
   const { response } = await dialog.showMessageBox(mainWindow, {
     type: 'question',
