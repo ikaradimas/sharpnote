@@ -6,6 +6,7 @@ const readline = require('readline');
 
 let mainWindow = null;
 let windowTabs = []; // kept in sync by renderer via update-window-tabs IPC
+let allowQuit = false;
 
 // Multi-kernel map: notebookId -> { process, ready, pending[] }
 const kernels = new Map();
@@ -246,6 +247,13 @@ function createWindow() {
     mainWindow.webContents.send('font-size-change', fontSize);
   });
 
+  mainWindow.on('close', (event) => {
+    if (!allowQuit) {
+      event.preventDefault();
+      mainWindow.webContents.send('before-quit');
+    }
+  });
+
   mainWindow.on('closed', () => {
     mainWindow = null;
     killAllKernels();
@@ -452,6 +460,11 @@ ipcMain.on('kernel-interrupt', (_event, notebookId) => {
   if (entry.process.stdin?.writable) {
     entry.process.stdin.write(JSON.stringify({ type: 'interrupt' }) + '\n');
   }
+});
+
+ipcMain.on('confirm-quit', () => {
+  allowQuit = true;
+  app.quit();
 });
 
 ipcMain.handle('new-notebook-dialog', async () => {

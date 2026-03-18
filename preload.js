@@ -83,6 +83,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Window menu tab sync
   updateWindowTabs: (tabs) => ipcRenderer.send('update-window-tabs', tabs),
 
+  // Quit guard
+  onBeforeQuit: (callback) => ipcRenderer.on('before-quit', () => callback()),
+  confirmQuit: () => ipcRenderer.send('confirm-quit'),
+
   // Renderer-side logging (appears in Logs panel)
   rendererLog: (tag, message) => ipcRenderer.send('renderer-log', { tag, message }),
 
