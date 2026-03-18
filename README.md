@@ -10,28 +10,32 @@
 ![Chart.js](https://img.shields.io/badge/Chart.js-4-FF6384?logo=chartdotjs&logoColor=white)
 ![Vitest](https://img.shields.io/badge/Vitest-2-6E9F18?logo=vitest&logoColor=white)
 ![xUnit](https://img.shields.io/badge/xUnit-2.9-512BD4?logo=dotnet&logoColor=white)
-![SQLite](https://img.shields.io/badge/SQLite-EF Core_8-003B57?logo=sqlite&logoColor=white)
+![SQLite](https://img.shields.io/badge/SQLite-EFCore_8-003B57?logo=sqlite&logoColor=white)
 ![esbuild](https://img.shields.io/badge/esbuild-0.25-FFCF00?logo=esbuild&logoColor=black)
 
 ---
 
 ## Table of Contents
 
-- [Features](#features)
-- [Architecture](#architecture)
-  - [Electron Main Process](#electron-main-process-mainjs)
-  - [React Renderer](#react-renderer-srcrendererjsx)
-  - [C# Kernel](#c-kernel-kernel)
-  - [IPC Protocol](#ipc-protocol)
-  - [Multi-Kernel Architecture](#multi-kernel-architecture)
-  - [Database Integration](#database-integration)
-  - [Dock Layout System](#dock-layout-system)
-- [Project Structure](#project-structure)
-- [Prerequisites](#prerequisites)
-- [Getting Started](#getting-started)
-- [Building for Distribution](#building-for-distribution)
-- [Testing](#testing)
-- [Notebook File Format](#notebook-file-format)
+- [Polyglot Notebook](#polyglot-notebook)
+  - [Table of Contents](#table-of-contents)
+  - [Features](#features)
+  - [Architecture](#architecture)
+    - [Electron Main Process (`main.js`)](#electron-main-process-mainjs)
+    - [React Renderer (`src/renderer.jsx`)](#react-renderer-srcrendererjsx)
+    - [C# Kernel (`kernel/`)](#c-kernel-kernel)
+    - [IPC Protocol](#ipc-protocol)
+    - [Multi-Kernel Architecture](#multi-kernel-architecture)
+    - [Database Integration](#database-integration)
+    - [Dock Layout System](#dock-layout-system)
+  - [Project Structure](#project-structure)
+  - [Prerequisites](#prerequisites)
+  - [Getting Started](#getting-started)
+  - [Building for Distribution](#building-for-distribution)
+  - [Testing](#testing)
+    - [JavaScript — Vitest](#javascript--vitest)
+    - [C# — xUnit](#c--xunit)
+  - [Notebook File Format](#notebook-file-format)
 
 ---
 
@@ -41,8 +45,8 @@
 - **C# REPL** — each cell is evaluated using Roslyn scripting; state is shared across cells within a notebook, with `using`/`#r` directives supported
 - **Per-notebook kernel** — every open notebook gets its own isolated .NET process; kernels start on demand and can be reset independently
 - **NuGet integration** — add packages via `#r "nuget: PackageName, Version"` directives or through the Packages panel; multiple package sources supported
-- **Rich output** — `Display.Html()`, `Display.Markdown()`, `Display.Image()`, `Display.Table()`, `Display.Graph()` (Chart.js), `Display.Csv()`, and `Console.Write` captured as `stdout`
-- **Database integration** — connect to SQLite, SQL Server, or PostgreSQL; schema is introspected and a typed `DbContext` + POCO classes are code-generated and injected automatically into the kernel
+- **Rich output** — `Display.Html()`, `Display.Table()`, `Display.Graph()` (Chart.js), `Display.Csv()`, and `Console.Write` captured as `stdout`
+- **Database integration** — connect to SQLite, SQLite (In-Memory), SQL Server, PostgreSQL, or Redis; for relational providers the schema is introspected and a typed `DbContext` + POCO classes are code-generated and injected; Redis injects a `StackExchange.Redis.IDatabase` variable
 - **Code Library** — file-based snippet library stored in `~/Documents/Polyglot Notebooks/Library/`; subfolder navigation, syntax-highlighted preview, insert-as-cell with animation
 - **Dock layout** — panels (Library, Log, NuGet, Config, DB) can be docked to left / right / bottom zones, float freely, or be dragged between zones; layouts can be saved and restored by name
 - **Autocomplete** — Roslyn `ResolveCompletion` backed; falls back to a C# keyword list while the kernel is starting
@@ -52,7 +56,8 @@
 - **Recent files** — last 12 opened notebooks persisted to `userData/recent-files.json`; exposed in the File menu
 - **Variables panel** — live snapshot of the kernel's global state after each execution
 - **Config panel** — per-notebook key/value store passed into the kernel as a `Config["key"]` helper
-- **Log panel** — stdout/stderr stream from the kernel process, time-stamped with millisecond precision
+- **Log panel** — structured, time-stamped kernel log stream with `NOTEBOOK` lifecycle entries and `USER` entries written by `.Log()` calls in scripts
+- **Table of Contents** — live heading outline from markdown cells; click any entry to scroll to it
 - **Dark theme** — purpose-built urban dark CSS (~2 650 lines); no UI framework dependency
 
 ---
@@ -108,7 +113,8 @@ All UI is a single ~3 400-line React file bundled by esbuild. Key components:
 | `LibraryPanel` | Code snippet library with subfolder nav and CodeMirror preview |
 | `NugetPanel` | Package list + add form + custom source management |
 | `ConfigPanel` | Key/value editor for per-notebook config passed to the kernel |
-| `VarsPanel` | Live variable snapshot from the kernel |
+| `VarsPanel` | Live variable snapshot from the kernel (name, type, value) |
+| `TocPanel` | Table of Contents — heading outline extracted from markdown cells |
 | `DbPanel` | Connection form, schema tree, attach/detach DB |
 | `DockZone` | Resizable panel zone (left / right / bottom / float) |
 | `FloatPanel` | Free-floating draggable/resizable panel window |
@@ -126,7 +132,7 @@ All UI is a single ~3 400-line React file bundled by esbuild. Key components:
   nugetPackages,          // [{ id, version, status }]
   nugetSources,           // [{ name, url, enabled }]
   config,                 // [{ key, value }]
-  logPanelOpen, nugetPanelOpen, configPanelOpen, dbPanelOpen,
+  logPanelOpen, nugetPanelOpen, configPanelOpen, dbPanelOpen, varsPanelOpen, tocPanelOpen,
   attachedDbs,            // [{ connectionId, status, varName, schema, error }]
   memoryHistory,          // last 60 memory_mb readings
 }
@@ -146,13 +152,12 @@ The kernel is a self-contained .NET 8 console application that communicates with
 
 ```csharp
 Display.Html("<b>bold</b>");
-Display.Markdown("# heading");
 Display.Table(myList);
-Display.Graph(new { type = "bar", data = ... });
 Display.Csv("a,b\n1,2");
-Display.Image(bytes, "image/png");
+Display.Graph(new { type = "bar", data = ... });
 
-Log.Write("message");         // appears in the Log panel
+"starting pipeline".Log();    // extension method; appears in Log panel, returns value
+value.Log("label");           // optional label shown alongside the value
 Config["key"]                 // per-notebook key/value store
 ```
 
@@ -169,8 +174,8 @@ Messages are newline-delimited JSON objects. The renderer sends to the kernel; t
 | `execute` | `{ id, code }` |
 | `interrupt` | `{}` |
 | `reset` | `{}` |
-| `lint` | `{ code }` |
-| `autocomplete` | `{ code, position }` |
+| `lint` | `{ requestId, code }` |
+| `autocomplete` | `{ requestId, code, position }` |
 | `db_connect` | `{ connectionId, provider, connectionString }` |
 | `db_disconnect` | `{ connectionId }` |
 | `exit` | `{}` |
@@ -188,8 +193,10 @@ Messages are newline-delimited JSON objects. The renderer sends to the kernel; t
 | `autocomplete_result` | `{ items[] }` |
 | `vars_update` | `{ vars[] }` |
 | `db_schema` | `{ connectionId, schema }` |
-| `db_ready` | `{ connectionId }` |
-| `db_error` | `{ connectionId, error }` |
+| `db_ready` | `{ connectionId, varName }` |
+| `db_error` | `{ connectionId, message }` |
+| `db_disconnected` | `{ connectionId }` |
+| `nuget_preload_complete` | — |
 | `memory_mb` | `{ mb }` |
 | `log` | `{ tag, message, timestamp }` |
 | `reset_complete` | — |
@@ -231,8 +238,10 @@ Supported providers:
 | Provider | Key | Connection string |
 |---|---|---|
 | SQLite | `sqlite` | `Data Source=/path/to/db.sqlite` |
+| SQLite (In-Memory) | `sqlite_memory` | shared-cache name, or blank to auto-generate |
 | SQL Server | `sqlserver` | `Server=...;Database=...;` |
 | PostgreSQL | `postgresql` | `Host=...;Database=...;` |
+| Redis | `redis` | `localhost:6379` or `host:port,password=secret` |
 
 ### Dock Layout System
 
@@ -439,23 +448,27 @@ Notebooks are saved as `.cnb` files — plain JSON:
 
 ```jsonc
 {
+  "version": "1.0",
   "title": "My Notebook",
+  "color": "#4a90d9",          // optional tab color (null if unset)
   "cells": [
     {
       "id": "uuid-v4",
-      "code": "var x = 42;\nConsole.WriteLine(x);",
-      "outputMode": "default",   // "default" | "hidden" | "inline"
+      "type": "code",           // "code" | "markdown"
+      "content": "var x = 42;\nConsole.WriteLine(x);",
+      "outputMode": "auto",     // "auto" | "text" | "html" | "table" | "graph"
       "locked": false
     }
   ],
-  "nugetPackages": [
-    { "id": "Newtonsoft.Json", "version": "13.0.3", "status": "loaded" }
+  "packages": [
+    { "id": "Newtonsoft.Json", "version": "13.0.3" }
   ],
-  "nugetSources": [
+  "sources": [
     { "name": "nuget.org", "url": "https://api.nuget.org/v3/index.json", "enabled": true }
   ],
   "config": [
     { "key": "ConnectionString", "value": "Data Source=mydb.sqlite" }
-  ]
+  ],
+  "attachedDbIds": ["conn-uuid-1"]   // global connection IDs to re-attach on open
 }
 ```

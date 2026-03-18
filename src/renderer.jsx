@@ -194,7 +194,7 @@ const DOCS_SECTIONS = [
       { type: 'ul', items: [
         'Display.Html(string html) — renders arbitrary HTML in the output area',
         'Display.Table(IEnumerable<T> rows) — renders an object collection as a formatted data table',
-        'Display.Df(DataTable dt) — renders a System.Data.DataTable',
+        'Display.Csv(string csv) — renders a CSV string as a scrollable data table',
         'Display.Graph(object spec) — renders an interactive Chart.js graph from a config object',
         'list.DisplayTable() — extension method shorthand for Display.Table(list)',
       ]},
@@ -226,7 +226,7 @@ const DOCS_SECTIONS = [
       { type: 'h3', text: 'HTML Output' },
       { type: 'p', text: 'Display.Html("<b>bold</b>") renders HTML directly in the output area. Use this for custom formatting, styled results, or embedded content.' },
       { type: 'h3', text: 'Data Tables' },
-      { type: 'p', text: 'Display.Table(myList) or myList.DisplayTable() renders an object collection as a scrollable table with column headers derived from property names. Display.Df(dataTable) accepts a System.Data.DataTable. Set the output mode to "table".' },
+      { type: 'p', text: 'Display.Table(myList) or myList.DisplayTable() renders an object collection as a scrollable table with column headers derived from property names. Display.Csv(csv) parses and renders a CSV string as a table. Set the output mode to "table".' },
       { type: 'h3', text: 'Graphs (Chart.js)' },
       { type: 'p', text: 'Display.Graph(spec) renders an interactive Chart.js chart. Set the output mode to "graph" and pass an anonymous object matching the Chart.js config schema:' },
       { type: 'code', text: 'Display.Graph(new {\n  type = "bar",\n  data = new {\n    labels = new[] { "Jan", "Feb", "Mar" },\n    datasets = new[] { new {\n      label = "Sales",\n      data  = new[] { 120, 95, 140 },\n      backgroundColor = "rgba(196,150,74,0.7)",\n    }}\n  },\n  options = new { responsive = true }\n});' },
@@ -243,12 +243,14 @@ const DOCS_SECTIONS = [
       { type: 'h3', text: 'Supported Providers' },
       { type: 'ul', items: [
         'SQLite — local file-based database',
+        'SQLite (In-Memory) — ephemeral database held in process memory; no file required; data is lost on kernel reset',
         'SQL Server — Microsoft SQL Server or Azure SQL',
         'PostgreSQL — via Npgsql',
+        'Redis — key-value store via StackExchange.Redis; injects an IDatabase variable instead of a DbContext',
       ]},
       { type: 'h3', text: 'Adding a Connection' },
       { type: 'p', text: 'Click the + button in the DB panel. Enter a name (used as the variable name in scripts), choose a provider, and enter a connection string:' },
-      { type: 'code', text: '-- SQLite\nData Source=/Users/me/data/mydb.db\n\n-- SQL Server\nServer=localhost;Database=mydb;User Id=sa;Password=pass;TrustServerCertificate=True\n\n-- PostgreSQL\nHost=localhost;Database=mydb;Username=postgres;Password=secret' },
+      { type: 'code', text: '-- SQLite\nData Source=/Users/me/data/mydb.db\n\n-- SQLite (In-Memory)\n(leave blank to auto-generate, or enter a shared-cache name)\n\n-- SQL Server\nServer=localhost;Database=mydb;User Id=sa;Password=pass;TrustServerCertificate=True\n\n-- PostgreSQL\nHost=localhost;Database=mydb;Username=postgres;Password=secret\n\n-- Redis\nlocalhost:6379\n  or\nserver:port,password=secret,ssl=true' },
       { type: 'h3', text: 'Attaching to a Notebook' },
       { type: 'p', text: 'Connections are global and can be attached to individual notebooks. Click Attach next to a connection. The kernel connects, introspects the schema, generates a typed DbContext, and injects it as a variable. Attached connections are saved in the .cnb file and reconnect automatically on open.' },
       { type: 'h3', text: 'Connection Status' },
@@ -262,8 +264,14 @@ const DOCS_SECTIONS = [
       { type: 'h3', text: 'Querying in Scripts' },
       { type: 'p', text: 'The connection name is sanitized to a camelCase variable (e.g. "My DB" → myDb). Use it as a standard EF Core DbContext:' },
       { type: 'code', text: '// Fetch all rows\nvar users = myDb.Users.ToList();\nDisplay.Table(users);\n\n// Filter and project\nvar active = myDb.Users\n    .Where(u => u.IsActive)\n    .Select(u => new { u.Name, u.Email })\n    .OrderBy(u => u.Name)\n    .ToList();\n\n// Raw SQL\nvar result = myDb.Database\n    .SqlQueryRaw<OrderSummary>("SELECT * FROM orders WHERE total > {0}", 100)\n    .ToList();' },
+      { type: 'h3', text: 'SQLite (In-Memory) Usage' },
+      { type: 'p', text: 'The in-memory DbContext starts with an empty schema. Create tables with raw SQL, then use the DbContext to query. Hit Refresh in the DB panel and then Detach + Attach to regenerate typed DbSets after schema changes.' },
+      { type: 'code', text: '// Create a table and insert rows\nmyDb.Database.ExecuteSqlRaw(\n    "CREATE TABLE IF NOT EXISTS Products (Id INTEGER PRIMARY KEY, Name TEXT, Price REAL)");\nmyDb.Database.ExecuteSqlRaw(\n    "INSERT INTO Products VALUES (1, \'Widget\', 9.99), (2, \'Gadget\', 24.99)");\n\n// Query back (typed projection requires detach+reattach for DbSet<T>)\nrecord Product(long Id, string Name, double Price);\nvar rows = myDb.Database\n    .SqlQueryRaw<Product>("SELECT Id, Name, Price FROM Products")\n    .ToList();\nDisplay.Table(rows);' },
+      { type: 'h3', text: 'Redis Usage' },
+      { type: 'p', text: 'The Redis provider injects an IDatabase variable (StackExchange.Redis). The schema tree shows up to 200 sampled keys grouped by prefix. Use the full StackExchange.Redis API:' },
+      { type: 'code', text: '// String operations\nmyRedis.StringSet("greeting", "hello");\nstring val = myRedis.StringGet("greeting");\nConsole.WriteLine(val);\n\n// Hash operations\nmyRedis.HashSet("user:1", new HashEntry[] {\n    new("name", "Alice"),\n    new("email", "alice@example.com"),\n});\nvar name = myRedis.HashGet("user:1", "name");\n\n// List\nmyRedis.ListRightPush("queue", "job-1");\nvar job = myRedis.ListLeftPop("queue");' },
       { type: 'h3', text: 'After Kernel Reset' },
-      { type: 'p', text: 'Resetting the kernel re-injects all attached DB contexts automatically. You do not need to re-attach them manually.' },
+      { type: 'p', text: 'Resetting the kernel re-injects all attached DB connections automatically. For in-memory SQLite, all data is lost on reset (the database is recreated empty). Redis data on the remote server is unaffected.' },
       { type: 'h3', text: 'Managing Connections' },
       { type: 'p', text: 'Connections are stored globally in app data (shared across all notebooks). Edit or delete a connection with the pencil/bin icons. Detach a connection from the current notebook without deleting it globally using the Detach button.' },
     ],
@@ -371,6 +379,24 @@ const DOCS_SECTIONS = [
     ],
   },
   {
+    id: 'variables', title: 'Variables',
+    content: [
+      { type: 'p', text: 'Open the Variables panel with the Variables button in the toolbar. It shows a live snapshot of all global variables in the active kernel session, updated automatically after each cell execution.' },
+      { type: 'h3', text: 'Variable List' },
+      { type: 'p', text: 'Each row shows the variable name, its declared .NET type, and a string representation of its current value. null values are displayed with a distinct style.' },
+      { type: 'h3', text: 'Filtering' },
+      { type: 'p', text: 'Use the filter input at the top of the panel to search by variable name or type name.' },
+    ],
+  },
+  {
+    id: 'toc', title: 'Table of Contents',
+    content: [
+      { type: 'p', text: 'Open the Table of Contents panel with the ToC button in the toolbar. It lists all headings extracted from markdown cells in the active notebook.' },
+      { type: 'p', text: 'Click any entry to scroll the notebook smoothly to that heading. Heading levels (H1–H6) are reflected as indentation in the list.' },
+      { type: 'p', text: 'If the notebook contains no markdown cells with headings, the panel shows "No headings found".' },
+    ],
+  },
+  {
     id: 'themes', title: 'Themes',
     content: [
       { type: 'p', text: 'Click the Theme button in the toolbar to open the theme picker. The selected theme applies instantly across the entire UI and is saved across sessions.' },
@@ -402,6 +428,7 @@ const DOCS_SECTIONS = [
         { keys: '⌘ ⇧ ,', desc: 'Toggle Config panel' },
         { keys: '⌘ ⇧ L', desc: 'Toggle Code Library panel' },
         { keys: '⌘ ⇧ G', desc: 'Toggle Log panel' },
+        { keys: '⌘ ⇧ D', desc: 'Toggle DB panel' },
         { keys: '⌘ =  /  ⌘ +', desc: 'Increase font size' },
         { keys: '⌘ –', desc: 'Decrease font size' },
         { keys: '⌘ 0', desc: 'Reset font size to default' },
@@ -1502,10 +1529,20 @@ export function ConfigPanel({ isOpen, onToggle, config, onAdd, onRemove, onUpdat
 // ── DB Panel components ────────────────────────────────────────────────────────
 
 const DB_PROVIDERS = [
-  { key: 'sqlite',     label: 'SQLite' },
-  { key: 'sqlserver',  label: 'SQL Server' },
-  { key: 'postgresql', label: 'PostgreSQL' },
+  { key: 'sqlite',        label: 'SQLite' },
+  { key: 'sqlite_memory', label: 'SQLite (In-Memory)', optionalConnStr: true },
+  { key: 'sqlserver',     label: 'SQL Server' },
+  { key: 'postgresql',    label: 'PostgreSQL' },
+  { key: 'redis',         label: 'Redis' },
 ];
+
+const DB_CONNSTR_PLACEHOLDER = {
+  sqlite:        'Data Source=/path/to/db.sqlite',
+  sqlite_memory: 'Shared memory name (leave blank to auto-generate)',
+  sqlserver:     'Server=...;Database=...;User Id=...;Password=...;TrustServerCertificate=True',
+  postgresql:    'Host=...;Database=...;Username=...;Password=...;',
+  redis:         'localhost:6379  or  server:port,password=secret',
+};
 
 function DbStatusDot({ status }) {
   return <span className={`db-status-dot db-status-${status || 'none'}`} />;
@@ -1546,16 +1583,16 @@ function DbConnectionForm({ connection, onSave, onCancel }) {
   const [provider, setProvider] = useState(connection?.provider ?? 'sqlite');
   const [connStr, setConnStr] = useState(connection?.connectionString ?? '');
 
+  const providerMeta = DB_PROVIDERS.find((p) => p.key === provider);
+
   const handleSave = () => {
-    const n = name.trim();
+    const n  = name.trim();
     const cs = connStr.trim();
-    if (!n || !cs) return;
-    onSave({
-      id: connection?.id ?? uuidv4(),
-      name: n,
-      provider,
-      connectionString: cs,
-    });
+    if (!n) return;
+    // Connection string is optional for in-memory providers; required for all others
+    if (!providerMeta?.optionalConnStr && !cs) return;
+    const id = connection?.id ?? uuidv4();
+    onSave({ id, name: n, provider, connectionString: cs });
   };
 
   return (
@@ -1578,7 +1615,7 @@ function DbConnectionForm({ connection, onSave, onCancel }) {
       </select>
       <input
         className="nuget-input db-connstr-input"
-        placeholder="Connection string"
+        placeholder={DB_CONNSTR_PLACEHOLDER[provider] ?? 'Connection string'}
         value={connStr}
         onChange={(e) => setConnStr(e.target.value)}
         spellCheck={false}
@@ -5238,6 +5275,8 @@ function App() {
     'toggle-logs':     () => { if (isNotebook()) setNb(activeIdRef.current, (n) => ({ logPanelOpen: !n.logPanelOpen })); },
     'toggle-library':  () => setLibraryPanelOpen((v) => !v),
     'toggle-db':       () => { if (isNotebook()) setNb(activeIdRef.current, (n) => ({ dbPanelOpen: !n.dbPanelOpen })); },
+    'toggle-vars':     () => { if (isNotebook()) setNb(activeIdRef.current, (n) => ({ varsPanelOpen: !n.varsPanelOpen })); },
+    'toggle-toc':      () => { if (isNotebook()) setNb(activeIdRef.current, (n) => ({ tocPanelOpen: !n.tocPanelOpen })); },
   };
 
   // Sync open tabs to main process so it can build the Window menu.
