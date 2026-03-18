@@ -122,51 +122,51 @@ public class DisplayHelper
 
     // ── One-shot display ─────────────────────────────────────────────────────
 
-    public void Html(string html) =>
-        Send(new { type = "display", id = _currentId, format = "html", content = (object)html });
+    public void Html(string html, string? title = null) =>
+        Send(new { type = "display", id = _currentId, format = "html", content = (object)html, title });
 
-    public void Table<T>(IEnumerable<T> rows)
+    public void Table<T>(IEnumerable<T> rows, string? title = null)
     {
         var list = ToRowDicts(rows.Cast<object?>().ToList());
-        Send(new { type = "display", id = _currentId, format = "table", content = (object)list });
+        Send(new { type = "display", id = _currentId, format = "table", content = (object)list, title });
     }
 
-    public void TableFromDicts(IEnumerable<Dictionary<string, object?>> rows)
+    public void TableFromDicts(IEnumerable<Dictionary<string, object?>> rows, string? title = null)
     {
         var list = rows.ToList();
-        Send(new { type = "display", id = _currentId, format = "table", content = (object)list });
+        Send(new { type = "display", id = _currentId, format = "table", content = (object)list, title });
     }
 
-    public void Csv(string csv) =>
-        Send(new { type = "display", id = _currentId, format = "csv", content = (object)csv });
+    public void Csv(string csv, string? title = null) =>
+        Send(new { type = "display", id = _currentId, format = "csv", content = (object)csv, title });
 
-    public void Graph(object chartConfig) =>
-        Send(new { type = "display", id = _currentId, format = "graph", content = chartConfig });
+    public void Graph(object chartConfig, string? title = null) =>
+        Send(new { type = "display", id = _currentId, format = "graph", content = chartConfig, title });
 
     // ── Updateable display handles ───────────────────────────────────────────
 
-    public DisplayHandle NewHtml(string initialHtml)
+    public DisplayHandle NewHtml(string initialHtml, string? title = null)
     {
         var h = NewHandle();
         Send(new { type = "display", id = _currentId, format = "html",
-                   content = (object)initialHtml, handleId = h.HandleId });
+                   content = (object)initialHtml, handleId = h.HandleId, title });
         return h;
     }
 
-    public DisplayHandle NewTable<T>(IEnumerable<T> rows)
+    public DisplayHandle NewTable<T>(IEnumerable<T> rows, string? title = null)
     {
         var h = NewHandle();
         var list = ToRowDicts(rows.Cast<object?>().ToList());
         Send(new { type = "display", id = _currentId, format = "table",
-                   content = (object)list, handleId = h.HandleId });
+                   content = (object)list, handleId = h.HandleId, title });
         return h;
     }
 
-    public DisplayHandle NewGraph(object chartConfig)
+    public DisplayHandle NewGraph(object chartConfig, string? title = null)
     {
         var h = NewHandle();
         Send(new { type = "display", id = _currentId, format = "graph",
-                   content = chartConfig, handleId = h.HandleId });
+                   content = chartConfig, handleId = h.HandleId, title });
         return h;
     }
 
@@ -195,34 +195,34 @@ public class DisplayHelper
 
 public static class PolyglotExtensions
 {
-    public static void Display(this object? obj)
+    public static void Display(this object? obj, string? title = null)
     {
         var d = DisplayContext.Current;
         if (d == null) return;
-        AutoDisplay(d, obj);
+        AutoDisplay(d, obj, title);
     }
 
-    public static void DisplayTable<T>(this IEnumerable<T> rows)
+    public static void DisplayTable<T>(this IEnumerable<T> rows, string? title = null)
     {
         var d = DisplayContext.Current;
         if (d == null) return;
         var dicts = DisplayHelper.ToRowDicts(rows.Cast<object?>().ToList());
-        d.TableFromDicts(dicts);
+        d.TableFromDicts(dicts, title);
     }
 
-    public static void DisplayHtml(this string html)
+    public static void DisplayHtml(this string html, string? title = null)
     {
-        DisplayContext.Current?.Html(html);
+        DisplayContext.Current?.Html(html, title);
     }
 
-    public static void DisplayCsv(this string csv)
+    public static void DisplayCsv(this string csv, string? title = null)
     {
-        DisplayContext.Current?.Csv(csv);
+        DisplayContext.Current?.Csv(csv, title);
     }
 
-    public static void DisplayGraph(this object chartConfig)
+    public static void DisplayGraph(this object chartConfig, string? title = null)
     {
-        DisplayContext.Current?.Graph(chartConfig);
+        DisplayContext.Current?.Graph(chartConfig, title);
     }
 
     public static T Log<T>(this T obj, string? label = null)
@@ -254,13 +254,13 @@ public static class PolyglotExtensions
         return obj;
     }
 
-    internal static void AutoDisplay(DisplayHelper d, object? obj)
+    internal static void AutoDisplay(DisplayHelper d, object? obj, string? title = null)
     {
         if (obj == null) return;
 
         if (obj is string s)
         {
-            d.Html($"<pre>{System.Net.WebUtility.HtmlEncode(s)}</pre>");
+            d.Html($"<pre>{System.Net.WebUtility.HtmlEncode(s)}</pre>", title);
             return;
         }
 
@@ -269,37 +269,37 @@ public static class PolyglotExtensions
             var items = enumerable.Cast<object?>().ToList();
             if (items.Count == 0)
             {
-                d.Html("<pre>(empty)</pre>");
+                d.Html("<pre>(empty)</pre>", title);
                 return;
             }
             var first = items[0];
             if (first == null || first is string || first.GetType().IsPrimitive)
             {
                 var rows = items.Select((v, i) => new Dictionary<string, object?> { ["index"] = i, ["value"] = v }).ToList();
-                d.TableFromDicts(rows);
+                d.TableFromDicts(rows, title);
             }
             else
             {
                 var dicts = DisplayHelper.ToRowDicts(items);
-                d.TableFromDicts(dicts);
+                d.TableFromDicts(dicts, title);
             }
             return;
         }
 
         if (obj.GetType().IsPrimitive || obj is decimal)
         {
-            d.Html($"<pre>{obj}</pre>");
+            d.Html($"<pre>{obj}</pre>", title);
             return;
         }
 
         try
         {
             var json = JsonSerializer.Serialize(obj, new JsonSerializerOptions { WriteIndented = true });
-            d.Html($"<pre>{System.Net.WebUtility.HtmlEncode(json)}</pre>");
+            d.Html($"<pre>{System.Net.WebUtility.HtmlEncode(json)}</pre>", title);
         }
         catch
         {
-            d.Html($"<pre>{System.Net.WebUtility.HtmlEncode(obj.ToString() ?? "")}</pre>");
+            d.Html($"<pre>{System.Net.WebUtility.HtmlEncode(obj.ToString() ?? "")}</pre>", title);
         }
     }
 }

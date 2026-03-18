@@ -945,6 +945,7 @@ function OutputBlock({ msg, index }) {
           ⬇
         </button>
       )}
+      {msg.title && <div className="output-title">{msg.title}</div>}
       {inner}
     </div>
   );
@@ -2555,7 +2556,7 @@ function TabOverflowMenu({ items, activeId, onSelect }) {
 
 // ── TabSection ────────────────────────────────────────────────────────────────
 
-function TabSection({ items, className, activeId, renderItem, onMoveToFront }) {
+function TabSection({ items, className, activeId, renderItem, onMoveToFront, maxFraction }) {
   const sectionRef = useRef(null);
   const widthCache = useRef(new Map());
   const [overflowFrom, setOverflowFrom] = useState(null);
@@ -2580,13 +2581,17 @@ function TabSection({ items, className, activeId, renderItem, onMoveToFront }) {
     });
 
     const OVERFLOW_W = 36;
-    const sectionW = el.offsetWidth;
+    const GAP = 2;
+    const sectionW = maxFraction != null
+      ? (el.parentElement?.offsetWidth ?? el.offsetWidth) * maxFraction
+      : el.offsetWidth;
     let sum = 0, cut = null;
 
     for (let i = 0; i < items.length; i++) {
-      sum += (widthCache.current.get(items[i].id) ?? 100) + 2;
+      if (i > 0) sum += GAP; // gap before this item (not before the first)
+      sum += (widthCache.current.get(items[i].id) ?? 100);
       const hasMore = i < items.length - 1;
-      if (sum + (hasMore ? OVERFLOW_W : 0) > sectionW) {
+      if (sum + (hasMore ? GAP + OVERFLOW_W : 0) > sectionW) {
         cut = Math.max(i, 1); // always show at least one tab
         break;
       }
@@ -2854,6 +2859,7 @@ function TabBar({ notebooks, activeId, onActivate, onClose, onNew, onRename,
           activeId={activeId}
           renderItem={renderItem}
           onMoveToFront={onReorder}
+          maxFraction={0.4}
         />
       )}
       {pinnedItems.length > 0 && regularItems.length > 0 && (
@@ -4020,7 +4026,7 @@ function App() {
               outputs: {
                 ...n.outputs,
                 [msg.id]: (n.outputs[msg.id] || []).map((m) =>
-                  m.handleId === msg.handleId ? msg : m
+                  m.handleId === msg.handleId ? { ...msg, title: m.title } : m
                 ),
               },
             }));

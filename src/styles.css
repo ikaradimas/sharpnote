@@ -659,29 +659,43 @@ body {
 }
 
 .output-stdout {
-  white-space: pre-wrap;
+  white-space: pre;
+  overflow-x: auto;
   color: var(--text-secondary);
 }
 
 .output-error {
   color: var(--status-error);
-  white-space: pre-wrap;
+  white-space: pre;
+  overflow-x: auto;
   text-shadow: 0 0 8px rgba(255, 40, 60, 0.4);
 }
 
 .output-error-stack {
   color: var(--text-dim);
-  white-space: pre-wrap;
+  white-space: pre;
+  overflow-x: auto;
   font-size: 11px;
   margin-top: 4px;
 }
 
 .output-interrupted { color: #9a6040; font-style: italic; font-size: 11px; padding: 3px 0; opacity: 0.8; }
 
+.output-title {
+  font-family: var(--font-heading);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent-primary);
+  opacity: 0.7;
+  margin-bottom: 4px;
+}
+
 .output-html {
   color: var(--text-secondary);
   font-family: var(--font-ui);
   font-size: 13px;
+  overflow-x: auto;
 }
 
 /* ── Data Table ──────────────────────────────────────────────────────────── */
@@ -1823,7 +1837,7 @@ body {
   flex-shrink: 0;
   gap: 2px;
 }
-.tab-section-pinned { flex: 1; max-width: 50%; min-width: 0; }
+.tab-section-pinned { max-width: 40%; }
 .tab-section-regular { flex: 1; min-width: 0; }
 
 .tab-overflow-btn {
