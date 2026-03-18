@@ -1890,6 +1890,8 @@ function Toolbar({
   onToggleToC,
   libraryPanelOpen,
   onToggleLibrary,
+  filesPanelOpen,
+  onToggleFiles,
   theme,
   onThemeChange,
   dockLayout,
@@ -1965,6 +1967,8 @@ function Toolbar({
         onToggleToC={onToggleToC}
         libraryPanelOpen={libraryPanelOpen}
         onToggleLibrary={onToggleLibrary}
+        filesPanelOpen={filesPanelOpen}
+        onToggleFiles={onToggleFiles}
       />
       {dockLayout && (
         <LayoutManager
@@ -2905,6 +2909,8 @@ function NotebookView({
   requestLint,
   libraryPanelOpen,
   onToggleLibrary,
+  filesPanelOpen,
+  onToggleFiles,
   theme,
   onThemeChange,
   dockLayout,
@@ -2984,6 +2990,8 @@ function NotebookView({
         onToggleToC={() => onSetNb((n) => ({ tocPanelOpen: !n.tocPanelOpen }))}
         libraryPanelOpen={libraryPanelOpen}
         onToggleLibrary={onToggleLibrary}
+        filesPanelOpen={filesPanelOpen}
+        onToggleFiles={onToggleFiles}
         theme={theme}
         onThemeChange={onThemeChange}
         dockLayout={dockLayout}
@@ -3073,7 +3081,7 @@ function TocPanel({ cells }) {
   return (
     <div className="toc-panel">
       <div className="toc-panel-header">
-        <span className="toc-panel-title">Contents</span>
+        <span className="toc-panel-title">Table of Contents</span>
       </div>
       {headings.length === 0 ? (
         <div className="toc-empty">No headings found</div>
@@ -3177,7 +3185,7 @@ function formatFileMtime(ms) {
   return d.toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
-function FilesPanel({ currentDir, onNavigate, onOpenNotebook }) {
+function FilesPanel({ currentDir, onNavigate, onOpenNotebook, notebookDir }) {
   const [entries, setEntries]           = useState([]);
   const [parentDir, setParentDir]       = useState(null);
   const [loading, setLoading]           = useState(false);
@@ -3277,11 +3285,17 @@ function FilesPanel({ currentDir, onNavigate, onOpenNotebook }) {
   // Breadcrumb segments from currentDir
   const crumbs = (() => {
     if (!currentDir) return [];
-    const parts = currentDir.replace(/\\/g, '/').split('/').filter(Boolean);
-    return parts.map((seg, i) => ({
-      label: seg,
-      path: (currentDir.startsWith('/') ? '/' : '') + parts.slice(0, i + 1).join('/'),
-    }));
+    const normalized = currentDir.replace(/\\/g, '/');
+    const isAbsolute = normalized.startsWith('/');
+    const parts = normalized.split('/').filter(Boolean);
+    const result = isAbsolute ? [{ label: '/', path: '/' }] : [];
+    parts.forEach((seg, i) => {
+      result.push({
+        label: seg,
+        path: (isAbsolute ? '/' : '') + parts.slice(0, i + 1).join('/'),
+      });
+    });
+    return result;
   })();
 
   return (
@@ -3315,6 +3329,18 @@ function FilesPanel({ currentDir, onNavigate, onOpenNotebook }) {
             </span>
           ))}
         </div>
+        {notebookDir && (
+          <button className="files-up-btn" onClick={() => loadDir(notebookDir)}
+                  title="Go to current notebook's folder">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.3">
+              <circle cx="6" cy="6" r="3.5"/>
+              <line x1="6" y1="1" x2="6" y2="2.5"/>
+              <line x1="6" y1="9.5" x2="6" y2="11"/>
+              <line x1="1" y1="6" x2="2.5" y2="6"/>
+              <line x1="9.5" y1="6" x2="11" y2="6"/>
+            </svg>
+          </button>
+        )}
         <button className="files-new-folder-btn" onClick={() => { setCreating(true); setCreateDraft(''); }}
                 title="New folder">+</button>
         <button className="files-refresh-btn" onClick={refresh} title="Refresh">↺</button>
@@ -3637,7 +3663,7 @@ const PANEL_META = {
   db:      { label: 'DB',        icon: <IconDB /> },
   library: { label: 'Library',   icon: <IconLibrary /> },
   vars:    { label: 'Variables', icon: <IconVars /> },
-  toc:     { label: 'Contents',  icon: <IconToC /> },
+  toc:     { label: 'Table of Contents',  icon: <IconToC /> },
   files:   { label: 'Files',     icon: <IconFiles /> },
 };
 
@@ -3836,6 +3862,7 @@ function ToolsMenu({
   varsPanelOpen, onToggleVars,
   tocPanelOpen, onToggleToC,
   libraryPanelOpen, onToggleLibrary,
+  filesPanelOpen, onToggleFiles,
 }) {
   const [open, setOpen] = useState(false);
   const btnRef = useRef(null);
@@ -3879,8 +3906,9 @@ function ToolsMenu({
     { icon: <IconLogs />,      label: 'Logs',       action: onToggleLogs,     active: logPanelOpen },
     { icon: <IconDB />,        label: 'Database',   action: onToggleDb,       active: dbPanelOpen },
     { icon: <IconVars />,      label: 'Variables',  action: onToggleVars,     active: varsPanelOpen },
-    { icon: <IconToC />,       label: 'Contents',   action: onToggleToC,      active: tocPanelOpen },
-    { icon: <IconLibrary />,   label: 'Library',    action: onToggleLibrary,  active: libraryPanelOpen },
+    { icon: <IconToC />,       label: 'Table of Contents', action: onToggleToC,      active: tocPanelOpen },
+    { icon: <IconLibrary />,   label: 'Library',           action: onToggleLibrary,  active: libraryPanelOpen },
+    { icon: <IconFiles />,     label: 'File Explorer',     action: onToggleFiles,    active: filesPanelOpen },
   ];
 
   const anyPanelActive = panelItems.some((p) => p.active);
@@ -4998,15 +5026,13 @@ function App() {
   }, []);
 
   const handlePanelClose = useCallback((panelId) => {
-    if (panelId === 'library') {
-      setLibraryPanelOpen(false);
-    } else {
-      const nbId = activeIdRef.current;
-      if (isNotebookId(nbId)) {
-        const flagMap = { log: 'logPanelOpen', nuget: 'nugetPanelOpen', config: 'configPanelOpen', db: 'dbPanelOpen', vars: 'varsPanelOpen', toc: 'tocPanelOpen' };
-        const flag = flagMap[panelId];
-        if (flag) setNb(nbId, { [flag]: false });
-      }
+    if (panelId === 'library') { setLibraryPanelOpen(false); return; }
+    if (panelId === 'files')   { setFilesPanelOpen(false);   return; }
+    const nbId = activeIdRef.current;
+    if (isNotebookId(nbId)) {
+      const flagMap = { log: 'logPanelOpen', nuget: 'nugetPanelOpen', config: 'configPanelOpen', db: 'dbPanelOpen', vars: 'varsPanelOpen', toc: 'tocPanelOpen' };
+      const flag = flagMap[panelId];
+      if (flag) setNb(nbId, { [flag]: false });
     }
   }, [setNb]);
 
@@ -5375,6 +5401,9 @@ function App() {
         currentDir: filesCurrentDir,
         onNavigate: setFilesCurrentDir,
         onOpenNotebook: handleOpenRecent,
+        notebookDir: activeNb?.path
+          ? (() => { const p = activeNb.path.replace(/\\/g, '/'); return p.slice(0, p.lastIndexOf('/')); })()
+          : null,
       },
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -5441,6 +5470,8 @@ function App() {
                     requestLint={requestLint}
                     libraryPanelOpen={libraryPanelOpen}
                     onToggleLibrary={() => setLibraryPanelOpen((v) => !v)}
+                    filesPanelOpen={filesPanelOpen}
+                    onToggleFiles={() => panelPropsMap.files.onToggle()}
                     theme={theme}
                     onThemeChange={setTheme}
                     dockLayout={dockLayout}
