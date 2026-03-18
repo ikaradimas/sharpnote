@@ -753,6 +753,11 @@ app.whenReady().then(() => {
   loadRecentFiles();
   fs.mkdirSync(libraryDir, { recursive: true });
   Menu.setApplicationMenu(buildMenu());
+  if (process.platform === 'darwin') {
+    const { nativeImage } = require('electron');
+    const dockIcon = nativeImage.createFromPath(path.join(__dirname, 'assets', 'icon.icns'));
+    app.dock.setIcon(dockIcon);
+  }
   createWindow();
   // Renderer requests kernel start per-notebook via 'start-kernel' IPC
 
