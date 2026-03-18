@@ -44,6 +44,16 @@ describe('CodeCell – run button', () => {
     expect(runBtn).toBeDisabled();
   });
 
+  it('Run button is disabled when kernelReady=false', () => {
+    render(<CodeCell {...defaultProps({ kernelReady: false })} />);
+    expect(screen.getByTitle('Run (Ctrl+Enter)')).toBeDisabled();
+  });
+
+  it('Run button is enabled when kernelReady=true and anyRunning=false', () => {
+    render(<CodeCell {...defaultProps({ kernelReady: true, anyRunning: false })} />);
+    expect(screen.getByTitle('Run (Ctrl+Enter)')).not.toBeDisabled();
+  });
+
   it('clicking Run fires onRun', () => {
     const onRun = vi.fn();
     render(<CodeCell {...defaultProps({ onRun })} />);

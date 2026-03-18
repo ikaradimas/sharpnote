@@ -1089,6 +1089,7 @@ export function CodeCell({
   outputs,
   isRunning,
   anyRunning,
+  kernelReady = true,
   onUpdate,
   onRun,
   onInterrupt,
@@ -1130,9 +1131,9 @@ export function CodeCell({
             </button>
           ) : (
             <>
-              <button className="run-btn" onClick={onRun} disabled={anyRunning} title="Run (Ctrl+Enter)">▶ Run</button>
+              <button className="run-btn" onClick={onRun} disabled={anyRunning || !kernelReady} title="Run (Ctrl+Enter)">▶ Run</button>
               <button className="cell-run-chevron" onClick={() => setDropdownOpen(v => !v)}
-                      disabled={anyRunning} title="More run options">▾</button>
+                      disabled={anyRunning || !kernelReady} title="More run options">▾</button>
             </>
           )}
           {dropdownOpen && !isRunning && (
@@ -1171,7 +1172,7 @@ export function CodeCell({
         value={cell.content}
         onChange={(val) => onUpdate(val)}
         language="csharp"
-        onCtrlEnter={onRun}
+        onCtrlEnter={kernelReady && !anyRunning ? onRun : undefined}
         onRequestCompletions={requestCompletions}
         onRequestLint={requestLint}
         readOnly={locked}
@@ -1980,7 +1981,9 @@ function Toolbar({
         </div>
       )}
       <div className="toolbar-separator" />
-      <button onClick={onRunAll} title="Run all code cells" className="toolbar-run-all">▶▶ Run All</button>
+      <button onClick={onRunAll} disabled={kernelStatus !== 'ready'}
+              title={kernelStatus === 'ready' ? 'Run all code cells' : 'Waiting for kernel…'}
+              className="toolbar-run-all">▶▶ Run All</button>
       <button onClick={onAddMarkdown} title="Add markdown cell">+ Markdown</button>
       <button onClick={onAddCode} title="Add code cell">+ Code</button>
       <div className="toolbar-separator" />
@@ -3070,6 +3073,7 @@ function NotebookView({
                 outputs={outputs[cell.id]}
                 isRunning={running.has(cell.id)}
                 anyRunning={running.size > 0}
+                kernelReady={kernelStatus === 'ready'}
                 onUpdate={(val) => updateCell(cell.id, val)}
                 onRun={() => onRunCell(nb.id, cell)}
                 onInterrupt={() => onInterrupt(nb.id)}
