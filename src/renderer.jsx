@@ -65,7 +65,13 @@ function getNotebookDisplayName(notebookPath, title, fallback = 'Untitled') {
 // ── Log timestamp formatting ───────────────────────────────────────────────────
 function formatLogTime(timestamp) {
   if (!timestamp) return '';
-  return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  // ISO string: "2026-03-18T12:34:56.789Z" — slice HH:MM:SS.mmm from the time part
+  const t = new Date(timestamp);
+  const hh = String(t.getHours()).padStart(2, '0');
+  const mm = String(t.getMinutes()).padStart(2, '0');
+  const ss = String(t.getSeconds()).padStart(2, '0');
+  const ms = String(t.getMilliseconds()).padStart(3, '0');
+  return `${hh}:${mm}:${ss}.${ms}`;
 }
 
 const DOCS_SECTIONS = [
