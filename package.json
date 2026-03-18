@@ -12,7 +12,8 @@
     "build:kernel:all": "npm run build:kernel:mac && npm run build:kernel:win",
     "dist:mac": "npm run build:renderer && npm run build:kernel:mac && electron-builder --mac",
     "dist:win": "npm run build:renderer && npm run build:kernel:win && electron-builder --win",
-    "dist:all": "npm run build:renderer && npm run build:kernel:all && electron-builder --mac --win"
+    "dist:all": "npm run build:renderer && npm run build:kernel:all && electron-builder --mac --win",
+    "postinstall": "node scripts/patch-electron-icon.js"
   },
   "build": {
     "appId": "com.xe.polyglot-notebook",
