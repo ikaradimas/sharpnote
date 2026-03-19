@@ -1,5 +1,10 @@
 # Polyglot Notebook — Claude Instructions
 
+## Committing changes
+
+After completing any task that modifies files, commit all changed files before finishing.
+Do not leave work uncommitted at the end of a session.
+
 ## Documentation maintenance
 
 Whenever you make a change that affects user-visible behaviour, public APIs, keyboard
