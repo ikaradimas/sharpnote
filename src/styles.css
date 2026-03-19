@@ -618,7 +618,8 @@ body {
 .cell-run-chevron {
   background: var(--accent-warm-bg); border: 1px solid var(--accent-primary-dim);
   border-left: none; color: var(--accent-primary);
-  padding: 2px 5px; border-radius: 0 2px 2px 0; cursor: pointer; font-size: 10px;
+  padding: 0 5px; border-radius: 0 2px 2px 0; cursor: pointer; font-size: 10px;
+  align-self: stretch; display: flex; align-items: center;
 }
 .cell-run-chevron:hover { background: #2e2410; }
 .cell-run-chevron:disabled { opacity: 0.4; cursor: not-allowed; }
