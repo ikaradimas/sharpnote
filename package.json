@@ -21,7 +21,10 @@
     "clean": "rm -rf release/ kernel/bin/ kernel/obj/ kernel/kernel.Tests/bin/ kernel/kernel.Tests/obj/ node_modules/ dist/ logs/",
     "rebuild:mac": "npm run clean && npm install && npm run build:renderer && npm run build:kernel:mac",
     "rebuild:win": "npm run clean && npm install && npm run build:renderer && npm run build:kernel:win",
-    "rebuild:all": "npm run clean && npm install && npm run build:renderer && npm run build:kernel:all"
+    "rebuild:all": "npm run clean && npm install && npm run build:renderer && npm run build:kernel:all",
+    "publish:mac": "npm run rebuild:mac && electron-builder --mac",
+    "publish:win": "npm run rebuild:win && electron-builder --win",
+    "publish:all": "npm run rebuild:all && electron-builder --mac --win"
   },
   "build": {
     "appId": "com.xe.sharpnote",

@@ -359,24 +359,27 @@ This bundles the renderer with esbuild, then launches Electron. The kernel subpr
 
 ## Building for Distribution
 
-Bundle the renderer and compile a self-contained kernel binary, then package with electron-builder.
+### Standalone installers (no .NET or Node.js required)
 
-**macOS (Universal — x64 + arm64):**
+These commands do a full clean rebuild and produce a self-contained installer. Electron bundles Node.js and the kernel is compiled with `--self-contained true`, so end users need no runtime dependencies.
+
 ```bash
-npm run dist:mac
+npm run publish:mac   # clean → rebuild → DMG (osx-x64 + osx-arm64)
+npm run publish:win   # clean → rebuild → NSIS installer (win-x64)
+npm run publish:all   # clean → rebuild → all platforms
 ```
 
-**Windows (x64):**
-```bash
-npm run dist:win
-```
+Output is written to `/tmp/sharpnote-build/`.
 
-**Both platforms:**
-```bash
-npm run dist:all
-```
+### Incremental builds (assumes dependencies already installed)
 
-Output is written to `/tmp/sharpnote-build/` (configured via `build.directories.output` in `package.json`).
+If you've already run `npm install` and only want to rebuild and package without a full clean:
+
+```bash
+npm run dist:mac   # build:renderer + build:kernel:mac + electron-builder --mac
+npm run dist:win   # build:renderer + build:kernel:win + electron-builder --win
+npm run dist:all   # build:renderer + build:kernel:all + electron-builder --mac --win
+```
 
 **Kernel only** (without packaging):
 ```bash
