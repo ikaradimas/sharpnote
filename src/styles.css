@@ -3868,18 +3868,7 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 /* ── Section collapse ────────────────────────────────────────────────────── */
 .cell-section-hidden { display: none; }
 
-.cell-collapse-btn {
-  position: absolute;
-  left: 7px; top: 7px;
-  background: none; border: none; cursor: pointer;
-  color: var(--text-dim); font-size: 9px; line-height: 1;
-  padding: 2px 3px; border-radius: 2px;
-  opacity: 0; transition: opacity 0.15s, color 0.15s;
-  z-index: 10;
-}
-.cell:hover .cell-collapse-btn,
-.cell-section-collapsed .cell-collapse-btn { opacity: 1; }
-.cell-collapse-btn:hover { color: var(--text-secondary); background: var(--bg-elevated); }
+.cell-collapse-btn { margin-right: 4px; }
 
 .cell-section-collapsed { border-color: var(--border-subtle) !important; }
 .cell-section-collapsed .markdown-render { opacity: 0.75; }

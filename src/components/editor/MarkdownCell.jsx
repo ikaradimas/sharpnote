@@ -62,16 +62,16 @@ export function MarkdownCell({
   return (
     <div className={`cell markdown-cell${collapsed ? ' cell-section-collapsed' : ''}`}>
       {cellIndex != null && <span className="cell-index-badge">{cellIndex + 1}</span>}
-      {isSectionHeader && (
-        <button
-          className="cell-collapse-btn"
-          onClick={onToggleCollapse}
-          title={collapsed ? 'Expand section' : 'Collapse section'}
-        >
-          {collapsed ? '▶' : '▼'}
-        </button>
-      )}
       <div className="cell-controls">
+        {isSectionHeader && (
+          <button
+            className="cell-ctrl-btn cell-collapse-btn"
+            onClick={onToggleCollapse}
+            title={collapsed ? 'Expand section' : 'Collapse section'}
+          >
+            {collapsed ? '▶' : '▼'}
+          </button>
+        )}
         <CellControls onMoveUp={onMoveUp} onMoveDown={onMoveDown} onDelete={onDelete} />
       </div>
       {editing ? (
