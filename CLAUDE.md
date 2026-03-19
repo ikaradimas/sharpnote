@@ -5,6 +5,21 @@
 After completing any task that modifies files, commit all changed files before finishing.
 Do not leave work uncommitted at the end of a session.
 
+## Semantic versioning
+
+Every commit must bump the version in `package.json` according to these rules:
+
+| Change type | Version segment | Examples |
+|---|---|---|
+| Bug fix, chore, refactor, tooling, docs-only | **patch** — `1.0.0 → 1.0.1` | fix a crash, update README, add npm script |
+| New backwards-compatible feature | **minor** — `1.0.1 → 1.1.0` | new panel, new IPC channel, new output type |
+| Breaking change | **major** — `1.1.0 → 2.0.0` | removed/renamed IPC channel, changed file format, removed public API |
+
+**Rules:**
+- Read the current version from `package.json` before every commit and write the bumped value back.
+- A single commit may only bump one segment; choose the highest-priority one that applies (major > minor > patch).
+- The version bump must be included in the same commit as the change — never in a separate commit.
+
 ## Documentation maintenance
 
 Whenever you make a change that affects user-visible behaviour, public APIs, keyboard
