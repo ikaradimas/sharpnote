@@ -32,6 +32,7 @@
   - [Prerequisites](#prerequisites)
   - [Getting Started](#getting-started)
   - [Building for Distribution](#building-for-distribution)
+  - [Maintenance](#maintenance)
   - [Testing](#testing)
     - [JavaScript — Vitest](#javascript--vitest)
     - [C# — xUnit](#c--xunit)
@@ -384,6 +385,24 @@ npm run build:kernel:win   # win-x64
 ```
 
 Self-contained binaries are placed under `kernel/bin/<rid>/`.
+
+---
+
+## Maintenance
+
+**Remove all build artifacts and dependencies:**
+```bash
+npm run clean
+```
+
+Deletes `release/`, `kernel/bin/`, `kernel/obj/`, `kernel/kernel.Tests/bin/`, `kernel/kernel.Tests/obj/`, `node_modules/`, `dist/`, and `logs/`.
+
+**Full clean rebuild:**
+```bash
+npm run rebuild:mac   # clean → install → renderer → kernel (osx-x64 + osx-arm64)
+npm run rebuild:win   # clean → install → renderer → kernel (win-x64)
+npm run rebuild:all   # clean → install → renderer → kernel (all platforms)
+```
 
 ---
 

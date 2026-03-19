@@ -18,7 +18,10 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:kernel": "dotnet test kernel/kernel.Tests/kernel.Tests.csproj --logger console",
-    "clean": "rm -rf release/ kernel/bin/ kernel/obj/ kernel/kernel.Tests/bin/ kernel/kernel.Tests/obj/ node_modules/ dist/ logs/"
+    "clean": "rm -rf release/ kernel/bin/ kernel/obj/ kernel/kernel.Tests/bin/ kernel/kernel.Tests/obj/ node_modules/ dist/ logs/",
+    "rebuild:mac": "npm run clean && npm install && npm run build:renderer && npm run build:kernel:mac",
+    "rebuild:win": "npm run clean && npm install && npm run build:renderer && npm run build:kernel:win",
+    "rebuild:all": "npm run clean && npm install && npm run build:renderer && npm run build:kernel:all"
   },
   "build": {
     "appId": "com.xe.sharpnote",
