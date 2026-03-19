@@ -17,7 +17,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:kernel": "dotnet test kernel/kernel.Tests/kernel.Tests.csproj --logger console"
+    "test:kernel": "dotnet test kernel/kernel.Tests/kernel.Tests.csproj --logger console",
+    "clean": "rm -rf release/ kernel/bin/ kernel/obj/ kernel/kernel.Tests/bin/ kernel/kernel.Tests/obj/ node_modules/ dist/ logs/"
   },
   "build": {
     "appId": "com.xe.sharpnote",
