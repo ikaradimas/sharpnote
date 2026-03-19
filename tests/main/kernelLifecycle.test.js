@@ -31,15 +31,17 @@ vi.mock('readline', () => ({
   }),
 }));
 
-let ipcHandlers, ipcEvents, kernels, sendToKernel;
+let ipcHandlers, ipcEvents, kernels, sendToKernel, setMainWindow, _notifyWindow;
 
 beforeAll(async () => {
   process.env.VITEST = '1';
-  const main = await import('../../main.js');
-  ipcHandlers  = main._ipcHandlers;
-  ipcEvents    = main._ipcEvents;
-  kernels      = main.kernels;
-  sendToKernel = main.sendToKernel;
+  const km = await import('../../src/main/kernel-manager.js');
+  ipcHandlers  = km._ipcHandlers;
+  ipcEvents    = km._ipcEvents;
+  kernels      = km.kernels;
+  sendToKernel = km.sendToKernel;
+  setMainWindow  = km.setMainWindow;
+  _notifyWindow  = km._notifyWindow;
 });
 
 beforeEach(() => {
@@ -96,6 +98,36 @@ describe('kernel-reset IPC event', () => {
     ipcEvents['kernel-reset'](fakeEvent, NB_ID);
     const newEntry = kernels.get(NB_ID);
     expect(newEntry).toBeDefined();
+  });
+});
+
+// Note: vi.mock('child_process') does not intercept CJS require() inside kernel-manager.js,
+// so we cannot hook into process 'exit'/'error' events via the spawned process mock.
+// Instead we test _notifyWindow() directly — the helper that all four send-sites delegate to.
+describe('_notifyWindow (isDestroyed guard)', () => {
+  afterEach(() => setMainWindow(null));
+
+  it('does not call webContents.send when window is already destroyed', () => {
+    const mockSend = vi.fn();
+    setMainWindow({ isDestroyed: () => true, webContents: { send: mockSend } });
+    _notifyWindow(NB_ID, { type: 'error', id: null, message: 'kernel exited' });
+    expect(mockSend).not.toHaveBeenCalled();
+  });
+
+  it('calls webContents.send when window is alive', () => {
+    const mockSend = vi.fn();
+    setMainWindow({ isDestroyed: () => false, webContents: { send: mockSend } });
+    _notifyWindow(NB_ID, { type: 'error', id: null, message: 'kernel exited' });
+    expect(mockSend).toHaveBeenCalledWith('kernel-message', {
+      notebookId: NB_ID,
+      message: { type: 'error', id: null, message: 'kernel exited' },
+    });
+  });
+
+  it('does not call webContents.send when _mainWindow is null', () => {
+    setMainWindow(null);
+    // Should not throw
+    expect(() => _notifyWindow(NB_ID, { type: 'error' })).not.toThrow();
   });
 });
 

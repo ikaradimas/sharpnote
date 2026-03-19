@@ -14,8 +14,8 @@ let resolveLibraryPath;
 
 beforeAll(async () => {
   process.env.VITEST = '1';
-  const main = await import('../../main.js');
-  resolveLibraryPath = main.resolveLibraryPath;
+  const lib = await import('../../src/main/library.js');
+  resolveLibraryPath = lib.resolveLibraryPath;
 });
 
 // The library dir is: /tmp/polyglot-test-docs/Polyglot Notebooks/Library

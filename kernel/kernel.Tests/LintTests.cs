@@ -1,5 +1,6 @@
 using System.Linq;
 using FluentAssertions;
+using PolyglotKernel;
 using Xunit;
 
 namespace kernel.Tests;

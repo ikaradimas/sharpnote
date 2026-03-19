@@ -14,10 +14,10 @@ let addRecentFile, getRecentFiles, clearRecentFiles;
 
 beforeAll(async () => {
   process.env.VITEST = '1';
-  const main = await import('../../main.js');
-  addRecentFile    = main.addRecentFile;
-  getRecentFiles   = main.getRecentFiles;
-  clearRecentFiles = main.clearRecentFiles;
+  const rf = await import('../../src/main/recent-files.js');
+  addRecentFile    = rf.addRecentFile;
+  getRecentFiles   = rf.getRecentFiles;
+  clearRecentFiles = rf.clearRecentFiles;
 });
 
 beforeEach(() => {

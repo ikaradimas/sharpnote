@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Microsoft.CodeAnalysis.CSharp;
+using PolyglotKernel;
 using Xunit;
 
 namespace kernel.Tests;

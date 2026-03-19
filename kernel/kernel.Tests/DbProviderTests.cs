@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.Data.Sqlite;
+using PolyglotKernel.Db;
 using Xunit;
 
 namespace kernel.Tests;

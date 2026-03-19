@@ -8,6 +8,8 @@ using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 
+namespace PolyglotKernel.Db;
+
 public static class DbCodeGen
 {
     // Escape a string for embedding as a C# string literal (backslash + quote)
@@ -188,7 +190,7 @@ public static class DbCodeGen
             foreach (var provAsm in p.RequiredAssemblies)
             {
                 var loc = provAsm.Location;
-                if (!string.IsNullOrEmpty(loc) && System.IO.File.Exists(loc))
+                if (!string.IsNullOrEmpty(loc) && File.Exists(loc))
                     refs.Add(MetadataReference.CreateFromFile(loc));
             }
 

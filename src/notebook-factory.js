@@ -1,0 +1,375 @@
+import { v4 as uuidv4 } from 'uuid';
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function shortId() {
+  return Math.random().toString(36).slice(2, 10); // 8-char base-36
+}
+
+export function makeCell(type = 'code', content = '') {
+  return { id: shortId(), type, content, ...(type === 'code' ? { outputMode: 'auto', locked: false } : {}) };
+}
+
+// ── NuGet default sources ─────────────────────────────────────────────────────
+
+export const DEFAULT_NUGET_SOURCES = [
+  { name: 'nuget.org', url: 'https://api.nuget.org/v3/index.json', enabled: true },
+];
+
+// ── Example notebook cells ────────────────────────────────────────────────────
+
+function makeExampleCells() {
+  const md = (content) => makeCell('markdown', content);
+  const cs = (content, outputMode = 'auto') =>
+    ({ ...makeCell('code', content), outputMode });
+
+  return [
+    md(`# Notebook
+
+An interactive C# notebook. Press **Ctrl+Enter** to run a cell, or click **▶ Run**.
+
+| Feature | Syntax |
+|---------|--------|
+| Console output | \`Console.WriteLine("hello")\` |
+| HTML | \`Display.Html("<b>bold</b>")\` |
+| Table | \`Display.Table(rows)\` · \`.DisplayTable()\` |
+| Chart | \`Display.Graph(chartJsConfig)\` |
+| NuGet | \`#r "nuget: Package, Version"\` |
+| Logging | \`value.Log()\` · \`value.Log("label")\` |
+| Config | \`Config["Key"]\` · \`Config.Get("Key", "default")\` |
+| Database | Attach via **DB** panel → \`mydb.Users.ToList()\` |
+| Auto-render | Return a value — type is detected automatically |`),
+
+    md('## 1 · Basic C#'),
+
+    cs(`// Variables, interpolation, LINQ
+var name = "Polyglot";
+var version = 1.0;
+Console.WriteLine($"Hello from {name} v{version}!");
+
+var numbers = Enumerable.Range(1, 10).ToList();
+var evens   = numbers.Where(n => n % 2 == 0).ToList();
+Console.WriteLine($"Evens: {string.Join(", ", evens)}");
+
+// Returning a value auto-renders it
+DateTime.Now`),
+
+    md('## 2 · HTML & Tables'),
+
+    cs(`Display.Html(@"
+  <h3 style='color:#4ec9b0;margin:0 0 6px'>Rich HTML output</h3>
+  <p>Render <strong>any HTML</strong> — styled text, lists, badges, whatever you need.</p>
+");
+
+var products = new[] {
+  new { Product = "Widget A", Price = 9.99,  Units = 142 },
+  new { Product = "Widget B", Price = 24.99, Units = 87  },
+  new { Product = "Widget C", Price = 4.99,  Units = 321 },
+};
+Display.Table(products);`),
+
+    md('## 3 · Extension Methods'),
+
+    cs(`// .Display() auto-detects type
+"Extension methods work directly on any object!".Display();
+
+// Array of objects → table via extension method
+var cities = new[] {
+  new { City = "Athens",  Country = "Greece",  Pop = 3_153_000 },
+  new { City = "Berlin",  Country = "Germany", Pop = 3_645_000 },
+  new { City = "Paris",   Country = "France",  Pop = 2_161_000 },
+  new { City = "Lisbon",  Country = "Portugal",Pop = 2_957_000 },
+};
+cities.DisplayTable();`),
+
+    md(`## 4 · NuGet Packages
+
+Use \`#r "nuget: PackageName, Version"\` to load any NuGet package inline.
+The first run downloads and caches it; subsequent runs are instant.`),
+
+    cs(`#r "nuget: Newtonsoft.Json, 13.0.3"
+using Newtonsoft.Json;
+
+var payload = new {
+  name         = "Ada Lovelace",
+  born         = 1815,
+  contributions = new[] { "First algorithm", "Analytical Engine notes" },
+};
+
+var json = JsonConvert.SerializeObject(payload, Formatting.Indented);
+Display.Html($"<pre style='color:#9cdcfe;margin:0'>{json}</pre>");`),
+
+    md('## 5 · Charts'),
+
+    cs(`// Return a Chart.js config object — set output mode to "graph"
+new {
+  type = "line",
+  data = new {
+    labels   = new[] { "Jan","Feb","Mar","Apr","May","Jun" },
+    datasets = new[] {
+      new {
+        label           = "Revenue ($k)",
+        data            = new[] { 42, 58, 51, 74, 83, 91 },
+        borderColor     = "rgba(78,201,176,1)",
+        backgroundColor = "rgba(78,201,176,0.1)",
+        tension         = 0.3,
+        fill            = true,
+      },
+      new {
+        label           = "Costs ($k)",
+        data            = new[] { 31, 35, 38, 40, 45, 48 },
+        borderColor     = "rgba(244,71,71,0.8)",
+        backgroundColor = "rgba(244,71,71,0.05)",
+        tension         = 0.3,
+        fill            = true,
+      },
+    },
+  },
+  options = new {
+    responsive = true,
+    plugins    = new {
+      title = new { display = true, text = "Revenue vs Costs 2024" },
+    },
+  },
+}`, 'graph'),
+
+    md('## 6 · CSV'),
+
+    cs(`// Parse and render CSV inline
+Display.Csv("Name,Score,Grade\\nAlice,95,A\\nBob,82,B\\nCharlie,78,C+\\nDiana,91,A-");`),
+
+    md(`## 7 · Live Updates
+
+\`Display.NewHtml()\`, \`NewTable()\`, and \`NewGraph()\` return a **handle** whose \`Update*\` methods
+replace the output in-place while the cell is still running — useful for progress indicators,
+streaming results, and live charts.`),
+
+    cs(`// Animated progress bar
+string Bar(int pct) => $@"<div style='font-family:sans-serif;padding:2px 0'>
+  <div style='background:#3c3c3c;border-radius:3px;height:16px'>
+    <div style='background:#0e639c;height:16px;border-radius:3px;width:{pct}%;transition:width 0.1s'></div>
+  </div>
+  <p style='color:#888;font-size:11px;margin:3px 0 0'>{pct}%</p>
+</div>";
+
+var progress = Display.NewHtml(Bar(0));
+for (int i = 1; i <= 20; i++) {
+    await Task.Delay(80);
+    progress.UpdateHtml(Bar(i * 5));
+}
+progress.UpdateHtml("<span style='color:#4ec9b0;font-weight:600'>✓ Complete!</span>");`),
+
+    cs(`// Live chart — data updates in-place without flicker
+var rng = new Random(42);
+int[] vals = { 30, 50, 40, 60, 45 };
+var labels = new[] { "A", "B", "C", "D", "E" };
+
+var chart = Display.NewGraph(new {
+    type = "bar",
+    data = new {
+        labels,
+        datasets = new[] { new {
+            label = "Live data",
+            data = vals,
+            backgroundColor = "rgba(86,156,214,0.7)",
+        }},
+    },
+    options = new { responsive = true, animation = new { duration = 150 } },
+});
+
+for (int frame = 0; frame < 15; frame++) {
+    await Task.Delay(250);
+    for (int j = 0; j < vals.Length; j++)
+        vals[j] = Math.Clamp(vals[j] + rng.Next(-15, 16), 5, 100);
+    chart.UpdateGraph(new {
+        type = "bar",
+        data = new {
+            labels,
+            datasets = new[] { new {
+                label = "Live data",
+                data = (int[])vals.Clone(),
+                backgroundColor = "rgba(86,156,214,0.7)",
+            }},
+        },
+        options = new { responsive = true, animation = new { duration = 150 } },
+    });
+}`, 'graph'),
+
+    md(`## 8 · Logging
+
+\`.Log()\` writes an entry to the **Logs panel** (open it with the **Logs** button in the toolbar)
+and to a daily rotating file in \`logs/YYYY-MM-DD.log\` beside the app.
+
+- \`value.Log()\` — logs the value and returns it, so it can be chained inline
+- \`value.Log("label")\` — prefixes the entry with a label
+- Entries tagged **USER** appear in teal; notebook activity tagged **NOTEBOOK** appears in blue`),
+
+    cs(`// Plain string
+"Starting data pipeline".Log();
+
+// Label + value (returns the value, so chaining works)
+var threshold = 0.75.Log("threshold");
+
+// Log inside a LINQ chain without breaking it
+var scores = new[] { 0.42, 0.81, 0.67, 0.91, 0.55 };
+var passing = scores
+    .Where(s => s >= threshold)
+    .Select(s => s.Log("pass"))   // logs each passing score
+    .ToList();
+
+// Log a complex object — serialised to JSON automatically
+var summary = new { Total = scores.Length, Passing = passing.Count, Threshold = threshold };
+summary.Log("summary");
+
+// Display the result too
+Display.Html($@"<p style='color:#4ec9b0'>
+  {passing.Count} of {scores.Length} scores passed (threshold {threshold:P0})
+</p>");`),
+
+    cs(`// Logging inside an async loop — useful for tracking long-running work
+var results = new List<(int Step, double Value)>();
+var rng2 = new Random(7);
+
+for (int i = 1; i <= 8; i++) {
+    await Task.Delay(120);
+    var v = Math.Round(rng2.NextDouble() * 100, 1);
+    results.Add((i, v));
+    $"step {i}: {v}".Log("loop");
+}
+
+results.DisplayTable();`),
+
+    md(`## 9 · Notebook Configuration
+
+Use the **Config** panel (toolbar) to define key/value pairs that become available to all scripts in the notebook via the \`Config\` global.
+
+This is useful for environment-specific settings (URLs, feature flags, credentials) without hard-coding them in cells.
+
+| Expression | Result |
+|------------|--------|
+| \`Config["Key"]\` | Value string, or \`""\` if missing |
+| \`Config.Get("Key", "default")\` | Value with fallback |
+| \`Config.Has("Key")\` | \`true\` if key exists and non-empty |
+| \`Config.All\` | \`IReadOnlyDictionary<string,string>\` |
+
+Config is persisted in the \`.cnb\` file alongside packages and sources.`),
+
+    cs(`// Read config values (try editing them in the Config panel first)
+var env     = Config.Get("Environment", "development");
+var baseUrl = Config.Get("ApiBaseUrl", "(not set)");
+var missing = Config.Get("NonExistent", "fallback value");
+
+Display.Html($@"
+<table style='border-collapse:collapse;font-size:12px'>
+  <tr><th style='padding:4px 12px;text-align:left;color:#4fc3f7'>Key</th>
+      <th style='padding:4px 12px;text-align:left;color:#4fc3f7'>Value</th></tr>
+  <tr><td style='padding:3px 12px'>Environment</td><td style='padding:3px 12px;color:#00e5cc'>{env}</td></tr>
+  <tr><td style='padding:3px 12px'>ApiBaseUrl</td><td style='padding:3px 12px;color:#00e5cc'>{baseUrl}</td></tr>
+  <tr><td style='padding:3px 12px'>NonExistent</td><td style='padding:3px 12px;color:#555'>{missing}</td></tr>
+  <tr><td style='padding:3px 12px;color:#555'>All entries</td><td style='padding:3px 12px;color:#555'>{Config.All.Count} defined</td></tr>
+</table>");`),
+
+    md(`## 10 · Databases
+
+Use the **DB** button in the toolbar to open the database panel.
+
+1. Click **+ Add** to register a named connection (SQLite, SQL Server, or PostgreSQL)
+2. Click **Attach** to connect it to this notebook — the kernel introspects the schema and injects a typed \`DbContext\` variable
+3. The variable name is derived from the connection name (e.g. *"My CRM"* → \`myCrm\`)
+4. All tables appear as strongly-typed \`DbSet<T>\` properties — autocomplete works out of the box
+
+| Task | Expression |
+|------|------------|
+| Fetch all rows | \`mydb.Users.ToList()\` |
+| Filter | \`mydb.Orders.Where(o => o.Total > 100).ToList()\` |
+| Project | \`mydb.Products.Select(p => new { p.Name, p.Price }).ToList()\` |
+| Count | \`mydb.Users.Count()\` |
+| Raw SQL | \`mydb.Users.FromSqlRaw("SELECT * FROM users WHERE active=1").ToList()\` |
+| Async | \`await mydb.Orders.ToListAsync()\` |
+
+The connection string stored in the DB panel is passed directly to EF Core — no code changes needed when switching environments.`),
+
+    cs(`// ── Replace "mydb" with your actual connection variable name ──────────────
+
+// 1. List all rows as a table
+// mydb.Users.ToList().DisplayTable();
+
+// 2. Filter and project
+// mydb.Orders
+//     .Where(o => o.Total > 100)
+//     .Select(o => new { o.Id, o.CustomerName, o.Total, o.CreatedAt })
+//     .OrderByDescending(o => o.Total)
+//     .Take(20)
+//     .ToList()
+//     .DisplayTable();
+
+// 3. Aggregate stats
+// var stats = new {
+//     Total  = mydb.Orders.Count(),
+//     Revenue = mydb.Orders.Sum(o => (decimal?)o.Total) ?? 0,
+//     Avg     = mydb.Orders.Average(o => (decimal?)o.Total) ?? 0,
+// };
+// stats.Display();
+
+// 4. Raw SQL (useful for complex queries or non-EF operations)
+// mydb.Database.ExecuteSqlRaw("UPDATE settings SET value='1' WHERE key='maintenance'");
+
+Display.Html(@"
+<p style='color:#5a7080;font-style:italic;font-size:12px'>
+  Attach a database in the <strong style='color:#c4964a'>DB panel</strong> to run these examples.<br>
+  The variable name shown in the schema panel (e.g. <code style='color:#6889a0'>mydb</code>)
+  is what you use in code.
+</p>");`),
+
+    cs(`// ── Connection string examples ────────────────────────────────────────────
+//
+// SQLite  (file path):
+//   Data Source=/path/to/database.db
+//
+// SQL Server:
+//   Server=localhost;Database=MyDb;User Id=sa;Password=secret;TrustServerCertificate=True
+//
+// PostgreSQL:
+//   Host=localhost;Database=mydb;Username=postgres;Password=secret
+//
+// ── Multiple databases in the same notebook ───────────────────────────────
+// Attach more than one connection — each gets its own variable:
+//
+//   crm.Customers.ToList()          // "CRM" connection
+//   analytics.PageViews.Count()     // "Analytics" connection
+//
+// ── Reset-safe ────────────────────────────────────────────────────────────
+// All attached databases are automatically re-injected after a kernel reset,
+// so your variables are always available without re-attaching.
+
+Display.Html(@"<pre style='color:#6889a0;margin:0'>// Ready — attach a DB and start querying</pre>");`),
+  ];
+}
+
+// ── Notebook factory ──────────────────────────────────────────────────────────
+
+export function createNotebook(withExamples = false) {
+  return {
+    id: uuidv4(),
+    title: 'Untitled',
+    path: null,
+    isDirty: false,
+    color: null,
+    memoryHistory: [],
+    cells: withExamples ? makeExampleCells() : [],
+    outputs: {},
+    running: new Set(),
+    kernelStatus: 'starting',
+    nugetPackages: [],
+    nugetSources: [...DEFAULT_NUGET_SOURCES],
+    config: [],
+    logPanelOpen: false,
+    nugetPanelOpen: false,
+    configPanelOpen: false,
+    attachedDbs: [],   // [{ connectionId, status, varName, schema, error }]
+    dbPanelOpen: false,
+    vars: [],
+    varsPanelOpen: false,
+    tocPanelOpen: false,
+  };
+}

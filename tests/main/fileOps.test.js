@@ -20,9 +20,9 @@ beforeAll(async () => {
   fs.writeFileSync(path.join(tmpDir, 'file.txt'), 'hello');
 
   process.env.VITEST = '1';
-  const main = await import('../../main.js');
-  ipcHandlers = main._ipcHandlers;
-  shell = main._shell;
+  const fo = await import('../../src/main/file-ops.js');
+  ipcHandlers = fo._ipcHandlers;
+  shell = fo._shell;
   vi.spyOn(shell, 'trashItem').mockResolvedValue(undefined);
 });
 

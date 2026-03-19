@@ -1,370 +1,42 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
-using System.Text.RegularExpressions;
-using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
-using System.Threading;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Scripting;
+using PolyglotKernel.Db;
 
-// ── DisplayContext ───────────────────────────────────────────────────────────
+namespace PolyglotKernel;
 
-public static class DisplayContext
+// ── Kernel entry point ────────────────────────────────────────────────────────
+
+partial class Program
 {
-    public static DisplayHelper? Current { get; internal set; }
-}
+    // ── Shared state accessible from all partial class handler files ──────────
 
-// ── LogContext ────────────────────────────────────────────────────────────────
-
-public static class LogContext
-{
-    internal static TextWriter? Output { get; set; }
-
-    internal static void WriteNotebook(string message)
-    {
-        Output?.WriteLine(JsonSerializer.Serialize(new
-        {
-            type = "log",
-            tag = "NOTEBOOK",
-            message,
-            timestamp = DateTime.UtcNow.ToString("O"),
-        }));
-    }
-}
-
-// ── ConfigContext ─────────────────────────────────────────────────────────────
-
-public class ConfigHelper
-{
-    private readonly IReadOnlyDictionary<string, string> _values;
-
-    public ConfigHelper(IReadOnlyDictionary<string, string> values) => _values = values;
-
-    /// <summary>Returns the value for <paramref name="key"/>, or an empty string if not set.</summary>
-    public string this[string key] => _values.TryGetValue(key, out var v) ? v : "";
-
-    /// <summary>Returns the value for <paramref name="key"/>, or <paramref name="defaultValue"/> if not set.</summary>
-    public string Get(string key, string defaultValue = "") =>
-        _values.TryGetValue(key, out var v) ? v : defaultValue;
-
-    /// <summary>Returns true if the key is present and non-empty.</summary>
-    public bool Has(string key) => _values.ContainsKey(key) && !string.IsNullOrEmpty(_values[key]);
-
-    /// <summary>All config entries as a read-only dictionary.</summary>
-    public IReadOnlyDictionary<string, string> All => _values;
-
-    public override string ToString() =>
-        _values.Count == 0 ? "(empty)" : string.Join(", ", _values.Select(kv => $"{kv.Key}={kv.Value}"));
-}
-
-public static class ConfigContext
-{
-    public static ConfigHelper Current { get; internal set; } =
-        new ConfigHelper(new Dictionary<string, string>());
-}
-
-// ── DisplayHandle ────────────────────────────────────────────────────────────
-
-public class DisplayHandle
-{
-    private readonly DisplayHelper _display;
-    public string HandleId { get; }
-
-    internal DisplayHandle(DisplayHelper display, string handleId)
-    {
-        _display = display;
-        HandleId = handleId;
-    }
-
-    public void UpdateHtml(string html) =>
-        _display.SendUpdate("html", (object)html, HandleId);
-
-    public void UpdateTable<T>(IEnumerable<T> rows)
-    {
-        var list = DisplayHelper.ToRowDicts(rows.Cast<object?>().ToList());
-        _display.SendUpdate("table", (object)list, HandleId);
-    }
-
-    public void UpdateGraph(object config) =>
-        _display.SendUpdate("graph", config, HandleId);
-
-    public void Clear() =>
-        _display.SendUpdate("html", (object)"", HandleId);
-}
-
-// ── Display helper ───────────────────────────────────────────────────────────
-
-public class DisplayHelper
-{
-    private readonly TextWriter _out;
-    private string? _currentId;
-
-    public DisplayHelper(TextWriter output) => _out = output;
-
-    public void SetCellId(string id) => _currentId = id;
-
-    private void Send(object payload)
-    {
-        _out.WriteLine(JsonSerializer.Serialize(payload));
-    }
-
-    // ── One-shot display ─────────────────────────────────────────────────────
-
-    public void Html(string html, string? title = null) =>
-        Send(new { type = "display", id = _currentId, format = "html", content = (object)html, title });
-
-    public void Table<T>(IEnumerable<T> rows, string? title = null)
-    {
-        var list = ToRowDicts(rows.Cast<object?>().ToList());
-        Send(new { type = "display", id = _currentId, format = "table", content = (object)list, title });
-    }
-
-    public void TableFromDicts(IEnumerable<Dictionary<string, object?>> rows, string? title = null)
-    {
-        var list = rows.ToList();
-        Send(new { type = "display", id = _currentId, format = "table", content = (object)list, title });
-    }
-
-    public void Csv(string csv, string? title = null) =>
-        Send(new { type = "display", id = _currentId, format = "csv", content = (object)csv, title });
-
-    public void Graph(object chartConfig, string? title = null) =>
-        Send(new { type = "display", id = _currentId, format = "graph", content = chartConfig, title });
-
-    // ── Updateable display handles ───────────────────────────────────────────
-
-    public DisplayHandle NewHtml(string initialHtml, string? title = null)
-    {
-        var h = NewHandle();
-        Send(new { type = "display", id = _currentId, format = "html",
-                   content = (object)initialHtml, handleId = h.HandleId, title });
-        return h;
-    }
-
-    public DisplayHandle NewTable<T>(IEnumerable<T> rows, string? title = null)
-    {
-        var h = NewHandle();
-        var list = ToRowDicts(rows.Cast<object?>().ToList());
-        Send(new { type = "display", id = _currentId, format = "table",
-                   content = (object)list, handleId = h.HandleId, title });
-        return h;
-    }
-
-    public DisplayHandle NewGraph(object chartConfig, string? title = null)
-    {
-        var h = NewHandle();
-        Send(new { type = "display", id = _currentId, format = "graph",
-                   content = chartConfig, handleId = h.HandleId, title });
-        return h;
-    }
-
-    internal void SendUpdate(string format, object content, string handleId) =>
-        Send(new { type = "display", id = _currentId, format, content, handleId, update = true });
-
-    private DisplayHandle NewHandle() =>
-        new(this, Guid.NewGuid().ToString("N")[..12]);
-
-    internal static List<Dictionary<string, object?>> ToRowDicts(List<object?> items)
-    {
-        return items.Select(row =>
-        {
-            if (row == null) return new Dictionary<string, object?> { ["value"] = null };
-            var dict = new Dictionary<string, object?>();
-            foreach (var p in row.GetType().GetProperties())
-                dict[p.Name] = p.GetValue(row);
-            if (dict.Count == 0)
-                dict["value"] = row.ToString();
-            return dict;
-        }).ToList();
-    }
-}
-
-// ── Extension methods ────────────────────────────────────────────────────────
-
-public static class PolyglotExtensions
-{
-    public static void Display(this object? obj, string? title = null)
-    {
-        var d = DisplayContext.Current;
-        if (d == null) return;
-        AutoDisplay(d, obj, title);
-    }
-
-    public static void DisplayTable<T>(this IEnumerable<T> rows, string? title = null)
-    {
-        var d = DisplayContext.Current;
-        if (d == null) return;
-        var dicts = DisplayHelper.ToRowDicts(rows.Cast<object?>().ToList());
-        d.TableFromDicts(dicts, title);
-    }
-
-    public static void DisplayHtml(this string html, string? title = null)
-    {
-        DisplayContext.Current?.Html(html, title);
-    }
-
-    public static void DisplayCsv(this string csv, string? title = null)
-    {
-        DisplayContext.Current?.Csv(csv, title);
-    }
-
-    public static void DisplayGraph(this object chartConfig, string? title = null)
-    {
-        DisplayContext.Current?.Graph(chartConfig, title);
-    }
-
-    public static T Log<T>(this T obj, string? label = null)
-    {
-        var output = LogContext.Output;
-        if (output != null)
-        {
-            string msg;
-            if (obj == null)
-                msg = "null";
-            else if (obj is string s)
-                msg = s;
-            else if (obj.GetType().IsPrimitive || obj is decimal)
-                msg = obj.ToString() ?? "";
-            else
-            {
-                try { msg = JsonSerializer.Serialize(obj); }
-                catch { msg = obj.ToString() ?? ""; }
-            }
-
-            output.WriteLine(JsonSerializer.Serialize(new
-            {
-                type = "log",
-                tag = "USER",
-                message = label != null ? $"{label}: {msg}" : msg,
-                timestamp = DateTime.UtcNow.ToString("O"),
-            }));
-        }
-        return obj;
-    }
-
-    internal static void AutoDisplay(DisplayHelper d, object? obj, string? title = null)
-    {
-        if (obj == null) return;
-
-        if (obj is string s)
-        {
-            d.Html($"<pre>{System.Net.WebUtility.HtmlEncode(s)}</pre>", title);
-            return;
-        }
-
-        if (obj is IEnumerable enumerable)
-        {
-            var items = enumerable.Cast<object?>().ToList();
-            if (items.Count == 0)
-            {
-                d.Html("<pre>(empty)</pre>", title);
-                return;
-            }
-            var first = items[0];
-            if (first == null || first is string || first.GetType().IsPrimitive)
-            {
-                var rows = items.Select((v, i) => new Dictionary<string, object?> { ["index"] = i, ["value"] = v }).ToList();
-                d.TableFromDicts(rows, title);
-            }
-            else
-            {
-                var dicts = DisplayHelper.ToRowDicts(items);
-                d.TableFromDicts(dicts, title);
-            }
-            return;
-        }
-
-        if (obj.GetType().IsPrimitive || obj is decimal)
-        {
-            d.Html($"<pre>{obj}</pre>", title);
-            return;
-        }
-
-        try
-        {
-            var json = JsonSerializer.Serialize(obj, new JsonSerializerOptions { WriteIndented = true });
-            d.Html($"<pre>{System.Net.WebUtility.HtmlEncode(json)}</pre>", title);
-        }
-        catch
-        {
-            d.Html($"<pre>{System.Net.WebUtility.HtmlEncode(obj.ToString() ?? "")}</pre>", title);
-        }
-    }
-}
-
-// ── Script globals ───────────────────────────────────────────────────────────
-
-public class ScriptGlobals
-{
-    public DisplayHelper Display { get; set; } = null!;
-    public ConfigHelper Config => ConfigContext.Current;
-    // Injected per-execution so loop-injection checks can cancel tight loops.
-    // Named with underscores to discourage accidental use in user code.
-    public CancellationToken __ct__ { get; set; }
-}
-
-// ── Cancellation-check injector ───────────────────────────────────────────────
-// Rewrites user code by inserting __ct__.ThrowIfCancellationRequested() at the
-// top of every loop body so that SIGINT can stop tight synchronous loops cleanly.
-
-class CancellationCheckInjector : CSharpSyntaxRewriter
-{
-    private readonly StatementSyntax _check =
-        SyntaxFactory.ParseStatement("__ct__.ThrowIfCancellationRequested();");
-
-    private BlockSyntax Wrap(StatementSyntax body)
-    {
-        if (body is BlockSyntax block)
-            return block.WithStatements(block.Statements.Insert(0, _check));
-        return SyntaxFactory.Block(_check, body);
-    }
-
-    public override SyntaxNode? VisitWhileStatement(WhileStatementSyntax node)
-    {
-        var v = (WhileStatementSyntax)base.VisitWhileStatement(node)!;
-        return v.WithStatement(Wrap(v.Statement));
-    }
-    public override SyntaxNode? VisitForStatement(ForStatementSyntax node)
-    {
-        var v = (ForStatementSyntax)base.VisitForStatement(node)!;
-        return v.WithStatement(Wrap(v.Statement));
-    }
-    public override SyntaxNode? VisitDoStatement(DoStatementSyntax node)
-    {
-        var v = (DoStatementSyntax)base.VisitDoStatement(node)!;
-        return v.WithStatement(Wrap(v.Statement));
-    }
-    public override SyntaxNode? VisitForEachStatement(ForEachStatementSyntax node)
-    {
-        var v = (ForEachStatementSyntax)base.VisitForEachStatement(node)!;
-        return v.WithStatement(Wrap(v.Statement));
-    }
-}
-
-// ── DB connection info record ─────────────────────────────────────────────────
-
-record DbConnectionInfo(string Id, string Name, string Provider,
-    string ConnectionString, string VarName, MetadataReference MetaRef, DbSchema Schema);
-
-// ── Kernel entry point ───────────────────────────────────────────────────────
-
-class Program
-{
     // Track loaded NuGet packages for the lifetime of this kernel process
     private static readonly HashSet<string> _loadedNugetKeys =
         new(StringComparer.OrdinalIgnoreCase);
+
+    // Script state — the accumulated Roslyn script execution chain
+    private static ScriptState<object?>? script;
+
+    // DB connection state
+    private static readonly Dictionary<string, DbConnectionInfo> attachedDbs = new();
+    private static readonly List<MetadataReference> dbMetaRefs = new();
+
+    // Cancellation token source for the current execution (set/cleared per execute)
+    private static CancellationTokenSource? _execCts;
+
+    // ── Entry point ───────────────────────────────────────────────────────────
 
     static async Task Main()
     {
@@ -393,7 +65,8 @@ class Program
                 "System.IO",
                 "System.Threading.Tasks",
                 "System.Text.Json",
-                "System.Net"
+                "System.Net",
+                "PolyglotKernel"
             )
             .AddReferences(
                 typeof(object).Assembly,
@@ -401,66 +74,6 @@ class Program
                 typeof(System.Net.WebUtility).Assembly,
                 typeof(DisplayHelper).Assembly
             );
-
-        ScriptState<object?>? state = null;
-        CancellationTokenSource? _execCts = null;
-
-        // ── DB connection state ───────────────────────────────────────────────
-        var attachedDbs = new Dictionary<string, DbConnectionInfo>();
-        var dbMetaRefs  = new List<MetadataReference>();
-
-        // Helper: inject a DB variable into the script state.
-        // Handles three cases:
-        //   1. Non-relational (Redis)     — injects ConnectionMultiplexer + IDatabase
-        //   2. Persistent-connection      — injects keeper SqliteConnection + connection-based DbContext
-        //   3. Regular relational (default) — injects string-based DbContext
-        async Task InjectDbContextAsync(DbConnectionInfo info)
-        {
-            var provider = DbProviders.Get(info.Provider);
-            var opts     = options.AddReferences(dbMetaRefs);
-            string code;
-
-            if (!provider.IsRelational)
-            {
-                // Redis: inject a ConnectionMultiplexer and expose GetDatabase() as the variable
-                var muxVar = $"__{info.VarName}_mux";
-                code = $"var {muxVar} = StackExchange.Redis.ConnectionMultiplexer.Connect({S(info.ConnectionString)});\n" +
-                       $"var {info.VarName} = {muxVar}.GetDatabase();";
-            }
-            else if (provider.UsesPersistentConnection)
-            {
-                // In-memory SQLite: open a keeper connection to prevent the shared-cache DB from vanishing,
-                // then create a DbContext that reuses that same connection.
-                var ns        = $"DynDb_{DbCodeGen.SanitizeTypeName(info.Name)}";
-                var ctx       = $"{ns}.{DbCodeGen.SanitizeTypeName(info.Name)}DbContext";
-                var keeperVar = $"__{info.VarName}_conn";
-                code = $"var {keeperVar} = new Microsoft.Data.Sqlite.SqliteConnection({S(info.ConnectionString)});\n" +
-                       $"{keeperVar}.Open();\n" +
-                       $"var {info.VarName} = new {ctx}({keeperVar});";
-            }
-            else
-            {
-                // Regular relational: string-based DbContext
-                var ns  = $"DynDb_{DbCodeGen.SanitizeTypeName(info.Name)}";
-                var ctx = $"{ns}.{DbCodeGen.SanitizeTypeName(info.Name)}DbContext";
-                code = $"var {info.VarName} = new {ctx}({S(info.ConnectionString)}, {S(info.Provider)});";
-            }
-
-            state = state == null
-                ? await CSharpScript.RunAsync<object?>(code, opts, globals, typeof(ScriptGlobals))
-                : await state.ContinueWithAsync<object?>(code, opts);
-        }
-
-        // Safe C# string literal
-        string S(string value) => JsonSerializer.Serialize(value);
-
-        // Safe ToString for variable inspector
-        static string SafeToString(object? value, string typeName)
-        {
-            if (value == null) return "null";
-            try { var s = value.ToString() ?? ""; return s.Length > 120 ? s[..120] + "…" : s; }
-            catch { return $"<{typeName}>"; }
-        }
 
         // PosixSignalRegistration works for piped (non-terminal) processes,
         // unlike Console.CancelKeyPress which requires stdin to be a TTY.
@@ -473,11 +86,11 @@ class Program
 
         realStdout.WriteLine(JsonSerializer.Serialize(new { type = "ready" }));
 
-        // ── Background memory reporter ───────────────────────────────────────
-        var memCts = new System.Threading.CancellationTokenSource();
+        // ── Background memory reporter ────────────────────────────────────────
+        var memCts = new CancellationTokenSource();
         _ = Task.Run(async () =>
         {
-            var proc = Process.GetCurrentProcess();
+            var proc = System.Diagnostics.Process.GetCurrentProcess();
             while (!memCts.Token.IsCancellationRequested)
             {
                 try
@@ -536,378 +149,51 @@ class Program
             {
                 case "execute":
                 {
-                    var id = msg.GetProperty("id").GetString()!;
-                    var code = msg.GetProperty("code").GetString()!;
-                    var outputMode = msg.TryGetProperty("outputMode", out var omProp)
-                        ? omProp.GetString() ?? "auto"
-                        : "auto";
-                    var execSources = msg.TryGetProperty("sources", out var esProp)
-                        ? esProp.EnumerateArray().Select(s => s.GetString()!).ToList()
-                        : (List<string>?)null;
-
-                    // ── Apply notebook config ────────────────────────────────
-                    var configDict = new Dictionary<string, string>();
-                    if (msg.TryGetProperty("config", out var cfgProp))
-                        foreach (var entry in cfgProp.EnumerateObject())
-                            configDict[entry.Name] = entry.Value.GetString() ?? "";
-                    ConfigContext.Current = new ConfigHelper(configDict);
-
-                    // ── Parse #r "nuget: ..." directives ────────────────────
-                    var (cleanCode, nugetRefs) = ParseNugetDirectives(code);
-
-                    bool success = true;
-                    string? errorMessage = null;
-                    string? stackTrace = null;
-
-                    // Load any requested NuGet packages before running code
-                    foreach (var (pkgId, pkgVer) in nugetRefs)
-                    {
-                        realStdout.WriteLine(JsonSerializer.Serialize(new
-                        {
-                            type = "stdout",
-                            id,
-                            content = $"📦 Installing {pkgId}{(pkgVer != null ? $" {pkgVer}" : " (latest)")}…"
-                        }));
-                        LogContext.WriteNotebook($"NuGet: Installing {pkgId}{(pkgVer != null ? $" {pkgVer}" : " (latest)")}");
-
-                        var (updatedOptions, nugetError) =
-                            await LoadNuGetAsync(pkgId, pkgVer, options, id, realStdout, execSources);
-
-                        if (nugetError != null)
-                        {
-                            success = false;
-                            errorMessage = nugetError;
-                            LogContext.WriteNotebook($"NuGet: Failed {pkgId}: {nugetError}");
-                            break;
-                        }
-
-                        options = updatedOptions;
-                        realStdout.WriteLine(JsonSerializer.Serialize(new
-                        {
-                            type = "stdout",
-                            id,
-                            content = $"✓ {pkgId} loaded"
-                        }));
-                        LogContext.WriteNotebook($"NuGet: Loaded {pkgId}");
-                    }
-
-                    if (!success)
-                    {
-                        realStdout.WriteLine(JsonSerializer.Serialize(new
-                        { type = "error", id, message = errorMessage, stackTrace = (string?)null }));
-                        realStdout.WriteLine(JsonSerializer.Serialize(new
-                        { type = "complete", id, success = false }));
-                        break;
-                    }
-
-                    // If only #r directives and no real code, complete immediately
-                    if (string.IsNullOrWhiteSpace(cleanCode))
-                    {
-                        realStdout.WriteLine(JsonSerializer.Serialize(new
-                        { type = "complete", id, success = true }));
-                        break;
-                    }
-
-                    display.SetCellId(id);
-                    DisplayContext.Current = display;
-
-                    var captureBuffer = new StringBuilder();
-                    using var captureWriter = new StringWriter(captureBuffer);
-                    Console.SetOut(captureWriter);
-
-                    var effectiveOptions = options.AddReferences(dbMetaRefs);
-                    _execCts = new CancellationTokenSource();
-                    var execToken = _execCts.Token;
-                    var interrupted = false;
-
-                    // Inject __ct__.ThrowIfCancellationRequested() into every loop body so
-                    // tight synchronous loops respond to Stop without killing the kernel.
-                    globals.__ct__ = execToken;
-                    var injectedCode = new CancellationCheckInjector()
-                        .Visit(CSharpSyntaxTree.ParseText(cleanCode,
-                            new CSharpParseOptions(LanguageVersion.Latest,
-                                DocumentationMode.None, SourceCodeKind.Script))
-                            .GetRoot())!.ToFullString();
-
-                    try
-                    {
-                        // WaitAsync handles async operations (await points); the injected checks
-                        // handle synchronous tight loops — together they cover all cases.
-                        Task<ScriptState<object?>> scriptTask = state == null
-                            ? CSharpScript.RunAsync<object?>(injectedCode, effectiveOptions, globals, typeof(ScriptGlobals))
-                            : state.ContinueWithAsync<object?>(injectedCode, effectiveOptions);
-                        state = await scriptTask.WaitAsync(execToken);
-                    }
-                    catch (OperationCanceledException) when (execToken.IsCancellationRequested)
-                    {
-                        interrupted = true;
-                        success = false;
-                        errorMessage = "Execution interrupted";
-                        // state left as-is
-                    }
-                    catch (CompilationErrorException ex)
-                    {
-                        success = false;
-                        errorMessage = string.Join("\n", ex.Diagnostics);
-                    }
-                    catch (Exception ex)
-                    {
-                        success = false;
-                        errorMessage = ex.Message;
-                        stackTrace = ex.StackTrace;
-                    }
-                    finally
-                    {
-                        // If interrupted the orphaned script task may still be running; redirect
-                        // Console.Out to Null so it cannot corrupt the JSON protocol.
-                        Console.SetOut(interrupted ? TextWriter.Null : realStdout);
-                        DisplayContext.Current = null;
-                        _execCts = null;
-                    }
-
-                    var captured = captureBuffer.ToString();
-                    if (!string.IsNullOrEmpty(captured))
-                    {
-                        realStdout.WriteLine(JsonSerializer.Serialize(new
-                        { type = "stdout", id, content = captured }));
-                    }
-
-                    if (success && state?.ReturnValue != null)
-                    {
-                        display.SetCellId(id);
-                        RenderReturnValue(display, state.ReturnValue, outputMode, id, realStdout);
-                    }
-
-                    if (!success && errorMessage != "Execution interrupted")
-                    {
-                        realStdout.WriteLine(JsonSerializer.Serialize(new
-                        { type = "error", id, message = errorMessage, stackTrace }));
-                    }
-
-                    if (success && state != null)
-                    {
-                        var vars = state.Variables
-                            .Where(v => !v.Name.StartsWith("<"))
-                            .Select(v => new {
-                                name         = v.Name,
-                                typeName     = v.Type.Name,
-                                fullTypeName = v.Type.FullName ?? v.Type.Name,
-                                value        = SafeToString(v.Value, v.Type.Name),
-                                isNull       = v.Value == null,
-                            })
-                            .ToList();
-                        realStdout.WriteLine(JsonSerializer.Serialize(new { type = "vars_update", vars }));
-                    }
-
-                    var wasCancelled = !success && errorMessage == "Execution interrupted";
-                    realStdout.WriteLine(JsonSerializer.Serialize(new
-                    { type = "complete", id, success, cancelled = wasCancelled }));
+                    await HandleExecute(msg, options, globals, display, realStdout,
+                        updatedOpts => options = updatedOpts);
                     break;
                 }
 
                 case "lint":
                 {
-                    var requestId = msg.GetProperty("requestId").GetString()!;
-                    var lintCode  = msg.GetProperty("code").GetString()!;
-                    var diags     = GetLintDiagnostics(lintCode);
-                    realStdout.WriteLine(JsonSerializer.Serialize(new
-                    { type = "lint_result", requestId, diagnostics = diags }));
+                    HandleLint(msg, realStdout);
                     break;
                 }
 
                 case "autocomplete":
                 {
-                    var requestId = msg.GetProperty("requestId").GetString()!;
-                    var acCode    = msg.GetProperty("code").GetString()!;
-                    var acPos     = msg.GetProperty("position").GetInt32();
-                    var items     = GetAutocompletions(acCode, acPos, state);
-                    realStdout.WriteLine(JsonSerializer.Serialize(new
-                    { type = "autocomplete_result", requestId, items }));
+                    HandleAutocomplete(msg, realStdout);
                     break;
                 }
 
                 case "preload_nugets":
                 {
-                    var preloadSources = msg.TryGetProperty("sources", out var psProp)
-                        ? psProp.EnumerateArray().Select(s => s.GetString()!).ToList()
-                        : (List<string>?)null;
-                    var pkgList = msg.GetProperty("packages").EnumerateArray().ToList();
-                    foreach (var pkgEl in pkgList)
-                    {
-                        var pkgId  = pkgEl.GetProperty("id").GetString()!;
-                        var pkgVer = pkgEl.TryGetProperty("version", out var vProp)
-                            && vProp.ValueKind == JsonValueKind.String
-                            ? vProp.GetString() : null;
-
-                        realStdout.WriteLine(JsonSerializer.Serialize(new
-                        { type = "nuget_status", id = pkgId, version = pkgVer, status = "loading" }));
-                        LogContext.WriteNotebook($"NuGet preload: {pkgId} {pkgVer ?? "latest"}");
-
-                        var (updatedOpts, nugetErr) =
-                            await LoadNuGetAsync(pkgId, pkgVer, options, "__preload__", realStdout, preloadSources);
-
-                        if (nugetErr != null)
-                        {
-                            realStdout.WriteLine(JsonSerializer.Serialize(new
-                            { type = "nuget_status", id = pkgId, version = pkgVer,
-                              status = "error", message = nugetErr }));
-                            LogContext.WriteNotebook($"NuGet preload error: {pkgId}: {nugetErr}");
-                        }
-                        else
-                        {
-                            options = updatedOpts;
-                            realStdout.WriteLine(JsonSerializer.Serialize(new
-                            { type = "nuget_status", id = pkgId, version = pkgVer, status = "loaded" }));
-                            LogContext.WriteNotebook($"NuGet preload loaded: {pkgId}");
-                        }
-                    }
-                    realStdout.WriteLine(JsonSerializer.Serialize(new { type = "nuget_preload_complete" }));
+                    await HandlePreloadNugets(msg, options, realStdout,
+                        updatedOpts => options = updatedOpts);
                     break;
                 }
 
                 case "reset":
                 {
-                    state = null;
-                    foreach (var info in attachedDbs.Values)
-                    {
-                        try { await InjectDbContextAsync(info); }
-                        catch { /* best-effort; kernel was reset */ }
-                    }
-                    realStdout.WriteLine(JsonSerializer.Serialize(new { type = "reset_complete" }));
+                    await HandleReset(options, globals, realStdout);
                     break;
                 }
 
                 case "db_connect":
                 {
-                    var connectionId  = msg.GetProperty("connectionId").GetString()!;
-                    var connName      = msg.GetProperty("name").GetString()!;
-                    var providerKey   = msg.GetProperty("provider").GetString()!;
-                    var connString    = msg.GetProperty("connectionString").GetString()!;
-                    var varName       = msg.TryGetProperty("varName", out var vnProp)
-                        ? vnProp.GetString() ?? DbCodeGen.SanitizeVarName(connName)
-                        : DbCodeGen.SanitizeVarName(connName);
-
-                    try
-                    {
-                        var provider = DbProviders.Get(providerKey);
-
-                        // Normalize the connection string (e.g. adds Mode=Memory for in-memory SQLite)
-                        var effectiveCs = provider.NormalizeConnectionString(connectionId, connString);
-
-                        // 1. Introspect schema
-                        var schema = await provider.IntrospectAsync(connectionId, effectiveCs);
-
-                        // 2. Send schema to renderer for tree display
-                        var schemaPayload = new
-                        {
-                            type         = "db_schema",
-                            connectionId,
-                            databaseName = schema.DatabaseName,
-                            tables       = schema.Tables.Select(t => new
-                            {
-                                schema   = t.Schema,
-                                name     = t.Name,
-                                columns  = t.Columns.Select(c => new
-                                {
-                                    name        = c.Name,
-                                    dbType      = c.DbType,
-                                    csharpType  = c.CSharpType,
-                                    isPrimaryKey= c.IsPrimaryKey,
-                                    isNullable  = c.IsNullable,
-                                    isIdentity  = c.IsIdentity,
-                                }).ToList(),
-                            }).ToList(),
-                        };
-                        lock (realStdout) { realStdout.WriteLine(JsonSerializer.Serialize(schemaPayload)); }
-
-                        MetadataReference metaRef;
-                        if (!provider.IsRelational)
-                        {
-                            // Non-relational (Redis): skip EF Core codegen; add the provider's assembly
-                            // to the script references so StackExchange.Redis types resolve in user code.
-                            var provAsm = provider.RequiredAssemblies.FirstOrDefault();
-                            metaRef = provAsm != null && !string.IsNullOrEmpty(provAsm.Location)
-                                ? MetadataReference.CreateFromFile(provAsm.Location)
-                                : MetadataReference.CreateFromFile(typeof(object).Assembly.Location);
-                        }
-                        else
-                        {
-                            // 3. Generate + compile DbContext
-                            var source = DbCodeGen.GenerateSource(connName, provider, schema);
-                            (_, metaRef) = DbCodeGen.Compile(source, provider);
-                        }
-
-                        // 4. Update state
-                        if (attachedDbs.TryGetValue(connectionId, out var existing))
-                            dbMetaRefs.Remove(existing.MetaRef);
-                        dbMetaRefs.Add(metaRef);
-
-                        var info = new DbConnectionInfo(connectionId, connName, providerKey, effectiveCs, varName, metaRef, schema);
-                        attachedDbs[connectionId] = info;
-
-                        // 5. Inject variable
-                        await InjectDbContextAsync(info);
-
-                        // 6. Confirm ready
-                        lock (realStdout) { realStdout.WriteLine(JsonSerializer.Serialize(new { type = "db_ready", connectionId, varName })); }
-                    }
-                    catch (Exception ex)
-                    {
-                        lock (realStdout) { realStdout.WriteLine(JsonSerializer.Serialize(new { type = "db_error", connectionId, message = ex.Message })); }
-                    }
+                    await HandleDbConnect(msg, options, globals, realStdout);
                     break;
                 }
 
                 case "db_disconnect":
                 {
-                    var connectionId = msg.GetProperty("connectionId").GetString()!;
-                    if (attachedDbs.TryGetValue(connectionId, out var info))
-                    {
-                        dbMetaRefs.Remove(info.MetaRef);
-                        attachedDbs.Remove(connectionId);
-                    }
-                    lock (realStdout) { realStdout.WriteLine(JsonSerializer.Serialize(new { type = "db_disconnected", connectionId })); }
+                    HandleDbDisconnect(msg, realStdout);
                     break;
                 }
 
                 case "db_refresh":
                 {
-                    var connectionId = msg.GetProperty("connectionId").GetString()!;
-                    if (!attachedDbs.TryGetValue(connectionId, out var info))
-                        break;
-
-                    try
-                    {
-                        var provider = DbProviders.Get(info.Provider);
-                        var schema   = await provider.IntrospectAsync(connectionId, info.ConnectionString);
-
-                        var schemaPayload = new
-                        {
-                            type         = "db_schema",
-                            connectionId,
-                            databaseName = schema.DatabaseName,
-                            tables       = schema.Tables.Select(t => new
-                            {
-                                schema   = t.Schema,
-                                name     = t.Name,
-                                columns  = t.Columns.Select(c => new
-                                {
-                                    name        = c.Name,
-                                    dbType      = c.DbType,
-                                    csharpType  = c.CSharpType,
-                                    isPrimaryKey= c.IsPrimaryKey,
-                                    isNullable  = c.IsNullable,
-                                    isIdentity  = c.IsIdentity,
-                                }).ToList(),
-                            }).ToList(),
-                        };
-                        lock (realStdout) { realStdout.WriteLine(JsonSerializer.Serialize(schemaPayload)); }
-                        attachedDbs[connectionId] = info with { Schema = schema };
-                    }
-                    catch (Exception ex)
-                    {
-                        lock (realStdout) { realStdout.WriteLine(JsonSerializer.Serialize(new { type = "db_error", connectionId, message = ex.Message })); }
-                    }
+                    await HandleDbRefresh(msg, realStdout);
                     break;
                 }
 
@@ -915,361 +201,6 @@ class Program
                     memCts.Cancel();
                     return;
             }
-        }
-    }
-
-    // ── C# keywords ─────────────────────────────────────────────────────────
-
-    private static readonly string[] CSharpKeywords =
-    {
-        "abstract", "as", "async", "await", "base", "bool", "break", "byte",
-        "case", "catch", "char", "checked", "class", "const", "continue",
-        "decimal", "default", "delegate", "do", "double", "else", "enum",
-        "event", "explicit", "extern", "false", "finally", "fixed", "float",
-        "for", "foreach", "goto", "if", "implicit", "in", "int", "interface",
-        "internal", "is", "lock", "long", "namespace", "new", "null", "object",
-        "operator", "out", "override", "params", "private", "protected",
-        "public", "readonly", "ref", "return", "sbyte", "sealed", "short",
-        "sizeof", "stackalloc", "static", "string", "struct", "switch", "this",
-        "throw", "true", "try", "typeof", "uint", "ulong", "unchecked",
-        "unsafe", "ushort", "using", "var", "virtual", "void", "volatile", "while",
-    };
-
-    // Well-known static types for member completion
-    private static readonly Dictionary<string, Type> WellKnownTypes =
-        new(StringComparer.Ordinal)
-        {
-            ["Console"] = typeof(Console),
-            ["Math"] = typeof(Math),
-            ["Convert"] = typeof(Convert),
-            ["String"] = typeof(string),
-            ["string"] = typeof(string),
-            ["int"] = typeof(int),
-            ["double"] = typeof(double),
-            ["Array"] = typeof(Array),
-            ["Enumerable"] = typeof(Enumerable),
-            ["File"] = typeof(System.IO.File),
-            ["Directory"] = typeof(Directory),
-            ["Path"] = typeof(System.IO.Path),
-            ["Environment"] = typeof(Environment),
-            ["DateTime"] = typeof(DateTime),
-            ["TimeSpan"] = typeof(TimeSpan),
-            ["Regex"] = typeof(Regex),
-            ["JsonSerializer"] = typeof(JsonSerializer),
-            ["Display"] = typeof(DisplayHelper),
-        };
-
-    // ── Lint handler ─────────────────────────────────────────────────────────
-
-    internal static List<object> GetLintDiagnostics(string code)
-    {
-        try
-        {
-            var parseOptions = new CSharpParseOptions(
-                LanguageVersion.Latest,
-                DocumentationMode.None,
-                SourceCodeKind.Script);
-            var tree = CSharpSyntaxTree.ParseText(code, parseOptions);
-            return tree.GetDiagnostics()
-                .Where(d => d.Location.IsInSource && d.Severity >= DiagnosticSeverity.Warning)
-                .Select(d => (object)new
-                {
-                    from = d.Location.SourceSpan.Start,
-                    to   = d.Location.SourceSpan.End,
-                    severity = d.Severity == DiagnosticSeverity.Error ? "error" : "warning",
-                    message  = d.GetMessage(),
-                })
-                .ToList();
-        }
-        catch { return new List<object>(); }
-    }
-
-    // ── Autocomplete handler ─────────────────────────────────────────────────
-
-    static List<object> GetAutocompletions(string code, int position, ScriptState<object?>? state)
-    {
-        var textBefore = position <= code.Length ? code[..position] : code;
-
-        // Member access: "expr." or "expr.partial"
-        var memberMatch = Regex.Match(textBefore, @"\b(\w+)\.(\w*)$");
-        if (memberMatch.Success)
-        {
-            var objName = memberMatch.Groups[1].Value;
-            var members = GetMembersForExpr(objName, state);
-            if (members.Count > 0) return members;
-        }
-
-        // General context: keywords + state variables
-        var items = new List<object>();
-        foreach (var kw in CSharpKeywords)
-            items.Add(new { label = kw, type = "keyword", detail = (string?)null });
-
-        if (state != null)
-        {
-            foreach (var v in state.Variables)
-            {
-                items.Add(new
-                {
-                    label  = v.Name,
-                    type   = "variable",
-                    detail = v.Type?.Name,
-                });
-            }
-        }
-
-        return items;
-    }
-
-    static List<object> GetMembersForExpr(string name, ScriptState<object?>? state)
-    {
-        // Try live variable
-        if (state != null)
-        {
-            var v = state.Variables.FirstOrDefault(
-                x => string.Equals(x.Name, name, StringComparison.Ordinal));
-            if (v?.Value != null)
-                return ReflectMembers(v.Value.GetType(), isStatic: false);
-        }
-
-        // Try well-known static type
-        if (WellKnownTypes.TryGetValue(name, out var type))
-            return ReflectMembers(type, isStatic: true);
-
-        return new List<object>();
-    }
-
-    static List<object> ReflectMembers(Type type, bool isStatic)
-    {
-        var flags = BindingFlags.Public |
-                    (isStatic ? BindingFlags.Static : BindingFlags.Instance);
-        var seen  = new HashSet<string>(StringComparer.Ordinal);
-        var items = new List<object>();
-
-        foreach (var m in type.GetMembers(flags))
-        {
-            if (m.Name.StartsWith('_') || !seen.Add(m.Name)) continue;
-
-            var (kind, detail) = m switch
-            {
-                MethodInfo mi when !mi.IsSpecialName =>
-                    ("function", mi.ReturnType.Name),
-                PropertyInfo pi =>
-                    ("property", pi.PropertyType.Name),
-                FieldInfo fi =>
-                    ("variable", fi.FieldType.Name),
-                _ => ("", null)
-            };
-
-            if (kind == "") continue;
-            items.Add(new { label = m.Name, type = kind, detail });
-        }
-
-        // LINQ extension methods for IEnumerable types
-        if (!isStatic && typeof(IEnumerable).IsAssignableFrom(type))
-        {
-            foreach (var m in typeof(Enumerable)
-                .GetMethods(BindingFlags.Public | BindingFlags.Static)
-                .Where(m => !m.IsSpecialName && seen.Add(m.Name)))
-            {
-                items.Add(new { label = m.Name, type = "function", detail = "LINQ" });
-            }
-        }
-
-        return items;
-    }
-
-    // ── #r "nuget: ..." parsing ──────────────────────────────────────────────
-
-    internal static (string cleanCode, List<(string id, string? version)> refs)
-        ParseNugetDirectives(string code)
-    {
-        var refs = new List<(string, string?)>();
-        var lines = code.Split('\n');
-        var clean = new List<string>(lines.Length);
-
-        foreach (var line in lines)
-        {
-            var m = Regex.Match(line.Trim(),
-                @"^#r\s+""nuget:\s*([^,""\s]+?)(?:\s*,\s*([^""]+?))?\s*""",
-                RegexOptions.IgnoreCase);
-            if (m.Success)
-            {
-                refs.Add((m.Groups[1].Value.Trim(),
-                          m.Groups[2].Success ? m.Groups[2].Value.Trim() : null));
-                clean.Add(""); // preserve line numbers
-            }
-            else
-            {
-                clean.Add(line);
-            }
-        }
-
-        return (string.Join('\n', clean), refs);
-    }
-
-    // ── NuGet package loader ─────────────────────────────────────────────────
-
-    private static async Task<(ScriptOptions opts, string? error)> LoadNuGetAsync(
-        string packageId, string? version, ScriptOptions options,
-        string cellId, TextWriter realStdout, IEnumerable<string>? sourceUrls = null)
-    {
-        var key = $"{packageId.ToLower()}/{version ?? "*"}";
-        if (_loadedNugetKeys.Contains(key)) return (options, null);
-
-        var tempDir = Path.Combine(Path.GetTempPath(), $"pg_{Guid.NewGuid():N}");
-        Directory.CreateDirectory(tempDir);
-
-        try
-        {
-            var verAttr = version != null ? $" Version=\"{version}\"" : "";
-            await File.WriteAllTextAsync(Path.Combine(tempDir, "r.csproj"),
-                $"""
-                <Project Sdk="Microsoft.NET.Sdk">
-                  <PropertyGroup>
-                    <TargetFramework>net8.0</TargetFramework>
-                    <ImplicitUsings>disable</ImplicitUsings>
-                    <Nullable>disable</Nullable>
-                  </PropertyGroup>
-                  <ItemGroup>
-                    <PackageReference Include="{packageId}"{verAttr} />
-                  </ItemGroup>
-                </Project>
-                """);
-
-            var srcArgs = sourceUrls?
-                .Where(s => !string.IsNullOrWhiteSpace(s))
-                .Select(s => $"--source \"{s}\"")
-                .ToList() ?? new List<string>();
-            var srcArgStr = srcArgs.Count > 0 ? " " + string.Join(" ", srcArgs) : "";
-
-            using var proc = new Process
-            {
-                StartInfo = new ProcessStartInfo("dotnet", $"restore r.csproj --nologo -v q{srcArgStr}")
-                {
-                    WorkingDirectory = tempDir,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                }
-            };
-            proc.Start();
-
-            // Read stdout/stderr concurrently to avoid deadlock
-            var stdoutTask = proc.StandardOutput.ReadToEndAsync();
-            var stderrTask = proc.StandardError.ReadToEndAsync();
-            await proc.WaitForExitAsync();
-            var stderr = await stderrTask;
-            await stdoutTask;
-
-            if (proc.ExitCode != 0)
-                return (options, $"NuGet restore failed for {packageId}: {stderr.Trim()}");
-
-            var assetsPath = Path.Combine(tempDir, "obj", "project.assets.json");
-            if (!File.Exists(assetsPath))
-                return (options, $"NuGet restore did not produce assets file for {packageId}");
-
-            var dlls = GetDllsFromAssets(assetsPath);
-            foreach (var dll in dlls.Where(File.Exists))
-            {
-                try { options = options.AddReferences(Assembly.LoadFrom(dll)); }
-                catch { /* skip unloadable assemblies */ }
-            }
-
-            _loadedNugetKeys.Add(key);
-            return (options, null);
-        }
-        catch (Exception ex)
-        {
-            return (options, $"NuGet error: {ex.Message}");
-        }
-        finally
-        {
-            try { Directory.Delete(tempDir, true); } catch { }
-        }
-    }
-
-    // Parse project.assets.json and return all runtime DLL paths
-    private static List<string> GetDllsFromAssets(string assetsPath)
-    {
-        var result = new List<string>();
-        using var doc = JsonDocument.Parse(File.ReadAllText(assetsPath));
-        var root = doc.RootElement;
-
-        // Global packages folder (first key in packageFolders)
-        string packageRoot = "";
-        foreach (var folder in root.GetProperty("packageFolders").EnumerateObject())
-        {
-            packageRoot = folder.Name.TrimEnd('/', '\\', Path.DirectorySeparatorChar);
-            break;
-        }
-        if (string.IsNullOrEmpty(packageRoot)) return result;
-
-        var libraries = root.GetProperty("libraries");
-
-        // Use the first (and only) target
-        foreach (var target in root.GetProperty("targets").EnumerateObject())
-        {
-            foreach (var pkg in target.Value.EnumerateObject())
-            {
-                if (!libraries.TryGetProperty(pkg.Name, out var libInfo)) continue;
-                if (!libInfo.TryGetProperty("path", out var pathEl)) continue;
-                var libPath = pathEl.GetString()!;
-
-                // Prefer runtime files; fall back to compile
-                JsonElement files = default;
-                bool found = pkg.Value.TryGetProperty("runtime", out files);
-                if (!found) found = pkg.Value.TryGetProperty("compile", out files);
-                if (!found) continue;
-
-                foreach (var file in files.EnumerateObject())
-                {
-                    var rel = file.Name; // e.g. "lib/net6.0/Foo.dll"
-                    if (rel == "_._") continue;
-                    if (!rel.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)) continue;
-
-                    var parts = new[] { packageRoot, libPath }
-                        .Concat(rel.Split('/'))
-                        .ToArray();
-                    result.Add(Path.Combine(parts));
-                }
-            }
-            break; // only first target
-        }
-
-        return result;
-    }
-
-    // ── Return value renderer ────────────────────────────────────────────────
-
-    static void RenderReturnValue(DisplayHelper display, object rv, string outputMode,
-        string id, TextWriter realStdout)
-    {
-        switch (outputMode)
-        {
-            case "text":
-                realStdout.WriteLine(JsonSerializer.Serialize(new
-                { type = "stdout", id, content = rv.ToString() ?? "" }));
-                break;
-            case "html":
-                display.Html(rv.ToString() ?? "");
-                break;
-            case "table":
-                if (rv is IEnumerable enumerable && rv is not string)
-                {
-                    var items = enumerable.Cast<object?>().ToList();
-                    display.TableFromDicts(DisplayHelper.ToRowDicts(items));
-                }
-                else
-                {
-                    PolyglotExtensions.AutoDisplay(display, rv);
-                }
-                break;
-            case "graph":
-                display.Graph(rv);
-                break;
-            default: // "auto"
-                PolyglotExtensions.AutoDisplay(display, rv);
-                break;
         }
     }
 }
