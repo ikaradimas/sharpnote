@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { makeCell } from '../notebook-factory.js';
+import { getSectionHeadingLevel, getCollapsedSections } from '../utils.js';
 import { Toolbar } from './toolbar/Toolbar.jsx';
 import { CodeCell } from './editor/CodeCell.jsx';
 import { MarkdownCell } from './editor/MarkdownCell.jsx';
@@ -57,6 +58,11 @@ export function NotebookView({
   const updateCellProp = (id, prop, value) => {
     onSetNbDirty((n) => ({ cells: n.cells.map((c) => c.id === id ? { ...c, [prop]: value } : c) }));
   };
+
+  const { hidden: collapsedCellIds, counts: collapsedCounts } = useMemo(
+    () => getCollapsedSections(cells),
+    [cells],
+  );
 
   const deleteCell = (id) => {
     onSetNbDirty((n) => {
@@ -129,12 +135,22 @@ export function NotebookView({
           />
         )}
 
-        {cells.map((cell, index) => (
-          <div key={cell.id} className="cell-wrapper" data-cell-id={cell.id}>
+        {cells.map((cell, index) => {
+          const isHidden = collapsedCellIds.has(cell.id);
+          const sectionLevel = getSectionHeadingLevel(cell);
+          return (
+          <div
+            key={cell.id}
+            className={`cell-wrapper${isHidden ? ' cell-section-hidden' : ''}`}
+            data-cell-id={cell.id}
+          >
             {cell.type === 'markdown' ? (
               <MarkdownCell
                 cell={cell}
                 cellIndex={index}
+                isSectionHeader={sectionLevel !== null}
+                onToggleCollapse={() => updateCellProp(cell.id, 'collapsed', !(cell.collapsed || false))}
+                collapsedCount={collapsedCounts.get(cell.id) ?? 0}
                 onUpdate={(val) => updateCell(cell.id, val)}
                 onDelete={() => deleteCell(cell.id)}
                 onMoveUp={() => moveCell(cell.id, -1)}
@@ -167,7 +183,7 @@ export function NotebookView({
               onAddCode={() => addCell('code', index)}
             />
           </div>
-        ))}
+        ); })}
       </div>
     </div>
   );

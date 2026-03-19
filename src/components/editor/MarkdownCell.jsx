@@ -30,7 +30,10 @@ function CellControls({ onMoveUp, onMoveDown, onDelete }) {
   );
 }
 
-export function MarkdownCell({ cell, cellIndex, onUpdate, onDelete, onMoveUp, onMoveDown }) {
+export function MarkdownCell({
+  cell, cellIndex, onUpdate, onDelete, onMoveUp, onMoveDown,
+  isSectionHeader, onToggleCollapse, collapsedCount,
+}) {
   const [editing, setEditing] = useState(!cell.content);
   const [draft, setDraft] = useState(cell.content);
 
@@ -54,9 +57,20 @@ export function MarkdownCell({ cell, cellIndex, onUpdate, onDelete, onMoveUp, on
     [cell.content]
   );
 
+  const collapsed = cell.collapsed || false;
+
   return (
-    <div className="cell markdown-cell">
+    <div className={`cell markdown-cell${collapsed ? ' cell-section-collapsed' : ''}`}>
       {cellIndex != null && <span className="cell-index-badge">{cellIndex + 1}</span>}
+      {isSectionHeader && (
+        <button
+          className="cell-collapse-btn"
+          onClick={onToggleCollapse}
+          title={collapsed ? 'Expand section' : 'Collapse section'}
+        >
+          {collapsed ? '▶' : '▼'}
+        </button>
+      )}
       <div className="cell-controls">
         <CellControls onMoveUp={onMoveUp} onMoveDown={onMoveDown} onDelete={onDelete} />
       </div>
@@ -80,6 +94,11 @@ export function MarkdownCell({ cell, cellIndex, onUpdate, onDelete, onMoveUp, on
             className="markdown-render"
             dangerouslySetInnerHTML={{ __html: renderedHtml || '<span class="markdown-placeholder">Double-click to write markdown…</span>' }}
           />
+          {collapsed && collapsedCount > 0 && (
+            <button className="cell-section-collapsed-indicator" onClick={onToggleCollapse}>
+              {collapsedCount} cell{collapsedCount !== 1 ? 's' : ''} hidden — click to expand
+            </button>
+          )}
         </div>
       )}
     </div>

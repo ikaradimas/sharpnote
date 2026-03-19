@@ -3865,6 +3865,37 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 .toc-h2 { padding-left: 22px; }
 .toc-h3 { padding-left: 32px; font-size: 11px; color: var(--text-muted); }
 
+/* ── Section collapse ────────────────────────────────────────────────────── */
+.cell-section-hidden { display: none; }
+
+.cell-collapse-btn {
+  position: absolute;
+  left: 7px; top: 7px;
+  background: none; border: none; cursor: pointer;
+  color: var(--text-dim); font-size: 9px; line-height: 1;
+  padding: 2px 3px; border-radius: 2px;
+  opacity: 0; transition: opacity 0.15s, color 0.15s;
+  z-index: 10;
+}
+.cell:hover .cell-collapse-btn,
+.cell-section-collapsed .cell-collapse-btn { opacity: 1; }
+.cell-collapse-btn:hover { color: var(--text-secondary); background: var(--bg-elevated); }
+
+.cell-section-collapsed { border-color: var(--border-subtle) !important; }
+.cell-section-collapsed .markdown-render { opacity: 0.75; }
+
+.cell-section-collapsed-indicator {
+  display: inline-block; margin-top: 4px;
+  font-family: var(--font-ui); font-size: 10px;
+  color: var(--text-dim); background: var(--bg-deep);
+  border: 1px solid var(--border-subtle); border-radius: 3px;
+  padding: 1px 8px; cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.cell-section-collapsed-indicator:hover {
+  color: var(--accent-primary); border-color: var(--accent-primary-dim);
+}
+
 /* ── About Dialog ────────────────────────────────────────────────────────── */
 .about-dialog {
   background: var(--bg-mid);

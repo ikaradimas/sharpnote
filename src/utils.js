@@ -24,6 +24,52 @@ export function formatLogTime(timestamp) {
   return `${hh}:${mm}:${ss}.${ms}`;
 }
 
+// ── Section collapse helpers ───────────────────────────────────────────────────
+// Returns the heading level (1–3) if a markdown cell's first non-empty line is
+// a heading, otherwise null.
+export function getSectionHeadingLevel(cell) {
+  if (cell.type !== 'markdown') return null;
+  const firstLine = (cell.content || '').split('\n').find((l) => l.trim() !== '');
+  const m = firstLine?.match(/^(#{1,3})\s+/);
+  return m ? m[1].length : null;
+}
+
+// Returns:
+//   hidden  — Set of cell IDs that belong to a currently-collapsed section
+//   counts  — Map from a collapsed heading cell ID to the number of cells it hides
+export function getCollapsedSections(cells) {
+  const hidden = new Set();
+  const counts = new Map();
+  let collapsedHeaderId = null;
+  let collapsedLevel = null;
+
+  for (const cell of cells) {
+    const level = getSectionHeadingLevel(cell);
+
+    if (collapsedLevel !== null) {
+      if (level !== null && level <= collapsedLevel) {
+        // This heading closes the active collapsed section.
+        collapsedHeaderId = null;
+        collapsedLevel = null;
+        if (cell.collapsed) {
+          collapsedHeaderId = cell.id;
+          collapsedLevel = level;
+          counts.set(cell.id, 0);
+        }
+      } else {
+        hidden.add(cell.id);
+        counts.set(collapsedHeaderId, (counts.get(collapsedHeaderId) ?? 0) + 1);
+      }
+    } else if (cell.collapsed && level !== null) {
+      collapsedHeaderId = cell.id;
+      collapsedLevel = level;
+      counts.set(cell.id, 0);
+    }
+  }
+
+  return { hidden, counts };
+}
+
 // ── Table of Contents heading extraction ──────────────────────────────────────
 export function extractHeadings(cells) {
   const headings = [];
