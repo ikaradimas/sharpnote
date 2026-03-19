@@ -48,7 +48,7 @@
 - **Rich output** — `Display.Html()`, `Display.Table()`, `Display.Graph()` (Chart.js), `Display.Csv()`, and `Console.Write` captured as `stdout`
 - **Database integration** — connect to SQLite, SQLite (In-Memory), SQL Server, PostgreSQL, or Redis; for relational providers the schema is introspected and a typed `DbContext` + POCO classes are code-generated and injected; Redis injects a `StackExchange.Redis.IDatabase` variable
 - **Code Library** — file-based snippet library stored in `~/Documents/Polyglot Notebooks/Library/`; subfolder navigation, syntax-highlighted preview, insert-as-cell with animation
-- **Dock layout** — panels (Library, Log, NuGet, Config, DB) can be docked to left / right / bottom zones, float freely, or be dragged between zones; layouts can be saved and restored by name
+- **Dock layout** — panels can be docked to left / right / bottom zones, floated freely, or dragged between zones; opening a panel via the toolbar auto-switches to its tab and briefly highlights it; tab bars show scroll-shadow indicators when tabs overflow; layouts can be saved and restored by name
 - **Autocomplete** — Roslyn `ResolveCompletion` backed; falls back to a C# keyword list while the kernel is starting
 - **Lint** — real-time Roslyn diagnostics; squiggles rendered via the CodeMirror lint extension
 - **Cell execution control** — Run, Stop (interrupt via cancellation token injection), Run From Here, Run To Here
@@ -255,6 +255,8 @@ Panels (Library, Log, NuGet, Config, DB) can be placed in four zones:
 | `float` | Free | — |
 
 Layout state is stored as `dockLayout = { assignments, order, sizes, floatPos, zoneTab }` and persisted as part of `saveAppSettings`. Users can save named layouts via the Layout Manager (toolbar icon) and switch between them; loading a layout increments `layoutKey` which forces a full DockZone remount to reset sizes.
+
+When a panel is opened via the toolbar (or a keyboard shortcut), the dock zone automatically switches to show that panel's tab and briefly highlights the panel with an accent outline. Zone tab bars display scroll-shadow indicators on overflowing edges; the active tab scrolls into view automatically.
 
 ---
 

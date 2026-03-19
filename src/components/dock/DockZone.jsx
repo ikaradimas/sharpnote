@@ -1,16 +1,19 @@
-import React from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { useResize } from '../../hooks/useResize.js';
 import { PANEL_META } from '../../config/dock-layout.jsx';
 import { renderPanelContent } from './renderPanelContent.jsx';
 
 export function DockZone({ zone, dockLayout, openFlags, panelProps,
-                    onTabChange, onPanelClose, onStartDrag, onResizeEnd }) {
+                    onTabChange, onPanelClose, onStartDrag, onResizeEnd, flashingPanel }) {
   const resizeSide = zone === 'left' ? 'right' : zone === 'right' ? 'left' : 'top';
   const [size, onResizeMouseDown] = useResize(
     dockLayout.sizes[zone] ?? 300,
     resizeSide,
     (newSize) => onResizeEnd?.(zone, newSize)
   );
+
+  const tabbarRef = useRef(null);
+  const [scrollShadow, setScrollShadow] = useState({ left: false, right: false });
 
   // Panels assigned to this zone, sorted by their order value
   const assigned = Object.keys(dockLayout.assignments)
@@ -26,10 +29,38 @@ export function DockZone({ zone, dockLayout, openFlags, panelProps,
 
   const visible = openPanels.length > 0;
 
+  // Auto-scroll the active tab into view when it changes
+  useEffect(() => {
+    if (!tabbarRef.current || !activeTab) return;
+    const el = tabbarRef.current.querySelector(`[data-panelid="${activeTab}"]`);
+    el?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+  }, [activeTab]);
+
+  // Track left/right overflow so we can show scroll-shadow indicators
+  useEffect(() => {
+    const el = tabbarRef.current;
+    if (!el) return;
+    const update = () => setScrollShadow({
+      left:  el.scrollLeft > 0,
+      right: el.scrollLeft + el.clientWidth < el.scrollWidth - 1,
+    });
+    update();
+    el.addEventListener('scroll', update, { passive: true });
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => { el.removeEventListener('scroll', update); ro.disconnect(); };
+  }, []);
+
   // Always render the same root element regardless of visible state.
   // This keeps hook state (useResize) stable and avoids reconciliation issues
   // when the first panel is added to a previously-empty zone.
   const zoneStyle = visible ? (zone === 'bottom' ? { height: size } : { width: size }) : undefined;
+
+  const tabbarClass = [
+    'dock-zone-tabbar',
+    scrollShadow.left  && 'scroll-shadow-left',
+    scrollShadow.right && 'scroll-shadow-right',
+  ].filter(Boolean).join(' ');
 
   return (
     <div
@@ -37,11 +68,12 @@ export function DockZone({ zone, dockLayout, openFlags, panelProps,
       style={zoneStyle}
     >
       <div className="dock-zone-rh" onMouseDown={onResizeMouseDown} />
-      <div className="dock-zone-tabbar">
+      <div ref={tabbarRef} className={tabbarClass}>
         {openPanels.map((id) => (
           <div
             key={id}
-            className={`dock-zone-tab${id === activeTab ? ' active' : ''}`}
+            data-panelid={id}
+            className={`dock-zone-tab${id === activeTab ? ' active' : ''}${id === flashingPanel ? ' flashing' : ''}`}
             onMouseDown={(e) => {
               if (e.button !== 0) return;
               e.preventDefault();
@@ -62,7 +94,7 @@ export function DockZone({ zone, dockLayout, openFlags, panelProps,
       {assigned.map((id) => (
         <div
           key={id}
-          className="dock-zone-content"
+          className={`dock-zone-content${id === flashingPanel ? ' panel-flash' : ''}`}
           style={{ display: visible && id === activeTab && openFlags[id] ? undefined : 'none' }}
         >
           {panelProps[id] && renderPanelContent(id, { ...panelProps[id], isOpen: !!openFlags[id] })}

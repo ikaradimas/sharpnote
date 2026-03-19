@@ -14,7 +14,12 @@ documentation surfaces in the same commit:
 
 **Scope rule:** only update what actually changed. A bug fix that has no user-visible effect
 does not require a docs update. A new panel, command, keyboard shortcut, output type,
-IPC handler, or file-format field always does.
+IPC handler, or file-format field always does. UX behaviour changes (e.g. new visual
+feedback, changed interaction flow) also qualify and must be documented.
+
+**Pre-commit checklist:** before every commit that touches behaviour, verify that
+`src/config/docs-sections.js` has an appropriate section for any affected feature,
+and that `README.md` reflects the change in its Features list and/or Architecture section.
 
 ## Key file locations
 
@@ -56,9 +61,13 @@ IPC handler, or file-format field always does.
 
 | File | Purpose |
 |---|---|
-| `kernel/Program.cs` | C# kernel — protocol loop, execution, display, lint, autocomplete |
-| `kernel/DbProvider.cs` | Database provider interface + SQLite/SQL Server/PostgreSQL/Redis |
-| `kernel/DbCodeGen.cs` | POCO + DbContext code generation |
+| `kernel/Program.cs` | Entry point + message dispatch loop (partial class Program) |
+| `kernel/Globals.cs` | ScriptGlobals, DisplayContext, LogContext, ConfigHelper |
+| `kernel/Display.cs` | DisplayHandle + DisplayHelper |
+| `kernel/Extensions.cs` | `.Display()`, `.Log()`, `.AutoDisplay()` extension methods |
+| `kernel/SyntaxRewriter.cs` | Roslyn CancellationCheckInjector |
+| `kernel/Handlers/` | `partial class Program` handlers: Execute, Nuget, Lint, Autocomplete, Db, Reset |
+| `kernel/Db/` | IDbProvider, DbProviders registry, DbCodeGen, per-provider classes (SQLite, SQL Server, PostgreSQL, Redis), Models |
 
 ### Tests & docs
 

@@ -323,6 +323,27 @@ export const DOCS_SECTIONS = [
     ],
   },
   {
+    id: 'layout', title: 'Dock Layout',
+    content: [
+      { type: 'p', text: 'Panels (Log, NuGet, Config, DB, Variables, ToC, Library, File Explorer) live in a flexible dock layout. Each panel can be placed in one of four zones or floated as a free window.' },
+      { type: 'h3', text: 'Zones' },
+      { type: 'ul', items: [
+        'Left — vertical strip; default: Library',
+        'Right — vertical strip; default: Log',
+        'Bottom — horizontal strip; default: NuGet, Config, DB',
+        'Float — free-floating draggable and resizable window',
+      ]},
+      { type: 'h3', text: 'Moving Panels' },
+      { type: 'p', text: 'Drag any panel tab to the drag handle (⠿) at the left of the tab, then drop it onto a drop zone highlighted at the edges and center of the workspace. Dropping onto a zone adds the panel to that zone\'s tab bar. Float panels can also be moved by dragging their header.' },
+      { type: 'h3', text: 'Panel Activation' },
+      { type: 'p', text: 'Opening a panel via the Tools menu (or a keyboard shortcut) automatically switches the dock zone to show that panel\'s tab and briefly highlights the panel with an accent outline, making it easy to locate at a glance.' },
+      { type: 'h3', text: 'Tab Bar Overflow' },
+      { type: 'p', text: 'When a dock zone has more panel tabs than can be displayed, scroll shadow indicators appear on the left or right edge of the tab bar. Scroll the tab bar horizontally to reach hidden tabs; the active tab scrolls into view automatically.' },
+      { type: 'h3', text: 'Saved Layouts' },
+      { type: 'p', text: 'Click the Layout Manager icon in the toolbar to open the layout manager. Save the current arrangement under a name, then switch between named layouts at any time. Layouts persist across sessions.' },
+    ],
+  },
+  {
     id: 'themes', title: 'Themes',
     content: [
       { type: 'p', text: 'Click the Theme button in the toolbar to open the theme picker. The selected theme applies instantly across the entire UI and is saved across sessions.' },

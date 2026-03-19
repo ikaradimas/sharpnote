@@ -54,6 +54,7 @@ export function App() {
   const [draggingPanel, setDraggingPanel] = useState(null);
   const [hoveredDropZone, setHoveredDropZone] = useState(null);
   const [layoutKey, setLayoutKey] = useState(0);
+  const [flashingPanel, setFlashingPanel] = useState(null);
   const dockLayoutRef = useRef(DEFAULT_DOCK_LAYOUT);
   const savedLayoutsRef = useRef([]);
   const draggingPanelRef = useRef(null);
@@ -957,6 +958,14 @@ export function App() {
     });
   }, []);
 
+  // Called when a panel is opened: switches to its tab in its zone and triggers a flash.
+  const handleFocusPanel = useCallback((panelId) => {
+    const zone = dockLayoutRef.current.assignments[panelId];
+    if (zone && zone !== 'float') handleZoneTabChange(zone, panelId);
+    setFlashingPanel(panelId);
+    setTimeout(() => setFlashingPanel((p) => p === panelId ? null : p), 700);
+  }, [handleZoneTabChange]);
+
   const handlePanelClose = useCallback((panelId) => {
     if (panelId === 'library') { setLibraryPanelOpen(false); return; }
     if (panelId === 'files')   { setFilesPanelOpen(false);   return; }
@@ -1353,6 +1362,7 @@ export function App() {
     onPanelClose: handlePanelClose,
     onStartDrag: handleStartDrag,
     onResizeEnd: handleZoneResizeEnd,
+    flashingPanel,
   };
 
   return (
@@ -1403,9 +1413,16 @@ export function App() {
                     requestCompletions={requestCompletions}
                     requestLint={requestLint}
                     libraryPanelOpen={libraryPanelOpen}
-                    onToggleLibrary={() => setLibraryPanelOpen((v) => !v)}
+                    onToggleLibrary={() => {
+                      if (!libraryPanelOpen) handleFocusPanel('library');
+                      setLibraryPanelOpen((v) => !v);
+                    }}
                     filesPanelOpen={filesPanelOpen}
-                    onToggleFiles={() => panelPropsMap.files.onToggle()}
+                    onToggleFiles={() => {
+                      if (!filesPanelOpen) handleFocusPanel('files');
+                      panelPropsMap.files.onToggle();
+                    }}
+                    onFocusPanel={handleFocusPanel}
                     theme={theme}
                     onThemeChange={setTheme}
                     dockLayout={dockLayout}
@@ -1451,7 +1468,7 @@ export function App() {
           if (!p) return null;
           const pos = dockLayout.floatPos[panelId] ?? { x: 200, y: 100, w: DEFAULT_FLOAT_W, h: DEFAULT_FLOAT_H };
           return (
-            <FloatPanel key={panelId} panelId={panelId} pos={pos} onMove={handleFloatMove} onClose={handlePanelClose} onStartDrag={handleStartDrag}>
+            <FloatPanel key={panelId} panelId={panelId} pos={pos} onMove={handleFloatMove} onClose={handlePanelClose} onStartDrag={handleStartDrag} flashing={flashingPanel === panelId}>
               {renderPanelContent(panelId, { ...p, isOpen: true })}
             </FloatPanel>
           );

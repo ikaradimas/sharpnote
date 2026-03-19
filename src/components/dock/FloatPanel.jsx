@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { PANEL_META } from '../../config/dock-layout.jsx';
 
-export function FloatPanel({ panelId, pos, onMove, onClose, onStartDrag, children }) {
+export function FloatPanel({ panelId, pos, onMove, onClose, onStartDrag, flashing, children }) {
   const posRef = useRef(pos);
   useEffect(() => { posRef.current = pos; }, [pos]);
 
@@ -32,7 +32,7 @@ export function FloatPanel({ panelId, pos, onMove, onClose, onStartDrag, childre
   };
 
   return (
-    <div className="float-panel" style={{ left: pos.x, top: pos.y, width: pos.w, height: pos.h }}>
+    <div className={`float-panel${flashing ? ' flashing' : ''}`} style={{ left: pos.x, top: pos.y, width: pos.w, height: pos.h }}>
       <div className="float-panel-header" onMouseDown={handleHeaderDown}>
         <div
           className="float-panel-drag-handle"

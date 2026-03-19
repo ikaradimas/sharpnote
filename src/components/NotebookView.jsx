@@ -24,6 +24,7 @@ export function NotebookView({
   onToggleLibrary,
   filesPanelOpen,
   onToggleFiles,
+  onFocusPanel,
   theme,
   onThemeChange,
   dockLayout,
@@ -89,18 +90,18 @@ export function NotebookView({
         onLoad={onLoad}
         onReset={() => onReset(nb.id)}
         logPanelOpen={logPanelOpen}
-        onToggleLogs={() => onSetNb((n) => ({ logPanelOpen: !n.logPanelOpen }))}
+        onToggleLogs={() => { if (!logPanelOpen) onFocusPanel?.('log'); onSetNb((n) => ({ logPanelOpen: !n.logPanelOpen })); }}
         nugetPanelOpen={nugetPanelOpen}
-        onToggleNuget={() => onSetNb((n) => ({ nugetPanelOpen: !n.nugetPanelOpen }))}
+        onToggleNuget={() => { if (!nugetPanelOpen) onFocusPanel?.('nuget'); onSetNb((n) => ({ nugetPanelOpen: !n.nugetPanelOpen })); }}
         configPanelOpen={configPanelOpen}
-        onToggleConfig={() => onSetNb((n) => ({ configPanelOpen: !n.configPanelOpen }))}
+        onToggleConfig={() => { if (!configPanelOpen) onFocusPanel?.('config'); onSetNb((n) => ({ configPanelOpen: !n.configPanelOpen })); }}
         configCount={config.length}
         dbPanelOpen={dbPanelOpen}
-        onToggleDb={() => onSetNb((n) => ({ dbPanelOpen: !n.dbPanelOpen }))}
+        onToggleDb={() => { if (!dbPanelOpen) onFocusPanel?.('db'); onSetNb((n) => ({ dbPanelOpen: !n.dbPanelOpen })); }}
         varsPanelOpen={varsPanelOpen}
-        onToggleVars={() => onSetNb((n) => ({ varsPanelOpen: !n.varsPanelOpen }))}
+        onToggleVars={() => { if (!varsPanelOpen) onFocusPanel?.('vars'); onSetNb((n) => ({ varsPanelOpen: !n.varsPanelOpen })); }}
         tocPanelOpen={tocPanelOpen}
-        onToggleToC={() => onSetNb((n) => ({ tocPanelOpen: !n.tocPanelOpen }))}
+        onToggleToC={() => { if (!tocPanelOpen) onFocusPanel?.('toc'); onSetNb((n) => ({ tocPanelOpen: !n.tocPanelOpen })); }}
         libraryPanelOpen={libraryPanelOpen}
         onToggleLibrary={onToggleLibrary}
         filesPanelOpen={filesPanelOpen}
