@@ -3864,6 +3864,44 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 .toc-h2 { padding-left: 22px; }
 .toc-h3 { padding-left: 32px; font-size: 11px; color: var(--text-muted); }
 
+/* ── About Dialog ────────────────────────────────────────────────────────── */
+.about-dialog {
+  background: var(--bg-mid);
+  border: 1px solid var(--border-default);
+  border-radius: 5px;
+  width: 380px;
+  display: flex; flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.55);
+}
+.about-dialog-header {
+  display: flex; align-items: baseline; gap: 10px;
+  padding: 16px 20px 14px;
+  border-bottom: 1px solid var(--border-default);
+}
+.about-dialog-name {
+  font-family: var(--font-heading);
+  font-size: 15px; letter-spacing: 0.07em;
+  color: var(--text-primary);
+}
+.about-dialog-version {
+  font-family: var(--font-code);
+  font-size: 11px; color: var(--text-dim);
+}
+.about-dialog-body { padding: 14px 20px 16px; }
+.about-dialog-desc {
+  font-family: var(--font-ui); font-size: 12px; line-height: 1.6;
+  color: var(--text-secondary); margin: 0 0 14px;
+}
+.about-dialog-stack {
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+.about-dialog-pill {
+  font-family: var(--font-code); font-size: 10px;
+  padding: 2px 8px; border-radius: 3px;
+  background: var(--bg-deep); border: 1px solid var(--border-subtle);
+  color: var(--text-dim);
+}
+
 /* ── Quit Dialog ─────────────────────────────────────────────────────────── */
 .quit-overlay {
   position: fixed; inset: 0; z-index: 9000;

@@ -125,6 +125,9 @@ function registerAllHandlers() {
 
   settings.register(ipcMain, { app, shell, mainWindow });
 
+  // App info.
+  ipcMain.handle('get-app-version', () => app.getVersion());
+
   // Recent-files IPC (thin wrappers, not in a sub-module register fn).
   ipcMain.handle('get-recent-files', () => recentFiles.getRecentFiles());
   ipcMain.handle('clear-recent-files', () => {

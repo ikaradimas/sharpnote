@@ -87,6 +87,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onBeforeQuit: (callback) => ipcRenderer.on('before-quit', () => callback()),
   confirmQuit: () => ipcRenderer.send('confirm-quit'),
 
+  // App info
+  getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+
   // Renderer-side logging (appears in Logs panel)
   rendererLog: (tag, message) => ipcRenderer.send('renderer-log', { tag, message }),
 

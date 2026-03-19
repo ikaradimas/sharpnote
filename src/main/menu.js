@@ -63,7 +63,7 @@ function buildMenu() {
     template.push({
       label: _app ? _app.name : 'SharpNote',
       submenu: [
-        { role: 'about' },
+        { label: `About ${_app ? _app.name : 'SharpNote'}`, click: () => send('about') },
         { type: 'separator' },
         { role: 'services' },
         { type: 'separator' },
@@ -165,6 +165,8 @@ function buildMenu() {
     label: 'Help',
     submenu: [
       { label: 'Documentation', accelerator: 'F1', click: () => send('docs') },
+      { type: 'separator' },
+      { label: 'About SharpNote…', click: () => send('about') },
     ],
   });
 

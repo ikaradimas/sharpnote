@@ -22,6 +22,7 @@ import { DockZone } from '../components/dock/DockZone.jsx';
 import { FloatPanel } from '../components/dock/FloatPanel.jsx';
 import { DockDropOverlay } from '../components/dock/DockDropOverlay.jsx';
 import { QuitDialog } from '../components/dialogs/QuitDialog.jsx';
+import { AboutDialog } from '../components/dialogs/AboutDialog.jsx';
 import { StatusBar } from './StatusBar.jsx';
 import { renderPanelContent } from '../components/dock/renderPanelContent.jsx';
 
@@ -47,6 +48,7 @@ export function App() {
   const [pinnedPaths, setPinnedPaths] = useState(() => new Set());
   const initialNbIdRef = useRef(notebooks[0].id);
   const [quitDirtyNbs, setQuitDirtyNbs] = useState(null);
+  const [aboutOpen, setAboutOpen] = useState(false);
 
   // Dock layout state
   const [dockLayout, setDockLayout] = useState(DEFAULT_DOCK_LAYOUT);
@@ -1181,6 +1183,7 @@ export function App() {
     'toggle-db':       () => { if (isNotebook()) setNb(activeIdRef.current, (n) => ({ dbPanelOpen: !n.dbPanelOpen })); },
     'toggle-vars':     () => { if (isNotebook()) setNb(activeIdRef.current, (n) => ({ varsPanelOpen: !n.varsPanelOpen })); },
     'toggle-toc':      () => { if (isNotebook()) setNb(activeIdRef.current, (n) => ({ tocPanelOpen: !n.tocPanelOpen })); },
+    about: () => setAboutOpen(true),
   };
 
   // Sync open tabs to main process so it can build the Window menu.
@@ -1478,6 +1481,7 @@ export function App() {
         sourceZone={draggingPanel ? dockLayout.assignments[draggingPanel] : null}
         hovered={hoveredDropZone}
       />
+      {aboutOpen && <AboutDialog onClose={() => setAboutOpen(false)} />}
       {quitDirtyNbs && (
         <QuitDialog
           dirtyNbs={quitDirtyNbs}
