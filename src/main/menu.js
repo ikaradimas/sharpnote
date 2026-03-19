@@ -140,13 +140,14 @@ function buildMenu() {
   template.push({
     label: 'Tools',
     submenu: [
-      { label: 'Packages',          accelerator: 'CmdOrCtrl+Shift+P', click: () => send('toggle-packages') },
       { label: 'Config',            accelerator: 'CmdOrCtrl+Shift+,', click: () => send('toggle-config') },
-      { label: 'Library',           accelerator: 'CmdOrCtrl+Shift+L', click: () => send('toggle-library') },
+      { label: 'Packages',          accelerator: 'CmdOrCtrl+Shift+P', click: () => send('toggle-packages') },
       { label: 'Logs',              accelerator: 'CmdOrCtrl+Shift+G', click: () => send('toggle-logs') },
-      { label: 'DB',                accelerator: 'CmdOrCtrl+Shift+D', click: () => send('toggle-db') },
-      { label: 'Variables',         click: () => send('toggle-vars') },
-      { label: 'Table of Contents', click: () => send('toggle-toc') },
+      { label: 'Database',          accelerator: 'CmdOrCtrl+Shift+D', click: () => send('toggle-db') },
+      { label: 'Variables',         accelerator: 'CmdOrCtrl+Shift+V', click: () => send('toggle-vars') },
+      { label: 'Table of Contents', accelerator: 'CmdOrCtrl+Shift+T', click: () => send('toggle-toc') },
+      { label: 'Library',           accelerator: 'CmdOrCtrl+Shift+L', click: () => send('toggle-library') },
+      { label: 'File Explorer',     accelerator: 'CmdOrCtrl+Shift+E', click: () => send('toggle-files') },
     ],
   });
 

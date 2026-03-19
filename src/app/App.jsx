@@ -1183,6 +1183,7 @@ export function App() {
     'toggle-db':       () => { if (isNotebook()) setNb(activeIdRef.current, (n) => ({ dbPanelOpen: !n.dbPanelOpen })); },
     'toggle-vars':     () => { if (isNotebook()) setNb(activeIdRef.current, (n) => ({ varsPanelOpen: !n.varsPanelOpen })); },
     'toggle-toc':      () => { if (isNotebook()) setNb(activeIdRef.current, (n) => ({ tocPanelOpen: !n.tocPanelOpen })); },
+    'toggle-files':    () => setFilesPanelOpen((v) => !v),
     about: () => setAboutOpen(true),
   };
 
