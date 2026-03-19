@@ -6,7 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using StackExchange.Redis;
 
-namespace PolyglotKernel.Db;
+namespace SharpNoteKernel.Db;
 
 // ── Redis provider ────────────────────────────────────────────────────────────
 

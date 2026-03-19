@@ -9,10 +9,10 @@ using System.Threading.Tasks;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
-using PolyglotKernel;
-using PolyglotKernel.Db;
+using SharpNoteKernel;
+using SharpNoteKernel.Db;
 
-namespace PolyglotKernel;
+namespace SharpNoteKernel;
 
 partial class Program
 {
@@ -223,14 +223,14 @@ partial class Program
                 }
                 else
                 {
-                    PolyglotExtensions.AutoDisplay(display, rv);
+                    SharpNoteExtensions.AutoDisplay(display, rv);
                 }
                 break;
             case "graph":
                 display.Graph(rv);
                 break;
             default: // "auto"
-                PolyglotExtensions.AutoDisplay(display, rv);
+                SharpNoteExtensions.AutoDisplay(display, rv);
                 break;
         }
     }

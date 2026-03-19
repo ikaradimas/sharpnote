@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text.Json;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using PolyglotKernel;
+using SharpNoteKernel;
 
-namespace PolyglotKernel;
+namespace SharpNoteKernel;
 
 partial class Program
 {

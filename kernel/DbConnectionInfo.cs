@@ -1,7 +1,7 @@
 using Microsoft.CodeAnalysis;
-using PolyglotKernel.Db;
+using SharpNoteKernel.Db;
 
-namespace PolyglotKernel;
+namespace SharpNoteKernel;
 
 // ── DB connection info record ─────────────────────────────────────────────────
 

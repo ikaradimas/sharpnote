@@ -11,7 +11,7 @@ function getLibraryDir() {
   if (!_libraryDir) {
     // Lazy-init: require electron at call time so the VITEST mock is in place.
     const { app } = require(process.env.VITEST ? '../../__mocks__/electron.js' : 'electron');
-    _libraryDir = path.join(app.getPath('documents'), 'Polyglot Notebooks', 'Library');
+    _libraryDir = path.join(app.getPath('documents'), 'SharpNote Notebooks', 'Library');
   }
   return _libraryDir;
 }

@@ -8,7 +8,7 @@ using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 
-namespace PolyglotKernel.Db;
+namespace SharpNoteKernel.Db;
 
 public static class DbCodeGen
 {

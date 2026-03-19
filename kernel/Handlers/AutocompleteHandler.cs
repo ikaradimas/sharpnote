@@ -8,9 +8,9 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
-using PolyglotKernel;
+using SharpNoteKernel;
 
-namespace PolyglotKernel;
+namespace SharpNoteKernel;
 
 partial class Program
 {

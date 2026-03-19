@@ -43,7 +43,7 @@ An interactive C# notebook. Press **Ctrl+Enter** to run a cell, or click **▶ R
     md('## 1 · Basic C#'),
 
     cs(`// Variables, interpolation, LINQ
-var name = "Polyglot";
+var name = "SharpNote";
 var version = 1.0;
 Console.WriteLine($"Hello from {name} v{version}!");
 

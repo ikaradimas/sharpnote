@@ -2,9 +2,9 @@ using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis.Scripting;
-using PolyglotKernel;
+using SharpNoteKernel;
 
-namespace PolyglotKernel;
+namespace SharpNoteKernel;
 
 partial class Program
 {

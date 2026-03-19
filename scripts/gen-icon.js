@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Generates assets/icon.png (1024×1024) for Polyglot Notebook.
+ * Generates assets/icon.png (1024×1024) for SharpNote.
  * Pure Node.js — only zlib (stdlib) required.
  *
  * Design: dark rounded-square background with a warm amber `>_` prompt glyph

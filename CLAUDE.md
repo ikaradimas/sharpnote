@@ -1,4 +1,4 @@
-# Polyglot Notebook — Claude Instructions
+# SharpNote — Claude Instructions
 
 ## Committing changes
 

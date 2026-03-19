@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace PolyglotKernel.Db;
+namespace SharpNoteKernel.Db;
 
 // ── Schema models ─────────────────────────────────────────────────────────────
 

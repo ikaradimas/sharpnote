@@ -3,7 +3,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace PolyglotKernel.Db;
+namespace SharpNoteKernel.Db;
 
 // ── IDbProvider interface ─────────────────────────────────────────────────────
 

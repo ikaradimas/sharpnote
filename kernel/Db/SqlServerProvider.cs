@@ -6,7 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
 
-namespace PolyglotKernel.Db;
+namespace SharpNoteKernel.Db;
 
 // ── SQL Server provider ───────────────────────────────────────────────────────
 

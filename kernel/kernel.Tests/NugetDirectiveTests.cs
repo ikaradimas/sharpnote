@@ -1,5 +1,5 @@
 using FluentAssertions;
-using PolyglotKernel;
+using SharpNoteKernel;
 using Xunit;
 
 namespace kernel.Tests;

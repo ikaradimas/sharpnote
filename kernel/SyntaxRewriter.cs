@@ -1,7 +1,7 @@
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace PolyglotKernel;
+namespace SharpNoteKernel;
 
 // ── Cancellation-check injector ───────────────────────────────────────────────
 // Rewrites user code by inserting __ct__.ThrowIfCancellationRequested() at the

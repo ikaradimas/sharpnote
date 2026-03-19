@@ -9,7 +9,7 @@ vi.mock('readline', () => ({
   createInterface: vi.fn().mockReturnValue({ on: vi.fn(), close: vi.fn() }),
 }));
 
-const tmpDir = path.join(os.tmpdir(), `polyglot-fileops-test-${Date.now()}`);
+const tmpDir = path.join(os.tmpdir(), `sharpnote-fileops-test-${Date.now()}`);
 let ipcHandlers, shell;
 const fakeEvent = {};
 

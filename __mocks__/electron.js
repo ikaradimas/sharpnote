@@ -8,15 +8,15 @@ const _ipcEvents   = {};
 const app = {
   getPath: (name) => {
     const paths = {
-      userData:  '/tmp/polyglot-test-userData',
-      documents: '/tmp/polyglot-test-docs',
-      home:      '/tmp/polyglot-test-home',
-      logs:      '/tmp/polyglot-test-logs',
+      userData:  '/tmp/sharpnote-test-userData',
+      documents: '/tmp/sharpnote-test-docs',
+      home:      '/tmp/sharpnote-test-home',
+      logs:      '/tmp/sharpnote-test-logs',
     };
-    return paths[name] || '/tmp/polyglot-test';
+    return paths[name] || '/tmp/sharpnote-test';
   },
   getVersion: () => '1.0.0',
-  getName: () => 'polyglot-notebook',
+  getName: () => 'sharpnote',
   isPackaged: false,
   addRecentDocument: () => {},
   whenReady: () => Promise.resolve(),

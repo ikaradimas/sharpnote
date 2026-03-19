@@ -6,7 +6,7 @@ using System.Text.Json;
 using System.Threading;
 using Microsoft.CodeAnalysis.Scripting;
 
-namespace PolyglotKernel;
+namespace SharpNoteKernel;
 
 // ── DisplayContext ────────────────────────────────────────────────────────────
 

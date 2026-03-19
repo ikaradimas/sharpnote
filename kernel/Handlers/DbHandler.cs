@@ -6,10 +6,10 @@ using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
-using PolyglotKernel;
-using PolyglotKernel.Db;
+using SharpNoteKernel;
+using SharpNoteKernel.Db;
 
-namespace PolyglotKernel;
+namespace SharpNoteKernel;
 
 partial class Program
 {

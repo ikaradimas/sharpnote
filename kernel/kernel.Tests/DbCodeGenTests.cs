@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using FluentAssertions;
-using PolyglotKernel;
-using PolyglotKernel.Db;
+using SharpNoteKernel;
+using SharpNoteKernel.Db;
 using Xunit;
 
 namespace kernel.Tests;

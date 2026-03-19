@@ -5,11 +5,11 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 
-namespace PolyglotKernel;
+namespace SharpNoteKernel;
 
 // ── Extension methods ─────────────────────────────────────────────────────────
 
-public static class PolyglotExtensions
+public static class SharpNoteExtensions
 {
     public static void Display(this object? obj, string? title = null)
     {

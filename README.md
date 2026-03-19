@@ -1,4 +1,4 @@
-# Polyglot Notebook
+# SharpNote
 
 > Interactive C# notebook application — multi-tab MDI, NuGet package management, database integration, Chart.js visualisations, and a full dock layout system.
 
@@ -17,7 +17,7 @@
 
 ## Table of Contents
 
-- [Polyglot Notebook](#polyglot-notebook)
+- [SharpNote](#sharpnote)
   - [Table of Contents](#table-of-contents)
   - [Features](#features)
   - [Architecture](#architecture)
@@ -47,7 +47,7 @@
 - **NuGet integration** — add packages via `#r "nuget: PackageName, Version"` directives or through the Packages panel; multiple package sources supported
 - **Rich output** — `Display.Html()`, `Display.Table()`, `Display.Graph()` (Chart.js), `Display.Csv()`, and `Console.Write` captured as `stdout`
 - **Database integration** — connect to SQLite, SQLite (In-Memory), SQL Server, PostgreSQL, or Redis; for relational providers the schema is introspected and a typed `DbContext` + POCO classes are code-generated and injected; Redis injects a `StackExchange.Redis.IDatabase` variable
-- **Code Library** — file-based snippet library stored in `~/Documents/Polyglot Notebooks/Library/`; subfolder navigation, syntax-highlighted preview, insert-as-cell with animation
+- **Code Library** — file-based snippet library stored in `~/Documents/SharpNote Notebooks/Library/`; subfolder navigation, syntax-highlighted preview, insert-as-cell with animation
 - **Dock layout** — panels can be docked to left / right / bottom zones, floated freely, or dragged between zones; opening a panel via the toolbar auto-switches to its tab and briefly highlights it; tab bars show scroll-shadow indicators when tabs overflow; layouts can be saved and restored by name
 - **Autocomplete** — Roslyn `ResolveCompletion` backed; falls back to a C# keyword list while the kernel is starting
 - **Lint** — real-time Roslyn diagnostics; squiggles rendered via the CodeMirror lint extension
@@ -93,7 +93,7 @@ The main process is a single Node.js/CJS file responsible for:
 | IPC handlers | ~40 `ipcMain.handle` / `ipcMain.on` registrations covering file ops, kernel lifecycle, DB connections, library, config, and more |
 | File operations | `fs-readdir`, `fs-rename`, `fs-delete` (via `shell.trashItem`), `fs-mkdir`, `fs-get-home` |
 | Recent files | Persisted to `<userData>/recent-files.json`; max 12 entries, duplicates moved to front |
-| Library | `resolveLibraryPath()` — path-traversal-safe resolver rooted at `~/Documents/Polyglot Notebooks/Library/` |
+| Library | `resolveLibraryPath()` — path-traversal-safe resolver rooted at `~/Documents/SharpNote Notebooks/Library/` |
 | DB connections | `<userData>/db-connections.json` — global list of named connection strings |
 | Menus | Native macOS / Windows menu built with `Menu.buildFromTemplate`; Tools sub-menu exposes keyboard shortcuts for all panels |
 | Logging | Dev mode: `logs/` next to `main.js`; packaged: `<userData>/logs/` |
@@ -263,7 +263,7 @@ When a panel is opened via the toolbar (or a keyboard shortcut), the dock zone a
 ## Project Structure
 
 ```
-polyglot-clone/
+sharpnote/
 ├── main.js               # Electron main process
 ├── preload.js            # contextBridge: exposes window.electronAPI to renderer
 ├── index.html            # App shell (loads dist/renderer.js)
@@ -342,7 +342,7 @@ polyglot-clone/
 
 ```bash
 git clone <repo-url>
-cd polyglot-clone
+cd sharpnote
 npm install
 ```
 
@@ -375,7 +375,7 @@ npm run dist:win
 npm run dist:all
 ```
 
-Output is written to `/tmp/polyglot-build/` (configured via `build.directories.output` in `package.json`).
+Output is written to `/tmp/sharpnote-build/` (configured via `build.directories.output` in `package.json`).
 
 **Kernel only** (without packaging):
 ```bash

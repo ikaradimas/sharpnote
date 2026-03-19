@@ -61,7 +61,7 @@ function buildMenu() {
 
   if (process.platform === 'darwin') {
     template.push({
-      label: _app ? _app.name : 'Polyglot Notebook',
+      label: _app ? _app.name : 'SharpNote',
       submenu: [
         { role: 'about' },
         { type: 'separator' },

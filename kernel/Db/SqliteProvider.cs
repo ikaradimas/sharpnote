@@ -6,7 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 
-namespace PolyglotKernel.Db;
+namespace SharpNoteKernel.Db;
 
 // ── SQLite provider ───────────────────────────────────────────────────────────
 

@@ -4,7 +4,7 @@ export const DOCS_SECTIONS = [
   {
     id: 'overview', title: 'Overview',
     content: [
-      { type: 'p', text: 'Polyglot Notebook is a desktop C# scripting environment. Notebooks are ordered sequences of code and markdown cells that share state within a dedicated .NET kernel process.' },
+      { type: 'p', text: 'SharpNote is a desktop C# scripting environment. Notebooks are ordered sequences of code and markdown cells that share state within a dedicated .NET kernel process.' },
       { type: 'h3', text: 'Key Concepts' },
       { type: 'ul', items: [
         'Notebook — a .cnb file containing cells, packages, config, and database attachment state',
@@ -131,7 +131,7 @@ export const DOCS_SECTIONS = [
       { type: 'p', text: 'Standard C# using statements work across the whole notebook. Common namespaces are pre-imported: System, System.Linq, System.Collections.Generic. Add any additional namespace in any cell.' },
       { type: 'h3', text: 'Loading Library Files with #load' },
       { type: 'p', text: 'Execute a .cs or .csx file directly in the kernel without copying its content into a cell:' },
-      { type: 'code', text: '#load "/Users/you/Documents/Polyglot Notebooks/Library/Helpers.cs"' },
+      { type: 'code', text: '#load "/Users/you/Documents/SharpNote Notebooks/Library/Helpers.cs"' },
       { type: 'p', text: 'The Library panel generates this directive automatically — select a file and click #load. All its definitions become available to subsequent cells.' },
       { type: 'h3', text: 'NuGet References' },
       { type: 'p', text: 'Add packages via the NuGet panel (⌘⇧P) or with a directive in any cell:' },
@@ -262,7 +262,7 @@ export const DOCS_SECTIONS = [
   {
     id: 'library', title: 'Code Library',
     content: [
-      { type: 'p', text: 'The Code Library is a shared folder of reusable C# snippets accessible from all notebooks. Open it with Tools → Library (⌘⇧L) or the Library button in the toolbar. Files are stored in ~/Documents/Polyglot Notebooks/Library/ and can be organised into subfolders.' },
+      { type: 'p', text: 'The Code Library is a shared folder of reusable C# snippets accessible from all notebooks. Open it with Tools → Library (⌘⇧L) or the Library button in the toolbar. Files are stored in ~/Documents/SharpNote Notebooks/Library/ and can be organised into subfolders.' },
       { type: 'h3', text: 'Browsing' },
       { type: 'ul', items: [
         'Subfolders are listed first with a triangle icon — click to enter',
@@ -405,7 +405,7 @@ export const DOCS_SECTIONS = [
       { type: 'h3', text: 'Cell Object' },
       { type: 'code', text: '{\n  "id":         "uuid-v4",\n  "type":       "code",    // or "markdown"\n  "content":    "Console.WriteLine(\\"hello\\");",\n  "outputMode": "auto",    // auto | text | html | table | graph\n  "locked":     false\n}' },
       { type: 'h3', text: 'Library Files' },
-      { type: 'p', text: 'Library snippets are plain .cs or .csx files stored in ~/Documents/Polyglot Notebooks/Library/. They are not embedded in .cnb files — notebooks reference them via #load directives or by copying content into a cell.' },
+      { type: 'p', text: 'Library snippets are plain .cs or .csx files stored in ~/Documents/SharpNote Notebooks/Library/. They are not embedded in .cnb files — notebooks reference them via #load directives or by copying content into a cell.' },
     ],
   },
 ];

@@ -25,7 +25,7 @@ const logDir = app.isPackaged
   ? path.join(app.getPath('userData'), 'logs')
   : path.join(__dirname, 'logs');
 
-const libraryDir = path.join(app.getPath('documents'), 'Polyglot Notebooks', 'Library');
+const libraryDir = path.join(app.getPath('documents'), 'SharpNote Notebooks', 'Library');
 
 // ── Init sub-modules with shared dependencies ─────────────────────────────────
 library.init(libraryDir);

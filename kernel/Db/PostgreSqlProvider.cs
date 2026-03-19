@@ -6,7 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Npgsql;
 
-namespace PolyglotKernel.Db;
+namespace SharpNoteKernel.Db;
 
 // ── PostgreSQL provider ───────────────────────────────────────────────────────
 

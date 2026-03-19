@@ -12,9 +12,9 @@ using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
-using PolyglotKernel.Db;
+using SharpNoteKernel.Db;
 
-namespace PolyglotKernel;
+namespace SharpNoteKernel;
 
 // ── Kernel entry point ────────────────────────────────────────────────────────
 
@@ -66,7 +66,7 @@ partial class Program
                 "System.Threading.Tasks",
                 "System.Text.Json",
                 "System.Net",
-                "PolyglotKernel"
+                "SharpNoteKernel"
             )
             .AddReferences(
                 typeof(object).Assembly,

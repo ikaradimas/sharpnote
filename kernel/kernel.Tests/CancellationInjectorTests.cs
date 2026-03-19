@@ -1,6 +1,6 @@
 using FluentAssertions;
 using Microsoft.CodeAnalysis.CSharp;
-using PolyglotKernel;
+using SharpNoteKernel;
 using Xunit;
 
 namespace kernel.Tests;

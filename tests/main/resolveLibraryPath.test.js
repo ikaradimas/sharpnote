@@ -18,8 +18,8 @@ beforeAll(async () => {
   resolveLibraryPath = lib.resolveLibraryPath;
 });
 
-// The library dir is: /tmp/polyglot-test-docs/Polyglot Notebooks/Library
-const LIBRARY_DIR = '/tmp/polyglot-test-docs/Polyglot Notebooks/Library';
+// The library dir is: /tmp/sharpnote-test-docs/SharpNote Notebooks/Library
+const LIBRARY_DIR = '/tmp/sharpnote-test-docs/SharpNote Notebooks/Library';
 
 describe('resolveLibraryPath', () => {
   it('resolves a relative path inside the library dir', () => {
