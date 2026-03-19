@@ -62,13 +62,27 @@ export function DockZone({ zone, dockLayout, openFlags, panelProps,
     scrollShadow.right && 'scroll-shadow-right',
   ].filter(Boolean).join(' ');
 
+  const scroll = (dir) => {
+    const el = tabbarRef.current;
+    if (el) el.scrollBy({ left: dir * 120, behavior: 'smooth' });
+  };
+
   return (
     <div
       className={`dock-zone dock-zone-${zone}${visible ? '' : ' dock-zone-hidden'}`}
       style={zoneStyle}
     >
       <div className="dock-zone-rh" onMouseDown={onResizeMouseDown} />
-      <div ref={tabbarRef} className={tabbarClass}>
+      <div className="dock-zone-tabbar-wrap">
+        {scrollShadow.left && (
+          <button
+            className="dock-zone-scroll-btn scroll-left"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => scroll(-1)}
+            title="Scroll tabs left"
+          >‹</button>
+        )}
+        <div ref={tabbarRef} className={tabbarClass}>
         {openPanels.map((id) => (
           <div
             key={id}
@@ -89,6 +103,15 @@ export function DockZone({ zone, dockLayout, openFlags, panelProps,
             >×</span>
           </div>
         ))}
+        </div>
+        {scrollShadow.right && (
+          <button
+            className="dock-zone-scroll-btn scroll-right"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => scroll(1)}
+            title="Scroll tabs right"
+          >›</button>
+        )}
       </div>
       {/* All assigned panels are kept mounted to preserve state; only the active one is shown */}
       {assigned.map((id) => (

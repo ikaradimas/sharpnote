@@ -3431,18 +3431,45 @@ body {
 
 /* ── Zone tab bar ────────────────────────────────────────────────────────────── */
 
-.dock-zone-tabbar {
+.dock-zone-tabbar-wrap {
   display: flex;
   flex-shrink: 0;
+  align-items: stretch;
   background: var(--bg-mid);
   border-bottom: 1px solid var(--border-default);
-  overflow-x: auto;
-  scrollbar-width: none;
   position: relative;
   z-index: 11;
   -webkit-app-region: no-drag;
 }
+
+.dock-zone-tabbar {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
 .dock-zone-tabbar::-webkit-scrollbar { display: none; }
+
+.dock-zone-scroll-btn {
+  flex-shrink: 0;
+  width: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-mid);
+  border: none;
+  color: var(--text-muted);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
+  user-select: none;
+  -webkit-app-region: no-drag;
+  transition: background 0.1s, color 0.1s;
+}
+.dock-zone-scroll-btn:hover { background: var(--bg-elevated); color: var(--text-secondary); }
+.dock-zone-scroll-btn.scroll-left  { border-right: 1px solid var(--border-subtle); }
+.dock-zone-scroll-btn.scroll-right { border-left:  1px solid var(--border-subtle); }
 
 .dock-zone-tab {
   display: flex;

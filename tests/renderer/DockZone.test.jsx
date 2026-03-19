@@ -102,3 +102,64 @@ describe('DockZone – tab bar', () => {
     expect(container.querySelector('.dock-zone-hidden')).not.toBeNull();
   });
 });
+
+// ── Scroll buttons ─────────────────────────────────────────────────────────────
+
+// Helper: configure scrollLeft/clientWidth/scrollWidth on the tabbar element,
+// then fire a scroll event so the component reads the new values and shows/hides buttons.
+const simulateOverflow = (tabbar, { scrollLeft, clientWidth, scrollWidth }) => {
+  Object.defineProperty(tabbar, 'scrollLeft', { get: () => scrollLeft, configurable: true });
+  Object.defineProperty(tabbar, 'clientWidth', { get: () => clientWidth, configurable: true });
+  Object.defineProperty(tabbar, 'scrollWidth', { get: () => scrollWidth, configurable: true });
+  fireEvent.scroll(tabbar);
+};
+
+describe('DockZone – scroll buttons', () => {
+  it('no scroll buttons when tabs fit without overflow', () => {
+    const { container } = render(<DockZone {...defaultProps()} />);
+    const tabbar = container.querySelector('.dock-zone-tabbar');
+    simulateOverflow(tabbar, { scrollLeft: 0, clientWidth: 300, scrollWidth: 300 });
+    expect(container.querySelector('.dock-zone-scroll-btn')).toBeNull();
+  });
+
+  it('shows right button when content overflows to the right', () => {
+    const { container } = render(<DockZone {...defaultProps()} />);
+    const tabbar = container.querySelector('.dock-zone-tabbar');
+    simulateOverflow(tabbar, { scrollLeft: 0, clientWidth: 100, scrollWidth: 300 });
+    expect(container.querySelector('.dock-zone-scroll-btn.scroll-right')).not.toBeNull();
+    expect(container.querySelector('.dock-zone-scroll-btn.scroll-left')).toBeNull();
+  });
+
+  it('shows left button when scrolled right', () => {
+    const { container } = render(<DockZone {...defaultProps()} />);
+    const tabbar = container.querySelector('.dock-zone-tabbar');
+    simulateOverflow(tabbar, { scrollLeft: 50, clientWidth: 100, scrollWidth: 200 });
+    expect(container.querySelector('.dock-zone-scroll-btn.scroll-left')).not.toBeNull();
+  });
+
+  it('shows both buttons when scrolled into the middle', () => {
+    const { container } = render(<DockZone {...defaultProps()} />);
+    const tabbar = container.querySelector('.dock-zone-tabbar');
+    simulateOverflow(tabbar, { scrollLeft: 50, clientWidth: 100, scrollWidth: 300 });
+    expect(container.querySelector('.dock-zone-scroll-btn.scroll-left')).not.toBeNull();
+    expect(container.querySelector('.dock-zone-scroll-btn.scroll-right')).not.toBeNull();
+  });
+
+  it('clicking right button calls scrollBy({ left: 120 })', () => {
+    const { container } = render(<DockZone {...defaultProps()} />);
+    const tabbar = container.querySelector('.dock-zone-tabbar');
+    tabbar.scrollBy = vi.fn();
+    simulateOverflow(tabbar, { scrollLeft: 0, clientWidth: 100, scrollWidth: 300 });
+    fireEvent.click(container.querySelector('.dock-zone-scroll-btn.scroll-right'));
+    expect(tabbar.scrollBy).toHaveBeenCalledWith({ left: 120, behavior: 'smooth' });
+  });
+
+  it('clicking left button calls scrollBy({ left: -120 })', () => {
+    const { container } = render(<DockZone {...defaultProps()} />);
+    const tabbar = container.querySelector('.dock-zone-tabbar');
+    tabbar.scrollBy = vi.fn();
+    simulateOverflow(tabbar, { scrollLeft: 50, clientWidth: 100, scrollWidth: 200 });
+    fireEvent.click(container.querySelector('.dock-zone-scroll-btn.scroll-left'));
+    expect(tabbar.scrollBy).toHaveBeenCalledWith({ left: -120, behavior: 'smooth' });
+  });
+});
