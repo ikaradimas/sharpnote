@@ -43,6 +43,23 @@ partial class Program
         return (string.Join('\n', clean), refs);
     }
 
+    // ── dotnet executable resolution ─────────────────────────────────────────
+    // Packaged Electron apps on macOS don't inherit the shell PATH, so "dotnet"
+    // alone fails. Probe the known install locations before falling back.
+    private static string ResolveDotnetExecutable()
+    {
+        string[] candidates =
+        [
+            "/usr/local/share/dotnet/dotnet",   // macOS official installer
+            "/opt/homebrew/bin/dotnet",          // Homebrew (Apple Silicon)
+            "/usr/local/bin/dotnet",             // Homebrew (Intel) / symlink
+            @"C:\Program Files\dotnet\dotnet.exe", // Windows official installer
+        ];
+        foreach (var path in candidates)
+            if (File.Exists(path)) return path;
+        return "dotnet"; // dev / Linux fallback via PATH
+    }
+
     // ── NuGet package loader ──────────────────────────────────────────────────
 
     internal static async Task<(ScriptOptions opts, string? error)> LoadNuGetAsync(
@@ -80,7 +97,7 @@ partial class Program
 
             using var proc = new Process
             {
-                StartInfo = new ProcessStartInfo("dotnet", $"restore r.csproj --nologo -v q{srcArgStr}")
+                StartInfo = new ProcessStartInfo(ResolveDotnetExecutable(), $"restore r.csproj --nologo -v q{srcArgStr}")
                 {
                     WorkingDirectory = tempDir,
                     RedirectStandardOutput = true,
