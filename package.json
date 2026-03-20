@@ -1,12 +1,12 @@
 {
   "name": "sharpnote",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "SharpNote — interactive C# notebook with multi-tab MDI, NuGet, and Chart.js output",
   "main": "main.js",
   "scripts": {
     "start": "npm run build:renderer && electron .",
     "dev": "npm run build:renderer && electron .",
-    "build:renderer": "esbuild src/renderer.jsx --bundle --outfile=dist/renderer.js --loader:.jsx=jsx",
+    "build:renderer": "esbuild src/renderer.jsx --bundle --outfile=dist/renderer.js --loader:.jsx=jsx && cp src/styles.css dist/styles.css",
     "build:kernel:mac": "dotnet publish kernel/kernel.csproj -r osx-x64 -c Release --self-contained true -o kernel/bin/osx-x64 && dotnet publish kernel/kernel.csproj -r osx-arm64 -c Release --self-contained true -o kernel/bin/osx-arm64",
     "build:kernel:win": "dotnet publish kernel/kernel.csproj -r win-x64 -c Release --self-contained true -o kernel/bin/win-x64",
     "build:kernel:all": "npm run build:kernel:mac && npm run build:kernel:win",
