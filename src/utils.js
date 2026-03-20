@@ -1,4 +1,5 @@
 import { DOCS_TAB_ID, LIB_EDITOR_ID_PREFIX } from './constants.js';
+import katex from 'katex';
 
 // ── Tab ID helpers ─────────────────────────────────────────────────────────────
 export const makeLibEditorId = (fullPath) => `${LIB_EDITOR_ID_PREFIX}${fullPath}`;
@@ -113,4 +114,34 @@ export function formatFileSize(bytes) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+// ── KaTeX math pre-processing ─────────────────────────────────────────────────
+// Replaces $...$ (inline) and $$...$$ (block) with rendered KaTeX HTML, skipping
+// fenced code blocks and inline code spans so math inside code is never touched.
+export function applyMath(content) {
+  const parts = content.split(/(```[\s\S]*?```|`[^`\n]+`)/g);
+  return parts.map((part, i) => {
+    if (i % 2 === 1) return part; // inside code — leave as-is
+
+    // Block math first: $$...$$
+    part = part.replace(/\$\$([^$]+?)\$\$/gs, (_, math) => {
+      try {
+        return `\n<div class="math-block">${katex.renderToString(math.trim(), { displayMode: true, throwOnError: false })}</div>\n`;
+      } catch (e) {
+        return `<div class="math-block math-error">$$${math}$$</div>`;
+      }
+    });
+
+    // Inline math: $...$
+    part = part.replace(/(?<!\$)\$([^$\n]+?)\$(?!\$)/g, (_, math) => {
+      try {
+        return katex.renderToString(math.trim(), { displayMode: false, throwOnError: false });
+      } catch (e) {
+        return `<span class="math-error">$${math}$</span>`;
+      }
+    });
+
+    return part;
+  }).join('');
 }

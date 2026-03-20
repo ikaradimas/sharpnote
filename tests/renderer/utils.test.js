@@ -9,6 +9,7 @@ import {
   parseCsv,
   tableToCSV,
   formatFileSize,
+  applyMath,
   DOCS_TAB_ID,
   LIB_EDITOR_ID_PREFIX,
 } from '../../src/renderer.jsx';
@@ -235,5 +236,60 @@ describe('formatFileSize', () => {
 
   it('formats values in MB range', () => {
     expect(formatFileSize(1024 * 1024 * 2.5)).toBe('2.5 MB');
+  });
+});
+
+// ── applyMath ─────────────────────────────────────────────────────────────────
+
+describe('applyMath', () => {
+  it('returns non-math content unchanged', () => {
+    expect(applyMath('hello world')).toBe('hello world');
+  });
+
+  it('renders inline math $...$ as KaTeX HTML', () => {
+    const result = applyMath('value is $x + 1$.');
+    expect(result).toContain('katex');
+    expect(result).not.toContain('$x + 1$');
+  });
+
+  it('renders block math $$...$$ inside a math-block div', () => {
+    const result = applyMath('$$E = mc^2$$');
+    expect(result).toContain('class="math-block"');
+    expect(result).toContain('katex');
+  });
+
+  it('does not process math inside fenced code blocks', () => {
+    const result = applyMath('```\n$x + 1$\n```');
+    expect(result).toBe('```\n$x + 1$\n```');
+  });
+
+  it('does not process math inside inline code', () => {
+    const result = applyMath('use `$x$` for math');
+    expect(result).toBe('use `$x$` for math');
+  });
+
+  it('does not confuse $$ with inline $ patterns', () => {
+    const result = applyMath('$$a + b$$');
+    // Should be rendered as block math, not two inline math segments
+    expect(result).toContain('class="math-block"');
+    // Should not contain raw $$
+    expect(result).not.toContain('$$a');
+  });
+
+  it('handles multiple inline math expressions in one string', () => {
+    const result = applyMath('$a$ and $b$');
+    expect(result).not.toContain('$a$');
+    expect(result).not.toContain('$b$');
+    // Two katex spans
+    const matches = result.match(/class="katex"/g) || [];
+    expect(matches.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('leaves content outside code blocks while preserving code blocks', () => {
+    const result = applyMath('$x$ and `code $y$`');
+    // inline math outside code should be rendered
+    expect(result).not.toContain('$x$');
+    // math inside inline code should be preserved literally
+    expect(result).toContain('`code $y$`');
   });
 });

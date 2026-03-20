@@ -524,6 +524,72 @@ data.Select((v, i) => new { Index = i, Value = v })
     .OrderByDescending(x => x.Value)
     .Take(3)
     .DisplayTable();`),
+
+    md(`## 15 · Diagrams (Mermaid)
+
+Use a fenced code block with the \`mermaid\` language tag to render diagrams inline.
+Flowcharts, sequence diagrams, class diagrams, state machines, Gantt charts, and more are all supported.
+
+\`\`\`mermaid
+flowchart TD
+    A([Start]) --> B{Input valid?}
+    B -- Yes --> C[Process data]
+    B -- No  --> D[Return error]
+    C --> E[Save to DB]
+    E --> F([Done])
+    D --> F
+\`\`\`
+
+\`\`\`mermaid
+sequenceDiagram
+    participant U as User
+    participant A as App
+    participant K as Kernel
+    participant N as NuGet
+
+    U->>A: Run cell (#r nuget: Pkg)
+    A->>K: execute message
+    K->>N: resolve & download
+    N-->>K: DLLs loaded
+    K-->>A: output stream
+    A-->>U: rendered output
+\`\`\`
+
+\`\`\`mermaid
+pie title Revenue by Category
+    "Hardware" : 42
+    "Software" : 29
+    "Services" : 18
+    "Support"  : 11
+\`\`\``),
+
+    md(`## 16 · Math Formulas (KaTeX)
+
+Use \`$...$\` for **inline math** and \`$$...$$\` for **display (block) math**.
+
+---
+
+**Euler's identity** — considered the most beautiful equation in mathematics:
+
+$$e^{i\\pi} + 1 = 0$$
+
+**Quadratic formula** — roots of $ax^2 + bx + c = 0$:
+
+$$x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$$
+
+**Fundamental theorem of calculus:**
+
+$$\\int_a^b f(x)\\, dx = F(b) - F(a)$$
+
+**Gaussian (normal) distribution** PDF:
+
+$$f(x) = \\frac{1}{\\sigma\\sqrt{2\\pi}}\\, e^{-\\frac{(x-\\mu)^2}{2\\sigma^2}}$$
+
+**Triangular number** — inline example: the sum $\\sum_{i=1}^{n} i = \\frac{n(n+1)}{2}$ gives $\\frac{n(n+1)}{2}$ for the $n$-th triangular number.
+
+**Matrix multiplication** (element notation):
+
+$$(AB)_{ij} = \\sum_{k=1}^{p} A_{ik}\\, B_{kj}$$`),
   ];
 }
 

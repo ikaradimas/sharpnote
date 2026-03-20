@@ -1,6 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { marked } from 'marked';
+import mermaid from 'mermaid';
+import { applyMath } from '../../utils.js';
 import { CodeEditor } from './CodeEditor.jsx';
+
+mermaid.initialize({ startOnLoad: false, theme: 'dark', securityLevel: 'loose' });
 
 function CellControls({ onMoveUp, onMoveDown, onDelete }) {
   const [confirming, setConfirming] = useState(false);
@@ -36,6 +40,7 @@ export function MarkdownCell({
 }) {
   const [editing, setEditing] = useState(!cell.content);
   const [draft, setDraft] = useState(cell.content);
+  const renderRef = useRef(null);
 
   const enterEdit = () => {
     setDraft(cell.content);
@@ -53,9 +58,36 @@ export function MarkdownCell({
   };
 
   const renderedHtml = useMemo(
-    () => cell.content ? marked.parse(cell.content) : '',
+    () => cell.content ? marked.parse(applyMath(cell.content)) : '',
     [cell.content]
   );
+
+  // Render mermaid diagrams after HTML is injected into the DOM.
+  useEffect(() => {
+    const container = renderRef.current;
+    if (!container) return;
+    const nodes = Array.from(container.querySelectorAll('pre > code.language-mermaid'));
+    if (nodes.length === 0) return;
+
+    const ts = Date.now();
+    nodes.forEach(async (node, idx) => {
+      const pre = node.parentElement;
+      const graphDef = node.textContent;
+      const id = `mermaid-${cell.id}-${ts}-${idx}`;
+      try {
+        const { svg } = await mermaid.render(id, graphDef);
+        const wrapper = document.createElement('div');
+        wrapper.className = 'mermaid-render';
+        wrapper.innerHTML = svg;
+        pre.replaceWith(wrapper);
+      } catch (e) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'mermaid-render mermaid-error';
+        wrapper.textContent = String(e.message || e);
+        pre.replaceWith(wrapper);
+      }
+    });
+  }, [renderedHtml, cell.id]);
 
   const collapsed = cell.collapsed || false;
 
@@ -91,6 +123,7 @@ export function MarkdownCell({
       ) : (
         <div className="markdown-render-wrap" onDoubleClick={enterEdit}>
           <div
+            ref={renderRef}
             className="markdown-render"
             dangerouslySetInnerHTML={{ __html: renderedHtml || '<span class="markdown-placeholder">Double-click to write markdown…</span>' }}
           />

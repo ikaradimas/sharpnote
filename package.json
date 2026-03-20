@@ -1,12 +1,12 @@
 {
   "name": "sharpnote",
-  "version": "1.3.4",
+  "version": "1.4.0",
   "description": "SharpNote — interactive C# notebook with multi-tab MDI, NuGet, and Chart.js output",
   "main": "main.js",
   "scripts": {
     "start": "npm run build:renderer && electron .",
     "dev": "npm run build:renderer && electron .",
-    "build:renderer": "esbuild src/renderer.jsx --bundle --outfile=dist/renderer.js --loader:.jsx=jsx && cp src/styles.css dist/styles.css",
+    "build:renderer": "esbuild src/renderer.jsx --bundle --outfile=dist/renderer.js --loader:.jsx=jsx && cp src/styles.css dist/styles.css && cp node_modules/katex/dist/katex.min.css dist/katex.min.css && cp -r node_modules/katex/dist/fonts dist/fonts",
     "build:kernel:mac": "dotnet publish kernel/kernel.csproj -r osx-x64 -c Release --self-contained true -o kernel/bin/osx-x64 && dotnet publish kernel/kernel.csproj -r osx-arm64 -c Release --self-contained true -o kernel/bin/osx-arm64",
     "build:kernel:win": "dotnet publish kernel/kernel.csproj -r win-x64 -c Release --self-contained true -o kernel/bin/win-x64",
     "build:kernel:all": "npm run build:kernel:mac && npm run build:kernel:win",
@@ -106,7 +106,9 @@
     "@codemirror/view": "^6.36.3",
     "chart.js": "^4.4.8",
     "codemirror": "^6.0.1",
+    "katex": "^0.16.39",
     "marked": "^15.0.7",
+    "mermaid": "^11.13.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "uuid": "^11.1.0"

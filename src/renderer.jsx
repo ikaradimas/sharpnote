@@ -6,13 +6,13 @@ import { DOCS_TAB_ID, LIB_EDITOR_ID_PREFIX } from './constants.js';
 import {
   makeLibEditorId, isLibEditorId, isNotebookId,
   getNotebookDisplayName, formatLogTime,
-  extractHeadings, parseCsv, tableToCSV, formatFileSize,
+  extractHeadings, parseCsv, tableToCSV, formatFileSize, applyMath,
 } from './utils.js';
 
 // Re-export everything that tests import from this file
 export { DOCS_TAB_ID, LIB_EDITOR_ID_PREFIX };
 export { makeLibEditorId, isLibEditorId, isNotebookId, getNotebookDisplayName, formatLogTime };
-export { extractHeadings, parseCsv, tableToCSV, formatFileSize };
+export { extractHeadings, parseCsv, tableToCSV, formatFileSize, applyMath };
 
 // ── Component exports (for test re-exports) ───────────────────────────────────
 export { DataTable } from './components/output/DataTable.jsx';
