@@ -1,13 +1,22 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis.Scripting;
+using NuGet.Common;
+using NuGet.Configuration;
+using NuGet.Frameworks;
+using NuGet.Packaging;
+using NuGet.Packaging.Core;
+using NuGet.Protocol;
+using NuGet.Protocol.Core.Types;
+using NuGet.Resolver;
+using NuGet.Versioning;
 using SharpNoteKernel;
 
 namespace SharpNoteKernel;
@@ -43,21 +52,141 @@ partial class Program
         return (string.Join('\n', clean), refs);
     }
 
-    // ── dotnet executable resolution ─────────────────────────────────────────
-    // Packaged Electron apps on macOS don't inherit the shell PATH, so "dotnet"
-    // alone fails. Probe the known install locations before falling back.
-    private static string ResolveDotnetExecutable()
+    // ── NuGet internals ───────────────────────────────────────────────────────
+
+    private const string NuGetOfficialFeed = "https://api.nuget.org/v3/index.json";
+    private static readonly NuGetFramework TargetFramework = NuGetFramework.Parse("net8.0");
+
+    private static List<SourceRepository> BuildSourceRepositories(IEnumerable<string>? sourceUrls)
     {
-        string[] candidates =
-        [
-            "/usr/local/share/dotnet/dotnet",   // macOS official installer
-            "/opt/homebrew/bin/dotnet",          // Homebrew (Apple Silicon)
-            "/usr/local/bin/dotnet",             // Homebrew (Intel) / symlink
-            @"C:\Program Files\dotnet\dotnet.exe", // Windows official installer
-        ];
-        foreach (var path in candidates)
-            if (File.Exists(path)) return path;
-        return "dotnet"; // dev / Linux fallback via PATH
+        var urls = sourceUrls?.Where(s => !string.IsNullOrWhiteSpace(s)).ToList()
+                   ?? [];
+        if (urls.Count == 0) urls.Add(NuGetOfficialFeed);
+        return urls.Select(url => Repository.Factory.GetCoreV3(new PackageSource(url))).ToList();
+    }
+
+    // Resolves the version to install: parses the requested string, or finds
+    // the latest stable (falling back to latest pre-release) from the feeds.
+    private static async Task<NuGetVersion?> ResolveVersionAsync(
+        string packageId, string? requestedVersion,
+        List<SourceRepository> sources, SourceCacheContext cache)
+    {
+        if (requestedVersion != null)
+            return NuGetVersion.Parse(requestedVersion);
+
+        foreach (var source in sources)
+        {
+            try
+            {
+                var res = await source.GetResourceAsync<FindPackageByIdResource>();
+                var versions = (await res.GetAllVersionsAsync(packageId, cache, NullLogger.Instance, CancellationToken.None))?.ToList();
+                if (versions == null || versions.Count == 0) continue;
+                return versions.Where(v => !v.IsPrerelease).DefaultIfEmpty().Max()
+                    ?? versions.Max();
+            }
+            catch { }
+        }
+        return null;
+    }
+
+    // Recursively collects the full set of SourcePackageDependencyInfo needed
+    // to satisfy the given package and all its transitive dependencies.
+    private static async Task CollectDependenciesAsync(
+        PackageIdentity package,
+        NuGetFramework framework,
+        List<SourceRepository> sources,
+        SourceCacheContext cache,
+        HashSet<SourcePackageDependencyInfo> available)
+    {
+        if (available.Contains(package)) return;
+
+        foreach (var source in sources)
+        {
+            try
+            {
+                var depRes = await source.GetResourceAsync<DependencyInfoResource>();
+                var depInfo = await depRes.ResolvePackage(package, framework, cache, NullLogger.Instance, CancellationToken.None);
+                if (depInfo == null) continue;
+
+                available.Add(depInfo);
+
+                foreach (var dep in depInfo.Dependencies)
+                {
+                    foreach (var src in sources)
+                    {
+                        try
+                        {
+                            var findRes = await src.GetResourceAsync<FindPackageByIdResource>();
+                            var versions = await findRes.GetAllVersionsAsync(dep.Id, cache, NullLogger.Instance, CancellationToken.None);
+                            var best = dep.VersionRange.FindBestMatch(versions);
+                            if (best == null) continue;
+                            await CollectDependenciesAsync(new PackageIdentity(dep.Id, best), framework, sources, cache, available);
+                            break;
+                        }
+                        catch { }
+                    }
+                }
+                break;
+            }
+            catch { }
+        }
+    }
+
+    // Downloads the package to the global NuGet cache if it isn't already there.
+    private static async Task EnsureDownloadedAsync(
+        PackageIdentity identity,
+        List<SourceRepository> sources,
+        SourceCacheContext cache,
+        string globalPackagesFolder)
+    {
+        if (Directory.Exists(GetLocalPackagePath(globalPackagesFolder, identity))) return;
+
+        foreach (var source in sources)
+        {
+            try
+            {
+                var dlRes = await source.GetResourceAsync<DownloadResource>();
+                var result = await dlRes.GetDownloadResourceResultAsync(
+                    identity,
+                    new PackageDownloadContext(cache),
+                    globalPackagesFolder,
+                    NullLogger.Instance,
+                    CancellationToken.None);
+
+                if (result.Status == DownloadResourceResultStatus.Available ||
+                    result.Status == DownloadResourceResultStatus.AvailableWithoutStream)
+                    break;
+            }
+            catch { }
+        }
+    }
+
+    private static string GetLocalPackagePath(string globalPackagesFolder, PackageIdentity identity)
+        => Path.Combine(globalPackagesFolder,
+                        identity.Id.ToLowerInvariant(),
+                        identity.Version.ToNormalizedString().ToLowerInvariant());
+
+    // Finds the best net8.0-compatible DLLs from a package already in the
+    // local cache, using NuGet's own framework compatibility rules.
+    private static List<string> GetDllsFromLocalPackage(string packagePath, NuGetFramework targetFramework)
+    {
+        var result = new List<string>();
+        if (!Directory.Exists(packagePath)) return result;
+        try
+        {
+            var reader = new PackageFolderReader(packagePath);
+            var nearest = NuGetFrameworkUtility.GetNearest(
+                reader.GetLibItems(), targetFramework, g => g.TargetFramework);
+            if (nearest == null) return result;
+            foreach (var item in nearest.Items)
+            {
+                if (!item.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)) continue;
+                var fullPath = Path.Combine(packagePath, item.Replace('/', Path.DirectorySeparatorChar));
+                if (File.Exists(fullPath)) result.Add(fullPath);
+            }
+        }
+        catch { }
+        return result;
     }
 
     // ── NuGet package loader ──────────────────────────────────────────────────
@@ -69,63 +198,66 @@ partial class Program
         var key = $"{packageId.ToLower()}/{version ?? "*"}";
         if (_loadedNugetKeys.Contains(key)) return (options, null);
 
-        var tempDir = Path.Combine(Path.GetTempPath(), $"pg_{Guid.NewGuid():N}");
-        Directory.CreateDirectory(tempDir);
-
         try
         {
-            var verAttr = version != null ? $" Version=\"{version}\"" : "";
-            await File.WriteAllTextAsync(Path.Combine(tempDir, "r.csproj"),
-                $"""
-                <Project Sdk="Microsoft.NET.Sdk">
-                  <PropertyGroup>
-                    <TargetFramework>net8.0</TargetFramework>
-                    <ImplicitUsings>disable</ImplicitUsings>
-                    <Nullable>disable</Nullable>
-                  </PropertyGroup>
-                  <ItemGroup>
-                    <PackageReference Include="{packageId}"{verAttr} />
-                  </ItemGroup>
-                </Project>
-                """);
+            var sources = BuildSourceRepositories(sourceUrls);
+            var cache = new SourceCacheContext();
 
-            var srcArgs = sourceUrls?
-                .Where(s => !string.IsNullOrWhiteSpace(s))
-                .Select(s => $"--source \"{s}\"")
-                .ToList() ?? new List<string>();
-            var srcArgStr = srcArgs.Count > 0 ? " " + string.Join(" ", srcArgs) : "";
+            // 1. Resolve the version to install.
+            var resolvedVersion = await ResolveVersionAsync(packageId, version, sources, cache);
+            if (resolvedVersion == null)
+                return (options, $"NuGet: package '{packageId}' not found on any configured source");
 
-            using var proc = new Process
+            var rootIdentity = new PackageIdentity(packageId, resolvedVersion);
+
+            // 2. Collect the full transitive dependency closure.
+            var available = new HashSet<SourcePackageDependencyInfo>(PackageIdentityComparer.Default);
+            await CollectDependenciesAsync(rootIdentity, TargetFramework, sources, cache, available);
+
+            // Ensure the root is present even if dep collection found nothing.
+            if (available.Count == 0)
+                await CollectDependenciesAsync(rootIdentity, NuGetFramework.AnyFramework, sources, cache, available);
+
+            // 3. Resolve install order via the NuGet resolver.
+            IEnumerable<PackageIdentity> toInstall;
+            try
             {
-                StartInfo = new ProcessStartInfo(ResolveDotnetExecutable(), $"restore r.csproj --nologo -v q{srcArgStr}")
+                var ctx = new PackageResolverContext(
+                    dependencyBehavior: DependencyBehavior.Lowest,
+                    targetIds: [packageId],
+                    requiredPackageIds: [],
+                    packagesConfig: [],
+                    preferredVersions: [],
+                    availablePackages: available,
+                    packageSources: sources.Select(s => s.PackageSource),
+                    log: NullLogger.Instance);
+                toInstall = new PackageResolver()
+                    .Resolve(ctx, CancellationToken.None)
+                    .Select(p => new PackageIdentity(p.Id, p.Version));
+            }
+            catch
+            {
+                // Resolver couldn't satisfy constraints — fall back to the raw available set.
+                toInstall = available.Select(p => new PackageIdentity(p.Id, p.Version));
+            }
+
+            // 4. Download each package (skips if already in global cache) and load DLLs.
+            var globalPackagesFolder = SettingsUtility.GetGlobalPackagesFolder(
+                Settings.LoadDefaultSettings(null));
+
+            foreach (var pkg in toInstall)
+            {
+                var pkgKey = $"{pkg.Id.ToLower()}/{pkg.Version}";
+                if (_loadedNugetKeys.Contains(pkgKey)) continue;
+
+                await EnsureDownloadedAsync(pkg, sources, cache, globalPackagesFolder);
+
+                foreach (var dll in GetDllsFromLocalPackage(GetLocalPackagePath(globalPackagesFolder, pkg), TargetFramework))
                 {
-                    WorkingDirectory = tempDir,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
+                    try { options = options.AddReferences(Assembly.LoadFrom(dll)); }
+                    catch { }
                 }
-            };
-            proc.Start();
-
-            // Read stdout/stderr concurrently to avoid deadlock
-            var stdoutTask = proc.StandardOutput.ReadToEndAsync();
-            var stderrTask = proc.StandardError.ReadToEndAsync();
-            await proc.WaitForExitAsync();
-            var stderr = await stderrTask;
-            await stdoutTask;
-
-            if (proc.ExitCode != 0)
-                return (options, $"NuGet restore failed for {packageId}: {stderr.Trim()}");
-
-            var assetsPath = Path.Combine(tempDir, "obj", "project.assets.json");
-            if (!File.Exists(assetsPath))
-                return (options, $"NuGet restore did not produce assets file for {packageId}");
-
-            var dlls = GetDllsFromAssets(assetsPath);
-            foreach (var dll in dlls.Where(File.Exists))
-            {
-                try { options = options.AddReferences(Assembly.LoadFrom(dll)); }
-                catch { /* skip unloadable assemblies */ }
+                _loadedNugetKeys.Add(pkgKey);
             }
 
             _loadedNugetKeys.Add(key);
@@ -135,61 +267,6 @@ partial class Program
         {
             return (options, $"NuGet error: {ex.Message}");
         }
-        finally
-        {
-            try { Directory.Delete(tempDir, true); } catch { }
-        }
-    }
-
-    // Parse project.assets.json and return all runtime DLL paths
-    private static List<string> GetDllsFromAssets(string assetsPath)
-    {
-        var result = new List<string>();
-        using var doc = JsonDocument.Parse(File.ReadAllText(assetsPath));
-        var root = doc.RootElement;
-
-        // Global packages folder (first key in packageFolders)
-        string packageRoot = "";
-        foreach (var folder in root.GetProperty("packageFolders").EnumerateObject())
-        {
-            packageRoot = folder.Name.TrimEnd('/', '\\', Path.DirectorySeparatorChar);
-            break;
-        }
-        if (string.IsNullOrEmpty(packageRoot)) return result;
-
-        var libraries = root.GetProperty("libraries");
-
-        // Use the first (and only) target
-        foreach (var target in root.GetProperty("targets").EnumerateObject())
-        {
-            foreach (var pkg in target.Value.EnumerateObject())
-            {
-                if (!libraries.TryGetProperty(pkg.Name, out var libInfo)) continue;
-                if (!libInfo.TryGetProperty("path", out var pathEl)) continue;
-                var libPath = pathEl.GetString()!;
-
-                // Prefer runtime files; fall back to compile
-                JsonElement files = default;
-                bool found = pkg.Value.TryGetProperty("runtime", out files);
-                if (!found) found = pkg.Value.TryGetProperty("compile", out files);
-                if (!found) continue;
-
-                foreach (var file in files.EnumerateObject())
-                {
-                    var rel = file.Name; // e.g. "lib/net6.0/Foo.dll"
-                    if (rel == "_._") continue;
-                    if (!rel.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)) continue;
-
-                    var parts = new[] { packageRoot, libPath }
-                        .Concat(rel.Split('/'))
-                        .ToArray();
-                    result.Add(Path.Combine(parts));
-                }
-            }
-            break; // only first target
-        }
-
-        return result;
     }
 
     // ── preload_nugets handler ────────────────────────────────────────────────
