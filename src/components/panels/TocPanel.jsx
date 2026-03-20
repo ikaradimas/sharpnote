@@ -4,8 +4,10 @@ import { extractHeadings } from '../../utils.js';
 export function TocPanel({ cells }) {
   const headings = useMemo(() => extractHeadings(cells), [cells]);
   const scroll = (cellId) => {
-    document.querySelector(`[data-cell-id="${cellId}"]`)
-      ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    requestAnimationFrame(() => {
+      document.querySelector(`[data-cell-id="${cellId}"]`)
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
   };
   return (
     <div className="toc-panel">
