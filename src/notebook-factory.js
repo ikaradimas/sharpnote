@@ -391,7 +391,7 @@ var http = new HttpClient();
 http.DefaultRequestHeaders.Add("User-Agent", "SharpNote/1.0");
 
 var json = await http.GetStringAsync("https://jsonplaceholder.typicode.com/posts?_limit=8");
-var posts = JsonSerializer.Deserialize<JsonElement>(json);
+var posts = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(json);
 
 var rows = posts.EnumerateArray().Select(p => {
     var firstLine = (p.GetProperty("body").GetString() ?? "").Split('\\n')[0];
