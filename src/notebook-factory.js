@@ -493,8 +493,13 @@ var shapes = new Shape[] {
 shapes
     .Select(s => new {
         Type    = Describe(s),
-        Details = s.ToString()!.Split('(')[1].TrimEnd(')'),
-        Area    = Math.Round(Area(s), 3),
+        Details = s switch {
+            Circle    c => $"r = {c.Radius}",
+            Rectangle r => $"{r.W} × {r.H}",
+            Triangle  t => $"b = {t.Base}, h = {t.Height}",
+            _           => "",
+        },
+        Area = Math.Round(Area(s), 3),
     })
     .DisplayTable();`),
 
