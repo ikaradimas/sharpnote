@@ -90,6 +90,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // App info
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
 
+  // URL fetch (proxied through main to bypass renderer CSP for http:// URLs)
+  fetchUrl: (url) => ipcRenderer.invoke('fetch-url', url),
+
   // Renderer-side logging (appears in Logs panel)
   rendererLog: (tag, message) => ipcRenderer.send('renderer-log', { tag, message }),
 

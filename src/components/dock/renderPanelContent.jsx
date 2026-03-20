@@ -7,6 +7,7 @@ import { VarsPanel } from '../panels/VarsPanel.jsx';
 import { TocPanel } from '../panels/TocPanel.jsx';
 import { LibraryPanel } from '../panels/library/LibraryPanel.jsx';
 import { FilesPanel } from '../panels/FilesPanel.jsx';
+import { ApiPanel } from '../panels/ApiPanel.jsx';
 
 export function renderPanelContent(panelId, p) {
   if (!p) return null;
@@ -19,6 +20,7 @@ export function renderPanelContent(panelId, p) {
     case 'toc':     return <TocPanel {...p} />;
     case 'library': return <LibraryPanel {...p} />;
     case 'files':   return <FilesPanel {...p} />;
+    case 'api':     return <ApiPanel {...p} />;
     default:        return null;
   }
 }

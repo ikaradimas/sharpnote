@@ -100,6 +100,17 @@ export function IconFiles() {
     </svg>
   );
 }
+export function IconApi() {
+  return (
+    <svg {..._ic} stroke="currentColor" strokeWidth="1.1" strokeLinecap="round">
+      <rect x="1.5" y="3" width="10" height="7.5" rx="1" />
+      <line x1="4" y1="6" x2="5.5" y2="6" />
+      <line x1="7" y1="6" x2="9" y2="6" />
+      <path d="M3 3V2m7 1V2" />
+      <line x1="1.5" y1="8" x2="11.5" y2="8" />
+    </svg>
+  );
+}
 export function IconFolderSvg() {
   return (
     <svg width="13" height="13" viewBox="0 0 13 13" fill="currentColor" style={{ opacity: 0.75 }}>

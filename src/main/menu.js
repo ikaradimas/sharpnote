@@ -148,6 +148,7 @@ function buildMenu() {
       { label: 'Table of Contents', accelerator: 'CmdOrCtrl+Shift+T', click: () => send('toggle-toc') },
       { label: 'Library',           accelerator: 'CmdOrCtrl+Shift+L', click: () => send('toggle-library') },
       { label: 'File Explorer',     accelerator: 'CmdOrCtrl+Shift+E', click: () => send('toggle-files') },
+      { label: 'API Browser',       accelerator: 'CmdOrCtrl+Shift+A', click: () => send('toggle-api') },
     ],
   });
 

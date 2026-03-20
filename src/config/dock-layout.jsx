@@ -3,8 +3,8 @@ import React from 'react';
 // ── Dock Layout System ────────────────────────────────────────────────────────
 
 export const DEFAULT_DOCK_LAYOUT = {
-  assignments: { log: 'right', nuget: 'bottom', config: 'bottom', db: 'bottom', library: 'left', vars: 'right', toc: 'left', files: 'left' },
-  order:       { log: 0, nuget: 0, config: 1, db: 2, library: 0, vars: 1, toc: 1, files: 2 },
+  assignments: { log: 'right', nuget: 'bottom', config: 'bottom', db: 'bottom', library: 'left', vars: 'right', toc: 'left', files: 'left', api: 'right' },
+  order:       { log: 0, nuget: 0, config: 1, db: 2, library: 0, vars: 1, toc: 1, files: 2, api: 2 },
   sizes:       { left: 300, right: 320, bottom: 280 },
   floatPos:    {},
   zoneTab:     { left: 'library', right: 'log', bottom: 'nuget' },
@@ -81,16 +81,28 @@ function IconFiles() {
     </svg>
   );
 }
+function IconApi() {
+  return (
+    <svg {..._ic} stroke="currentColor" strokeWidth="1.1" strokeLinecap="round">
+      <rect x="1.5" y="3" width="10" height="7.5" rx="1" />
+      <line x1="4" y1="6" x2="5.5" y2="6" />
+      <line x1="7" y1="6" x2="9" y2="6" />
+      <path d="M3 3V2m7 1V2" />
+      <line x1="1.5" y1="8" x2="11.5" y2="8" />
+    </svg>
+  );
+}
 
 export const PANEL_META = {
-  log:     { label: 'Logs',      icon: <IconLogs /> },
-  nuget:   { label: 'Packages',  icon: <IconPackages /> },
-  config:  { label: 'Config',    icon: <IconConfig /> },
-  db:      { label: 'DB',        icon: <IconDB /> },
-  library: { label: 'Library',   icon: <IconLibrary /> },
-  vars:    { label: 'Variables', icon: <IconVars /> },
-  toc:     { label: 'Table of Contents',  icon: <IconToC /> },
-  files:   { label: 'Files',     icon: <IconFiles /> },
+  log:     { label: 'Logs',       icon: <IconLogs /> },
+  nuget:   { label: 'Packages',   icon: <IconPackages /> },
+  config:  { label: 'Config',     icon: <IconConfig /> },
+  db:      { label: 'DB',         icon: <IconDB /> },
+  library: { label: 'Library',    icon: <IconLibrary /> },
+  vars:    { label: 'Variables',  icon: <IconVars /> },
+  toc:     { label: 'Table of Contents', icon: <IconToC /> },
+  files:   { label: 'Files',      icon: <IconFiles /> },
+  api:     { label: 'API Browser', icon: <IconApi /> },
 };
 
 // ── Dock drop zones ───────────────────────────────────────────────────────────

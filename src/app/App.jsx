@@ -38,6 +38,7 @@ export function App() {
   const [docsOpen, setDocsOpen] = useState(false);
   const [libraryPanelOpen, setLibraryPanelOpen] = useState(false);
   const [filesPanelOpen, setFilesPanelOpen]     = useState(false);
+  const [apiPanelOpen, setApiPanelOpen]         = useState(false);
   const [filesCurrentDir, setFilesCurrentDir]   = useState(null);
   const [libEditors, setLibEditors] = useState([]);
   const [dbConnections, setDbConnections] = useState([]);
@@ -1184,6 +1185,7 @@ export function App() {
     'toggle-vars':     () => { if (isNotebook()) setNb(activeIdRef.current, (n) => ({ varsPanelOpen: !n.varsPanelOpen })); },
     'toggle-toc':      () => { if (isNotebook()) setNb(activeIdRef.current, (n) => ({ tocPanelOpen: !n.tocPanelOpen })); },
     'toggle-files':    () => setFilesPanelOpen((v) => !v),
+    'toggle-api':      () => setApiPanelOpen((v) => !v),
     about: () => setAboutOpen(true),
   };
 
@@ -1272,7 +1274,8 @@ export function App() {
     vars:    isNotebookId(activeId) ? (activeNb?.varsPanelOpen ?? false) : false,
     toc:     isNotebookId(activeId) ? (activeNb?.tocPanelOpen ?? false) : false,
     files:   filesPanelOpen,
-  }), [activeId, activeNb, libraryPanelOpen, filesPanelOpen]);
+    api:     apiPanelOpen,
+  }), [activeId, activeNb, libraryPanelOpen, filesPanelOpen, apiPanelOpen]);
 
   const panelPropsMap = useMemo(() => {
     const nbId = activeNb?.id ?? null;
@@ -1352,9 +1355,12 @@ export function App() {
           ? (() => { const p = activeNb.path.replace(/\\/g, '/'); return p.slice(0, p.lastIndexOf('/')); })()
           : null,
       },
+      api: {
+        onToggle: () => setApiPanelOpen((v) => !v),
+      },
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeNb, dbConnections, filesPanelOpen, filesCurrentDir]);
+  }, [activeNb, dbConnections, filesPanelOpen, filesCurrentDir, apiPanelOpen]);
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -1425,6 +1431,11 @@ export function App() {
                     onToggleFiles={() => {
                       if (!filesPanelOpen) handleFocusPanel('files');
                       panelPropsMap.files.onToggle();
+                    }}
+                    apiPanelOpen={apiPanelOpen}
+                    onToggleApi={() => {
+                      if (!apiPanelOpen) handleFocusPanel('api');
+                      setApiPanelOpen((v) => !v);
                     }}
                     onFocusPanel={handleFocusPanel}
                     theme={theme}

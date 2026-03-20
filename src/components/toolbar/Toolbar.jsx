@@ -33,6 +33,8 @@ export function Toolbar({
   onToggleLibrary,
   filesPanelOpen,
   onToggleFiles,
+  apiPanelOpen,
+  onToggleApi,
   theme,
   onThemeChange,
   dockLayout,
@@ -112,6 +114,8 @@ export function Toolbar({
         onToggleLibrary={onToggleLibrary}
         filesPanelOpen={filesPanelOpen}
         onToggleFiles={onToggleFiles}
+        apiPanelOpen={apiPanelOpen}
+        onToggleApi={onToggleApi}
       />
       {dockLayout && (
         <LayoutManager

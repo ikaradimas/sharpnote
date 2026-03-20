@@ -25,6 +25,8 @@ export function NotebookView({
   onToggleLibrary,
   filesPanelOpen,
   onToggleFiles,
+  apiPanelOpen,
+  onToggleApi,
   onFocusPanel,
   theme,
   onThemeChange,
@@ -112,6 +114,8 @@ export function NotebookView({
         onToggleLibrary={onToggleLibrary}
         filesPanelOpen={filesPanelOpen}
         onToggleFiles={onToggleFiles}
+        apiPanelOpen={apiPanelOpen}
+        onToggleApi={onToggleApi}
         theme={theme}
         onThemeChange={onThemeChange}
         dockLayout={dockLayout}

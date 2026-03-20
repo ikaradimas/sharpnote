@@ -128,6 +128,14 @@ function registerAllHandlers() {
   // App info.
   ipcMain.handle('get-app-version', () => app.getVersion());
 
+  // URL fetch — used by the API browser panel; proxied through the main process
+  // so that http:// URLs (e.g. local dev servers) bypass the renderer CSP.
+  ipcMain.handle('fetch-url', async (_event, url) => {
+    const res = await fetch(url, { headers: { Accept: 'application/json, application/yaml, text/yaml, text/plain, */*' } });
+    if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+    return res.text();
+  });
+
   // Recent-files IPC (thin wrappers, not in a sub-module register fn).
   ipcMain.handle('get-recent-files', () => recentFiles.getRecentFiles());
   ipcMain.handle('clear-recent-files', () => {

@@ -376,6 +376,7 @@ export const DOCS_SECTIONS = [
         { keys: '⌘ ⇧ L', desc: 'Toggle Code Library panel' },
         { keys: '⌘ ⇧ G', desc: 'Toggle Log panel' },
         { keys: '⌘ ⇧ D', desc: 'Toggle DB panel' },
+        { keys: '⌘ ⇧ A', desc: 'Toggle API Browser panel' },
         { keys: '⌘ =  /  ⌘ +', desc: 'Increase font size' },
         { keys: '⌘ –', desc: 'Decrease font size' },
         { keys: '⌘ 0', desc: 'Reset font size to default' },
@@ -406,6 +407,27 @@ export const DOCS_SECTIONS = [
       { type: 'code', text: '{\n  "id":         "uuid-v4",\n  "type":       "code",    // or "markdown"\n  "content":    "Console.WriteLine(\\"hello\\");",\n  "outputMode": "auto",    // auto | text | html | table | graph\n  "locked":     false\n}' },
       { type: 'h3', text: 'Library Files' },
       { type: 'p', text: 'Library snippets are plain .cs or .csx files stored in ~/Documents/SharpNote Notebooks/Library/. They are not embedded in .cnb files — notebooks reference them via #load directives or by copying content into a cell.' },
+    ],
+  },
+  {
+    id: 'api-browser', title: 'API Browser',
+    content: [
+      { type: 'p', text: 'The API Browser panel lets you explore OpenAPI/Swagger specifications by URL. Open it from the Tools menu (⌘⇧A) or the Tools dropdown in the toolbar.' },
+      { type: 'h3', text: 'Loading a Spec' },
+      { type: 'p', text: 'Enter any public or local URL that returns an OpenAPI 3.x or Swagger 2.x spec and press Enter or click Load. Both JSON and YAML formats are accepted. Local dev-server URLs (http://) are fetched through the main process to bypass browser CSP restrictions.' },
+      { type: 'h3', text: 'Browsing Endpoints' },
+      { type: 'ul', items: [
+        'Endpoints are grouped by tag (or "Default" for untagged operations)',
+        'Click a tag header to collapse or expand the group',
+        'Click an individual endpoint row to expand its detail view',
+        'Each detail shows parameters, request body content types, and response codes',
+      ]},
+      { type: 'h3', text: 'Supported Formats' },
+      { type: 'ul', items: [
+        'OpenAPI 3.0 and 3.1 (application/json or application/yaml)',
+        'Swagger 2.0 (JSON or YAML)',
+        'Common spec hosts: Swagger UI /swagger.json, FastAPI /openapi.json, Redoc /openapi.yaml, etc.',
+      ]},
     ],
   },
 ];

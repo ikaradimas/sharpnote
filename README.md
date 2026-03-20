@@ -59,6 +59,7 @@
 - **Config panel** — per-notebook key/value store passed into the kernel as a `Config["key"]` helper
 - **Log panel** — structured, time-stamped kernel log stream with `NOTEBOOK` lifecycle entries and `USER` entries written by `.Log()` calls in scripts
 - **Table of Contents** — live heading outline from markdown cells; click any entry to scroll to it
+- **API Browser** — enter any OpenAPI 3.x or Swagger 2.0 spec URL (JSON or YAML) to explore endpoints grouped by tag; expandable detail shows parameters, request body, and response codes; http:// URLs are proxied through the main process
 - **Dark theme** — purpose-built urban dark CSS (~2 650 lines); no UI framework dependency
 
 ---
