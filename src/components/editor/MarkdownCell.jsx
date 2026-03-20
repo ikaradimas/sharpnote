@@ -63,7 +63,10 @@ export function MarkdownCell({
   );
 
   // Render mermaid diagrams after HTML is injected into the DOM.
+  // Depends on `editing` so it re-fires whenever the user exits edit mode,
+  // even if the cell content (and therefore renderedHtml) didn't change.
   useEffect(() => {
+    if (editing) return;
     const container = renderRef.current;
     if (!container) return;
     const nodes = Array.from(container.querySelectorAll('pre > code.language-mermaid'));
@@ -87,7 +90,7 @@ export function MarkdownCell({
         pre.replaceWith(wrapper);
       }
     });
-  }, [renderedHtml, cell.id]);
+  }, [renderedHtml, cell.id, editing]);
 
   const collapsed = cell.collapsed || false;
 
