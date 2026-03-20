@@ -343,6 +343,181 @@ Display.Html(@"
 // so your variables are always available without re-attaching.
 
 Display.Html(@"<pre style='color:#6889a0;margin:0'>// Ready — attach a DB and start querying</pre>");`),
+
+    md(`## 11 · Shared State & Records
+
+All cells in a notebook share a single execution context — types, variables, and \`using\`
+directives defined in one cell are available in every cell that runs afterwards.`),
+
+    cs(`// Define a record type and build a dataset — both persist for the cells below.
+public record Sale(string Region, string Product, int Qty, decimal Revenue);
+
+var sales = new List<Sale> {
+    new("North", "Widget Pro",  42, 1259.58m),
+    new("North", "DataSync",    18,  882.00m),
+    new("South", "Widget Pro",  67, 2009.33m),
+    new("South", "Connector",  201, 1002.99m),
+    new("East",  "DataSync",    31, 1519.00m),
+    new("East",  "Widget Pro",  29,  869.71m),
+    new("West",  "Connector",  145,  723.55m),
+    new("West",  "DataSync",    24,  936.00m),
+};
+
+$"Dataset ready: {sales.Count} sales records across {sales.Select(s => s.Region).Distinct().Count()} regions".Display();`),
+
+    cs(`// 'sales' and the Sale record are still in scope — no redefinition needed.
+var byRegion = sales
+    .GroupBy(s => s.Region)
+    .Select(g => new {
+        Region  = g.Key,
+        Orders  = g.Count(),
+        Units   = g.Sum(s => s.Qty),
+        Revenue = g.Sum(s => s.Revenue),
+        Avg     = Math.Round(g.Average(s => s.Revenue), 2),
+    })
+    .OrderByDescending(r => r.Revenue);
+
+byRegion.DisplayTable();`),
+
+    md(`## 12 · Async & HTTP
+
+\`await\` works at the top level in any cell — no wrapper needed.
+The example below calls a public test API; it requires an internet connection.`),
+
+    cs(`using System.Net.Http;
+using System.Text.Json;
+
+using var http = new HttpClient();
+http.DefaultRequestHeaders.Add("User-Agent", "SharpNote/1.0");
+
+var json = await http.GetStringAsync("https://jsonplaceholder.typicode.com/posts?_limit=8");
+var posts = JsonSerializer.Deserialize<JsonElement>(json);
+
+var rows = posts.EnumerateArray().Select(p => new {
+    Id    = p.GetProperty("id").GetInt32(),
+    Title = p.GetProperty("title").GetString(),
+    Excerpt = (p.GetProperty("body").GetString() ?? "")
+                .Split('\\n')[0]
+                .Substring(0, Math.Min(50, p.GetProperty("body").GetString()!.Length)) + "…",
+});
+
+rows.DisplayTable();`),
+
+    md('## 13 · More Chart Types'),
+
+    cs(`// Doughnut — category share
+new {
+    type = "doughnut",
+    data = new {
+        labels = new[] { "Hardware", "Software", "Services", "Support" },
+        datasets = new[] { new {
+            data            = new[] { 42, 29, 18, 11 },
+            backgroundColor = new[] {
+                "rgba(78,201,176,0.82)",
+                "rgba(86,156,214,0.82)",
+                "rgba(244,182,71,0.82)",
+                "rgba(197,134,192,0.82)",
+            },
+            borderWidth = 0,
+        }},
+    },
+    options = new {
+        responsive = true,
+        plugins = new {
+            title  = new { display = true, text = "Revenue Share by Category (%)" },
+            legend = new { position = "right" },
+        },
+    },
+}`, 'graph'),
+
+    cs(`// Scatter — correlation between two variables
+var rng = new Random(12);
+var points = Enumerable.Range(0, 45).Select(_ => {
+    var x = Math.Round(rng.NextDouble() * 100, 1);
+    return new { x, y = Math.Round(x * 0.55 + rng.NextDouble() * 35, 1) };
+}).ToList();
+
+new {
+    type = "scatter",
+    data = new {
+        datasets = new[] { new {
+            label           = "Samples",
+            data            = points,
+            backgroundColor = "rgba(86,156,214,0.65)",
+            pointRadius     = 5,
+        }},
+    },
+    options = new {
+        responsive = true,
+        plugins = new { title = new { display = true, text = "Scatter: X vs Y" } },
+        scales  = new {
+            x = new { title = new { display = true, text = "X" } },
+            y = new { title = new { display = true, text = "Y" } },
+        },
+    },
+}`, 'graph'),
+
+    md(`## 14 · Modern C#
+
+Pattern matching, switch expressions, list patterns, and the range operator all work
+out of the box — Roslyn scripting targets C# 12.`),
+
+    cs(`// Records + switch expression + pattern matching
+public record Shape;
+public record Circle(double Radius) : Shape;
+public record Rectangle(double W, double H) : Shape;
+public record Triangle(double Base, double Height) : Shape;
+
+static double Area(Shape s) => s switch {
+    Circle    { Radius: var r }           => Math.PI * r * r,
+    Rectangle { W: var w, H: var h }     => w * h,
+    Triangle  { Base: var b, Height: var h } => 0.5 * b * h,
+    _                                     => 0,
+};
+
+static string Describe(Shape s) => s switch {
+    Circle c when c.Radius > 10  => "large circle",
+    Circle                       => "small circle",
+    Rectangle { W: var w, H: var h } when w == h => "square",
+    Rectangle                    => "rectangle",
+    Triangle                     => "triangle",
+    _                            => "unknown",
+};
+
+var shapes = new Shape[] {
+    new Circle(5), new Circle(12), new Rectangle(4, 4),
+    new Rectangle(4, 7), new Triangle(6, 3),
+};
+
+shapes
+    .Select(s => new {
+        Type    = Describe(s),
+        Details = s.ToString()!.Split('(')[1].TrimEnd(')'),
+        Area    = Math.Round(Area(s), 3),
+    })
+    .DisplayTable();`),
+
+    cs(`// List patterns, ranges, and collection expressions
+int[] data = [3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5];
+
+// List pattern matching
+string Classify(int[] arr) => arr switch {
+    []                     => "empty",
+    [var x]                => $"single element: {x}",
+    [var first, .., var last] => $"first={first}, last={last}, length={arr.Length}",
+};
+
+Display.Html($"<code style='color:#9cdcfe'>{Classify(data)}</code>");
+
+// Range slicing
+var middle = data[2..^2];
+$"Middle slice [2..^2]: [{string.Join(", ", middle)}]".Display();
+
+// Top 3 by value, with index
+data.Select((v, i) => new { Index = i, Value = v })
+    .OrderByDescending(x => x.Value)
+    .Take(3)
+    .DisplayTable();`),
   ];
 }
 
