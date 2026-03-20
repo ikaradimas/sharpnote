@@ -387,7 +387,7 @@ The example below calls a public test API; it requires an internet connection.`)
     cs(`using System.Net.Http;
 using System.Text.Json;
 
-using var http = new HttpClient();
+var http = new HttpClient();
 http.DefaultRequestHeaders.Add("User-Agent", "SharpNote/1.0");
 
 var json = await http.GetStringAsync("https://jsonplaceholder.typicode.com/posts?_limit=8");
