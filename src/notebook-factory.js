@@ -393,12 +393,13 @@ http.DefaultRequestHeaders.Add("User-Agent", "SharpNote/1.0");
 var json = await http.GetStringAsync("https://jsonplaceholder.typicode.com/posts?_limit=8");
 var posts = JsonSerializer.Deserialize<JsonElement>(json);
 
-var rows = posts.EnumerateArray().Select(p => new {
-    Id    = p.GetProperty("id").GetInt32(),
-    Title = p.GetProperty("title").GetString(),
-    Excerpt = (p.GetProperty("body").GetString() ?? "")
-                .Split('\\n')[0]
-                .Substring(0, Math.Min(50, p.GetProperty("body").GetString()!.Length)) + "…",
+var rows = posts.EnumerateArray().Select(p => {
+    var firstLine = (p.GetProperty("body").GetString() ?? "").Split('\\n')[0];
+    return new {
+        Id      = p.GetProperty("id").GetInt32(),
+        Title   = p.GetProperty("title").GetString(),
+        Excerpt = firstLine.Length > 50 ? firstLine[..50] + "…" : firstLine,
+    };
 });
 
 rows.DisplayTable();`),
