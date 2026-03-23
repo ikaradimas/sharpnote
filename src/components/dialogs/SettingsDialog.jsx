@@ -11,7 +11,7 @@ const PANEL_FONT_SIZE_DEFAULT = 11.5;
 
 // ── Appearance section ────────────────────────────────────────────────────────
 
-function AppearanceSection({ theme, fontSize, onThemeChange, onFontSizeChange, panelFontSize, onPanelFontSizeChange }) {
+function AppearanceSection({ theme, fontSize, onThemeChange, onFontSizeChange, panelFontSize, onPanelFontSizeChange, lineAltEnabled, onLineAltChange }) {
   return (
     <div className="settings-section">
       <div className="settings-group">
@@ -61,6 +61,18 @@ function AppearanceSection({ theme, fontSize, onThemeChange, onFontSizeChange, p
             Reset
           </button>
         </div>
+      </div>
+
+      <div className="settings-group">
+        <div className="settings-group-label">Code Editor</div>
+        <label className="settings-toggle-row">
+          <input
+            type="checkbox"
+            checked={!!lineAltEnabled}
+            onChange={(e) => onLineAltChange(e.target.checked)}
+          />
+          <span>Alternating line stripes</span>
+        </label>
       </div>
 
       <div className="settings-group">
@@ -195,6 +207,8 @@ export function SettingsDialog({
   onFontSizeChange,
   panelFontSize,
   onPanelFontSizeChange,
+  lineAltEnabled,
+  onLineAltChange,
   pinnedPaths,
   onUnpin,
   onExport,
@@ -276,6 +290,8 @@ export function SettingsDialog({
                 onFontSizeChange={onFontSizeChange}
                 panelFontSize={panelFontSize}
                 onPanelFontSizeChange={onPanelFontSizeChange}
+                lineAltEnabled={lineAltEnabled}
+                onLineAltChange={onLineAltChange}
               />
             )}
             {activeSection === 'paths' && (

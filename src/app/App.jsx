@@ -1668,6 +1668,8 @@ export function App() {
           onFontSizeChange={(size) => window.electronAPI?.setFontSize(size)}
           panelFontSize={panelFontSize}
           onPanelFontSizeChange={(size) => window.electronAPI?.setPanelFontSize(size)}
+          lineAltEnabled={lineAltEnabled}
+          onLineAltChange={setLineAltEnabled}
           pinnedPaths={pinnedPaths}
           onUnpin={handleTogglePin}
           onExport={handleExportSettings}
