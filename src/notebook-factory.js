@@ -605,6 +605,7 @@ export function createNotebook(withExamples = false) {
     memoryHistory: [],
     cells: withExamples ? makeExampleCells() : [],
     outputs: {},
+    cellResults: {},
     running: new Set(),
     kernelStatus: 'starting',
     nugetPackages: [],

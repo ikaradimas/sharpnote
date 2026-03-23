@@ -165,6 +165,30 @@ describe('CodeCell – execution timer', () => {
     expect(document.querySelector('.cell-execution-spinner')).toBeNull();
   });
 
+  it('shows green checkmark on success', () => {
+    const { rerender } = render(<CodeCell {...defaultProps({ isRunning: true })} />);
+    rerender(<CodeCell {...defaultProps({ isRunning: false, lastResult: 'success' })} />);
+    const icon = document.querySelector('.cell-exec-icon');
+    expect(icon).not.toBeNull();
+    expect(icon.classList.contains('cell-exec-success')).toBe(true);
+    expect(icon.textContent).toBe('✓');
+  });
+
+  it('shows red x on error', () => {
+    const { rerender } = render(<CodeCell {...defaultProps({ isRunning: true })} />);
+    rerender(<CodeCell {...defaultProps({ isRunning: false, lastResult: 'error' })} />);
+    const icon = document.querySelector('.cell-exec-icon');
+    expect(icon).not.toBeNull();
+    expect(icon.classList.contains('cell-exec-error')).toBe(true);
+    expect(icon.textContent).toBe('✗');
+  });
+
+  it('shows no icon when lastResult is null', () => {
+    const { rerender } = render(<CodeCell {...defaultProps({ isRunning: true })} />);
+    rerender(<CodeCell {...defaultProps({ isRunning: false, lastResult: null })} />);
+    expect(document.querySelector('.cell-exec-icon')).toBeNull();
+  });
+
   it('increments elapsed time after 1 second', async () => {
     vi.useFakeTimers();
     render(<CodeCell {...defaultProps({ isRunning: true })} />);

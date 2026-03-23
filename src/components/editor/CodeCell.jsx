@@ -43,6 +43,7 @@ export function CodeCell({
   cell,
   cellIndex,
   outputs,
+  lastResult = null,
   isRunning,
   anyRunning,
   kernelReady = true,
@@ -155,7 +156,14 @@ export function CodeCell({
       <div className="code-cell-footer">
         {(isRunning || lastDuration !== null) && (
           <span className="cell-execution-timer">
-            {isRunning && <span className="cell-execution-spinner" />}
+            {isRunning
+              ? <span className="cell-execution-spinner" />
+              : lastResult === 'success'
+                ? <span className="cell-exec-icon cell-exec-success">✓</span>
+                : lastResult === 'error'
+                  ? <span className="cell-exec-icon cell-exec-error">✗</span>
+                  : null
+            }
             {formatElapsed(isRunning ? elapsed : lastDuration)}
           </span>
         )}

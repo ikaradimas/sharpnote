@@ -36,7 +36,7 @@ export function NotebookView({
   onLoadLayout,
   onDeleteLayout,
 }) {
-  const { cells, outputs, running, kernelStatus,
+  const { cells, outputs, cellResults, running, kernelStatus,
           config, logPanelOpen, nugetPanelOpen, configPanelOpen,
           dbPanelOpen, varsPanelOpen, tocPanelOpen, path: notebookPath } = nb;
 
@@ -165,6 +165,7 @@ export function NotebookView({
                 cell={cell}
                 cellIndex={index}
                 outputs={outputs[cell.id]}
+                lastResult={cellResults?.[cell.id] ?? null}
                 isRunning={running.has(cell.id)}
                 anyRunning={running.size > 0}
                 kernelReady={kernelStatus === 'ready'}

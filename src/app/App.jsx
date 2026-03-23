@@ -370,10 +370,11 @@ export function App() {
           setNb(notebookId, (n) => {
             const next = new Set(n.running);
             next.delete(msg.id);
+            const result = (!msg.cancelled && msg.success) ? 'success' : 'error';
             const extra = msg.cancelled
               ? { outputs: { ...n.outputs, [msg.id]: [...(n.outputs[msg.id] || []), { type: 'interrupted' }] } }
               : {};
-            return { running: next, ...extra };
+            return { running: next, cellResults: { ...(n.cellResults || {}), [msg.id]: result }, ...extra };
           });
           break;
         }
@@ -493,6 +494,7 @@ export function App() {
     return new Promise((resolve) => {
       setNb(notebookId, (n) => ({
         outputs: { ...n.outputs, [cell.id]: [] },
+        cellResults: { ...(n.cellResults || {}), [cell.id]: null },
         running: new Set([...n.running, cell.id]),
       }));
 
@@ -553,6 +555,7 @@ export function App() {
     setNb(notebookId, (n) => ({
       kernelStatus: 'starting',
       outputs: {},
+      cellResults: {},
       running: new Set(),
       vars: [],
       // Reset loaded/loading packages to pending so the new kernel re-preloads them
