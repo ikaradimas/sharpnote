@@ -16,7 +16,7 @@ const METHOD_COLORS = {
 
 const HTTP_METHODS = ['get', 'post', 'put', 'delete', 'patch', 'head', 'options', 'trace'];
 
-function getBaseUrl(spec) {
+export function getBaseUrl(spec) {
   if (spec.servers?.length) {
     const s = spec.servers[0];
     return s.url || '';
@@ -28,7 +28,7 @@ function getBaseUrl(spec) {
   return '';
 }
 
-function groupOperations(spec) {
+export function groupOperations(spec) {
   const groups = {};
   for (const [path, pathItem] of Object.entries(spec.paths || {})) {
     for (const method of HTTP_METHODS) {
@@ -43,7 +43,7 @@ function groupOperations(spec) {
   return groups;
 }
 
-function resolveRef(spec, ref) {
+export function resolveRef(spec, ref) {
   if (!ref?.startsWith('#/')) return null;
   const parts = ref.slice(2).split('/');
   let node = spec;
@@ -51,7 +51,7 @@ function resolveRef(spec, ref) {
   return node ?? null;
 }
 
-function getSchemaType(spec, schema) {
+export function getSchemaType(spec, schema) {
   if (!schema) return '';
   if (schema.$ref) {
     const resolved = resolveRef(spec, schema.$ref);
@@ -64,7 +64,7 @@ function getSchemaType(spec, schema) {
 }
 
 // Returns body info for Swagger 2 operations (which use in:"body" parameters).
-function getSwagger2BodyInfo(spec, op) {
+export function getSwagger2BodyInfo(spec, op) {
   const bodyParam = op.parameters?.find(p => p.in === 'body');
   if (!bodyParam) return null;
   return {

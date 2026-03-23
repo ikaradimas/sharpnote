@@ -7,12 +7,14 @@ import {
   makeLibEditorId, isLibEditorId, isNotebookId,
   getNotebookDisplayName, formatLogTime,
   extractHeadings, parseCsv, tableToCSV, formatFileSize, applyMath,
+  getSectionHeadingLevel, getCollapsedSections,
 } from './utils.js';
 
 // Re-export everything that tests import from this file
 export { DOCS_TAB_ID, LIB_EDITOR_ID_PREFIX };
 export { makeLibEditorId, isLibEditorId, isNotebookId, getNotebookDisplayName, formatLogTime };
 export { extractHeadings, parseCsv, tableToCSV, formatFileSize, applyMath };
+export { getSectionHeadingLevel, getCollapsedSections };
 
 // ── Component exports (for test re-exports) ───────────────────────────────────
 export { DataTable } from './components/output/DataTable.jsx';
