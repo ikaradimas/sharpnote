@@ -55,7 +55,7 @@ partial class Program
     // ── NuGet internals ───────────────────────────────────────────────────────
 
     private const string NuGetOfficialFeed = "https://api.nuget.org/v3/index.json";
-    private static readonly NuGetFramework TargetFramework = NuGetFramework.Parse("net8.0");
+    private static readonly NuGetFramework TargetFramework = NuGetFramework.Parse("net10.0");
 
     private static List<SourceRepository> BuildSourceRepositories(IEnumerable<string>? sourceUrls)
     {
@@ -166,7 +166,7 @@ partial class Program
                         identity.Id.ToLowerInvariant(),
                         identity.Version.ToNormalizedString().ToLowerInvariant());
 
-    // Finds the best net8.0-compatible DLLs from a package already in the
+    // Finds the best net10.0-compatible DLLs from a package already in the
     // local cache, using NuGet's own framework compatibility rules.
     private static List<string> GetDllsFromLocalPackage(string packagePath, NuGetFramework targetFramework)
     {

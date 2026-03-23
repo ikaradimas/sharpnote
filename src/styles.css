@@ -4068,38 +4068,84 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 .about-dialog {
   background: var(--bg-mid);
   border: 1px solid var(--border-default);
-  border-radius: 5px;
-  width: 380px;
+  border-radius: 6px;
+  width: 400px;
   display: flex; flex-direction: column;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.55);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.6);
 }
-.about-dialog-header {
-  display: flex; align-items: baseline; gap: 10px;
-  padding: 16px 20px 14px;
-  border-bottom: 1px solid var(--border-default);
+
+/* ── Header ── */
+.about-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 20px 22px 18px;
+  border-bottom: 1px solid var(--border-subtle);
 }
-.about-dialog-name {
+.about-logo {
+  width: 44px; height: 44px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #1a3a4a 0%, #0d2530 100%);
+  border: 1px solid var(--accent-primary-dim);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-code);
+  font-size: 15px; font-weight: 700;
+  color: var(--accent-primary);
+  text-shadow: 0 0 8px var(--accent-glow);
+  flex-shrink: 0;
+  letter-spacing: -0.5px;
+}
+.about-title-group {
+  display: flex; flex-direction: column; gap: 3px;
+}
+.about-name {
   font-family: var(--font-heading);
-  font-size: 15px; letter-spacing: 0.07em;
+  font-size: 18px; letter-spacing: 0.06em;
   color: var(--text-primary);
 }
-.about-dialog-version {
+.about-version {
   font-family: var(--font-code);
-  font-size: 11px; color: var(--text-dim);
+  font-size: 12px;
+  color: var(--accent-primary);
 }
-.about-dialog-body { padding: 14px 20px 16px; }
-.about-dialog-desc {
-  font-family: var(--font-ui); font-size: 12px; line-height: 1.6;
-  color: var(--text-secondary); margin: 0 0 14px;
+
+/* ── Body ── */
+.about-body { padding: 16px 22px 18px; display: flex; flex-direction: column; gap: 14px; }
+
+.about-desc {
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: var(--text-secondary);
+  margin: 0;
 }
-.about-dialog-stack {
+
+.about-section-label {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin-bottom: -6px;
+}
+
+.about-stack {
   display: flex; flex-wrap: wrap; gap: 6px;
 }
-.about-dialog-pill {
-  font-family: var(--font-code); font-size: 10px;
-  padding: 2px 8px; border-radius: 3px;
-  background: var(--bg-deep); border: 1px solid var(--border-subtle);
-  color: var(--text-dim);
+.about-pill {
+  font-family: var(--font-code);
+  font-size: 11px;
+  padding: 3px 9px;
+  border-radius: 4px;
+  background: var(--bg-deep);
+  border: 1px solid var(--border-default);
+  color: var(--text-muted);
+}
+
+.about-copyright {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: var(--text-faint);
 }
 
 /* ── Quit Dialog ─────────────────────────────────────────────────────────── */

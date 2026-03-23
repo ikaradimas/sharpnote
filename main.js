@@ -5,6 +5,8 @@ const { app, BrowserWindow, ipcMain, dialog, Menu, shell } =
 const path = require('path');
 const fs   = require('fs');
 
+app.name = 'SharpNote';
+
 // ── Sub-modules ───────────────────────────────────────────────────────────────
 const recentFiles   = require('./src/main/recent-files');
 const dbConnections = require('./src/main/db-connections');
