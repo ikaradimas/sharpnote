@@ -24,6 +24,11 @@ function applyFontSize(delta) {
   if (_mainWindow) _mainWindow.webContents.send('font-size-change', fontSize);
 }
 
+function setFontSize(size) {
+  fontSize = Math.min(FONT_SIZE_MAX, Math.max(FONT_SIZE_MIN, size));
+  if (_mainWindow) _mainWindow.webContents.send('font-size-change', fontSize);
+}
+
 function getFontSize() {
   return fontSize;
 }
@@ -56,12 +61,14 @@ function register(ipcMain, { app, shell, mainWindow } = {}) {
 
   ipcMain.handle('app-settings-load', () => loadAppSettings());
   ipcMain.handle('app-settings-save', (_e, s) => saveAppSettings(s));
+  ipcMain.handle('font-size-set', (_e, size) => setFontSize(size));
 }
 
 module.exports = {
   FONT_SIZE_MIN,
   FONT_SIZE_MAX,
   applyFontSize,
+  setFontSize,
   getFontSize,
   resetFontSize,
   loadAppSettings,

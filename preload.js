@@ -44,6 +44,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onFontSizeChange: (callback) => {
     ipcRenderer.on('font-size-change', (_event, size) => callback(size));
   },
+  setFontSize: (size) => ipcRenderer.invoke('font-size-set', size),
+
+  // App paths
+  getAppPaths: () => ipcRenderer.invoke('get-app-paths'),
 
   // Menu actions
   onMenuAction: (callback) => {

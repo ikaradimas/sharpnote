@@ -130,6 +130,12 @@ function registerAllHandlers() {
 
   // App info.
   ipcMain.handle('get-app-version', () => app.getVersion());
+  ipcMain.handle('get-app-paths', () => ({
+    userData: app.getPath('userData'),
+    documents: app.getPath('documents'),
+    library: libraryDir,
+    logs: logDir,
+  }));
 
   // URL fetch — used by the API browser panel; proxied through the main process
   // so that http:// URLs (e.g. local dev servers) bypass the renderer CSP.

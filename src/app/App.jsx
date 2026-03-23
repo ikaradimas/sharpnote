@@ -23,6 +23,7 @@ import { FloatPanel } from '../components/dock/FloatPanel.jsx';
 import { DockDropOverlay } from '../components/dock/DockDropOverlay.jsx';
 import { QuitDialog } from '../components/dialogs/QuitDialog.jsx';
 import { AboutDialog } from '../components/dialogs/AboutDialog.jsx';
+import { SettingsDialog } from '../components/dialogs/SettingsDialog.jsx';
 import { StatusBar } from './StatusBar.jsx';
 import { renderPanelContent } from '../components/dock/renderPanelContent.jsx';
 
@@ -50,6 +51,8 @@ export function App() {
   const initialNbIdRef = useRef(notebooks[0].id);
   const [quitDirtyNbs, setQuitDirtyNbs] = useState(null);
   const [aboutOpen, setAboutOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [fontSize, setFontSizeState] = useState(12.6);
 
   // Dock layout state
   const [dockLayout, setDockLayout] = useState(DEFAULT_DOCK_LAYOUT);
@@ -464,6 +467,7 @@ export function App() {
     if (!window.electronAPI?.onFontSizeChange) return;
     window.electronAPI.onFontSizeChange((size) => {
       document.documentElement.style.setProperty('--base-font-size', String(size));
+      setFontSizeState(size);
     });
   }, []);
 
@@ -1217,6 +1221,7 @@ export function App() {
     'toggle-files':    () => setFilesPanelOpen((v) => !v),
     'toggle-api':      () => setApiPanelOpen((v) => !v),
     about: () => setAboutOpen(true),
+    settings: () => setSettingsOpen(true),
   };
 
   // Sync open tabs to main process so it can build the Window menu.
@@ -1525,6 +1530,17 @@ export function App() {
         hovered={hoveredDropZone}
       />
       {aboutOpen && <AboutDialog onClose={() => setAboutOpen(false)} />}
+      {settingsOpen && (
+        <SettingsDialog
+          theme={theme}
+          fontSize={fontSize}
+          onThemeChange={setTheme}
+          onFontSizeChange={(size) => window.electronAPI?.setFontSize(size)}
+          pinnedPaths={pinnedPaths}
+          onUnpin={handleTogglePin}
+          onClose={() => setSettingsOpen(false)}
+        />
+      )}
       {quitDirtyNbs && (
         <QuitDialog
           dirtyNbs={quitDirtyNbs}

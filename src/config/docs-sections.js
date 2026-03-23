@@ -447,4 +447,19 @@ export const DOCS_SECTIONS = [
       ]},
     ],
   },
+  {
+    id: 'settings', title: 'Settings',
+    content: [
+      { type: 'p', text: 'Open Settings from the application menu (⌘, on macOS, Ctrl+, on Windows/Linux) to configure appearance, paths, and startup behaviour.' },
+      { type: 'h3', text: 'Appearance' },
+      { type: 'ul', items: [
+        'Font Size — drag the slider (10–28 px) to resize the UI and editor fonts; a live preview updates as you drag. The Reset button restores the default of 12.6 px. The keyboard shortcuts ⌘= / ⌘- / ⌘0 still work outside the dialog.',
+        'Theme — click any theme tile to switch the colour scheme immediately. Eight built-in themes are available: kl1nt, Nord, Dracula, Tokyo Night, Monokai, Catppuccin, Solarized Dark, and GitHub Light.',
+      ]},
+      { type: 'h3', text: 'Paths' },
+      { type: 'p', text: 'Shows the four key directories used by SharpNote: Code Library, User Data, Logs, and Documents. Click the ↗ button next to any path to open it in Finder / Explorer.' },
+      { type: 'h3', text: 'Startup' },
+      { type: 'p', text: 'Lists all currently pinned notebooks. Pinned notebooks reopen automatically when SharpNote starts. Click ✕ next to a path to unpin it. To pin a notebook, right-click its tab and choose Pin.' },
+    ],
+  },
 ];

@@ -65,6 +65,8 @@ function buildMenu() {
       submenu: [
         { label: `About ${_app ? _app.name : 'SharpNote'}`, click: () => send('about') },
         { type: 'separator' },
+        { label: 'Preferences…', accelerator: 'CmdOrCtrl+,', click: () => send('settings') },
+        { type: 'separator' },
         { role: 'services' },
         { type: 'separator' },
         { role: 'hide' },
@@ -123,6 +125,10 @@ function buildMenu() {
       { role: 'paste' },
       { role: 'selectAll' },
       ...fontSizeItems,
+      ...(process.platform !== 'darwin' ? [
+        { type: 'separator' },
+        { label: 'Preferences…', accelerator: 'CmdOrCtrl+,', click: () => send('settings') },
+      ] : []),
     ],
   });
 

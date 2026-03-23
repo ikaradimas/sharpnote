@@ -60,6 +60,7 @@
 - **Log panel** — structured, time-stamped kernel log stream with `NOTEBOOK` lifecycle entries and `USER` entries written by `.Log()` calls in scripts
 - **Table of Contents** — live heading outline from markdown cells; click any entry to scroll to it
 - **API Browser** — enter any OpenAPI 3.x or Swagger 2.0 spec URL (JSON or YAML) to explore endpoints grouped by tag; expandable detail shows parameters, request body, and response schema types; **Try it** form sends live requests with path/query/body inputs; supports Bearer, API Key, and Basic auth applied to every request; save and recall multiple APIs with their auth config; all requests proxied through the main process for http:// local dev servers
+- **Settings dialog** — ⌘, / Ctrl+, opens a tabbed preferences dialog: Appearance (font size slider with live preview, theme picker), Paths (open Library / user data / log / documents folders in Finder), Startup (manage pinned notebooks that reopen on launch)
 - **Dark theme** — purpose-built urban dark CSS (~2 650 lines); no UI framework dependency
 
 ---
