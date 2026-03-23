@@ -682,6 +682,35 @@ export function App() {
     }, 50);
   }, [setNbDirty]);
 
+  // Inject content into the currently focused cell, or create a new cell if none is focused.
+  // Used by the API Browser "Inject" button.
+  const handleInjectApiCall = useCallback((content) => {
+    const nbId = activeIdRef.current;
+    if (!isNotebookId(nbId)) return;
+
+    // Detect the focused CodeMirror editor within the active notebook pane
+    const focusedEditor = document.querySelector(
+      `.notebook-pane[data-nb="${nbId}"] .cm-focused`
+    );
+    const cellWrapper = focusedEditor?.closest('.cell-wrapper[data-cell-id]');
+    const focusedCellId = cellWrapper?.dataset?.cellId;
+
+    if (focusedCellId) {
+      // Replace the focused cell's content with the snippet
+      setNbDirty(nbId, (n) => ({
+        cells: n.cells.map((c) => c.id === focusedCellId ? { ...c, content } : c),
+      }));
+      setTimeout(() => {
+        cellWrapper.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        cellWrapper.classList.add('cell-flash');
+        cellWrapper.addEventListener('animationend', () => cellWrapper.classList.remove('cell-flash'), { once: true });
+      }, 50);
+    } else {
+      // No focused cell — insert a new one after the last visible cell
+      handleInsertLibraryFile(content);
+    }
+  }, [setNbDirty, handleInsertLibraryFile]);
+
   // Open a library file in an editor tab
   const handleOpenLibraryFile = useCallback(async (file) => {
     if (!window.electronAPI) return;
@@ -1357,7 +1386,7 @@ export function App() {
       },
       api: {
         onToggle: () => setApiPanelOpen((v) => !v),
-        onInsert: handleInsertLibraryFile,
+        onInsert: handleInjectApiCall,
       },
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
