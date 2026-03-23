@@ -24,7 +24,7 @@ function writeLog(tag, message) {
       path.join(_logDir, `${date}.log`),
       `${timestamp} [${tag}] ${message}\n`
     );
-    if (_mainWindow) {
+    if (_mainWindow && !_mainWindow.isDestroyed()) {
       _mainWindow.webContents.send('log-entry', { timestamp, tag, message });
     }
   } catch (e) {
