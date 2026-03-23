@@ -153,10 +153,16 @@ describe('CodeCell – execution timer', () => {
     expect(document.querySelector('.cell-execution-timer').textContent).toContain('0s');
   });
 
-  it('hides timer when isRunning transitions to false', () => {
+  it('keeps timer visible when isRunning transitions to false', () => {
     const { rerender } = render(<CodeCell {...defaultProps({ isRunning: true })} />);
     rerender(<CodeCell {...defaultProps({ isRunning: false })} />);
-    expect(document.querySelector('.cell-execution-timer')).toBeNull();
+    expect(document.querySelector('.cell-execution-timer')).not.toBeNull();
+  });
+
+  it('hides spinner after execution ends', () => {
+    const { rerender } = render(<CodeCell {...defaultProps({ isRunning: true })} />);
+    rerender(<CodeCell {...defaultProps({ isRunning: false })} />);
+    expect(document.querySelector('.cell-execution-spinner')).toBeNull();
   });
 
   it('increments elapsed time after 1 second', async () => {

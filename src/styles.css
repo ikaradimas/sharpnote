@@ -513,6 +513,7 @@ body {
 }
 
 .cell-lock-btn {
+  margin-left: auto;
   background: transparent;
   border: none;
   cursor: pointer;

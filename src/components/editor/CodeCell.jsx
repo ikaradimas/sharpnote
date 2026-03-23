@@ -64,12 +64,21 @@ export function CodeCell({
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
   const [elapsed, setElapsed] = useState(0);
+  const [lastDuration, setLastDuration] = useState(null);
+  const elapsedRef = useRef(0);
 
   useEffect(() => {
-    if (!isRunning) { setElapsed(0); return; }
+    if (!isRunning) return;
+    elapsedRef.current = 0;
     setElapsed(0);
-    const id = setInterval(() => setElapsed((e) => e + 1), 1000);
-    return () => clearInterval(id);
+    const id = setInterval(() => {
+      elapsedRef.current += 1;
+      setElapsed(elapsedRef.current);
+    }, 1000);
+    return () => {
+      clearInterval(id);
+      setLastDuration(elapsedRef.current);
+    };
   }, [isRunning]);
 
   useEffect(() => {
@@ -144,10 +153,10 @@ export function CodeCell({
       />
       <CellOutput messages={outputs} />
       <div className="code-cell-footer">
-        {isRunning && (
+        {(isRunning || lastDuration !== null) && (
           <span className="cell-execution-timer">
-            <span className="cell-execution-spinner" />
-            {formatElapsed(elapsed)}
+            {isRunning && <span className="cell-execution-spinner" />}
+            {formatElapsed(isRunning ? elapsed : lastDuration)}
           </span>
         )}
         <button
