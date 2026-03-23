@@ -15,9 +15,17 @@ import { CSHARP_KEYWORDS } from '../../config/csharp-keywords.js';
 export let _setCursorPos = null;
 export function registerCursorPosSetter(fn) { _setCursorPos = fn; }
 
+// Applied via a Compartment for alt-indexed cells so CodeMirror's own theming
+// mechanism sets the background — CSS overrides fight with oneDark's injected
+// StyleModule and always lose. CSS variables resolve correctly here.
+const altEditorTheme = EditorView.theme({
+  '&': { backgroundColor: 'var(--bg-mid)' },
+  '.cm-gutters': { backgroundColor: 'var(--bg-mid)' },
+});
+
 export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
                       onRequestCompletions, onRequestLint, readOnly = false,
-                      cellIndex = null }) {
+                      cellIndex = null, isAlt = false }) {
   const containerRef = useRef(null);
   const viewRef = useRef(null);
   const onChangeRef = useRef(onChange);
@@ -25,6 +33,7 @@ export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
   const completionsRef = useRef(onRequestCompletions);
   const lintRef = useRef(onRequestLint);
   const readOnlyCompartmentRef = useRef(null);
+  const altThemeCompartmentRef = useRef(null);
   const cellIndexRef = useRef(cellIndex);
 
   useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
@@ -40,6 +49,14 @@ export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
     if (!view || !compartment) return;
     view.dispatch({ effects: compartment.reconfigure(EditorState.readOnly.of(readOnly)) });
   }, [readOnly]);
+
+  // Swap alt-row background when cell position changes (e.g. after a move/delete)
+  useEffect(() => {
+    const view = viewRef.current;
+    const compartment = altThemeCompartmentRef.current;
+    if (!view || !compartment) return;
+    view.dispatch({ effects: compartment.reconfigure(isAlt ? altEditorTheme : []) });
+  }, [isAlt]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -70,6 +87,8 @@ export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
 
     const readOnlyCompartment = new Compartment();
     readOnlyCompartmentRef.current = readOnlyCompartment;
+    const altThemeCompartment = new Compartment();
+    altThemeCompartmentRef.current = altThemeCompartment;
 
     const extensions = [
       history(),
@@ -84,6 +103,7 @@ export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
       blurHandler,
       EditorView.lineWrapping,
       readOnlyCompartment.of(EditorState.readOnly.of(readOnly)),
+      altThemeCompartment.of(isAlt ? altEditorTheme : []),
     ];
 
     if (language === 'csharp') {

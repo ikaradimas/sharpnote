@@ -65,6 +65,7 @@ export function CodeCell({
   onToggleLock,
   requestCompletions,
   requestLint,
+  isAlt = false,
 }) {
   const outputMode = cell.outputMode || 'auto';
   const locked = cell.locked || false;
@@ -159,6 +160,7 @@ export function CodeCell({
         onRequestLint={requestLint}
         readOnly={locked}
         cellIndex={cellIndex}
+        isAlt={isAlt}
       />
       <CellOutput messages={outputs} />
       <div className="code-cell-footer">

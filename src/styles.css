@@ -633,21 +633,12 @@ body {
   background: var(--bg-base);
 }
 
-/* Alternating row tint. The .cell-wrapper-alt class is applied by
-   NotebookView via index % 2, which is reliable unlike :nth-child which
-   is affected by the leading <AddBar> sibling.
-   Uses solid background shorthand — NOT a background-image overlay.
-   The global .cm-editor rule uses the background shorthand (!important),
-   which implicitly resets background-image, making overlay-based tints
-   unreliable. A plain solid color at higher specificity (0,2,0 vs 0,1,0)
-   cleanly overrides it. Gutter is targeted separately as CodeMirror's
-   oneDark theme sets its own background on that element. */
-.cell-wrapper-alt .cm-editor {
-  background: var(--bg-mid) !important;
-}
-.cell-wrapper-alt .cm-gutters {
-  background: var(--bg-mid) !important;
-}
+/* Alternating row tint: handled in CodeEditor.jsx via EditorView.theme()
+   in an altThemeCompartment. CodeMirror's own theming mechanism is used
+   because CSS overrides fight with oneDark's injected StyleModule and
+   the global .cm-editor background shorthand always resets background-image.
+   The .cell-wrapper-alt class is still applied in NotebookView for any
+   future CSS use, but CodeMirror backgrounds are managed from JS. */
 
 .code-cell-header {
   display: flex;
