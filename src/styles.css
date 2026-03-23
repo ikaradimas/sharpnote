@@ -636,19 +636,18 @@ body {
   background: var(--bg-base);
 }
 
-/* Alternating row tint — a semi-transparent overlay composited on top of
-   the existing background.  Using an overlay avoids the rounding-to-zero
-   problem that color-mix hits when bg-base and bg-mid are very close.
-   The .notebook's leading <AddBar> is the first child, so odd cell-wrappers
-   are positions 3, 5, 7… — giving Cell 2, 4, 6… the tint as expected.
-   Only --cell-alt-overlay needs a per-theme value (github-light uses black). */
-.cell-wrapper:nth-child(odd) .code-cell {
-  background: linear-gradient(var(--cell-alt-overlay), var(--cell-alt-overlay)),
-              var(--bg-base);
+/* Alternating row tint.  The .cell-wrapper-alt class is applied by
+   NotebookView via index % 2, which is reliable unlike :nth-child which
+   is affected by the leading <AddBar> sibling.  background-color and
+   background-image are set separately to avoid the CSS shorthand
+   ambiguity that prevents var() from being parsed as a <color>. */
+.cell-wrapper-alt .code-cell {
+  background-color: var(--bg-base);
+  background-image: linear-gradient(var(--cell-alt-overlay), var(--cell-alt-overlay));
 }
-.cell-wrapper:nth-child(odd) .cm-editor {
-  background: linear-gradient(var(--cell-alt-overlay), var(--cell-alt-overlay)),
-              var(--bg-deep) !important;
+.cell-wrapper-alt .cm-editor {
+  background-color: var(--bg-deep) !important;
+  background-image: linear-gradient(var(--cell-alt-overlay), var(--cell-alt-overlay)) !important;
 }
 
 .code-cell-header {
