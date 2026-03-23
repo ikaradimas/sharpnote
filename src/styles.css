@@ -5,6 +5,7 @@
 :root {
   /* Non-theme */
   --base-font-size: 12.6;
+  --panel-zoom: 1;
   --font-ui:      'Share Tech Mono', 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
   --font-heading: 'Orbitron', 'Share Tech Mono', monospace;
   --font-code:    'Cascadia Code', 'Fira Code', 'Consolas', monospace;
@@ -3566,6 +3567,7 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  zoom: var(--panel-zoom);
 }
 
 @keyframes panel-content-flash {
@@ -3722,6 +3724,7 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  zoom: var(--panel-zoom);
 }
 .float-panel-resize {
   position: absolute;

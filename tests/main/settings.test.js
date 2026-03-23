@@ -88,6 +88,81 @@ describe('resetFontSize', () => {
   });
 });
 
+// ── Panel font size ────────────────────────────────────────────────────────────
+
+describe('panel font size constants', () => {
+  it('PANEL_FONT_SIZE_MIN is 8', () => {
+    expect(settings.PANEL_FONT_SIZE_MIN).toBe(8);
+  });
+
+  it('PANEL_FONT_SIZE_MAX is 18', () => {
+    expect(settings.PANEL_FONT_SIZE_MAX).toBe(18);
+  });
+
+  it('PANEL_FONT_SIZE_DEFAULT is 11.5', () => {
+    expect(settings.PANEL_FONT_SIZE_DEFAULT).toBe(11.5);
+  });
+});
+
+describe('setPanelFontSize / getPanelFontSize', () => {
+  beforeEach(() => {
+    settings.resetPanelFontSize();
+  });
+
+  it('returns the default after reset', () => {
+    expect(settings.getPanelFontSize()).toBeCloseTo(11.5);
+  });
+
+  it('sets a valid size', () => {
+    settings.setPanelFontSize(14);
+    expect(settings.getPanelFontSize()).toBe(14);
+  });
+
+  it('clamps to PANEL_FONT_SIZE_MAX', () => {
+    settings.setPanelFontSize(100);
+    expect(settings.getPanelFontSize()).toBe(settings.PANEL_FONT_SIZE_MAX);
+  });
+
+  it('clamps to PANEL_FONT_SIZE_MIN', () => {
+    settings.setPanelFontSize(1);
+    expect(settings.getPanelFontSize()).toBe(settings.PANEL_FONT_SIZE_MIN);
+  });
+
+  it('sends panel-font-size-change via webContents when mainWindow is set', () => {
+    const sent = [];
+    const fakeWindow = { webContents: { send: (ch, val) => sent.push({ ch, val }) } };
+    settings.setMainWindow(fakeWindow);
+    settings.setPanelFontSize(13);
+    settings.setMainWindow(null);
+    expect(sent).toHaveLength(1);
+    expect(sent[0].ch).toBe('panel-font-size-change');
+    expect(sent[0].val).toBe(13);
+  });
+
+  it('does not throw when mainWindow is null', () => {
+    settings.setMainWindow(null);
+    expect(() => settings.setPanelFontSize(12)).not.toThrow();
+  });
+});
+
+describe('resetPanelFontSize', () => {
+  it('resets to 11.5 after a change', () => {
+    settings.setPanelFontSize(15);
+    settings.resetPanelFontSize();
+    expect(settings.getPanelFontSize()).toBeCloseTo(11.5);
+  });
+
+  it('sends panel-font-size-change on reset', () => {
+    const sent = [];
+    const fakeWindow = { webContents: { send: (ch, val) => sent.push({ ch, val }) } };
+    settings.setMainWindow(fakeWindow);
+    settings.resetPanelFontSize();
+    settings.setMainWindow(null);
+    expect(sent).toHaveLength(1);
+    expect(sent[0].val).toBeCloseTo(11.5);
+  });
+});
+
 // ── loadAppSettings / saveAppSettings ─────────────────────────────────────────
 
 describe('loadAppSettings', () => {

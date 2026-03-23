@@ -56,6 +56,10 @@ export function App() {
   const fontSizeRef = useRef(12.6);
   useEffect(() => { fontSizeRef.current = fontSize; }, [fontSize]);
 
+  const [panelFontSize, setPanelFontSizeState] = useState(11.5);
+  const panelFontSizeRef = useRef(11.5);
+  useEffect(() => { panelFontSizeRef.current = panelFontSize; }, [panelFontSize]);
+
   // Dock layout state
   const [dockLayout, setDockLayout] = useState(DEFAULT_DOCK_LAYOUT);
   const [savedLayouts, setSavedLayouts] = useState([]);
@@ -473,6 +477,14 @@ export function App() {
     });
   }, []);
 
+  useEffect(() => {
+    if (!window.electronAPI?.onPanelFontSizeChange) return;
+    window.electronAPI.onPanelFontSizeChange((size) => {
+      document.documentElement.style.setProperty('--panel-zoom', String(size / 11.5));
+      setPanelFontSizeState(size);
+    });
+  }, []);
+
   // ── Cell execution ─────────────────────────────────────────────────────────
 
   const runCell = useCallback((notebookId, cell) => {
@@ -809,6 +821,7 @@ export function App() {
         pinnedTabs: [...pinnedPathsRef.current],
       },
       fontSize: fontSizeRef.current,
+      panelFontSize: panelFontSizeRef.current,
       dbConnections: dbConnectionsRef.current,
       apiSaved,
     };
@@ -841,6 +854,9 @@ export function App() {
     }
     if (typeof data.fontSize === 'number') {
       window.electronAPI?.setFontSize(data.fontSize);
+    }
+    if (typeof data.panelFontSize === 'number') {
+      window.electronAPI?.setPanelFontSize(data.panelFontSize);
     }
     if (Array.isArray(data.dbConnections)) {
       setDbConnections(data.dbConnections);
@@ -1602,6 +1618,8 @@ export function App() {
           fontSize={fontSize}
           onThemeChange={setTheme}
           onFontSizeChange={(size) => window.electronAPI?.setFontSize(size)}
+          panelFontSize={panelFontSize}
+          onPanelFontSizeChange={(size) => window.electronAPI?.setPanelFontSize(size)}
           pinnedPaths={pinnedPaths}
           onUnpin={handleTogglePin}
           onExport={handleExportSettings}

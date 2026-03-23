@@ -19,6 +19,8 @@ function makeProps(overrides = {}) {
     fontSize: 12.6,
     onThemeChange: vi.fn(),
     onFontSizeChange: vi.fn(),
+    panelFontSize: 11.5,
+    onPanelFontSizeChange: vi.fn(),
     pinnedPaths: new Set(),
     onUnpin: vi.fn(),
     onExport: vi.fn().mockResolvedValue({ success: true }),
@@ -50,7 +52,7 @@ describe('SettingsDialog rendering', () => {
 
   it('shows Appearance section by default', () => {
     render(<SettingsDialog {...makeProps()} />);
-    expect(screen.getByRole('slider')).toBeInTheDocument();
+    expect(screen.getAllByRole('slider').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('kl1nt')).toBeInTheDocument(); // theme tile
   });
 
@@ -123,7 +125,7 @@ describe('font size slider', () => {
 
   it('slider has correct min/max', () => {
     render(<SettingsDialog {...makeProps()} />);
-    const slider = screen.getByRole('slider');
+    const slider = screen.getAllByRole('slider')[0];
     expect(slider).toHaveAttribute('min', '10');
     expect(slider).toHaveAttribute('max', '28');
   });
@@ -131,20 +133,53 @@ describe('font size slider', () => {
   it('calls onFontSizeChange when slider moves', () => {
     const props = makeProps();
     render(<SettingsDialog {...props} />);
-    fireEvent.change(screen.getByRole('slider'), { target: { value: '16' } });
+    fireEvent.change(screen.getAllByRole('slider')[0], { target: { value: '16' } });
     expect(props.onFontSizeChange).toHaveBeenCalledWith(16);
   });
 
   it('calls onFontSizeChange with 12.6 when Reset is clicked', () => {
     const props = makeProps({ fontSize: 20 });
     render(<SettingsDialog {...props} />);
-    fireEvent.click(screen.getByText('Reset'));
+    fireEvent.click(screen.getAllByText('Reset')[0]);
     expect(props.onFontSizeChange).toHaveBeenCalledWith(12.6);
   });
 
   it('font preview text is present', () => {
     render(<SettingsDialog {...makeProps()} />);
     expect(screen.getByText('The quick brown fox')).toBeInTheDocument();
+  });
+});
+
+// ── Appearance — panel font size ──────────────────────────────────────────────
+
+describe('panel font size slider', () => {
+  it('shows current panel font size value', () => {
+    render(<SettingsDialog {...makeProps({ panelFontSize: 14 })} />);
+    expect(screen.getByText('14.0 px')).toBeInTheDocument();
+  });
+
+  it('panel slider has correct min/max', () => {
+    render(<SettingsDialog {...makeProps()} />);
+    const sliders = screen.getAllByRole('slider');
+    const panelSlider = sliders[1]; // second slider is panel font size
+    expect(panelSlider).toHaveAttribute('min', '8');
+    expect(panelSlider).toHaveAttribute('max', '18');
+  });
+
+  it('calls onPanelFontSizeChange when panel slider moves', () => {
+    const props = makeProps();
+    render(<SettingsDialog {...props} />);
+    const sliders = screen.getAllByRole('slider');
+    fireEvent.change(sliders[1], { target: { value: '13' } });
+    expect(props.onPanelFontSizeChange).toHaveBeenCalledWith(13);
+  });
+
+  it('calls onPanelFontSizeChange with 11.5 when panel Reset is clicked', () => {
+    const props = makeProps({ panelFontSize: 16 });
+    render(<SettingsDialog {...props} />);
+    const resetBtns = screen.getAllByText('Reset');
+    fireEvent.click(resetBtns[1]); // second Reset is panel font size
+    expect(props.onPanelFontSizeChange).toHaveBeenCalledWith(11.5);
   });
 });
 

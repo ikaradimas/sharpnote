@@ -79,6 +79,7 @@ function createWindow() {
 
   mainWindow.webContents.on('did-finish-load', () => {
     mainWindow.webContents.send('font-size-change', settings.getFontSize());
+    mainWindow.webContents.send('panel-font-size-change', settings.getPanelFontSize());
   });
 
   mainWindow.on('close', (event) => {

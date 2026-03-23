@@ -155,6 +155,8 @@ function buildMenu() {
       { label: 'Library',           accelerator: 'CmdOrCtrl+Shift+L', click: () => send('toggle-library') },
       { label: 'File Explorer',     accelerator: 'CmdOrCtrl+Shift+E', click: () => send('toggle-files') },
       { label: 'API Browser',       accelerator: 'CmdOrCtrl+Shift+A', click: () => send('toggle-api') },
+      { type: 'separator' },
+      { label: 'Settings…',         accelerator: 'CmdOrCtrl+,',       click: () => send('settings') },
     ],
   });
 

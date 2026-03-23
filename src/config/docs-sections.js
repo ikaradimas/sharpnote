@@ -453,7 +453,8 @@ export const DOCS_SECTIONS = [
       { type: 'p', text: 'Open Settings from the application menu (⌘, on macOS, Ctrl+, on Windows/Linux) to configure appearance, paths, and startup behaviour.' },
       { type: 'h3', text: 'Appearance' },
       { type: 'ul', items: [
-        'Font Size — drag the slider (10–28 px) to resize the UI and editor fonts; a live preview updates as you drag. The Reset button restores the default of 12.6 px. The keyboard shortcuts ⌘= / ⌘- / ⌘0 still work outside the dialog.',
+        'Editor Font Size — drag the slider (10–28 px) to resize the notebook editor font; a live preview updates as you drag. The Reset button restores the default of 12.6 px. The keyboard shortcuts ⌘= / ⌘- / ⌘0 still work outside the dialog.',
+        'Panel Font Size — drag the slider (8–18 px) to scale all panel content (Logs, Variables, DB, etc.) uniformly. The Reset button restores the default of 11.5 px.',
         'Theme — click any theme tile to switch the colour scheme immediately. Eight built-in themes are available: kl1nt, Nord, Dracula, Tokyo Night, Monokai, Catppuccin, Solarized Dark, and GitHub Light.',
       ]},
       { type: 'h3', text: 'Paths' },
@@ -461,7 +462,7 @@ export const DOCS_SECTIONS = [
       { type: 'h3', text: 'Startup' },
       { type: 'p', text: 'Lists all currently pinned notebooks. Pinned notebooks reopen automatically when SharpNote starts. Click ✕ next to a path to unpin it. To pin a notebook, right-click its tab and choose Pin.' },
       { type: 'h3', text: 'Export / Import' },
-      { type: 'p', text: 'The Export… and Import… buttons at the bottom of the sidebar let you back up and restore your entire configuration as a single JSON file. The exported file includes theme, font size, dock layout, saved dock layout presets, pinned notebooks, database connections, and saved API configurations. Importing applies all fields that are present in the file and immediately persists them — missing fields are left unchanged.' },
+      { type: 'p', text: 'The Export… and Import… buttons at the bottom of the sidebar let you back up and restore your entire configuration as a single JSON file. The exported file includes theme, editor font size, panel font size, dock layout, saved dock layout presets, pinned notebooks, database connections, and saved API configurations. Importing applies all fields that are present in the file and immediately persists them — missing fields are left unchanged.' },
     ],
   },
 ];

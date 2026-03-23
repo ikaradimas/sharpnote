@@ -5,13 +5,17 @@ const FONT_SIZE_MIN = 10;
 const FONT_SIZE_MAX = 28;
 const FONT_SIZE_DEFAULT = 12.6;
 
+const PANEL_FONT_SIZE_MIN = 8;
+const PANEL_FONT_SIZE_MAX = 18;
+const PANEL_FONT_SIZE_DEFAULT = 11.5;
+
 // ── Appearance section ────────────────────────────────────────────────────────
 
-function AppearanceSection({ theme, fontSize, onThemeChange, onFontSizeChange }) {
+function AppearanceSection({ theme, fontSize, onThemeChange, onFontSizeChange, panelFontSize, onPanelFontSizeChange }) {
   return (
     <div className="settings-section">
       <div className="settings-group">
-        <div className="settings-group-label">Font Size</div>
+        <div className="settings-group-label">Editor Font Size</div>
         <div className="settings-font-row">
           <input
             type="range"
@@ -33,6 +37,29 @@ function AppearanceSection({ theme, fontSize, onThemeChange, onFontSizeChange })
         </div>
         <div className="settings-font-preview" style={{ fontSize: `${fontSize}px` }}>
           The quick brown fox
+        </div>
+      </div>
+
+      <div className="settings-group">
+        <div className="settings-group-label">Panel Font Size</div>
+        <div className="settings-font-row">
+          <input
+            type="range"
+            min={PANEL_FONT_SIZE_MIN}
+            max={PANEL_FONT_SIZE_MAX}
+            step="0.5"
+            value={panelFontSize}
+            onChange={(e) => onPanelFontSizeChange(parseFloat(e.target.value))}
+            className="settings-font-slider"
+          />
+          <span className="settings-font-value">{Number(panelFontSize).toFixed(1)} px</span>
+          <button
+            className="settings-reset-btn"
+            onClick={() => onPanelFontSizeChange(PANEL_FONT_SIZE_DEFAULT)}
+            title="Reset to default"
+          >
+            Reset
+          </button>
         </div>
       </div>
 
@@ -166,6 +193,8 @@ export function SettingsDialog({
   fontSize,
   onThemeChange,
   onFontSizeChange,
+  panelFontSize,
+  onPanelFontSizeChange,
   pinnedPaths,
   onUnpin,
   onExport,
@@ -245,6 +274,8 @@ export function SettingsDialog({
                 fontSize={fontSize}
                 onThemeChange={onThemeChange}
                 onFontSizeChange={onFontSizeChange}
+                panelFontSize={panelFontSize}
+                onPanelFontSizeChange={onPanelFontSizeChange}
               />
             )}
             {activeSection === 'paths' && (
