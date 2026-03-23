@@ -30,13 +30,19 @@ function CellControls({ onMoveUp, onMoveDown, onDelete }) {
   );
 }
 
-function formatElapsed(seconds) {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
+function formatElapsed(ms) {
+  if (ms < 60_000) {
+    // Show two decimal places below 10 s, one decimal above.
+    return ms < 10_000
+      ? `${(ms / 1000).toFixed(2)}s`
+      : `${(ms / 1000).toFixed(1)}s`;
+  }
+  const totalSec = Math.floor(ms / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
   if (h > 0) return `${h}h ${m}m ${s}s`;
-  if (m > 0) return `${m}m ${s}s`;
-  return `${s}s`;
+  return `${m}m ${s}s`;
 }
 
 export function CodeCell({
@@ -70,12 +76,13 @@ export function CodeCell({
 
   useEffect(() => {
     if (!isRunning) return;
+    const startTime = Date.now();
     elapsedRef.current = 0;
     setElapsed(0);
     const id = setInterval(() => {
-      elapsedRef.current += 1;
+      elapsedRef.current = Date.now() - startTime;
       setElapsed(elapsedRef.current);
-    }, 1000);
+    }, 100);
     return () => {
       clearInterval(id);
       setLastDuration(elapsedRef.current);

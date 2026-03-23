@@ -189,11 +189,11 @@ describe('CodeCell – execution timer', () => {
     expect(document.querySelector('.cell-exec-icon')).toBeNull();
   });
 
-  it('increments elapsed time after 1 second', async () => {
+  it('shows elapsed time after 1 second', async () => {
     vi.useFakeTimers();
     render(<CodeCell {...defaultProps({ isRunning: true })} />);
     act(() => { vi.advanceTimersByTime(1000); });
-    expect(document.querySelector('.cell-execution-timer').textContent).toContain('1s');
+    expect(document.querySelector('.cell-execution-timer').textContent).toContain('1.00s');
     vi.useRealTimers();
   });
 
