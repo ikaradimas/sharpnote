@@ -1516,9 +1516,77 @@ body {
 
 .nuget-id-input { flex: 1; min-width: 0; }
 .nuget-ver-input { width: 100px; }
-.nuget-ver-edit-input { width: 120px; flex-shrink: 0; padding: 1px 5px; height: 20px; font-size: 11px; }
-.nuget-ver-btn { opacity: 0; transition: opacity 0.1s; }
-.nuget-item:hover .nuget-ver-btn { opacity: 1; }
+
+/* ── Version picker ── */
+.nuget-ver-picker { position: relative; flex-shrink: 0; }
+
+.nuget-ver-picker-btn {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  background: var(--bg-deep);
+  border: 1px solid var(--border-default);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-family: var(--font-ui);
+  padding: 1px 5px;
+  height: 20px;
+  border-radius: 3px;
+  cursor: pointer;
+  max-width: 120px;
+  min-width: 60px;
+}
+.nuget-ver-picker-btn:hover {
+  border-color: var(--accent-primary-dim);
+  color: var(--accent-secondary);
+}
+.nuget-ver-picker-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nuget-ver-picker-chevron { flex-shrink: 0; opacity: 0.6; font-size: 9px; }
+
+/* Portal dropdown — fixed over everything */
+.nuget-ver-picker-dropdown {
+  position: fixed;
+  z-index: 9999;
+  background: var(--bg-deep);
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  max-height: 220px;
+  overflow-y: auto;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.5);
+}
+.nuget-ver-picker-dropdown::-webkit-scrollbar { width: 5px; }
+.nuget-ver-picker-dropdown::-webkit-scrollbar-track { background: var(--bg-deep); }
+.nuget-ver-picker-dropdown::-webkit-scrollbar-thumb { background: var(--border-default); border-radius: 3px; }
+
+.nuget-ver-picker-loading {
+  padding: 6px 10px;
+  font-size: 11px;
+  color: var(--text-faint);
+  font-family: var(--font-ui);
+  white-space: nowrap;
+}
+
+.nuget-ver-picker-option {
+  display: block;
+  width: 100%;
+  padding: 3px 10px;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-family: var(--font-ui);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.nuget-ver-picker-option:hover { background: var(--border-default); color: var(--accent-secondary); }
+.nuget-ver-picker-selected { color: var(--accent-primary) !important; }
 
 .nuget-add-btn {
   background: var(--accent-warm-bg);
@@ -1686,13 +1754,6 @@ body {
   flex-shrink: 0;
 }
 
-.nuget-result-ver-input {
-  width: 90px;
-  flex-shrink: 0;
-  padding: 1px 5px;
-  height: 18px;
-  font-size: 11px;
-}
 
 .nuget-result-dl {
   font-size: 10px;
