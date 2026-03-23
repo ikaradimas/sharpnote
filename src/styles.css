@@ -674,12 +674,6 @@ body {
 }
 .run-btn:disabled { background: #14130a; border-color: var(--border-strong); color: #2a5060; cursor: not-allowed; box-shadow: none; }
 
-.running-spinner {
-  font-size: 11px;
-  color: var(--accent-primary);
-  text-shadow: 0 0 6px var(--accent-glow);
-}
-
 .cell-run-group { position: relative; display: flex; align-items: center; }
 .cell-run-group .run-btn { border-radius: 2px 0 0 2px; }
 

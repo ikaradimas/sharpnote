@@ -124,7 +124,6 @@ export function CodeCell({
             </div>
           )}
         </div>
-        {isRunning && <span className="running-spinner">executing…</span>}
         <div className="header-right">
           <label className="output-mode-label">output</label>
           <select

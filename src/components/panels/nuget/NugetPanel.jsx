@@ -252,7 +252,7 @@ function BrowseTab({ sources, onAdd, installedPackages }) {
         {results.map((pkg) => {
           const installed = isInstalled(pkg.id);
           // versionChoices[id] === undefined → use latest from search; null → "latest" (no pin)
-          const chosenVersion = versionChoices.hasOwnProperty(pkg.id)
+          const chosenVersion = Object.hasOwn(versionChoices, pkg.id)
             ? versionChoices[pkg.id]
             : pkg.version;
           return (

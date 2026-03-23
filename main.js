@@ -40,18 +40,9 @@ menuBuilder.init({
   Menu,
   mainWindow: null,
   getRecentFiles:  recentFiles.getRecentFiles,
-  saveRecentFiles: (list) => {
-    // Clear internal list and persist (used by "Clear Recent Files" menu item).
+  saveRecentFiles: () => {
     recentFiles.clearRecentFiles();
-    const userDataPath = app.getPath('userData');
-    recentFiles.saveRecentFiles.call(null); // persist empty list
-    // Re-expose the path dependency by re-calling loadRecentFiles with empty list trick.
-    // Actually, just write the empty array directly.
-    try {
-      const p = path.join(userDataPath, 'recent-files.json');
-      fs.mkdirSync(path.dirname(p), { recursive: true });
-      fs.writeFileSync(p, JSON.stringify(list, null, 2), 'utf-8');
-    } catch {}
+    recentFiles.saveRecentFiles();
   },
   applyFontSize: settings.applyFontSize,
   resetFontSize: settings.resetFontSize,
