@@ -6,7 +6,12 @@ const fs   = require('fs');
 const FONT_SIZE_MIN = 10;
 const FONT_SIZE_MAX = 28;
 
+const PANEL_FONT_SIZE_MIN     = 8;
+const PANEL_FONT_SIZE_MAX     = 18;
+const PANEL_FONT_SIZE_DEFAULT = 11.5;
+
 let fontSize         = 12.6;
+let panelFontSize    = PANEL_FONT_SIZE_DEFAULT;
 let _mainWindow      = null;
 let _appSettingsPath = null;
 
@@ -18,6 +23,8 @@ function init({ mainWindow, appSettingsPath }) {
 function setMainWindow(win) {
   _mainWindow = win;
 }
+
+// ── Editor font size ──────────────────────────────────────────────────────────
 
 function applyFontSize(delta) {
   fontSize = Math.min(FONT_SIZE_MAX, Math.max(FONT_SIZE_MIN, fontSize + delta));
@@ -37,6 +44,24 @@ function resetFontSize() {
   fontSize = 12.6;
   if (_mainWindow) _mainWindow.webContents.send('font-size-change', fontSize);
 }
+
+// ── Panel font size ───────────────────────────────────────────────────────────
+
+function setPanelFontSize(size) {
+  panelFontSize = Math.min(PANEL_FONT_SIZE_MAX, Math.max(PANEL_FONT_SIZE_MIN, size));
+  if (_mainWindow) _mainWindow.webContents.send('panel-font-size-change', panelFontSize);
+}
+
+function getPanelFontSize() {
+  return panelFontSize;
+}
+
+function resetPanelFontSize() {
+  panelFontSize = PANEL_FONT_SIZE_DEFAULT;
+  if (_mainWindow) _mainWindow.webContents.send('panel-font-size-change', panelFontSize);
+}
+
+// ── App settings ──────────────────────────────────────────────────────────────
 
 function loadAppSettings(appSettingsPath) {
   const p = appSettingsPath || _appSettingsPath;
@@ -62,15 +87,22 @@ function register(ipcMain, { app, shell, mainWindow } = {}) {
   ipcMain.handle('app-settings-load', () => loadAppSettings());
   ipcMain.handle('app-settings-save', (_e, s) => saveAppSettings(s));
   ipcMain.handle('font-size-set', (_e, size) => setFontSize(size));
+  ipcMain.handle('panel-font-size-set', (_e, size) => setPanelFontSize(size));
 }
 
 module.exports = {
   FONT_SIZE_MIN,
   FONT_SIZE_MAX,
+  PANEL_FONT_SIZE_MIN,
+  PANEL_FONT_SIZE_MAX,
+  PANEL_FONT_SIZE_DEFAULT,
   applyFontSize,
   setFontSize,
   getFontSize,
   resetFontSize,
+  setPanelFontSize,
+  getPanelFontSize,
+  resetPanelFontSize,
   loadAppSettings,
   saveAppSettings,
   init,
