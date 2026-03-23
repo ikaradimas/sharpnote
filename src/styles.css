@@ -633,6 +633,16 @@ body {
   background: var(--bg-base);
 }
 
+/* Alternating row tint — so subtle it's barely perceptible, but helps
+   visual scanning down a long notebook.  color-mix() derives the tint
+   from the existing theme variables, so no per-theme overrides needed. */
+.cell-wrapper:nth-child(even) .code-cell {
+  background: color-mix(in srgb, var(--bg-base) 94%, var(--bg-mid));
+}
+.cell-wrapper:nth-child(even) .cm-editor {
+  background: color-mix(in srgb, var(--bg-deep) 94%, var(--bg-mid)) !important;
+}
+
 .code-cell-header {
   display: flex;
   align-items: center;
