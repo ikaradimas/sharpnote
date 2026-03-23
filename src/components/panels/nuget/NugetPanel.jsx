@@ -63,10 +63,13 @@ async function searchNuget(sources, query) {
   return results;
 }
 
-function InstalledTab({ packages, kernelStatus, onAdd, onRemove, onRetry }) {
+function InstalledTab({ packages, kernelStatus, onAdd, onRemove, onRetry, onChangeVersion }) {
   const [newId, setNewId] = useState('');
   const [newVersion, setNewVersion] = useState('');
+  const [editingId, setEditingId] = useState(null);
+  const [editVersion, setEditVersion] = useState('');
   const idRef = useRef(null);
+  const editRef = useRef(null);
   const isReady = kernelStatus === 'ready';
 
   const handleAdd = () => {
@@ -77,26 +80,69 @@ function InstalledTab({ packages, kernelStatus, onAdd, onRemove, onRetry }) {
     idRef.current?.focus();
   };
 
+  const startEdit = (pkg) => {
+    setEditingId(pkg.id);
+    setEditVersion(pkg.version || '');
+    setTimeout(() => editRef.current?.focus(), 0);
+  };
+
+  const confirmEdit = (pkg) => {
+    const v = editVersion.trim() || null;
+    if (v !== pkg.version) onChangeVersion(pkg.id, v);
+    setEditingId(null);
+  };
+
+  const cancelEdit = () => setEditingId(null);
+
   return (
     <div className="nuget-tab-content">
       <div className="nuget-list">
         {packages.length === 0 && <span className="nuget-empty">No startup packages — add one below or browse</span>}
-        {packages.map((pkg) => (
-          <div key={pkg.id} className="nuget-item">
-            <NugetStatusDot status={pkg.status} error={pkg.error} />
-            <span className="nuget-id">{pkg.id}</span>
-            <span className="nuget-version">{pkg.version || 'latest'}</span>
-            {pkg.status === 'error' && (
-              <button className="nuget-action-btn" title={`Retry: ${pkg.error || ''}`}
-                onClick={() => onRetry(pkg.id, pkg.version)}>↺</button>
-            )}
-            {pkg.status === 'pending' && isReady && (
-              <button className="nuget-action-btn" title="Install now"
-                onClick={() => onRetry(pkg.id, pkg.version)}>▶</button>
-            )}
-            <button className="nuget-remove-btn" title="Remove" onClick={() => onRemove(pkg.id)}>×</button>
-          </div>
-        ))}
+        {packages.map((pkg) => {
+          const isEditing = editingId === pkg.id;
+          return (
+            <div key={pkg.id} className="nuget-item">
+              <NugetStatusDot status={pkg.status} error={pkg.error} />
+              <span className="nuget-id">{pkg.id}</span>
+              {isEditing ? (
+                <>
+                  <input
+                    ref={editRef}
+                    className="nuget-input nuget-ver-edit-input"
+                    placeholder="Version (blank = latest)"
+                    value={editVersion}
+                    onChange={(e) => setEditVersion(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') confirmEdit(pkg);
+                      if (e.key === 'Escape') cancelEdit();
+                    }}
+                    spellCheck={false}
+                  />
+                  <button className="nuget-action-btn" title="Confirm" onClick={() => confirmEdit(pkg)}>✓</button>
+                  <button className="nuget-action-btn" title="Cancel" onClick={cancelEdit}>✕</button>
+                </>
+              ) : (
+                <>
+                  <span className="nuget-version">{pkg.version || 'latest'}</span>
+                  <button
+                    className="nuget-action-btn nuget-ver-btn"
+                    title="Change version"
+                    onClick={() => startEdit(pkg)}
+                  >✎</button>
+                  {pkg.status === 'error' && (
+                    <button className="nuget-action-btn" title={`Retry: ${pkg.error || ''}`}
+                      onClick={() => onRetry(pkg.id, pkg.version)}>↺</button>
+                  )}
+                  {pkg.status === 'pending' && isReady && (
+                    <button className="nuget-action-btn" title="Install now"
+                      onClick={() => onRetry(pkg.id, pkg.version)}>▶</button>
+                  )}
+                </>
+              )}
+              <button className="nuget-remove-btn" title="Remove" onClick={() => onRemove(pkg.id)}>×</button>
+            </div>
+          );
+        })}
       </div>
       <div className="nuget-add-row">
         <input ref={idRef} className="nuget-input nuget-id-input" placeholder="Package ID"
@@ -116,11 +162,12 @@ function BrowseTab({ sources, onAdd, installedPackages }) {
   const [results, setResults] = useState([]);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState(null);
+  const [versionOverrides, setVersionOverrides] = useState({});
 
   const doSearch = async () => {
     const q = query.trim();
     if (!q) return;
-    setSearching(true); setSearchError(null);
+    setSearching(true); setSearchError(null); setVersionOverrides({});
     try {
       setResults(await searchNuget(sources, q));
     } catch (e) {
@@ -131,6 +178,8 @@ function BrowseTab({ sources, onAdd, installedPackages }) {
   };
 
   const isInstalled = (id) => installedPackages.some((p) => p.id.toLowerCase() === id.toLowerCase());
+
+  const getVersion = (pkg) => versionOverrides[pkg.id] !== undefined ? versionOverrides[pkg.id] : pkg.version;
 
   return (
     <div className="nuget-tab-content">
@@ -149,11 +198,20 @@ function BrowseTab({ sources, onAdd, installedPackages }) {
         )}
         {results.map((pkg) => {
           const installed = isInstalled(pkg.id);
+          const ver = getVersion(pkg);
           return (
             <div key={pkg.id} className="nuget-result-item">
               <div className="nuget-result-main">
                 <span className="nuget-result-id">{pkg.id}</span>
-                <span className="nuget-result-version">{pkg.version}</span>
+                <input
+                  className="nuget-input nuget-result-ver-input"
+                  value={ver}
+                  onChange={(e) => setVersionOverrides((prev) => ({ ...prev, [pkg.id]: e.target.value }))}
+                  onKeyDown={(e) => e.key === 'Enter' && !installed && onAdd(pkg.id, ver || null)}
+                  placeholder="version"
+                  spellCheck={false}
+                  title="Version to install (leave as-is for latest)"
+                />
                 {pkg.totalDownloads > 0 && (
                   <span className="nuget-result-dl" title={`${pkg.totalDownloads.toLocaleString()} downloads`}>
                     ↓{formatDownloads(pkg.totalDownloads)}
@@ -161,8 +219,8 @@ function BrowseTab({ sources, onAdd, installedPackages }) {
                 )}
                 <button
                   className={`nuget-result-add${installed ? ' nuget-result-added' : ''}`}
-                  onClick={() => !installed && onAdd(pkg.id, pkg.version)}
-                  title={installed ? 'Already added' : `Add ${pkg.id} ${pkg.version}`}
+                  onClick={() => !installed && onAdd(pkg.id, ver || null)}
+                  title={installed ? 'Already added' : `Add ${pkg.id} ${ver}`}
                 >
                   {installed ? '✓' : '+ Add'}
                 </button>
@@ -213,7 +271,7 @@ function SourcesTab({ sources, onAdd, onRemove, onToggle }) {
 }
 
 export function NugetPanel({ isOpen, onToggle, packages, kernelStatus, sources,
-                      onAdd, onRemove, onRetry,
+                      onAdd, onRemove, onRetry, onChangeVersion,
                       onAddSource, onRemoveSource, onToggleSource }) {
   const [height, onResizeMouseDown] = useResize(260, 'top');
   const [tab, setTab] = useState('installed');
@@ -244,7 +302,7 @@ export function NugetPanel({ isOpen, onToggle, packages, kernelStatus, sources,
       <div className="nuget-body">
         {tab === 'installed' && (
           <InstalledTab packages={packages} kernelStatus={kernelStatus}
-            onAdd={onAdd} onRemove={onRemove} onRetry={onRetry} />
+            onAdd={onAdd} onRemove={onRemove} onRetry={onRetry} onChangeVersion={onChangeVersion} />
         )}
         {tab === 'browse' && (
           <BrowseTab sources={sources} onAdd={onAdd} installedPackages={packages} />

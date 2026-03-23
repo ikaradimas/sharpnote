@@ -401,7 +401,12 @@ export function App() {
           setNb(notebookId, (n) => ({
             nugetPackages: n.nugetPackages.map((p) =>
               p.id === msg.id
-                ? { ...p, status: msg.status, ...(msg.message ? { error: msg.message } : { error: undefined }) }
+                ? {
+                    ...p,
+                    status: msg.status,
+                    ...(msg.status === 'loaded' && msg.version ? { version: msg.version } : {}),
+                    ...(msg.message ? { error: msg.message } : { error: undefined }),
+                  }
                 : p
             ),
           }));
@@ -982,6 +987,27 @@ export function App() {
     });
   }, [setNb]);
 
+  const changeNugetVersion = useCallback((notebookId, id, newVersion) => {
+    const nb = notebooksRef.current.find((n) => n.id === notebookId);
+    if (!nb) return;
+    const isReady = nb.kernelStatus === 'ready';
+    setNb(notebookId, (n) => ({
+      nugetPackages: n.nugetPackages.map((p) =>
+        p.id === id
+          ? { ...p, version: newVersion || null, status: isReady ? 'loading' : 'pending', error: undefined }
+          : p
+      ),
+      isDirty: true,
+    }));
+    if (isReady && window.electronAPI) {
+      window.electronAPI.sendToKernel(notebookId, {
+        type: 'preload_nugets',
+        packages: [{ id, version: newVersion || null }],
+        sources: nb.nugetSources.filter((s) => s.enabled).map((s) => s.url),
+      });
+    }
+  }, [setNb]);
+
   // ── DB connection management ───────────────────────────────────────────────
 
   const handleAddDbConnection = useCallback((conn) => {
@@ -1413,6 +1439,7 @@ export function App() {
         onAdd: nbId ? (id, ver) => addNugetPackage(nbId, id, ver) : () => {},
         onRemove: nbId ? (id) => removeNugetPackage(nbId, id) : () => {},
         onRetry: nbId ? (id, ver) => retryNugetPackage(nbId, id, ver) : () => {},
+        onChangeVersion: nbId ? (id, ver) => changeNugetVersion(nbId, id, ver) : () => {},
         onAddSource: nbId ? (name, url) => setNbDirty(nbId, (n) => ({
           nugetSources: n.nugetSources.some((s) => s.url === url)
             ? n.nugetSources : [...n.nugetSources, { name, url, enabled: true }],

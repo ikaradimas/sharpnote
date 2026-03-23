@@ -1516,6 +1516,9 @@ body {
 
 .nuget-id-input { flex: 1; min-width: 0; }
 .nuget-ver-input { width: 100px; }
+.nuget-ver-edit-input { width: 120px; flex-shrink: 0; padding: 1px 5px; height: 20px; font-size: 11px; }
+.nuget-ver-btn { opacity: 0; transition: opacity 0.1s; }
+.nuget-item:hover .nuget-ver-btn { opacity: 1; }
 
 .nuget-add-btn {
   background: var(--accent-warm-bg);
@@ -1681,6 +1684,14 @@ body {
   color: var(--text-muted);
   white-space: nowrap;
   flex-shrink: 0;
+}
+
+.nuget-result-ver-input {
+  width: 90px;
+  flex-shrink: 0;
+  padding: 1px 5px;
+  height: 18px;
+  font-size: 11px;
 }
 
 .nuget-result-dl {

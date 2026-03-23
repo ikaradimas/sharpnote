@@ -58,7 +58,7 @@ partial class Program
             }));
             LogContext.WriteNotebook($"NuGet: Installing {pkgId}{(pkgVer != null ? $" {pkgVer}" : " (latest)")}");
 
-            var (updatedOptions, nugetError) =
+            var (updatedOptions, nugetError, _) =
                 await LoadNuGetAsync(pkgId, pkgVer, options, id, realStdout, execSources);
 
             if (nugetError != null)

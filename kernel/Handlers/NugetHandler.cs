@@ -191,12 +191,12 @@ partial class Program
 
     // ── NuGet package loader ──────────────────────────────────────────────────
 
-    internal static async Task<(ScriptOptions opts, string? error)> LoadNuGetAsync(
+    internal static async Task<(ScriptOptions opts, string? error, string? resolvedVersion)> LoadNuGetAsync(
         string packageId, string? version, ScriptOptions options,
         string cellId, TextWriter realStdout, IEnumerable<string>? sourceUrls = null)
     {
         var key = $"{packageId.ToLower()}/{version ?? "*"}";
-        if (_loadedNugetKeys.Contains(key)) return (options, null);
+        if (_loadedNugetKeys.Contains(key)) return (options, null, version);
 
         try
         {
@@ -206,8 +206,9 @@ partial class Program
             // 1. Resolve the version to install.
             var resolvedVersion = await ResolveVersionAsync(packageId, version, sources, cache);
             if (resolvedVersion == null)
-                return (options, $"NuGet: package '{packageId}' not found on any configured source");
+                return (options, $"NuGet: package '{packageId}' not found on any configured source", null);
 
+            var resolvedVersionStr = resolvedVersion?.ToNormalizedString();
             var rootIdentity = new PackageIdentity(packageId, resolvedVersion);
 
             // 2. Collect the full transitive dependency closure.
@@ -261,11 +262,11 @@ partial class Program
             }
 
             _loadedNugetKeys.Add(key);
-            return (options, null);
+            return (options, null, resolvedVersionStr);
         }
         catch (Exception ex)
         {
-            return (options, $"NuGet error: {ex.Message}");
+            return (options, $"NuGet error: {ex.Message}", null);
         }
     }
 
@@ -292,7 +293,7 @@ partial class Program
             { type = "nuget_status", id = pkgId, version = pkgVer, status = "loading" }));
             LogContext.WriteNotebook($"NuGet preload: {pkgId} {pkgVer ?? "latest"}");
 
-            var (updatedOpts, nugetErr) =
+            var (updatedOpts, nugetErr, resolvedVer) =
                 await LoadNuGetAsync(pkgId, pkgVer, options, "__preload__", realStdout, preloadSources);
 
             if (nugetErr != null)
@@ -307,8 +308,8 @@ partial class Program
                 options = updatedOpts;
                 setOptions(options);
                 realStdout.WriteLine(JsonSerializer.Serialize(new
-                { type = "nuget_status", id = pkgId, version = pkgVer, status = "loaded" }));
-                LogContext.WriteNotebook($"NuGet preload loaded: {pkgId}");
+                { type = "nuget_status", id = pkgId, version = resolvedVer ?? pkgVer, status = "loaded" }));
+                LogContext.WriteNotebook($"NuGet preload loaded: {pkgId} {resolvedVer ?? pkgVer ?? "latest"}");
             }
         }
         realStdout.WriteLine(JsonSerializer.Serialize(new { type = "nuget_preload_complete" }));
