@@ -44,6 +44,8 @@
 
   /* Panel */
   --panel-active-bg: #0a2a38;
+  /* Alternating line tint inside code editors */
+  --line-alt-bg: rgba(255, 255, 255, 0.06);
 }
 
 *, *::before, *::after {
@@ -633,12 +635,6 @@ body {
   background: var(--bg-base);
 }
 
-/* Alternating row tint: handled in CodeEditor.jsx via EditorView.theme()
-   in an altThemeCompartment. CodeMirror's own theming mechanism is used
-   because CSS overrides fight with oneDark's injected StyleModule and
-   the global .cm-editor background shorthand always resets background-image.
-   The .cell-wrapper-alt class is still applied in NotebookView for any
-   future CSS use, but CodeMirror backgrounds are managed from JS. */
 
 .code-cell-header {
   display: flex;
@@ -725,19 +721,20 @@ body {
   overflow: hidden;
 }
 
-/* CodeMirror overrides.
-   --editor-bg controls the background for both the editor and its gutter.
-   Set to --bg-mid on .cell-wrapper-alt for alternating row tint — CSS
-   variable inheritance propagates the override to all descendant rules. */
-:root { --editor-bg: var(--bg-deep); }
-.cell-wrapper-alt { --editor-bg: var(--bg-mid); }
-
+/* CodeMirror overrides */
 .cm-editor {
-  background: var(--editor-bg) !important;
+  background: var(--bg-deep) !important;
   font-size: calc((var(--base-font-size) - 1) * 1px) !important;
 }
 .cm-gutters {
-  background: var(--editor-bg) !important;
+  background: var(--bg-deep) !important;
+}
+
+/* Alternating line tint inside the editor — every even line gets a subtle
+   background wash. :nth-child works reliably here because .cm-content
+   contains only .cm-line children for standard code editing. */
+.cm-content .cm-line:nth-child(even) {
+  background: var(--line-alt-bg);
 }
 
 .cm-editor.cm-focused { outline: none !important; }
@@ -3480,6 +3477,7 @@ body {
   --accent-secondary-glow:rgba(26,127,55,.08);
   --status-error:#d1242f; --status-warning:#9a6700; --status-success:#1a7f37;
   --panel-active-bg:#cce5ff;
+  --line-alt-bg: rgba(0, 0, 0, 0.04);
 }
 
 /* ── Theme picker ─────────────────────────────────────────────────────────────── */

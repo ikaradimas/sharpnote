@@ -145,7 +145,7 @@ export function NotebookView({
           return (
           <div
             key={cell.id}
-            className={`cell-wrapper${isHidden ? ' cell-section-hidden' : ''}${index % 2 === 1 ? ' cell-wrapper-alt' : ''}`}
+            className={`cell-wrapper${isHidden ? ' cell-section-hidden' : ''}`}
             data-cell-id={cell.id}
           >
             {cell.type === 'markdown' ? (
