@@ -44,9 +44,6 @@
 
   /* Panel */
   --panel-active-bg: #0a2a38;
-  /* Alternating cell row overlay — semi-transparent white for dark themes.
-     github-light overrides this to a semi-transparent black below. */
-  --cell-alt-overlay: rgba(255, 255, 255, 0.10);
 }
 
 *, *::before, *::after {
@@ -636,21 +633,20 @@ body {
   background: var(--bg-base);
 }
 
-/* Alternating row tint.  The .cell-wrapper-alt class is applied by
+/* Alternating row tint. The .cell-wrapper-alt class is applied by
    NotebookView via index % 2, which is reliable unlike :nth-child which
-   is affected by the leading <AddBar> sibling.  background-color and
-   background-image are set separately to avoid the CSS shorthand
-   ambiguity that prevents var() from being parsed as a <color>.
-   Both .cm-editor and .cm-scroller are targeted because CodeMirror's
-   scroller child can otherwise cover the editor's own background. */
-.cell-wrapper-alt .code-cell-header {
-  background-color: var(--bg-mid);
-  background-image: linear-gradient(var(--cell-alt-overlay), var(--cell-alt-overlay));
+   is affected by the leading <AddBar> sibling.
+   Uses solid background shorthand — NOT a background-image overlay.
+   The global .cm-editor rule uses the background shorthand (!important),
+   which implicitly resets background-image, making overlay-based tints
+   unreliable. A plain solid color at higher specificity (0,2,0 vs 0,1,0)
+   cleanly overrides it. Gutter is targeted separately as CodeMirror's
+   oneDark theme sets its own background on that element. */
+.cell-wrapper-alt .cm-editor {
+  background: var(--bg-mid) !important;
 }
-.cell-wrapper-alt .cm-editor,
-.cell-wrapper-alt .cm-scroller {
-  background-color: var(--bg-deep) !important;
-  background-image: linear-gradient(var(--cell-alt-overlay), var(--cell-alt-overlay)) !important;
+.cell-wrapper-alt .cm-gutters {
+  background: var(--bg-mid) !important;
 }
 
 .code-cell-header {
@@ -3484,7 +3480,6 @@ body {
   --accent-secondary-glow:rgba(26,127,55,.08);
   --status-error:#d1242f; --status-warning:#9a6700; --status-success:#1a7f37;
   --panel-active-bg:#cce5ff;
-  --cell-alt-overlay: rgba(0, 0, 0, 0.10);
 }
 
 /* ── Theme picker ─────────────────────────────────────────────────────────────── */
