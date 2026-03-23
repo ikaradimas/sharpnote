@@ -479,11 +479,37 @@ body {
 
 .code-cell-footer {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
   align-items: center;
   padding: 1px 4px;
   min-height: 20px;
   background: var(--bg-base);
+}
+
+.cell-execution-timer {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  color: var(--accent-primary);
+  font-family: monospace;
+  letter-spacing: 0.03em;
+}
+
+@keyframes cell-spin {
+  to { transform: rotate(360deg); }
+}
+
+.cell-execution-spinner {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border: 1.5px solid transparent;
+  border-top-color: var(--accent-primary);
+  border-right-color: var(--accent-primary);
+  border-radius: 50%;
+  animation: cell-spin 0.7s linear infinite;
+  flex-shrink: 0;
 }
 
 .cell-lock-btn {

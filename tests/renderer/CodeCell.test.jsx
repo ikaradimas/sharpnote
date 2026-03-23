@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { CodeCell } from '../../src/renderer.jsx';
 
 const makeCell = (overrides = {}) => ({
@@ -129,5 +129,51 @@ describe('CodeCell – output mode', () => {
     const select = document.querySelector('.output-mode-select');
     fireEvent.change(select, { target: { value: 'html' } });
     expect(onOutputModeChange).toHaveBeenCalledWith('html');
+  });
+});
+
+describe('CodeCell – execution timer', () => {
+  it('does not render timer when not running', () => {
+    render(<CodeCell {...defaultProps({ isRunning: false })} />);
+    expect(document.querySelector('.cell-execution-timer')).toBeNull();
+  });
+
+  it('renders timer when isRunning=true', () => {
+    render(<CodeCell {...defaultProps({ isRunning: true })} />);
+    expect(document.querySelector('.cell-execution-timer')).not.toBeNull();
+  });
+
+  it('renders spinner element when isRunning=true', () => {
+    render(<CodeCell {...defaultProps({ isRunning: true })} />);
+    expect(document.querySelector('.cell-execution-spinner')).not.toBeNull();
+  });
+
+  it('shows 0s initially', () => {
+    render(<CodeCell {...defaultProps({ isRunning: true })} />);
+    expect(document.querySelector('.cell-execution-timer').textContent).toContain('0s');
+  });
+
+  it('hides timer when isRunning transitions to false', () => {
+    const { rerender } = render(<CodeCell {...defaultProps({ isRunning: true })} />);
+    rerender(<CodeCell {...defaultProps({ isRunning: false })} />);
+    expect(document.querySelector('.cell-execution-timer')).toBeNull();
+  });
+
+  it('increments elapsed time after 1 second', async () => {
+    vi.useFakeTimers();
+    render(<CodeCell {...defaultProps({ isRunning: true })} />);
+    act(() => { vi.advanceTimersByTime(1000); });
+    expect(document.querySelector('.cell-execution-timer').textContent).toContain('1s');
+    vi.useRealTimers();
+  });
+
+  it('resets elapsed to 0s when restarted', async () => {
+    vi.useFakeTimers();
+    const { rerender } = render(<CodeCell {...defaultProps({ isRunning: true })} />);
+    act(() => { vi.advanceTimersByTime(3000); });
+    rerender(<CodeCell {...defaultProps({ isRunning: false })} />);
+    rerender(<CodeCell {...defaultProps({ isRunning: true })} />);
+    expect(document.querySelector('.cell-execution-timer').textContent).toContain('0s');
+    vi.useRealTimers();
   });
 });

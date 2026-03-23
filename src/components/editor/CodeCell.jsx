@@ -30,6 +30,15 @@ function CellControls({ onMoveUp, onMoveDown, onDelete }) {
   );
 }
 
+function formatElapsed(seconds) {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  if (h > 0) return `${h}h ${m}m ${s}s`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
+
 export function CodeCell({
   cell,
   cellIndex,
@@ -54,6 +63,14 @@ export function CodeCell({
   const locked = cell.locked || false;
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    if (!isRunning) { setElapsed(0); return; }
+    setElapsed(0);
+    const id = setInterval(() => setElapsed((e) => e + 1), 1000);
+    return () => clearInterval(id);
+  }, [isRunning]);
 
   useEffect(() => {
     if (!dropdownOpen) return;
@@ -127,6 +144,12 @@ export function CodeCell({
       />
       <CellOutput messages={outputs} />
       <div className="code-cell-footer">
+        {isRunning && (
+          <span className="cell-execution-timer">
+            <span className="cell-execution-spinner" />
+            {formatElapsed(elapsed)}
+          </span>
+        )}
         <button
           className={`cell-lock-btn${locked ? ' cell-lock-btn-on' : ''}`}
           onClick={onToggleLock}
