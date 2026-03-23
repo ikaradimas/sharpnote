@@ -206,4 +206,18 @@ describe('CodeCell – execution timer', () => {
     expect(document.querySelector('.cell-execution-timer').textContent).toContain('0s');
     vi.useRealTimers();
   });
+
+  it('shows ran-at timestamp after execution ends', () => {
+    vi.useFakeTimers();
+    const { rerender } = render(<CodeCell {...defaultProps({ isRunning: true })} />);
+    act(() => { vi.advanceTimersByTime(500); });
+    rerender(<CodeCell {...defaultProps({ isRunning: false })} />);
+    expect(document.querySelector('.cell-ran-at')).not.toBeNull();
+    vi.useRealTimers();
+  });
+
+  it('does not show ran-at timestamp while running', () => {
+    render(<CodeCell {...defaultProps({ isRunning: true })} />);
+    expect(document.querySelector('.cell-ran-at')).toBeNull();
+  });
 });

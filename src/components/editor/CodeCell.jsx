@@ -72,6 +72,7 @@ export function CodeCell({
   const dropdownRef = useRef(null);
   const [elapsed, setElapsed] = useState(0);
   const [lastDuration, setLastDuration] = useState(null);
+  const [lastRanAt, setLastRanAt] = useState(null);
   const elapsedRef = useRef(0);
 
   useEffect(() => {
@@ -86,6 +87,7 @@ export function CodeCell({
     return () => {
       clearInterval(id);
       setLastDuration(elapsedRef.current);
+      setLastRanAt(new Date());
     };
   }, [isRunning]);
 
@@ -171,6 +173,11 @@ export function CodeCell({
                   : null
             }
             {formatElapsed(isRunning ? elapsed : lastDuration)}
+            {!isRunning && lastRanAt && (
+              <span className="cell-ran-at" title={lastRanAt.toLocaleString()}>
+                {lastRanAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
+              </span>
+            )}
           </span>
         )}
         <button

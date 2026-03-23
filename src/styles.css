@@ -521,6 +521,13 @@ body {
 .cell-exec-success { color: #4caf50; }
 .cell-exec-error   { color: #e05252; }
 
+.cell-ran-at {
+  color: var(--text-muted);
+  margin-left: 4px;
+  border-left: 1px solid var(--border);
+  padding-left: 6px;
+}
+
 .cell-lock-btn {
   margin-left: auto;
   background: transparent;
