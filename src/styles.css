@@ -44,6 +44,9 @@
 
   /* Panel */
   --panel-active-bg: #0a2a38;
+  /* Alternating cell row overlay — semi-transparent white for dark themes.
+     github-light overrides this to a semi-transparent black below. */
+  --cell-alt-overlay: rgba(255, 255, 255, 0.04);
 }
 
 *, *::before, *::after {
@@ -633,14 +636,19 @@ body {
   background: var(--bg-base);
 }
 
-/* Alternating row tint — so subtle it's barely perceptible, but helps
-   visual scanning down a long notebook.  color-mix() derives the tint
-   from the existing theme variables, so no per-theme overrides needed. */
-.cell-wrapper:nth-child(even) .code-cell {
-  background: color-mix(in srgb, var(--bg-base) 94%, var(--bg-mid));
+/* Alternating row tint — a semi-transparent overlay composited on top of
+   the existing background.  Using an overlay avoids the rounding-to-zero
+   problem that color-mix hits when bg-base and bg-mid are very close.
+   The .notebook's leading <AddBar> is the first child, so odd cell-wrappers
+   are positions 3, 5, 7… — giving Cell 2, 4, 6… the tint as expected.
+   Only --cell-alt-overlay needs a per-theme value (github-light uses black). */
+.cell-wrapper:nth-child(odd) .code-cell {
+  background: linear-gradient(var(--cell-alt-overlay), var(--cell-alt-overlay)),
+              var(--bg-base);
 }
-.cell-wrapper:nth-child(even) .cm-editor {
-  background: color-mix(in srgb, var(--bg-deep) 94%, var(--bg-mid)) !important;
+.cell-wrapper:nth-child(odd) .cm-editor {
+  background: linear-gradient(var(--cell-alt-overlay), var(--cell-alt-overlay)),
+              var(--bg-deep) !important;
 }
 
 .code-cell-header {
@@ -3474,6 +3482,7 @@ body {
   --accent-secondary-glow:rgba(26,127,55,.08);
   --status-error:#d1242f; --status-warning:#9a6700; --status-success:#1a7f37;
   --panel-active-bg:#cce5ff;
+  --cell-alt-overlay: rgba(0, 0, 0, 0.04);
 }
 
 /* ── Theme picker ─────────────────────────────────────────────────────────────── */
