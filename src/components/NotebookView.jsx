@@ -181,7 +181,6 @@ export function NotebookView({
                 onToggleLock={() => updateCellProp(cell.id, 'locked', !(cell.locked || false))}
                 requestCompletions={(code, pos) => requestCompletions(nb.id, code, pos)}
                 requestLint={(code) => requestLint(nb.id, code)}
-                isAlt={index % 2 === 1}
               />
             )}
             <AddBar

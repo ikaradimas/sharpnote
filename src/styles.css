@@ -725,10 +725,19 @@ body {
   overflow: hidden;
 }
 
-/* CodeMirror overrides */
+/* CodeMirror overrides.
+   --editor-bg controls the background for both the editor and its gutter.
+   Set to --bg-mid on .cell-wrapper-alt for alternating row tint — CSS
+   variable inheritance propagates the override to all descendant rules. */
+:root { --editor-bg: var(--bg-deep); }
+.cell-wrapper-alt { --editor-bg: var(--bg-mid); }
+
 .cm-editor {
-  background: var(--bg-deep) !important;
+  background: var(--editor-bg) !important;
   font-size: calc((var(--base-font-size) - 1) * 1px) !important;
+}
+.cm-gutters {
+  background: var(--editor-bg) !important;
 }
 
 .cm-editor.cm-focused { outline: none !important; }
