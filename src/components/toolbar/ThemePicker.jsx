@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { THEMES } from '../../config/themes.js';
 import { IconTheme } from './Icons.jsx';
 
-export function ThemePicker({ theme, onSelect }) {
+export function ThemePicker({ theme, onSelect, lineAltEnabled, onLineAltChange }) {
   const [open, setOpen] = useState(false);
   const btnRef = useRef(null);
   const popupRef = useRef(null);
@@ -55,6 +55,15 @@ export function ThemePicker({ theme, onSelect }) {
               <span className="theme-picker-name">{t.name}</span>
             </div>
           ))}
+          <div className="theme-picker-separator" />
+          <label className="theme-picker-toggle" onClick={(e) => e.stopPropagation()}>
+            <input
+              type="checkbox"
+              checked={!!lineAltEnabled}
+              onChange={(e) => onLineAltChange(e.target.checked)}
+            />
+            <span>Line stripes</span>
+          </label>
         </div>,
         document.body
       )}

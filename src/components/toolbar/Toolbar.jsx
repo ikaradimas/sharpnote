@@ -37,6 +37,8 @@ export function Toolbar({
   onToggleApi,
   theme,
   onThemeChange,
+  lineAltEnabled,
+  onLineAltChange,
   dockLayout,
   savedLayouts,
   onSaveLayout,
@@ -126,7 +128,7 @@ export function Toolbar({
           onDelete={onDeleteLayout}
         />
       )}
-      <ThemePicker theme={theme} onSelect={onThemeChange} />
+      <ThemePicker theme={theme} onSelect={onThemeChange} lineAltEnabled={lineAltEnabled} onLineAltChange={onLineAltChange} />
       <div className="kernel-status">
         <div className={`kernel-dot ${kernelStatus}`} />
         <span>{kernelStatus}</span>

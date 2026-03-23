@@ -60,6 +60,10 @@ export function App() {
   const panelFontSizeRef = useRef(11.5);
   useEffect(() => { panelFontSizeRef.current = panelFontSize; }, [panelFontSize]);
 
+  const [lineAltEnabled, setLineAltEnabled] = useState(true);
+  const lineAltEnabledRef = useRef(true);
+  useEffect(() => { lineAltEnabledRef.current = lineAltEnabled; }, [lineAltEnabled]);
+
   // Dock layout state
   const [dockLayout, setDockLayout] = useState(DEFAULT_DOCK_LAYOUT);
   const [savedLayouts, setSavedLayouts] = useState([]);
@@ -166,6 +170,7 @@ export function App() {
   useEffect(() => {
     window.electronAPI?.loadAppSettings().then((s) => {
       if (s?.theme) setTheme(s.theme);
+      if (typeof s?.lineAltEnabled === 'boolean') setLineAltEnabled(s.lineAltEnabled);
       if (s?.dockLayout) {
         const loaded = {
           ...DEFAULT_DOCK_LAYOUT,
@@ -227,11 +232,16 @@ export function App() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { document.documentElement.dataset.theme = theme; }, [theme]);
+  useEffect(() => { document.documentElement.classList.toggle('line-alt-enabled', lineAltEnabled); }, [lineAltEnabled]);
 
   useEffect(() => {
     if (isFirstThemeRender.current) { isFirstThemeRender.current = false; return; }
-    window.electronAPI?.saveAppSettings({ theme, pinnedTabs: [...pinnedPathsRef.current], dockLayout: dockLayoutRef.current, savedLayouts: savedLayoutsRef.current });
+    window.electronAPI?.saveAppSettings({ theme, lineAltEnabled: lineAltEnabledRef.current, pinnedTabs: [...pinnedPathsRef.current], dockLayout: dockLayoutRef.current, savedLayouts: savedLayoutsRef.current });
   }, [theme]); // pinnedPathsRef is stable ref, no dep needed
+
+  useEffect(() => {
+    window.electronAPI?.saveAppSettings({ theme: themeRef.current, lineAltEnabled, pinnedTabs: [...pinnedPathsRef.current], dockLayout: dockLayoutRef.current, savedLayouts: savedLayoutsRef.current });
+  }, [lineAltEnabled]);
 
   // When dbConnections first loads, send db_connect for any notebooks whose
   // saved DBs are still 'connecting' (kernel was already ready before connections loaded).
@@ -812,7 +822,7 @@ export function App() {
     setPinnedPaths((prev) => {
       const next = new Set(prev);
       if (next.has(filePath)) next.delete(filePath); else next.add(filePath);
-      window.electronAPI?.saveAppSettings({ theme: themeRef.current, pinnedTabs: [...next], dockLayout: dockLayoutRef.current, savedLayouts: savedLayoutsRef.current });
+      window.electronAPI?.saveAppSettings({ theme: themeRef.current, lineAltEnabled: lineAltEnabledRef.current, pinnedTabs: [...next], dockLayout: dockLayoutRef.current, savedLayouts: savedLayoutsRef.current });
       return next;
     });
   }, []);
@@ -876,10 +886,11 @@ export function App() {
 
     // Persist the merged app settings
     window.electronAPI?.saveAppSettings({
-      theme:        data.appSettings?.theme        ?? themeRef.current,
-      dockLayout:   data.appSettings?.dockLayout   ?? dockLayoutRef.current,
-      savedLayouts: data.appSettings?.savedLayouts ?? savedLayoutsRef.current,
-      pinnedTabs:   data.appSettings?.pinnedTabs   ?? [...pinnedPathsRef.current],
+      theme:          data.appSettings?.theme          ?? themeRef.current,
+      lineAltEnabled: data.appSettings?.lineAltEnabled ?? lineAltEnabledRef.current,
+      dockLayout:     data.appSettings?.dockLayout     ?? dockLayoutRef.current,
+      savedLayouts:   data.appSettings?.savedLayouts   ?? savedLayoutsRef.current,
+      pinnedTabs:     data.appSettings?.pinnedTabs     ?? [...pinnedPathsRef.current],
     });
 
     return result;
@@ -1131,6 +1142,7 @@ export function App() {
       dockLayoutRef.current = updated;
       window.electronAPI?.saveAppSettings({
         theme: themeRef.current,
+        lineAltEnabled: lineAltEnabledRef.current,
         pinnedTabs: [...pinnedPathsRef.current],
         dockLayout: updated,
         savedLayouts: savedLayoutsRef.current,
@@ -1206,6 +1218,7 @@ export function App() {
           setTimeout(() => {
             window.electronAPI?.saveAppSettings({
               theme: themeRef.current,
+              lineAltEnabled: lineAltEnabledRef.current,
               pinnedTabs: [...pinnedPathsRef.current],
               dockLayout: dockLayoutRef.current,
               savedLayouts: savedLayoutsRef.current,
@@ -1232,6 +1245,7 @@ export function App() {
       savedLayoutsRef.current = updated;
       window.electronAPI?.saveAppSettings({
         theme: themeRef.current,
+        lineAltEnabled: lineAltEnabledRef.current,
         pinnedTabs: [...pinnedPathsRef.current],
         dockLayout: dockLayoutRef.current,
         savedLayouts: updated,
@@ -1252,6 +1266,7 @@ export function App() {
     setLayoutKey((k) => k + 1);
     window.electronAPI?.saveAppSettings({
       theme: themeRef.current,
+      lineAltEnabled: lineAltEnabledRef.current,
       pinnedTabs: [...pinnedPathsRef.current],
       dockLayout: layout,
       savedLayouts: savedLayoutsRef.current,
@@ -1264,6 +1279,7 @@ export function App() {
       savedLayoutsRef.current = updated;
       window.electronAPI?.saveAppSettings({
         theme: themeRef.current,
+        lineAltEnabled: lineAltEnabledRef.current,
         pinnedTabs: [...pinnedPathsRef.current],
         dockLayout: dockLayoutRef.current,
         savedLayouts: updated,
@@ -1588,6 +1604,8 @@ export function App() {
                     onFocusPanel={handleFocusPanel}
                     theme={theme}
                     onThemeChange={setTheme}
+                    lineAltEnabled={lineAltEnabled}
+                    onLineAltChange={setLineAltEnabled}
                     dockLayout={dockLayout}
                     savedLayouts={savedLayouts}
                     onSaveLayout={handleSaveLayout}

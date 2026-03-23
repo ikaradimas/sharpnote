@@ -44,8 +44,8 @@
 
   /* Panel */
   --panel-active-bg: #0a2a38;
-  /* Alternating line tint inside code editors */
-  --line-alt-bg: rgba(255, 255, 255, 0.06);
+  /* Alternating line tint inside code editors (toggled via .line-alt-enabled on <html>) */
+  --line-alt-bg: rgba(255, 255, 255, 0.03);
 }
 
 *, *::before, *::after {
@@ -730,10 +730,8 @@ body {
   background: var(--bg-deep) !important;
 }
 
-/* Alternating line tint inside the editor — every even line gets a subtle
-   background wash. :nth-child works reliably here because .cm-content
-   contains only .cm-line children for standard code editing. */
-.cm-content .cm-line:nth-child(even) {
+/* Alternating line tint — enabled by .line-alt-enabled on <html> (toggled in ThemePicker). */
+.line-alt-enabled .cm-content .cm-line:nth-child(even) {
   background: var(--line-alt-bg);
 }
 
@@ -3477,7 +3475,7 @@ body {
   --accent-secondary-glow:rgba(26,127,55,.08);
   --status-error:#d1242f; --status-warning:#9a6700; --status-success:#1a7f37;
   --panel-active-bg:#cce5ff;
-  --line-alt-bg: rgba(0, 0, 0, 0.04);
+  --line-alt-bg: rgba(0, 0, 0, 0.03);
 }
 
 /* ── Theme picker ─────────────────────────────────────────────────────────────── */
@@ -3540,6 +3538,26 @@ body {
   flex: 1;
   white-space: nowrap;
 }
+
+.theme-picker-separator {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: 4px 0;
+}
+
+.theme-picker-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: var(--text-secondary);
+  -webkit-app-region: no-drag;
+}
+.theme-picker-toggle:hover { color: var(--text-primary); }
+.theme-picker-toggle input[type="checkbox"] { cursor: pointer; accent-color: var(--accent-primary); }
 
 /* ── Dock Layout System ──────────────────────────────────────────────────────── */
 
