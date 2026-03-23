@@ -154,14 +154,21 @@ function startKernelForId(notebookId) {
     _writeLog('KERNEL', `Process error: ${err.message}`);
     _notifyWindow(notebookId, { type: 'error', id: null, message: 'Kernel process error: ' + err.message });
   });
+
+  // Suppress EPIPE: if the kernel exits while we are still writing to stdin
+  // the stream emits 'error' rather than throwing, and without a listener it
+  // would become an uncaught exception that crashes the main process.
+  kernelProcess.stdin.on('error', () => {});
 }
 
 function killKernelForId(notebookId) {
   const entry = kernels.get(notebookId);
   if (!entry || !entry.process) return;
-  try {
-    entry.process.stdin.write(JSON.stringify({ type: 'exit' }) + '\n');
-  } catch (_) {}
+  if (entry.process.stdin.writable) {
+    try {
+      entry.process.stdin.write(JSON.stringify({ type: 'exit' }) + '\n');
+    } catch (_) {}
+  }
   setTimeout(() => {
     if (entry.process) {
       entry.process.kill();
