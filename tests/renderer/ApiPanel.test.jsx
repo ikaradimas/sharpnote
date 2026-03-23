@@ -57,7 +57,10 @@ const SWAGGER2_SPEC = {
 
 beforeEach(() => {
   window.electronAPI = {
-    fetchUrl: vi.fn(),
+    fetchUrl:     vi.fn(),
+    loadApiSaved: vi.fn().mockResolvedValue([]),
+    saveApiSaved: vi.fn().mockResolvedValue(undefined),
+    apiRequest:   vi.fn(),
   };
 });
 

@@ -14,6 +14,7 @@ const kernelManager = require('./src/main/kernel-manager');
 const notebookIo    = require('./src/main/notebook-io');
 const logOps        = require('./src/main/log-ops');
 const settings      = require('./src/main/settings');
+const apiSaved      = require('./src/main/api-saved');
 const menuBuilder   = require('./src/main/menu');
 
 // ── Process-level state ───────────────────────────────────────────────────────
@@ -125,6 +126,8 @@ function registerAllHandlers() {
 
   settings.register(ipcMain, { app, shell, mainWindow });
 
+  apiSaved.register(ipcMain, { app });
+
   // App info.
   ipcMain.handle('get-app-version', () => app.getVersion());
 
@@ -134,6 +137,23 @@ function registerAllHandlers() {
     const res = await fetch(url, { headers: { Accept: 'application/json, application/yaml, text/yaml, text/plain, */*' } });
     if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
     return res.text();
+  });
+
+  // API request execution — proxied through the main process so http:// URLs
+  // bypass renderer CSP and custom auth headers can be forwarded freely.
+  ipcMain.handle('api-request', async (_event, { method, url, headers, body }) => {
+    const start = Date.now();
+    const opts = { method: (method || 'GET').toUpperCase(), headers: headers || {} };
+    if (body !== undefined && body !== null && body !== '') opts.body = body;
+    const res = await fetch(url, opts);
+    const bodyText = await res.text();
+    return {
+      status: res.status,
+      statusText: res.statusText,
+      headers: Object.fromEntries(res.headers.entries()),
+      body: bodyText,
+      duration: Date.now() - start,
+    };
   });
 
   // Recent-files IPC (thin wrappers, not in a sub-module register fn).

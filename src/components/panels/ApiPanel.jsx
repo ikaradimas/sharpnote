@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import yaml from 'js-yaml';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -29,8 +29,7 @@ function getBaseUrl(spec) {
 }
 
 function groupOperations(spec) {
-  const groups = {};  // tagName → [{ method, path, op }]
-
+  const groups = {};
   for (const [path, pathItem] of Object.entries(spec.paths || {})) {
     for (const method of HTTP_METHODS) {
       const op = pathItem[method];
@@ -41,7 +40,6 @@ function groupOperations(spec) {
       groups[key].push({ method, path, op });
     }
   }
-
   return groups;
 }
 
@@ -60,26 +58,292 @@ function getSchemaType(spec, schema) {
     return resolved ? getSchemaType(spec, resolved) : schema.$ref.split('/').pop();
   }
   if (schema.type === 'array') {
-    const items = schema.items;
-    return `${getSchemaType(spec, items)}[]`;
+    return `${getSchemaType(spec, schema.items)}[]`;
   }
   return schema.type || (schema.properties ? 'object' : '');
 }
 
 // Returns body info for Swagger 2 operations (which use in:"body" parameters).
-// Returns null for OAS3 (which uses op.requestBody).
 function getSwagger2BodyInfo(spec, op) {
   const bodyParam = op.parameters?.find(p => p.in === 'body');
   if (!bodyParam) return null;
-  const consumes = op.consumes || spec.consumes || [];
   return {
     schema: bodyParam.schema ?? null,
     required: !!bodyParam.required,
-    consumes,
+    consumes: op.consumes || spec.consumes || [],
   };
 }
 
+// ── Auth helpers ──────────────────────────────────────────────────────────────
+
+export function applyAuth(headers, queryParams, auth) {
+  if (auth.type === 'bearer' && auth.token) {
+    headers['Authorization'] = `Bearer ${auth.token}`;
+  } else if (auth.type === 'apikey' && auth.keyName && auth.keyValue) {
+    if (auth.keyIn === 'header') {
+      headers[auth.keyName] = auth.keyValue;
+    } else {
+      queryParams[auth.keyName] = auth.keyValue;
+    }
+  } else if (auth.type === 'basic' && (auth.username || auth.password)) {
+    headers['Authorization'] = `Basic ${btoa(`${auth.username || ''}:${auth.password || ''}`)}`;
+  }
+}
+
+export function buildRequestUrl(baseUrl, pathTemplate, pathParams, queryParams) {
+  let url = baseUrl + pathTemplate;
+  for (const [k, v] of Object.entries(pathParams)) {
+    if (v !== '') url = url.replace(`{${k}}`, encodeURIComponent(v));
+  }
+  const qs = new URLSearchParams();
+  for (const [k, v] of Object.entries(queryParams)) {
+    if (v !== '') qs.append(k, v);
+  }
+  const qStr = qs.toString();
+  return qStr ? `${url}?${qStr}` : url;
+}
+
+function generateId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+const DEFAULT_AUTH = { type: 'none', token: '', keyName: 'X-API-Key', keyValue: '', keyIn: 'header', username: '', password: '' };
+
 // ── Sub-components ────────────────────────────────────────────────────────────
+
+function SavedApiBar({ savedApis, selectedId, onSelect, onSave, onDelete }) {
+  return (
+    <div className="api-saved-bar">
+      <select
+        className="api-saved-select"
+        value={selectedId || ''}
+        onChange={(e) => onSelect(e.target.value || null)}
+      >
+        <option value="">— saved APIs —</option>
+        {savedApis.map(a => (
+          <option key={a.id} value={a.id}>{a.title || a.url}</option>
+        ))}
+      </select>
+      <button className="api-saved-btn" onClick={onSave} title="Save current URL and auth config">
+        Save
+      </button>
+      <button
+        className="api-saved-btn api-saved-btn-del"
+        onClick={onDelete}
+        disabled={!selectedId}
+        title="Delete saved API"
+      >
+        Delete
+      </button>
+    </div>
+  );
+}
+
+function AuthConfig({ auth, onChange }) {
+  function set(field, value) { onChange({ ...auth, [field]: value }); }
+  return (
+    <div className="api-auth-row">
+      <span className="api-auth-label">Auth</span>
+      <select className="api-auth-type" value={auth.type} onChange={(e) => set('type', e.target.value)}>
+        <option value="none">None</option>
+        <option value="bearer">Bearer</option>
+        <option value="apikey">API Key</option>
+        <option value="basic">Basic</option>
+      </select>
+      {auth.type === 'bearer' && (
+        <input
+          className="api-auth-input api-auth-secret"
+          type="password"
+          placeholder="Token"
+          value={auth.token}
+          onChange={(e) => set('token', e.target.value)}
+          spellCheck={false}
+        />
+      )}
+      {auth.type === 'apikey' && (
+        <>
+          <input
+            className="api-auth-input"
+            type="text"
+            placeholder="Header / param name"
+            value={auth.keyName}
+            onChange={(e) => set('keyName', e.target.value)}
+            spellCheck={false}
+          />
+          <input
+            className="api-auth-input api-auth-secret"
+            type="password"
+            placeholder="Value"
+            value={auth.keyValue}
+            onChange={(e) => set('keyValue', e.target.value)}
+            spellCheck={false}
+          />
+          <select className="api-auth-in" value={auth.keyIn} onChange={(e) => set('keyIn', e.target.value)}>
+            <option value="header">header</option>
+            <option value="query">query</option>
+          </select>
+        </>
+      )}
+      {auth.type === 'basic' && (
+        <>
+          <input
+            className="api-auth-input"
+            type="text"
+            placeholder="Username"
+            value={auth.username}
+            onChange={(e) => set('username', e.target.value)}
+            spellCheck={false}
+          />
+          <input
+            className="api-auth-input api-auth-secret"
+            type="password"
+            placeholder="Password"
+            value={auth.password}
+            onChange={(e) => set('password', e.target.value)}
+            spellCheck={false}
+          />
+        </>
+      )}
+    </div>
+  );
+}
+
+function TryItForm({ spec, method, pathTemplate, op, auth, baseUrl }) {
+  const pathParamDefs  = (op.parameters ?? []).filter(p => p.in === 'path');
+  const queryParamDefs = (op.parameters ?? []).filter(p => p.in === 'query');
+  const hasBody = !!op.requestBody || (spec.swagger && op.parameters?.some(p => p.in === 'body'));
+
+  const [pathParams,  setPathParams]  = useState(() => Object.fromEntries(pathParamDefs.map(p  => [p.name, ''])));
+  const [queryParams, setQueryParams] = useState(() => Object.fromEntries(queryParamDefs.map(p => [p.name, ''])));
+  const [body,        setBody]        = useState('');
+  const [response,    setResponse]    = useState(null);
+  const [loading,     setLoading]     = useState(false);
+  const [showHeaders, setShowHeaders] = useState(false);
+
+  async function execute() {
+    setLoading(true);
+    setResponse(null);
+    try {
+      const headers = { 'Accept': 'application/json, */*' };
+      if (hasBody) headers['Content-Type'] = 'application/json';
+      const qp = { ...queryParams };
+      applyAuth(headers, qp, auth);
+      const url = buildRequestUrl(baseUrl, pathTemplate, pathParams, qp);
+      const opts = { method, url, headers };
+      if (hasBody && body.trim()) opts.body = body;
+      const result = await window.electronAPI.apiRequest(opts);
+      setResponse(result);
+    } catch (e) {
+      setResponse({ error: e.message || String(e) });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function prettyBody(text) {
+    try { return JSON.stringify(JSON.parse(text), null, 2); }
+    catch { return text; }
+  }
+
+  return (
+    <div className="api-tryit">
+      {pathParamDefs.length > 0 && (
+        <div className="api-tryit-section">
+          <div className="api-section-label">Path parameters</div>
+          {pathParamDefs.map(p => (
+            <div key={p.name} className="api-tryit-param-row">
+              <span className="api-tryit-param-name">{p.name}</span>
+              <input
+                className="api-tryit-input"
+                type="text"
+                placeholder={p.description || p.name}
+                value={pathParams[p.name] ?? ''}
+                onChange={(e) => setPathParams(prev => ({ ...prev, [p.name]: e.target.value }))}
+                spellCheck={false}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+      {queryParamDefs.length > 0 && (
+        <div className="api-tryit-section">
+          <div className="api-section-label">Query parameters</div>
+          {queryParamDefs.map(p => (
+            <div key={p.name} className="api-tryit-param-row">
+              <span className="api-tryit-param-name">{p.name}</span>
+              <input
+                className="api-tryit-input"
+                type="text"
+                placeholder={p.description || p.name}
+                value={queryParams[p.name] ?? ''}
+                onChange={(e) => setQueryParams(prev => ({ ...prev, [p.name]: e.target.value }))}
+                spellCheck={false}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+      {hasBody && (
+        <div className="api-tryit-section">
+          <div className="api-section-label">Request body</div>
+          <textarea
+            className="api-tryit-body"
+            placeholder={'{\n  "key": "value"\n}'}
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            spellCheck={false}
+          />
+        </div>
+      )}
+      <div className="api-tryit-actions">
+        <button
+          className="api-tryit-execute"
+          onClick={execute}
+          disabled={loading || !baseUrl}
+          title={!baseUrl ? 'No base URL — check spec servers/host field' : undefined}
+        >
+          {loading ? '…' : 'Execute'}
+        </button>
+      </div>
+      {response && (
+        <div className="api-tryit-response">
+          {response.error ? (
+            <div className="api-error">{response.error}</div>
+          ) : (
+            <>
+              <div className="api-tryit-response-meta">
+                <span className={`api-status-badge api-status-${String(response.status)[0]}xx`}>
+                  {response.status}
+                </span>
+                <span className="api-tryit-status-text">{response.statusText}</span>
+                <span className="api-tryit-duration">{response.duration}ms</span>
+                <button
+                  className="api-tryit-headers-toggle"
+                  onClick={() => setShowHeaders(h => !h)}
+                >
+                  {showHeaders ? 'Hide headers' : 'Headers'}
+                </button>
+              </div>
+              {showHeaders && response.headers && (
+                <div className="api-tryit-headers">
+                  {Object.entries(response.headers).map(([k, v]) => (
+                    <div key={k} className="api-tryit-header-row">
+                      <span className="api-tryit-header-name">{k}</span>
+                      <span className="api-tryit-header-value">{v}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {response.body && (
+                <pre className="api-tryit-body-out">{prettyBody(response.body)}</pre>
+              )}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function MethodBadge({ method }) {
   return (
@@ -96,11 +360,7 @@ function ParamsTable({ spec, parameters }) {
     <table className="api-params-table">
       <thead>
         <tr>
-          <th>Name</th>
-          <th>In</th>
-          <th>Type</th>
-          <th>Req</th>
-          <th>Description</th>
+          <th>Name</th><th>In</th><th>Type</th><th>Req</th><th>Description</th>
         </tr>
       </thead>
       <tbody>
@@ -123,10 +383,9 @@ function ResponsesTable({ spec, responses }) {
   return (
     <div className="api-responses">
       {Object.entries(responses).map(([code, resp]) => {
-        // OAS3: resp.content keys; Swagger 2: resp.schema type
         const contentTypes = resp.content ? Object.keys(resp.content).join(', ') : null;
-        const schemaType = resp.schema ? getSchemaType(spec, resp.schema) : null;
-        const typeLabel = contentTypes || schemaType;
+        const schemaType   = resp.schema  ? getSchemaType(spec, resp.schema)  : null;
+        const typeLabel    = contentTypes || schemaType;
         return (
           <div key={code} className="api-response-row">
             <span className={`api-status-badge api-status-${code[0]}xx`}>{code}</span>
@@ -139,10 +398,8 @@ function ResponsesTable({ spec, responses }) {
   );
 }
 
-function Operation({ spec, method, path, op, expanded, onToggle }) {
-  // Swagger 2 body is expressed as a parameter with in:"body"; exclude it from the
-  // params table and render a dedicated Request Body section instead (matching OAS3).
-  const sw2Body = !op.requestBody && spec.swagger ? getSwagger2BodyInfo(spec, op) : null;
+function Operation({ spec, method, path, op, expanded, onToggle, tryItOpen, onToggleTryIt, auth, baseUrl }) {
+  const sw2Body      = !op.requestBody && spec.swagger ? getSwagger2BodyInfo(spec, op) : null;
   const displayParams = sw2Body
     ? (op.parameters ?? []).filter(p => p.in !== 'body')
     : op.parameters ?? [];
@@ -190,13 +447,29 @@ function Operation({ spec, method, path, op, expanded, onToggle }) {
               <ResponsesTable spec={spec} responses={op.responses} />
             </>
           )}
+          <button
+            className={`api-tryit-toggle${tryItOpen ? ' api-tryit-toggle-open' : ''}`}
+            onClick={onToggleTryIt}
+          >
+            {tryItOpen ? '▾ Try it' : '▸ Try it'}
+          </button>
+          {tryItOpen && (
+            <TryItForm
+              spec={spec}
+              method={method}
+              pathTemplate={path}
+              op={op}
+              auth={auth}
+              baseUrl={baseUrl}
+            />
+          )}
         </div>
       )}
     </div>
   );
 }
 
-function TagGroup({ spec, tag, operations, expanded, onToggleTag, expandedOps, onToggleOp }) {
+function TagGroup({ spec, tag, operations, expanded, onToggleTag, expandedOps, onToggleOp, expandedTryIt, onToggleTryIt, auth, baseUrl }) {
   return (
     <div className="api-tag">
       <button className="api-tag-header" onClick={() => onToggleTag(tag)}>
@@ -215,6 +488,10 @@ function TagGroup({ spec, tag, operations, expanded, onToggleTag, expandedOps, o
             op={op}
             expanded={expandedOps.has(opKey)}
             onToggle={() => onToggleOp(opKey)}
+            tryItOpen={expandedTryIt.has(opKey)}
+            onToggleTryIt={() => onToggleTryIt(opKey)}
+            auth={auth}
+            baseUrl={baseUrl}
           />
         );
       })}
@@ -225,12 +502,20 @@ function TagGroup({ spec, tag, operations, expanded, onToggleTag, expandedOps, o
 // ── ApiPanel ──────────────────────────────────────────────────────────────────
 
 export function ApiPanel({ onToggle }) {
-  const [url, setUrl] = useState('');
-  const [spec, setSpec] = useState(null);
-  const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [url,          setUrl]          = useState('');
+  const [spec,         setSpec]         = useState(null);
+  const [error,        setError]        = useState(null);
+  const [loading,      setLoading]      = useState(false);
   const [expandedTags, setExpandedTags] = useState(new Set());
-  const [expandedOps, setExpandedOps] = useState(new Set());
+  const [expandedOps,  setExpandedOps]  = useState(new Set());
+  const [expandedTryIt,setExpandedTryIt]= useState(new Set());
+  const [auth,         setAuth]         = useState(DEFAULT_AUTH);
+  const [savedApis,    setSavedApis]    = useState([]);
+  const [selectedSavedId, setSelectedSavedId] = useState(null);
+
+  useEffect(() => {
+    window.electronAPI.loadApiSaved?.().then(list => setSavedApis(list ?? [])).catch(() => {});
+  }, []);
 
   async function loadSpec() {
     const trimmed = url.trim();
@@ -248,6 +533,7 @@ export function ApiPanel({ onToggle }) {
       setSpec(parsed);
       setExpandedTags(new Set(Object.keys(groupOperations(parsed))));
       setExpandedOps(new Set());
+      setExpandedTryIt(new Set());
     } catch (e) {
       setError(e.message || String(e));
     } finally {
@@ -255,8 +541,38 @@ export function ApiPanel({ onToggle }) {
     }
   }
 
+  function selectSavedApi(id) {
+    setSelectedSavedId(id);
+    if (!id) return;
+    const saved = savedApis.find(a => a.id === id);
+    if (!saved) return;
+    setUrl(saved.url);
+    setAuth(saved.auth ?? DEFAULT_AUTH);
+    setSpec(null);
+    setError(null);
+  }
+
+  function saveCurrentApi() {
+    const title = spec?.info?.title || url;
+    const entry = { id: selectedSavedId || generateId(), url, title, auth };
+    const updated = selectedSavedId
+      ? savedApis.map(a => a.id === selectedSavedId ? entry : a)
+      : [...savedApis, entry];
+    setSavedApis(updated);
+    setSelectedSavedId(entry.id);
+    window.electronAPI.saveApiSaved?.(updated);
+  }
+
+  function deleteCurrentApi() {
+    if (!selectedSavedId) return;
+    const updated = savedApis.filter(a => a.id !== selectedSavedId);
+    setSavedApis(updated);
+    setSelectedSavedId(null);
+    window.electronAPI.saveApiSaved?.(updated);
+  }
+
   function toggleTag(tag) {
-    setExpandedTags((prev) => {
+    setExpandedTags(prev => {
       const next = new Set(prev);
       next.has(tag) ? next.delete(tag) : next.add(tag);
       return next;
@@ -264,14 +580,22 @@ export function ApiPanel({ onToggle }) {
   }
 
   function toggleOp(key) {
-    setExpandedOps((prev) => {
+    setExpandedOps(prev => {
       const next = new Set(prev);
       next.has(key) ? next.delete(key) : next.add(key);
       return next;
     });
   }
 
-  const groups = spec ? groupOperations(spec) : {};
+  function toggleTryIt(key) {
+    setExpandedTryIt(prev => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
+  }
+
+  const groups  = spec ? groupOperations(spec) : {};
   const baseUrl = spec ? getBaseUrl(spec) : '';
   const totalOps = Object.values(groups).reduce((n, ops) => n + ops.length, 0);
 
@@ -281,6 +605,14 @@ export function ApiPanel({ onToggle }) {
         <span className="api-panel-title">API Browser</span>
         <button className="panel-close-btn" onClick={onToggle}>✕</button>
       </div>
+
+      <SavedApiBar
+        savedApis={savedApis}
+        selectedId={selectedSavedId}
+        onSelect={selectSavedApi}
+        onSave={saveCurrentApi}
+        onDelete={deleteCurrentApi}
+      />
 
       <div className="api-url-row">
         <input
@@ -296,6 +628,8 @@ export function ApiPanel({ onToggle }) {
           {loading ? '…' : 'Load'}
         </button>
       </div>
+
+      <AuthConfig auth={auth} onChange={setAuth} />
 
       {error && <div className="api-error">{error}</div>}
 
@@ -327,6 +661,10 @@ export function ApiPanel({ onToggle }) {
                 onToggleTag={toggleTag}
                 expandedOps={expandedOps}
                 onToggleOp={toggleOp}
+                expandedTryIt={expandedTryIt}
+                onToggleTryIt={toggleTryIt}
+                auth={auth}
+                baseUrl={baseUrl}
               />
             ))}
           </div>

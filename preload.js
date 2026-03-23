@@ -93,6 +93,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // URL fetch (proxied through main to bypass renderer CSP for http:// URLs)
   fetchUrl: (url) => ipcRenderer.invoke('fetch-url', url),
 
+  // API Browser — saved configurations
+  loadApiSaved: () => ipcRenderer.invoke('api-saved-load'),
+  saveApiSaved: (list) => ipcRenderer.invoke('api-saved-save', list),
+
+  // API Browser — request execution (proxied through main for CSP + auth header freedom)
+  apiRequest: (opts) => ipcRenderer.invoke('api-request', opts),
+
   // Renderer-side logging (appears in Logs panel)
   rendererLog: (tag, message) => ipcRenderer.send('renderer-log', { tag, message }),
 
