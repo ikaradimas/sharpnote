@@ -11,14 +11,28 @@ function parseLogContent(text) {
 }
 
 function LogEntry({ entry }) {
+  const msg = entry.message || '';
+  const isCollapsible = msg.includes('\n') || msg.length > 120;
+  const [collapsed, setCollapsed] = useState(isCollapsible);
   const time = formatLogTime(entry.timestamp);
   const tagClass = `log-tag log-tag-${(entry.tag || '').toLowerCase().replace(/[^a-z]/g, '')}`;
   return (
     <div className="log-entry">
       <span className="log-time">{time}</span>
       <span className={tagClass}>{entry.tag}</span>
-      <span className="log-message">
-        {entry.message}
+      <span className="log-entry-toggle-cell">
+        {isCollapsible && (
+          <button
+            className="log-entry-toggle"
+            onClick={() => setCollapsed((c) => !c)}
+            title={collapsed ? 'Expand' : 'Collapse'}
+          >
+            {collapsed ? '▶' : '▼'}
+          </button>
+        )}
+      </span>
+      <span className={`log-message${collapsed ? ' log-message-collapsed' : ''}`}>
+        {msg}
         {entry.memoryMb != null && (
           <span className="log-memory"> · {entry.memoryMb.toFixed(0)} MB</span>
         )}

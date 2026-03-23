@@ -293,10 +293,15 @@ export const DOCS_SECTIONS = [
       { type: 'p', text: 'Open the Log panel with Tools → Logs (⌘⇧G) or the Logs button in the toolbar. It shows a real-time interleaved stream from all open notebooks and writes daily rotating log files alongside the app.' },
       { type: 'h3', text: 'Live Stream' },
       { type: 'p', text: 'When "Live" is selected in the dropdown, log entries appear in real time and the panel auto-scrolls to the latest entry.' },
+      { type: 'h3', text: 'Collapsible Entries' },
+      { type: 'p', text: 'Entries with long or multi-line messages (such as stack traces from kernel errors) are collapsed to a single truncated line by default. Click the ▶ chevron to expand an entry and see the full content. Click ▼ to collapse it again.' },
       { type: 'h3', text: 'Log Entry Tags' },
       { type: 'ul', items: [
-        'NOTEBOOK — lifecycle events: kernel start, NuGet restore, cell execute, kernel exit',
+        'KERNEL — kernel lifecycle events (start, ready, stop) and all kernel stderr output (warnings, errors, crash traces)',
+        'CELL — cell execution events: run start, completion, duration, and cell-level runtime errors',
         'USER — entries written from scripts with .Log() — shown in teal',
+        'NUGET — package install progress and results',
+        'DB — database connection status',
       ]},
       { type: 'h3', text: 'Historical Logs' },
       { type: 'p', text: 'Log files are written per calendar day. Use the dropdown to select a past day\'s log. Click the bin button to delete the selected log file.' },
@@ -450,7 +455,7 @@ export const DOCS_SECTIONS = [
   {
     id: 'settings', title: 'Settings',
     content: [
-      { type: 'p', text: 'Open Settings from the application menu (⌘, on macOS, Ctrl+, on Windows/Linux) to configure appearance, paths, and startup behaviour.' },
+      { type: 'p', text: 'Open the Settings dialog (⌘, on macOS, Ctrl+, on Windows/Linux, or Tools → Settings…) to configure appearance, paths, and startup behaviour.' },
       { type: 'h3', text: 'Appearance' },
       { type: 'ul', items: [
         'Editor Font Size — drag the slider (10–28 px) to resize the notebook editor font; a live preview updates as you drag. The Reset button restores the default of 12.6 px. The keyboard shortcuts ⌘= / ⌘- / ⌘0 still work outside the dialog.',

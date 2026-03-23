@@ -11,6 +11,10 @@ const kernels = new Map();
 const _ipcHandlers = {};
 const _ipcEvents   = {};
 
+// Captured per-kernel handlers for test access (populated when VITEST is set).
+const _stderrHandlers = {};  // notebookId -> stderr 'data' handler
+const _lineHandlers   = {};  // notebookId -> readline 'line' handler
+
 let _mainWindow  = null;
 let _app         = null;
 let _writeLog    = null;  // injected from log-ops to avoid circular deps
@@ -72,7 +76,7 @@ function startKernelForId(notebookId) {
 
   const rl = readline.createInterface({ input: kernelProcess.stdout });
 
-  rl.on('line', (line) => {
+  const lineHandler = (line) => {
     if (!line.trim()) return;
     try {
       const msg = JSON.parse(line);
@@ -100,6 +104,9 @@ function startKernelForId(notebookId) {
       if (msg.type === 'error' && !msg.id) {
         _writeLog('KERNEL', `Error: ${msg.message}`);
       }
+      if (msg.type === 'error' && msg.id) {
+        _writeLog('CELL', `[${msg.id}] error: ${msg.message}`);
+      }
       if (msg.type === 'nuget_status') {
         const detail = msg.message ? ` — ${msg.message}` : '';
         _writeLog('NUGET', `${msg.id}: ${msg.status}${detail}`);
@@ -115,11 +122,24 @@ function startKernelForId(notebookId) {
     } catch (e) {
       console.error('Failed to parse kernel message:', line, e);
     }
-  });
+  };
 
-  kernelProcess.stderr.on('data', (data) => {
-    console.error(`Kernel stderr (${notebookId}):`, data.toString());
-  });
+  rl.on('line', lineHandler);
+
+  const stderrHandler = (data) => {
+    const text = data.toString();
+    for (const line of text.split('\n')) {
+      const trimmed = line.trim();
+      if (trimmed) _writeLog('KERNEL', trimmed);
+    }
+  };
+
+  kernelProcess.stderr.on('data', stderrHandler);
+
+  if (process.env.VITEST) {
+    _lineHandlers[notebookId]   = lineHandler;
+    _stderrHandlers[notebookId] = stderrHandler;
+  }
 
   kernelProcess.on('exit', (code) => {
     entry.ready = false;
@@ -241,4 +261,6 @@ module.exports = {
   _notifyWindow,
   _ipcHandlers,
   _ipcEvents,
+  _stderrHandlers,
+  _lineHandlers,
 };
