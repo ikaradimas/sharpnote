@@ -46,7 +46,7 @@
   --panel-active-bg: #0a2a38;
   /* Alternating cell row overlay — semi-transparent white for dark themes.
      github-light overrides this to a semi-transparent black below. */
-  --cell-alt-overlay: rgba(255, 255, 255, 0.04);
+  --cell-alt-overlay: rgba(255, 255, 255, 0.10);
 }
 
 *, *::before, *::after {
@@ -640,12 +640,15 @@ body {
    NotebookView via index % 2, which is reliable unlike :nth-child which
    is affected by the leading <AddBar> sibling.  background-color and
    background-image are set separately to avoid the CSS shorthand
-   ambiguity that prevents var() from being parsed as a <color>. */
-.cell-wrapper-alt .code-cell {
-  background-color: var(--bg-base);
+   ambiguity that prevents var() from being parsed as a <color>.
+   Both .cm-editor and .cm-scroller are targeted because CodeMirror's
+   scroller child can otherwise cover the editor's own background. */
+.cell-wrapper-alt .code-cell-header {
+  background-color: var(--bg-mid);
   background-image: linear-gradient(var(--cell-alt-overlay), var(--cell-alt-overlay));
 }
-.cell-wrapper-alt .cm-editor {
+.cell-wrapper-alt .cm-editor,
+.cell-wrapper-alt .cm-scroller {
   background-color: var(--bg-deep) !important;
   background-image: linear-gradient(var(--cell-alt-overlay), var(--cell-alt-overlay)) !important;
 }
@@ -3481,7 +3484,7 @@ body {
   --accent-secondary-glow:rgba(26,127,55,.08);
   --status-error:#d1242f; --status-warning:#9a6700; --status-success:#1a7f37;
   --panel-active-bg:#cce5ff;
-  --cell-alt-overlay: rgba(0, 0, 0, 0.04);
+  --cell-alt-overlay: rgba(0, 0, 0, 0.10);
 }
 
 /* ── Theme picker ─────────────────────────────────────────────────────────────── */
