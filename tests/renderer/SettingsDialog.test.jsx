@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { SettingsDialog } from '../../src/components/dialogs/SettingsDialog.jsx';
 
@@ -21,6 +21,8 @@ function makeProps(overrides = {}) {
     onFontSizeChange: vi.fn(),
     pinnedPaths: new Set(),
     onUnpin: vi.fn(),
+    onExport: vi.fn().mockResolvedValue({ success: true }),
+    onImport: vi.fn().mockResolvedValue({ success: true }),
     onClose: vi.fn(),
     ...overrides,
   };
@@ -251,5 +253,75 @@ describe('Startup section — with pinned notebooks', () => {
     const unpinBtns = screen.getAllByTitle('Unpin this notebook');
     fireEvent.click(unpinBtns[0]);
     expect(props.onUnpin).toHaveBeenCalledWith('/home/user/notebooks/work.cnb');
+  });
+});
+
+// ── Export / Import buttons ───────────────────────────────────────────────────
+
+describe('Export / Import buttons', () => {
+  it('renders Export… and Import… buttons', () => {
+    render(<SettingsDialog {...makeProps()} />);
+    expect(screen.getByTitle('Export all settings to a JSON file')).toBeInTheDocument();
+    expect(screen.getByTitle('Import settings from a JSON file')).toBeInTheDocument();
+  });
+
+  it('calls onExport when Export… is clicked', async () => {
+    const props = makeProps();
+    render(<SettingsDialog {...props} />);
+    await act(async () => {
+      fireEvent.click(screen.getByTitle('Export all settings to a JSON file'));
+    });
+    expect(props.onExport).toHaveBeenCalledOnce();
+  });
+
+  it('calls onImport when Import… is clicked', async () => {
+    const props = makeProps();
+    render(<SettingsDialog {...props} />);
+    await act(async () => {
+      fireEvent.click(screen.getByTitle('Import settings from a JSON file'));
+    });
+    expect(props.onImport).toHaveBeenCalledOnce();
+  });
+
+  it('shows success status after successful export', async () => {
+    const props = makeProps({ onExport: vi.fn().mockResolvedValue({ success: true }) });
+    render(<SettingsDialog {...props} />);
+    await act(async () => {
+      fireEvent.click(screen.getByTitle('Export all settings to a JSON file'));
+    });
+    await waitFor(() => {
+      expect(screen.getByText('Settings exported.')).toBeInTheDocument();
+    });
+  });
+
+  it('shows success status after successful import', async () => {
+    const props = makeProps({ onImport: vi.fn().mockResolvedValue({ success: true }) });
+    render(<SettingsDialog {...props} />);
+    await act(async () => {
+      fireEvent.click(screen.getByTitle('Import settings from a JSON file'));
+    });
+    await waitFor(() => {
+      expect(screen.getByText('Settings imported.')).toBeInTheDocument();
+    });
+  });
+
+  it('shows error status when export returns an error', async () => {
+    const props = makeProps({ onExport: vi.fn().mockResolvedValue({ success: false, error: 'Disk full' }) });
+    render(<SettingsDialog {...props} />);
+    await act(async () => {
+      fireEvent.click(screen.getByTitle('Export all settings to a JSON file'));
+    });
+    await waitFor(() => {
+      expect(screen.getByText('Disk full')).toBeInTheDocument();
+    });
+  });
+
+  it('shows no status when export is cancelled (success: false, no error)', async () => {
+    const props = makeProps({ onExport: vi.fn().mockResolvedValue({ success: false }) });
+    render(<SettingsDialog {...props} />);
+    await act(async () => {
+      fireEvent.click(screen.getByTitle('Export all settings to a JSON file'));
+    });
+    expect(document.querySelector('.settings-status')).toBeNull();
   });
 });

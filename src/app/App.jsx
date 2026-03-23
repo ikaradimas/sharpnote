@@ -53,6 +53,8 @@ export function App() {
   const [aboutOpen, setAboutOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [fontSize, setFontSizeState] = useState(12.6);
+  const fontSizeRef = useRef(12.6);
+  useEffect(() => { fontSizeRef.current = fontSize; }, [fontSize]);
 
   // Dock layout state
   const [dockLayout, setDockLayout] = useState(DEFAULT_DOCK_LAYOUT);
@@ -793,6 +795,70 @@ export function App() {
       window.electronAPI?.saveAppSettings({ theme: themeRef.current, pinnedTabs: [...next], dockLayout: dockLayoutRef.current, savedLayouts: savedLayoutsRef.current });
       return next;
     });
+  }, []);
+
+  const handleExportSettings = useCallback(async () => {
+    const apiSaved = await window.electronAPI?.loadApiSaved() ?? [];
+    const data = {
+      version: '1.0',
+      exportedAt: new Date().toISOString(),
+      appSettings: {
+        theme: themeRef.current,
+        dockLayout: dockLayoutRef.current,
+        savedLayouts: savedLayoutsRef.current,
+        pinnedTabs: [...pinnedPathsRef.current],
+      },
+      fontSize: fontSizeRef.current,
+      dbConnections: dbConnectionsRef.current,
+      apiSaved,
+    };
+    return window.electronAPI?.exportSettings(data);
+  }, []);
+
+  const handleImportSettings = useCallback(async () => {
+    const result = await window.electronAPI?.importSettings();
+    if (!result?.success || !result?.data) return result;
+    const { data } = result;
+
+    if (data.appSettings?.theme) setTheme(data.appSettings.theme);
+
+    if (data.appSettings?.dockLayout) {
+      const loaded = {
+        ...DEFAULT_DOCK_LAYOUT,
+        ...data.appSettings.dockLayout,
+        assignments: { ...DEFAULT_DOCK_LAYOUT.assignments, ...(data.appSettings.dockLayout.assignments || {}) },
+        order:       { ...DEFAULT_DOCK_LAYOUT.order,       ...(data.appSettings.dockLayout.order       || {}) },
+      };
+      setDockLayout(loaded);
+      dockLayoutRef.current = loaded;
+    }
+    if (Array.isArray(data.appSettings?.savedLayouts)) {
+      setSavedLayouts(data.appSettings.savedLayouts);
+      savedLayoutsRef.current = data.appSettings.savedLayouts;
+    }
+    if (Array.isArray(data.appSettings?.pinnedTabs)) {
+      setPinnedPaths(new Set(data.appSettings.pinnedTabs));
+    }
+    if (typeof data.fontSize === 'number') {
+      window.electronAPI?.setFontSize(data.fontSize);
+    }
+    if (Array.isArray(data.dbConnections)) {
+      setDbConnections(data.dbConnections);
+      window.electronAPI?.saveDbConnections(data.dbConnections);
+    }
+    if (Array.isArray(data.apiSaved)) {
+      window.electronAPI?.saveApiSaved(data.apiSaved);
+    }
+
+    // Persist the merged app settings
+    window.electronAPI?.saveAppSettings({
+      theme:        data.appSettings?.theme        ?? themeRef.current,
+      dockLayout:   data.appSettings?.dockLayout   ?? dockLayoutRef.current,
+      savedLayouts: data.appSettings?.savedLayouts ?? savedLayoutsRef.current,
+      pinnedTabs:   data.appSettings?.pinnedTabs   ?? [...pinnedPathsRef.current],
+    });
+
+    return result;
   }, []);
 
   const handleCloseTab = useCallback((tabId) => {
@@ -1538,6 +1604,8 @@ export function App() {
           onFontSizeChange={(size) => window.electronAPI?.setFontSize(size)}
           pinnedPaths={pinnedPaths}
           onUnpin={handleTogglePin}
+          onExport={handleExportSettings}
+          onImport={handleImportSettings}
           onClose={() => setSettingsOpen(false)}
         />
       )}

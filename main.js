@@ -128,6 +128,39 @@ function registerAllHandlers() {
 
   apiSaved.register(ipcMain, { app });
 
+  // Settings export / import
+  ipcMain.handle('settings-export', async (_event, data) => {
+    const { filePath, canceled } = await dialog.showSaveDialog({
+      title: 'Export Settings',
+      defaultPath: `sharpnote-settings-${new Date().toISOString().slice(0, 10)}.json`,
+      filters: [{ name: 'JSON', extensions: ['json'] }],
+    });
+    if (canceled || !filePath) return { success: false };
+    try {
+      fs.mkdirSync(path.dirname(filePath), { recursive: true });
+      fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
+      return { success: true, filePath };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('settings-import', async () => {
+    const { filePaths, canceled } = await dialog.showOpenDialog({
+      title: 'Import Settings',
+      filters: [{ name: 'JSON', extensions: ['json'] }],
+      properties: ['openFile'],
+    });
+    if (canceled || !filePaths?.length) return { success: false };
+    try {
+      const content = fs.readFileSync(filePaths[0], 'utf-8');
+      const data = JSON.parse(content);
+      return { success: true, data };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
   // App info.
   ipcMain.handle('get-app-version', () => app.getVersion());
   ipcMain.handle('get-app-paths', () => ({

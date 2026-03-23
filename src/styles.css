@@ -4288,6 +4288,26 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
   background: var(--accent-warm-bg); color: var(--accent-primary);
   border: 1px solid var(--accent-primary-dim);
 }
+.settings-sidebar-footer {
+  margin-top: auto; padding: 10px 8px 8px;
+  border-top: 1px solid var(--border-subtle);
+  display: flex; flex-direction: column; gap: 4px;
+}
+.settings-io-btn {
+  background: var(--bg-mid); border: 1px solid var(--border-default);
+  color: var(--text-muted); border-radius: 3px; cursor: pointer;
+  font-family: var(--font-ui); font-size: 11px;
+  padding: 5px 10px; text-align: left;
+  transition: color 0.12s, border-color 0.12s, background 0.12s;
+}
+.settings-io-btn:hover { color: var(--text-primary); border-color: var(--border-strong); background: var(--bg-elevated); }
+.settings-status {
+  font-family: var(--font-ui); font-size: 10px;
+  padding: 3px 6px; border-radius: 3px;
+  line-height: 1.4; word-break: break-word;
+}
+.settings-status-success { color: var(--status-success); background: rgba(78,201,176,0.08); }
+.settings-status-error   { color: var(--status-error);   background: rgba(255,64,96,0.08); }
 
 /* Main area */
 .settings-dialog-main {

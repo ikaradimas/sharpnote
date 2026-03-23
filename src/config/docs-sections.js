@@ -460,6 +460,8 @@ export const DOCS_SECTIONS = [
       { type: 'p', text: 'Shows the four key directories used by SharpNote: Code Library, User Data, Logs, and Documents. Click the ↗ button next to any path to open it in Finder / Explorer.' },
       { type: 'h3', text: 'Startup' },
       { type: 'p', text: 'Lists all currently pinned notebooks. Pinned notebooks reopen automatically when SharpNote starts. Click ✕ next to a path to unpin it. To pin a notebook, right-click its tab and choose Pin.' },
+      { type: 'h3', text: 'Export / Import' },
+      { type: 'p', text: 'The Export… and Import… buttons at the bottom of the sidebar let you back up and restore your entire configuration as a single JSON file. The exported file includes theme, font size, dock layout, saved dock layout presets, pinned notebooks, database connections, and saved API configurations. Importing applies all fields that are present in the file and immediately persists them — missing fields are left unchanged.' },
     ],
   },
 ];

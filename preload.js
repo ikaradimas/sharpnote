@@ -49,6 +49,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // App paths
   getAppPaths: () => ipcRenderer.invoke('get-app-paths'),
 
+  // Settings export / import
+  exportSettings: (data) => ipcRenderer.invoke('settings-export', data),
+  importSettings: () => ipcRenderer.invoke('settings-import'),
+
   // Menu actions
   onMenuAction: (callback) => {
     ipcRenderer.on('menu-action', (_event, action) => callback(action));

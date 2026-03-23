@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { THEMES } from '../../config/themes.js';
 
 const FONT_SIZE_MIN = 10;
@@ -168,14 +168,36 @@ export function SettingsDialog({
   onFontSizeChange,
   pinnedPaths,
   onUnpin,
+  onExport,
+  onImport,
   onClose,
 }) {
   const [activeSection, setActiveSection] = useState('appearance');
   const [paths, setPaths] = useState(null);
+  const [status, setStatus] = useState(null); // { type: 'success'|'error', message }
+  const statusTimerRef = useRef(null);
 
   useEffect(() => {
     window.electronAPI?.getAppPaths().then(setPaths).catch(() => {});
   }, []);
+
+  const showStatus = (type, message) => {
+    clearTimeout(statusTimerRef.current);
+    setStatus({ type, message });
+    statusTimerRef.current = setTimeout(() => setStatus(null), 3000);
+  };
+
+  const handleExport = async () => {
+    const result = await onExport?.();
+    if (result?.success) showStatus('success', 'Settings exported.');
+    else if (result?.error) showStatus('error', result.error);
+  };
+
+  const handleImport = async () => {
+    const result = await onImport?.();
+    if (result?.success) showStatus('success', 'Settings imported.');
+    else if (result?.error) showStatus('error', result.error);
+  };
 
   const handleOverlayClick = (e) => {
     if (e.target === e.currentTarget) onClose();
@@ -197,6 +219,19 @@ export function SettingsDialog({
               {s.label}
             </button>
           ))}
+          <div className="settings-sidebar-footer">
+            {status && (
+              <div className={`settings-status settings-status-${status.type}`}>
+                {status.message}
+              </div>
+            )}
+            <button className="settings-io-btn" onClick={handleExport} title="Export all settings to a JSON file">
+              Export…
+            </button>
+            <button className="settings-io-btn" onClick={handleImport} title="Import settings from a JSON file">
+              Import…
+            </button>
+          </div>
         </div>
         <div className="settings-dialog-main">
           <div className="settings-dialog-header">
