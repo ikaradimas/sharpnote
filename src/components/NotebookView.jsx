@@ -30,6 +30,8 @@ export function NotebookView({
   onFocusPanel,
   theme,
   onThemeChange,
+  lineAltEnabled,
+  onLineAltChange,
   dockLayout,
   savedLayouts,
   onSaveLayout,
@@ -118,6 +120,8 @@ export function NotebookView({
         onToggleApi={onToggleApi}
         theme={theme}
         onThemeChange={onThemeChange}
+        lineAltEnabled={lineAltEnabled}
+        onLineAltChange={onLineAltChange}
         dockLayout={dockLayout}
         savedLayouts={savedLayouts}
         onSaveLayout={onSaveLayout}

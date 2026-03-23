@@ -751,13 +751,13 @@ body {
 }
 
 .cm-activeLineGutter {
-  background: #3a3020 !important;
+  background: color-mix(in srgb, var(--accent-primary) 20%, var(--bg-deep)) !important;
   color: var(--accent-primary) !important;
   font-weight: 600;
 }
 
 .cm-activeLine {
-  background: rgba(196, 150, 74, 0.13) !important;
+  background: color-mix(in srgb, var(--accent-primary) 13%, transparent) !important;
 }
 
 /* ── Cell Output ─────────────────────────────────────────────────────────── */
