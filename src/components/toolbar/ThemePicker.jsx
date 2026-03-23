@@ -56,13 +56,13 @@ export function ThemePicker({ theme, onSelect, lineAltEnabled, onLineAltChange }
             </div>
           ))}
           <div className="theme-picker-separator" />
-          <label className="theme-picker-toggle" onClick={(e) => e.stopPropagation()}>
+          <label className="theme-picker-toggle" onMouseDown={(e) => e.stopPropagation()}>
             <input
               type="checkbox"
               checked={!!lineAltEnabled}
               onChange={(e) => onLineAltChange(e.target.checked)}
             />
-            <span>Line stripes</span>
+            <span>Alternating row colors</span>
           </label>
         </div>,
         document.body

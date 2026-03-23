@@ -71,7 +71,7 @@ function AppearanceSection({ theme, fontSize, onThemeChange, onFontSizeChange, p
             checked={!!lineAltEnabled}
             onChange={(e) => onLineAltChange(e.target.checked)}
           />
-          <span>Alternating line stripes</span>
+          <span>Alternating row colors</span>
         </label>
       </div>
 
