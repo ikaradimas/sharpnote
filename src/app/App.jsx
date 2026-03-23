@@ -1001,6 +1001,7 @@ export function App() {
   const handlePanelClose = useCallback((panelId) => {
     if (panelId === 'library') { setLibraryPanelOpen(false); return; }
     if (panelId === 'files')   { setFilesPanelOpen(false);   return; }
+    if (panelId === 'api')     { setApiPanelOpen(false);     return; }
     const nbId = activeIdRef.current;
     if (isNotebookId(nbId)) {
       const flagMap = { log: 'logPanelOpen', nuget: 'nugetPanelOpen', config: 'configPanelOpen', db: 'dbPanelOpen', vars: 'varsPanelOpen', toc: 'tocPanelOpen' };
