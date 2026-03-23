@@ -36,10 +36,20 @@ const SWAGGER2_SPEC = {
   host: 'api.old.example.com',
   basePath: '/v2',
   schemes: ['https'],
+  consumes: ['application/json'],
+  produces: ['application/json'],
   paths: {
     '/users': {
-      get: { tags: ['users'], summary: 'Get users', responses: { '200': { description: 'OK' } } },
+      get: { tags: ['users'], summary: 'Get users', responses: { '200': { description: 'OK', schema: { type: 'array', items: { $ref: '#/definitions/User' } } } } },
+      post: {
+        tags: ['users'], summary: 'Create user',
+        parameters: [{ name: 'body', in: 'body', required: true, schema: { $ref: '#/definitions/User' } }],
+        responses: { '201': { description: 'Created', schema: { $ref: '#/definitions/User' } } },
+      },
     },
+  },
+  definitions: {
+    User: { type: 'object', properties: { id: { type: 'integer' }, name: { type: 'string' } } },
   },
 };
 
@@ -218,5 +228,68 @@ describe('ApiPanel', () => {
     fireEvent.change(input, { target: { value: 'https://example.com/api.json' } });
     fireEvent.keyDown(input, { key: 'Enter' });
     await waitFor(() => screen.getByText('Pet Store'));
+  });
+
+  it('shows Swagger 2 request body section with consumes and schema type', async () => {
+    window.electronAPI.fetchUrl.mockResolvedValue(JSON.stringify(SWAGGER2_SPEC));
+    render(<ApiPanel onToggle={() => {}} />);
+    fireEvent.change(screen.getByPlaceholderText(/openapi/i), {
+      target: { value: 'https://example.com/swagger.json' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Load' }));
+    await waitFor(() => screen.getByText('Legacy API'));
+
+    // Expand the POST /users operation
+    fireEvent.click(screen.getByText('Create user'));
+    expect(screen.getByText('Request Body')).toBeInTheDocument();
+    expect(screen.getByText(/application\/json/)).toBeInTheDocument();
+    expect(screen.getByText(/required/)).toBeInTheDocument();
+  });
+
+  it('does not show body parameter in params table for Swagger 2', async () => {
+    window.electronAPI.fetchUrl.mockResolvedValue(JSON.stringify(SWAGGER2_SPEC));
+    render(<ApiPanel onToggle={() => {}} />);
+    fireEvent.change(screen.getByPlaceholderText(/openapi/i), {
+      target: { value: 'https://example.com/swagger.json' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Load' }));
+    await waitFor(() => screen.getByText('Legacy API'));
+
+    fireEvent.click(screen.getByText('Create user'));
+    // body param must not appear in the params table (it's in the Request Body section)
+    const paramInCells = screen.queryAllByText('body');
+    const inCells = paramInCells.filter(el => el.classList.contains('api-param-in'));
+    expect(inCells).toHaveLength(0);
+  });
+
+  it('shows response schema type for Swagger 2', async () => {
+    window.electronAPI.fetchUrl.mockResolvedValue(JSON.stringify(SWAGGER2_SPEC));
+    render(<ApiPanel onToggle={() => {}} />);
+    fireEvent.change(screen.getByPlaceholderText(/openapi/i), {
+      target: { value: 'https://example.com/swagger.json' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Load' }));
+    await waitFor(() => screen.getByText('Legacy API'));
+
+    // Expand GET /users and check the response schema type (array of User)
+    fireEvent.click(screen.getByText('Get users'));
+    expect(screen.getByText('200')).toBeInTheDocument();
+    expect(screen.getByText('object[]')).toBeInTheDocument();
+  });
+
+  it('resolves $ref from definitions in Swagger 2', async () => {
+    window.electronAPI.fetchUrl.mockResolvedValue(JSON.stringify(SWAGGER2_SPEC));
+    render(<ApiPanel onToggle={() => {}} />);
+    fireEvent.change(screen.getByPlaceholderText(/openapi/i), {
+      target: { value: 'https://example.com/swagger.json' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Load' }));
+    await waitFor(() => screen.getByText('Legacy API'));
+
+    // POST response 201 schema is $ref → User → object; expand and check
+    fireEvent.click(screen.getByText('Create user'));
+    expect(screen.getByText('201')).toBeInTheDocument();
+    // schema type resolved from #/definitions/User → object
+    expect(screen.getAllByText('object').length).toBeGreaterThanOrEqual(1);
   });
 });

@@ -66,6 +66,19 @@ function getSchemaType(spec, schema) {
   return schema.type || (schema.properties ? 'object' : '');
 }
 
+// Returns body info for Swagger 2 operations (which use in:"body" parameters).
+// Returns null for OAS3 (which uses op.requestBody).
+function getSwagger2BodyInfo(spec, op) {
+  const bodyParam = op.parameters?.find(p => p.in === 'body');
+  if (!bodyParam) return null;
+  const consumes = op.consumes || spec.consumes || [];
+  return {
+    schema: bodyParam.schema ?? null,
+    required: !!bodyParam.required,
+    consumes,
+  };
+}
+
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 function MethodBadge({ method }) {
@@ -105,21 +118,35 @@ function ParamsTable({ spec, parameters }) {
   );
 }
 
-function ResponsesTable({ responses }) {
+function ResponsesTable({ spec, responses }) {
   if (!responses) return null;
   return (
     <div className="api-responses">
-      {Object.entries(responses).map(([code, resp]) => (
-        <div key={code} className="api-response-row">
-          <span className={`api-status-badge api-status-${code[0]}xx`}>{code}</span>
-          <span className="api-response-desc">{resp.description || ''}</span>
-        </div>
-      ))}
+      {Object.entries(responses).map(([code, resp]) => {
+        // OAS3: resp.content keys; Swagger 2: resp.schema type
+        const contentTypes = resp.content ? Object.keys(resp.content).join(', ') : null;
+        const schemaType = resp.schema ? getSchemaType(spec, resp.schema) : null;
+        const typeLabel = contentTypes || schemaType;
+        return (
+          <div key={code} className="api-response-row">
+            <span className={`api-status-badge api-status-${code[0]}xx`}>{code}</span>
+            <span className="api-response-desc">{resp.description || ''}</span>
+            {typeLabel && <span className="api-response-type">{typeLabel}</span>}
+          </div>
+        );
+      })}
     </div>
   );
 }
 
 function Operation({ spec, method, path, op, expanded, onToggle }) {
+  // Swagger 2 body is expressed as a parameter with in:"body"; exclude it from the
+  // params table and render a dedicated Request Body section instead (matching OAS3).
+  const sw2Body = !op.requestBody && spec.swagger ? getSwagger2BodyInfo(spec, op) : null;
+  const displayParams = sw2Body
+    ? (op.parameters ?? []).filter(p => p.in !== 'body')
+    : op.parameters ?? [];
+
   return (
     <div className={`api-op${expanded ? ' api-op-expanded' : ''}`}>
       <button className="api-op-header" onClick={onToggle}>
@@ -132,10 +159,10 @@ function Operation({ spec, method, path, op, expanded, onToggle }) {
       {expanded && (
         <div className="api-op-detail">
           {op.description && <p className="api-op-desc">{op.description}</p>}
-          {op.parameters?.length > 0 && (
+          {displayParams.length > 0 && (
             <>
               <div className="api-section-label">Parameters</div>
-              <ParamsTable spec={spec} parameters={op.parameters} />
+              <ParamsTable spec={spec} parameters={displayParams} />
             </>
           )}
           {op.requestBody && (
@@ -147,10 +174,20 @@ function Operation({ spec, method, path, op, expanded, onToggle }) {
               </div>
             </>
           )}
+          {sw2Body && (
+            <>
+              <div className="api-section-label">Request Body</div>
+              <div className="api-request-body">
+                {sw2Body.consumes.length ? sw2Body.consumes.join(', ') : 'body'}
+                {sw2Body.required ? ' (required)' : ' (optional)'}
+                {sw2Body.schema && <> — {getSchemaType(spec, sw2Body.schema)}</>}
+              </div>
+            </>
+          )}
           {op.responses && (
             <>
               <div className="api-section-label">Responses</div>
-              <ResponsesTable responses={op.responses} />
+              <ResponsesTable spec={spec} responses={op.responses} />
             </>
           )}
         </div>
