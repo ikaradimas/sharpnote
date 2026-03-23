@@ -2,7 +2,7 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { ApiPanel, applyAuth, buildRequestUrl } from '../../src/components/panels/ApiPanel.jsx';
+import { ApiPanel, applyAuth, buildRequestUrl, buildHttpClientSnippet } from '../../src/components/panels/ApiPanel.jsx';
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
@@ -385,5 +385,122 @@ describe('Saved APIs', () => {
   it('Delete button is disabled when no saved API is selected', () => {
     render(<ApiPanel onToggle={() => {}} />);
     expect(screen.getByRole('button', { name: 'Delete' })).toBeDisabled();
+  });
+});
+
+// ── buildHttpClientSnippet unit tests ─────────────────────────────────────────
+
+const NO_AUTH = { type: 'none', token: '', keyName: '', keyValue: '', keyIn: 'header', username: '', password: '' };
+
+describe('buildHttpClientSnippet', () => {
+  it('generates a GET call with the correct URL', () => {
+    const op = { parameters: [], responses: {} };
+    const snippet = buildHttpClientSnippet('get', '/items', op, 'https://api.example.com', NO_AUTH);
+    expect(snippet).toContain('client.GetAsync("https://api.example.com/items")');
+    expect(snippet).toContain('EnsureSuccessStatusCode');
+    expect(snippet).toContain('body.Display()');
+  });
+
+  it('generates path param variables with string interpolation', () => {
+    const op = { parameters: [{ name: 'id', in: 'path', schema: { type: 'string' } }], responses: {} };
+    const snippet = buildHttpClientSnippet('get', '/items/{id}', op, 'https://api.example.com', NO_AUTH);
+    expect(snippet).toContain('var id = "<id>";');
+    expect(snippet).toContain('$"https://api.example.com/items/${id}"');
+  });
+
+  it('includes Bearer auth header', () => {
+    const auth = { ...NO_AUTH, type: 'bearer', token: 'my-secret' };
+    const op = { parameters: [], responses: {} };
+    const snippet = buildHttpClientSnippet('get', '/items', op, 'https://api.example.com', auth);
+    expect(snippet).toContain('AuthenticationHeaderValue("Bearer", "my-secret")');
+  });
+
+  it('uses placeholder when bearer token is empty', () => {
+    const auth = { ...NO_AUTH, type: 'bearer', token: '' };
+    const op = { parameters: [], responses: {} };
+    const snippet = buildHttpClientSnippet('get', '/items', op, 'https://api.example.com', auth);
+    expect(snippet).toContain('<bearer-token>');
+  });
+
+  it('adds api key as header when keyIn is header', () => {
+    const auth = { ...NO_AUTH, type: 'apikey', keyName: 'X-Key', keyValue: 'abc', keyIn: 'header' };
+    const op = { parameters: [], responses: {} };
+    const snippet = buildHttpClientSnippet('get', '/items', op, 'https://api.example.com', auth);
+    expect(snippet).toContain('DefaultRequestHeaders.Add("X-Key", "abc")');
+  });
+
+  it('appends api key to URL when keyIn is query', () => {
+    const auth = { ...NO_AUTH, type: 'apikey', keyName: 'token', keyValue: 'xyz', keyIn: 'query' };
+    const op = { parameters: [], responses: {} };
+    const snippet = buildHttpClientSnippet('get', '/items', op, 'https://api.example.com', auth);
+    expect(snippet).toContain('token=xyz');
+  });
+
+  it('includes Basic auth credentials', () => {
+    const auth = { ...NO_AUTH, type: 'basic', username: 'user', password: 'pass' };
+    const op = { parameters: [], responses: {} };
+    const snippet = buildHttpClientSnippet('get', '/items', op, 'https://api.example.com', auth);
+    expect(snippet).toContain('"user:pass"');
+    expect(snippet).toContain('AuthenticationHeaderValue("Basic"');
+  });
+
+  it('generates a POST call with request body template', () => {
+    const op = { requestBody: { required: true, content: { 'application/json': {} } }, parameters: [], responses: {} };
+    const snippet = buildHttpClientSnippet('post', '/items', op, 'https://api.example.com', NO_AUTH);
+    expect(snippet).toContain('client.PostAsync(');
+    expect(snippet).toContain('StringContent(');
+    expect(snippet).toContain('// TODO: fill in request body');
+  });
+
+  it('uses SendAsync for non-standard methods', () => {
+    const op = { parameters: [], responses: {} };
+    const snippet = buildHttpClientSnippet('options', '/items', op, 'https://api.example.com', NO_AUTH);
+    expect(snippet).toContain('SendAsync');
+    expect(snippet).toContain('"OPTIONS"');
+  });
+});
+
+// ── Inject button ─────────────────────────────────────────────────────────────
+
+describe('Inject button', () => {
+  it('shows Inject button when onInsert is provided and operation is expanded', async () => {
+    const onInsert = vi.fn();
+    render(<ApiPanel onToggle={() => {}} onInsert={onInsert} />);
+    await loadSpec();
+    await expandOp('List items');
+    expect(screen.getByRole('button', { name: /Inject/i })).toBeInTheDocument();
+  });
+
+  it('does not show Inject button when onInsert is not provided', async () => {
+    render(<ApiPanel onToggle={() => {}} />);
+    await loadSpec();
+    await expandOp('List items');
+    expect(screen.queryByRole('button', { name: /Inject/i })).not.toBeInTheDocument();
+  });
+
+  it('calls onInsert with a C# snippet when clicked', async () => {
+    const onInsert = vi.fn();
+    render(<ApiPanel onToggle={() => {}} onInsert={onInsert} />);
+    await loadSpec();
+    await expandOp('List items');
+    fireEvent.click(screen.getByRole('button', { name: /Inject/i }));
+    expect(onInsert).toHaveBeenCalledOnce();
+    const snippet = onInsert.mock.calls[0][0];
+    expect(snippet).toContain('HttpClient');
+    expect(snippet).toContain('/items');
+  });
+
+  it('includes auth in the injected snippet', async () => {
+    const onInsert = vi.fn();
+    render(<ApiPanel onToggle={() => {}} onInsert={onInsert} />);
+    await loadSpec();
+
+    fireEvent.change(screen.getByDisplayValue('None'), { target: { value: 'bearer' } });
+    fireEvent.change(screen.getByPlaceholderText('Token'), { target: { value: 'tok123' } });
+
+    await expandOp('List items');
+    fireEvent.click(screen.getByRole('button', { name: /Inject/i }));
+    const snippet = onInsert.mock.calls[0][0];
+    expect(snippet).toContain('tok123');
   });
 });

@@ -109,6 +109,85 @@ function generateId() {
 
 const DEFAULT_AUTH = { type: 'none', token: '', keyName: 'X-API-Key', keyValue: '', keyIn: 'header', username: '', password: '' };
 
+// ── C# snippet generator ──────────────────────────────────────────────────────
+
+export function buildHttpClientSnippet(method, pathTemplate, op, baseUrl, auth) {
+  const m = method.toLowerCase();
+  const lines = [];
+
+  lines.push('using var client = new HttpClient();');
+
+  // Auth header setup
+  if (auth.type === 'bearer') {
+    const tok = auth.token || '<bearer-token>';
+    lines.push(`client.DefaultRequestHeaders.Authorization =`);
+    lines.push(`    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", "${tok}");`);
+  } else if (auth.type === 'apikey' && auth.keyIn === 'header') {
+    const name = auth.keyName || 'X-API-Key';
+    const val  = auth.keyValue || '<api-key>';
+    lines.push(`client.DefaultRequestHeaders.Add("${name}", "${val}");`);
+  } else if (auth.type === 'basic') {
+    const u = auth.username || '<username>';
+    const p = auth.password || '<password>';
+    lines.push(`var credentials = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("${u}:${p}"));`);
+    lines.push(`client.DefaultRequestHeaders.Authorization =`);
+    lines.push(`    new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", credentials);`);
+  }
+
+  // Build URL expression — replace {param} placeholders with C# string interpolation vars
+  const pathParams  = (op.parameters ?? []).filter(p => p.in === 'path');
+  const paramTokens = pathTemplate.match(/\{(\w+)\}/g) ?? [];
+  let urlExpr;
+  if (paramTokens.length > 0) {
+    pathParams.forEach(p => lines.push(`var ${p.name} = "<${p.name}>"; // path param`));
+    const interpolated = (baseUrl + pathTemplate).replace(/\{(\w+)\}/g, '${$1}');
+    urlExpr = `$"${interpolated}"`;
+  } else {
+    urlExpr = `"${baseUrl + pathTemplate}"`;
+  }
+  // Append api-key query param if needed
+  if (auth.type === 'apikey' && auth.keyIn === 'query' && auth.keyName) {
+    const sep = urlExpr.includes('?') ? '&' : '?';
+    const val = auth.keyValue || '<api-key>';
+    urlExpr = urlExpr.endsWith('"')
+      ? urlExpr.slice(0, -1) + `${sep}${auth.keyName}=${val}"`
+      : urlExpr;
+  }
+
+  // Request body for POST / PUT / PATCH
+  const sw2Body = !op.requestBody && (op.parameters ?? []).some(p => p.in === 'body');
+  const hasBody = !!op.requestBody || sw2Body;
+  const needsContent = hasBody && ['post', 'put', 'patch'].includes(m);
+  if (needsContent) {
+    lines.push('');
+    lines.push('var payload = new');
+    lines.push('{');
+    lines.push('    // TODO: fill in request body');
+    lines.push('};');
+    lines.push('var content = new System.Net.Http.StringContent(');
+    lines.push('    System.Text.Json.JsonSerializer.Serialize(payload),');
+    lines.push('    System.Text.Encoding.UTF8, "application/json");');
+  }
+
+  // HTTP call
+  lines.push('');
+  const csMethod = { get: 'Get', post: 'Post', put: 'Put', patch: 'Patch', delete: 'Delete' }[m];
+  if (csMethod) {
+    const args = needsContent ? `${urlExpr}, content` : urlExpr;
+    lines.push(`var response = await client.${csMethod}Async(${args});`);
+  } else {
+    // HEAD, OPTIONS, TRACE etc. — use SendAsync
+    const httpMethod = method.toUpperCase();
+    lines.push(`var request = new HttpRequestMessage(new HttpMethod("${httpMethod}"), ${urlExpr});`);
+    lines.push('var response = await client.SendAsync(request);');
+  }
+  lines.push('response.EnsureSuccessStatusCode();');
+  lines.push('var body = await response.Content.ReadAsStringAsync();');
+  lines.push('body.Display();');
+
+  return lines.join('\n');
+}
+
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 function SavedApiBar({ savedApis, selectedId, onSelect, onSave, onDelete }) {
@@ -398,7 +477,7 @@ function ResponsesTable({ spec, responses }) {
   );
 }
 
-function Operation({ spec, method, path, op, expanded, onToggle, tryItOpen, onToggleTryIt, auth, baseUrl }) {
+function Operation({ spec, method, path, op, expanded, onToggle, tryItOpen, onToggleTryIt, onInject, auth, baseUrl }) {
   const sw2Body      = !op.requestBody && spec.swagger ? getSwagger2BodyInfo(spec, op) : null;
   const displayParams = sw2Body
     ? (op.parameters ?? []).filter(p => p.in !== 'body')
@@ -447,12 +526,23 @@ function Operation({ spec, method, path, op, expanded, onToggle, tryItOpen, onTo
               <ResponsesTable spec={spec} responses={op.responses} />
             </>
           )}
-          <button
-            className={`api-tryit-toggle${tryItOpen ? ' api-tryit-toggle-open' : ''}`}
-            onClick={onToggleTryIt}
-          >
-            {tryItOpen ? '▾ Try it' : '▸ Try it'}
-          </button>
+          <div className="api-op-actions">
+            <button
+              className={`api-tryit-toggle${tryItOpen ? ' api-tryit-toggle-open' : ''}`}
+              onClick={onToggleTryIt}
+            >
+              {tryItOpen ? '▾ Try it' : '▸ Try it'}
+            </button>
+            {onInject && (
+              <button
+                className="api-inject-btn"
+                onClick={() => onInject(buildHttpClientSnippet(method, path, op, baseUrl, auth))}
+                title="Inject C# HttpClient call into the active cell or a new cell"
+              >
+                {'{ }'} Inject
+              </button>
+            )}
+          </div>
           {tryItOpen && (
             <TryItForm
               spec={spec}
@@ -469,7 +559,7 @@ function Operation({ spec, method, path, op, expanded, onToggle, tryItOpen, onTo
   );
 }
 
-function TagGroup({ spec, tag, operations, expanded, onToggleTag, expandedOps, onToggleOp, expandedTryIt, onToggleTryIt, auth, baseUrl }) {
+function TagGroup({ spec, tag, operations, expanded, onToggleTag, expandedOps, onToggleOp, expandedTryIt, onToggleTryIt, onInject, auth, baseUrl }) {
   return (
     <div className="api-tag">
       <button className="api-tag-header" onClick={() => onToggleTag(tag)}>
@@ -490,6 +580,7 @@ function TagGroup({ spec, tag, operations, expanded, onToggleTag, expandedOps, o
             onToggle={() => onToggleOp(opKey)}
             tryItOpen={expandedTryIt.has(opKey)}
             onToggleTryIt={() => onToggleTryIt(opKey)}
+            onInject={onInject}
             auth={auth}
             baseUrl={baseUrl}
           />
@@ -501,7 +592,7 @@ function TagGroup({ spec, tag, operations, expanded, onToggleTag, expandedOps, o
 
 // ── ApiPanel ──────────────────────────────────────────────────────────────────
 
-export function ApiPanel({ onToggle }) {
+export function ApiPanel({ onToggle, onInsert }) {
   const [url,          setUrl]          = useState('');
   const [spec,         setSpec]         = useState(null);
   const [error,        setError]        = useState(null);
@@ -603,7 +694,6 @@ export function ApiPanel({ onToggle }) {
     <div className="api-panel">
       <div className="api-panel-header">
         <span className="api-panel-title">API Browser</span>
-        <button className="panel-close-btn" onClick={onToggle}>✕</button>
       </div>
 
       <SavedApiBar
@@ -663,6 +753,7 @@ export function ApiPanel({ onToggle }) {
                 onToggleOp={toggleOp}
                 expandedTryIt={expandedTryIt}
                 onToggleTryIt={toggleTryIt}
+                onInject={onInsert}
                 auth={auth}
                 baseUrl={baseUrl}
               />

@@ -1357,6 +1357,7 @@ export function App() {
       },
       api: {
         onToggle: () => setApiPanelOpen((v) => !v),
+        onInsert: handleInsertLibraryFile,
       },
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
