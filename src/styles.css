@@ -4708,7 +4708,7 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 
 .cmd-palette-overlay {
   position: fixed; inset: 0; z-index: 9000;
-  background: rgba(0,0,0,0.45);
+  background: var(--bg-deep);
   display: flex; align-items: flex-start; justify-content: center;
   padding-top: 80px;
 }
