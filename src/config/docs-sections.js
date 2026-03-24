@@ -600,8 +600,12 @@ export const DOCS_SECTIONS = [
         'Auto-assigned colors distinguish variables',
       ]},
       { type: 'h3', text: 'Live Plotting with Display.Plot' },
-      { type: 'p', text: 'Push data points to the graph mid-execution using Display.Plot(name, value). This streams values into the Graph panel in real time without waiting for the cell to finish.' },
-      { type: 'code', text: 'var iter = 0;\nwhile (iter < 1000) {\n  iter++;\n  Display.Plot("iter", iter);\n  await Task.Delay(20);\n}' },
+      { type: 'p', text: 'Push data points to the graph mid-execution using Display.Plot(name, value, mode). This streams values into the Graph panel in real time without waiting for the cell to finish.' },
+      { type: 'ul', items: [
+        'PlotMode.Value (default) — plots the raw value',
+        'PlotMode.RateOfChange — plots the delta since the previous call for that variable name',
+      ]},
+      { type: 'code', text: 'Display.Plot("position", position);                          // raw\nDisplay.Plot("velocity", velocity, PlotMode.RateOfChange);  // Δ per tick' },
     ],
   },
   {

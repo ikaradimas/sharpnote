@@ -6,6 +6,15 @@ using System.Text.Json;
 
 namespace SharpNoteKernel;
 
+/// <summary>Determines what value Display.Plot sends to the Graph panel.</summary>
+public enum PlotMode
+{
+    /// <summary>Plot the raw value as-is.</summary>
+    Value,
+    /// <summary>Plot the change from the previous call for this variable name.</summary>
+    RateOfChange,
+}
+
 // ── WidgetHandle ───────────────────────────────────────────────────────────────
 
 public class WidgetHandle
@@ -75,6 +84,7 @@ public class DisplayHelper
 {
     private readonly TextWriter _out;
     private readonly Dictionary<string, JsonElement>? _widgetValues;
+    private readonly Dictionary<string, double> _plotLastValues = new();
     private string? _currentId;
     private int _widgetCounter;
 
@@ -224,9 +234,18 @@ public class DisplayHelper
     /// <summary>
     /// Pushes a single numeric data point to the Graph panel immediately, without waiting
     /// for the cell to finish. Useful for plotting loop variables in real time.
+    /// Use <see cref="PlotMode.RateOfChange"/> to plot the delta from the previous call instead of the raw value.
     /// </summary>
-    public void Plot(string name, double value) =>
-        Send(new { type = "var_point", name, value });
+    public void Plot(string name, double value, PlotMode mode = PlotMode.Value)
+    {
+        double plotValue = value;
+        if (mode == PlotMode.RateOfChange)
+        {
+            plotValue = _plotLastValues.TryGetValue(name, out var prev) ? value - prev : 0;
+        }
+        _plotLastValues[name] = value;
+        Send(new { type = "var_point", name, value = plotValue });
+    }
 
     // ── Internal helpers ──────────────────────────────────────────────────────
 

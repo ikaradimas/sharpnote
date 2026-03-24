@@ -673,6 +673,34 @@ flowchart LR
     {arrows}
 \`\`\`
 ");`),
+
+    md(`## 19 · Live Graph with Display.Plot
+
+\`Display.Plot(name, value)\` pushes a data point to the **Graph panel** immediately — no need to wait for the cell to finish.
+
+| Mode | Description |
+|------|-------------|
+| \`PlotMode.Value\` | Plot the raw value *(default)* |
+| \`PlotMode.RateOfChange\` | Plot the change since the last call |
+
+Open the **Graph panel** (Ctrl+Shift+R), then run the cell below to see both series update in real time.`),
+
+    cs(`// ── Display.Plot: raw value vs. rate of change ───────────────────────────────
+// Open the Graph panel (Ctrl+Shift+R) before running.
+
+var rng = new Random(42);
+double position = 0;
+
+for (int step = 0; step < 200; step++)
+{
+    double velocity = Math.Sin(step * 0.15) * 5 + rng.NextDouble() - 0.5;
+    position += velocity;
+
+    Display.Plot("position", position);                             // raw value
+    Display.Plot("velocity", velocity, PlotMode.RateOfChange);     // Δ per tick
+
+    await Task.Delay(30);
+}`),
   ];
 }
 
