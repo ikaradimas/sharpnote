@@ -36,7 +36,7 @@ export function TodoPanel({ cells, onNavigateToCell }) {
         <div className="todo-list">
           {items.map((item, i) => (
             <button
-              key={i}
+              key={`${item.cellId}-${item.tag}-${i}`}
               className="todo-item"
               onClick={() => onNavigateToCell?.(item.cellId)}
               title={`Jump to cell ${item.cellIndex + 1}`}

@@ -39,10 +39,10 @@ export function GraphPanel({ varHistory }) {
 
   const datasets = useMemo(() => {
     const selectedArr = [...selected];
-    const globalIndex = (name) => varNames.indexOf(name);
+    const nameIndex = Object.fromEntries(varNames.map((n, i) => [n, i]));
     return selectedArr.map((name) => {
       const data = hist[name] || [];
-      const color = colorForIndex(globalIndex(name));
+      const color = colorForIndex(nameIndex[name] ?? 0);
       const fill = chartType === 'area';
       return {
         label: name,

@@ -10,7 +10,7 @@ import { marked } from 'marked';
 import { DOCS_TAB_ID } from '../constants.js';
 import {
   makeLibEditorId, isLibEditorId, isNotebookId,
-  getNotebookDisplayName,
+  getNotebookDisplayName, scrollAndFlash,
 } from '../utils.js';
 import { DEFAULT_DOCK_LAYOUT, DEFAULT_FLOAT_W, DEFAULT_FLOAT_H } from '../config/dock-layout.jsx';
 import { createNotebook, makeCell, DEFAULT_NUGET_SOURCES } from '../notebook-factory.js';
@@ -714,9 +714,7 @@ export function App() {
     if (!pane) return;
     const wrapper = pane.querySelector(`.cell-wrapper[data-cell-id="${cellId}"]`);
     if (!wrapper) return;
-    wrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    wrapper.classList.add('cell-flash');
-    wrapper.addEventListener('animationend', () => wrapper.classList.remove('cell-flash'), { once: true });
+    scrollAndFlash(wrapper, 'center');
   }, []);
 
   // handleLoad always opens a NEW tab
@@ -804,9 +802,7 @@ export function App() {
       const wrappers = nb.querySelectorAll('.cell-wrapper');
       const target = wrappers[targetIndex];
       if (!target) return;
-      target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      target.classList.add('cell-flash');
-      target.addEventListener('animationend', () => target.classList.remove('cell-flash'), { once: true });
+      scrollAndFlash(target);
     }, 50);
   }, [setNbDirty]);
 
@@ -829,9 +825,7 @@ export function App() {
         cells: n.cells.map((c) => c.id === focusedCellId ? { ...c, content } : c),
       }));
       setTimeout(() => {
-        cellWrapper.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        cellWrapper.classList.add('cell-flash');
-        cellWrapper.addEventListener('animationend', () => cellWrapper.classList.remove('cell-flash'), { once: true });
+        scrollAndFlash(cellWrapper);
       }, 50);
     } else {
       // No focused cell — insert a new one after the last visible cell

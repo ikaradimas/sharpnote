@@ -145,3 +145,10 @@ export function applyMath(content) {
     return part;
   }).join('');
 }
+
+/** Scroll an element into view and briefly flash it with the cell-flash animation. */
+export function scrollAndFlash(el, block = 'nearest') {
+  el.scrollIntoView({ behavior: 'smooth', block });
+  el.classList.add('cell-flash');
+  el.addEventListener('animationend', () => el.classList.remove('cell-flash'), { once: true });
+}
