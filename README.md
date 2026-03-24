@@ -8,7 +8,7 @@
 ![C%23](https://img.shields.io/badge/C%23-Roslyn_Scripting-239120?logo=csharp&logoColor=white)
 ![CodeMirror](https://img.shields.io/badge/CodeMirror-6-D30707?logo=codemirror&logoColor=white)
 ![Chart.js](https://img.shields.io/badge/Chart.js-4-FF6384?logo=chartdotjs&logoColor=white)
-![Vitest](https://img.shields.io/badge/Vitest-2-6E9F18?logo=vitest&logoColor=white)
+![Vitest](https://img.shields.io/badge/Vitest-3-6E9F18?logo=vitest&logoColor=white)
 ![xUnit](https://img.shields.io/badge/xUnit-2.9-512BD4?logo=dotnet&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-EFCore_8-003B57?logo=sqlite&logoColor=white)
 ![esbuild](https://img.shields.io/badge/esbuild-0.25-FFCF00?logo=esbuild&logoColor=black)
@@ -22,7 +22,7 @@
   - [Features](#features)
   - [Architecture](#architecture)
     - [Electron Main Process (`main.js`)](#electron-main-process-mainjs)
-    - [React Renderer (`src/renderer.jsx`)](#react-renderer-srcrendererjsx)
+    - [React Renderer (`src/`)](#react-renderer-src)
     - [C# Kernel (`kernel/`)](#c-kernel-kernel)
     - [IPC Protocol](#ipc-protocol)
     - [Multi-Kernel Architecture](#multi-kernel-architecture)
@@ -42,37 +42,51 @@
 
 ## Features
 
+### Editor & Execution
+
 - **Multi-tab MDI** — open multiple notebooks simultaneously in a tabbed interface with per-tab colour coding, pin-to-keep, and rename-on-double-click
 - **C# REPL** — each cell is evaluated using Roslyn scripting; state is shared across cells within a notebook, with `using`/`#r` directives supported
 - **Per-notebook kernel** — every open notebook gets its own isolated .NET process; kernels start on demand and can be reset independently
-- **NuGet integration** — add packages via `#r "nuget: PackageName, Version"` directives or through the Packages panel; multiple package sources supported
-- **Rich output** — `Display.Html()`, `Display.Table()`, `Display.Graph()` (Chart.js), `Display.Csv()`, and `Console.Write` captured as `stdout`
-- **Database integration** — connect to SQLite, SQLite (In-Memory), SQL Server, PostgreSQL, or Redis; for relational providers the schema is introspected and a typed `DbContext` + POCO classes are code-generated and injected; Redis injects a `StackExchange.Redis.IDatabase` variable
-- **Code Library** — file-based snippet library stored in `~/Documents/SharpNote Notebooks/Library/`; subfolder navigation, syntax-highlighted preview, insert-as-cell with animation
-- **Dock layout** — panels can be docked to left / right / bottom zones, floated freely, or dragged between zones; opening a panel via the toolbar auto-switches to its tab and briefly highlights it; tab bars show scroll-shadow indicators when tabs overflow; layouts can be saved and restored by name
+- **Cell execution control** — Run, Stop (interrupt via cancellation token injection), Run From Here, Run To Here
 - **Autocomplete** — Roslyn `ResolveCompletion` backed; falls back to a C# keyword list while the kernel is starting; Tab accepts a completion (Enter remains a normal newline); a toggle in Settings → Appearance enables or disables the live linter
 - **Lint** — real-time Roslyn diagnostics; squiggles rendered via the CodeMirror lint extension
-- **Cell execution control** — Run, Stop (interrupt via cancellation token injection), Run From Here, Run To Here
-- **Memory sparkline** — kernel reports heap usage every 3 s; rendered as an SVG bar chart in the status bar
-- **Recent files** — last 12 opened notebooks persisted to `userData/recent-files.json`; exposed in the File menu
-- **Variables panel** — live snapshot of the kernel's global state after each execution
-- **Config panel** — per-notebook key/value store passed into the kernel as a `Config["key"]` helper
-- **Log panel** — structured, time-stamped kernel log stream with `NOTEBOOK` lifecycle entries and `USER` entries written by `.Log()` calls in scripts
-- **Table of Contents** — live heading outline from markdown cells; click any entry to scroll to it
-- **API Browser** — enter any OpenAPI 3.x or Swagger 2.0 spec URL (JSON or YAML) to explore endpoints grouped by tag; expandable detail shows parameters, request body, and response schema types; **Try it** form sends live requests with path/query/body inputs; supports Bearer, API Key, and Basic auth applied to every request; save and recall multiple APIs with their auth config; all requests proxied through the main process for http:// local dev servers
-- **Settings dialog** — ⌘, / Ctrl+, opens a tabbed preferences dialog: Appearance (font size slider with live preview, theme picker), Paths (open Library / user data / log / documents folders in Finder), Startup (manage pinned notebooks that reopen on launch); Export… / Import… buttons back up and restore all settings (theme, font size, dock layout, DB connections, API configs) as a single JSON file
-- **Command Palette** — ⌘K / Ctrl+K opens a fuzzy-search overlay of every action in the app; keyboard-navigable with arrow keys and Enter; results filter as you type
-- **Cell Output History** — re-running a cell preserves the previous outputs; a ‹ › navigator in the cell footer lets you browse the last 5 runs to compare results across executions
 - **Reactive Cell Dependencies** — after a successful execution, downstream cells that reference any variable whose value changed are flagged with a "↺ upstream variables changed" banner, clearing automatically when those cells are run
-- **Variable Sparklines** — the Variables panel tracks the history of numeric variables and renders a mini trend sparkline for each one, updated after every execution
-- **Notebook Export** — File → Export as HTML… generates a self-contained dark-themed HTML file containing all cell sources, markdown renders, and outputs; no external dependencies required to view it
-- **Interactive Widgets** — `Display.Slider()`, `Display.Dropdown()`, and `Display.DatePicker()` render live controls in cell output; widget values persist between cell executions and are sent back to the kernel on change
+- **Cell Output History** — re-running a cell preserves the previous outputs; a ‹ › navigator in the cell footer lets you browse the last 5 runs to compare results across executions
+
+### Output & Display
+
+- **Rich output** — `Display.Html()`, `Display.Table()`, `Display.Graph()` (Chart.js), `Display.Csv()`, and `Console.Write` captured as `stdout`
 - **Display.Markdown** — `Display.Markdown(text)` renders markdown from C# code with Mermaid diagram and KaTeX math support, enabling dynamic reports and documentation generation
 - **Graph panel** — live time-series chart driven by `Display.Plot(name, value)` calls; per-variable avg / max overlay lines; Clear button and `Display.ClearGraph()` API; chart type, legend toggle (`Ctrl+Shift+R`)
-- **To Do panel** — auto-scans code cells for `// TODO`, `// FIXME`, and `// BUG` comments; click any item to scroll to and highlight the originating cell (`Ctrl+Shift+O`)
+- **Interactive Widgets** — `Display.Slider()`, `Display.Dropdown()`, and `Display.DatePicker()` render live controls in cell output; widget values persist between cell executions and are sent back to the kernel on change
+- **Notebook Export** — File → Export as HTML… generates a self-contained dark-themed HTML file containing all cell sources, markdown renders, and outputs; no external dependencies required to view it
+- **Memory sparkline** — kernel reports heap usage every 3 s; rendered as an SVG bar chart in the status bar
+
+### Panels
+
+- **Variables panel** — live snapshot of the kernel's global state after each execution
+- **Variable Sparklines** — the Variables panel tracks the history of numeric variables and renders a mini trend sparkline for each one, updated after every execution
 - **Variable Inspection** — click ⊕ in the Variables panel to open a full-value inspection dialog; Load Full Value fetches the complete JSON-serialised representation from the kernel with a copy-to-clipboard button
-- **Keyboard Shortcuts** — Settings → Shortcuts shows all shortcuts grouped by category with a search box; click any reassignable shortcut to capture a custom key combination; custom bindings are persisted and applied to the application menu instantly
+- **Log panel** — structured, time-stamped kernel log stream with `NOTEBOOK` lifecycle entries and `USER` entries written by `.Log()` calls in scripts
 - **Log panel cell links** — cell IDs that appear in log entries are rendered as clickable links that navigate directly to the corresponding cell; code cells show their ID in muted text in the header
+- **Table of Contents** — live heading outline from markdown cells; click any entry to scroll to it
+- **To Do panel** — auto-scans code cells for `// TODO`, `// FIXME`, and `// BUG` comments; click any item to scroll to and highlight the originating cell (`Ctrl+Shift+O`)
+- **Config panel** — per-notebook key/value store passed into the kernel as a `Config["key"]` helper
+- **Dock layout** — panels can be docked to left / right / bottom zones, floated freely, or dragged between zones; opening a panel via the toolbar auto-switches to its tab and briefly highlights it; tab bars show scroll-shadow indicators when tabs overflow; layouts can be saved and restored by name
+
+### Data & Integration
+
+- **NuGet integration** — add packages via `#r "nuget: PackageName, Version"` directives or through the Packages panel; multiple package sources supported
+- **Database integration** — connect to SQLite, SQLite (In-Memory), SQL Server, PostgreSQL, or Redis; for relational providers the schema is introspected and a typed `DbContext` + POCO classes are code-generated and injected; Redis injects a `StackExchange.Redis.IDatabase` variable
+- **Code Library** — file-based snippet library stored in `~/Documents/SharpNote Notebooks/Library/`; subfolder navigation, syntax-highlighted preview, insert-as-cell with animation
+- **API Browser** — enter any OpenAPI 3.x or Swagger 2.0 spec URL (JSON or YAML) to explore endpoints grouped by tag; expandable detail shows parameters, request body, and response schema types; **Try it** form sends live requests with path/query/body inputs; supports Bearer, API Key, and Basic auth applied to every request; save and recall multiple APIs with their auth config; all requests proxied through the main process for http:// local dev servers
+
+### Developer Experience
+
+- **Settings dialog** — ⌘, / Ctrl+, opens a tabbed preferences dialog: Appearance (font size slider with live preview, theme picker), Paths (open Library / user data / log / documents folders in Finder), Startup (manage pinned notebooks that reopen on launch); Export… / Import… buttons back up and restore all settings (theme, font size, dock layout, DB connections, API configs) as a single JSON file
+- **Command Palette** — ⌘K / Ctrl+K opens a fuzzy-search overlay of every action in the app; keyboard-navigable with arrow keys and Enter; results filter as you type
+- **Keyboard Shortcuts** — Settings → Shortcuts shows all shortcuts grouped by category with a search box; click any reassignable shortcut to capture a custom key combination; custom bindings are persisted and applied to the application menu instantly
+- **Recent files** — last 12 opened notebooks persisted to `userData/recent-files.json`; exposed in the File menu
 - **Dark theme** — purpose-built urban dark CSS; no UI framework dependency
 
 ---
@@ -87,8 +101,9 @@
                      │  contextBridge (preload.js)
                      │  window.electronAPI.*
 ┌────────────────────▼────────────────────────────────────┐
-│               React Renderer  (src/renderer.jsx)          │
-│  ~3 400 lines · CodeMirror 6 editors · Chart.js output   │
+│               React Renderer  (src/)                      │
+│  src/app/, src/components/, src/hooks/, src/config/      │
+│  CodeMirror 6 editors · Chart.js output                  │
 └────────────────────┬────────────────────────────────────┘
                      │  JSON lines over child_process stdin/stdout
           ┌──────────▼──────────┐   ┌─────────────────────┐
@@ -113,9 +128,9 @@ The main process is a single Node.js/CJS file responsible for:
 | Menus | Native macOS / Windows menu built with `Menu.buildFromTemplate`; Tools sub-menu exposes keyboard shortcuts for all panels |
 | Logging | Dev mode: `logs/` next to `main.js`; packaged: `<userData>/logs/` |
 
-### React Renderer (`src/renderer.jsx`)
+### React Renderer (`src/`)
 
-All UI is a single ~3 400-line React file bundled by esbuild. Key components:
+The UI is organized across `src/app/`, `src/components/`, `src/hooks/`, and `src/config/`, bundled by esbuild. Key components:
 
 | Component | Responsibility |
 |---|---|
@@ -166,13 +181,33 @@ The kernel is a self-contained .NET 8 console application that communicates with
 **Exposed scripting APIs:**
 
 ```csharp
-Display.Html("<b>bold</b>");
-Display.Table(myList);
-Display.Csv("a,b\n1,2");
-Display.Graph(new { type = "bar", data = ... });
+// ── Text & markup ─────────────────────────────────────────────────────────────
+Display.Html("<b>bold</b>");                        // render arbitrary HTML
+Display.Markdown("## Title\n\n$E=mc^2$");           // markdown + KaTeX + Mermaid
 
+// ── Data tables ───────────────────────────────────────────────────────────────
+Display.Table(myList);                              // render object collection as table
+Display.Csv("a,b\n1,2");                            // parse and render CSV string
+myList.DisplayTable();                              // extension method shorthand
+
+// ── Charts ────────────────────────────────────────────────────────────────────
+Display.Graph(new { type = "bar", data = ... });    // Chart.js config object
+
+// ── Live graph streaming (Graph panel) ───────────────────────────────────────
+Display.Plot("series", value);                      // push a value mid-execution
+Display.Plot("series", value, PlotMode.RateOfChange); // push delta since last call
+Display.ClearGraph();                               // wipe all series in the Graph panel
+
+// ── Interactive widgets ───────────────────────────────────────────────────────
+Display.Slider("Label", min, max, step, defaultValue);  // numeric slider
+Display.Dropdown("Label", new[] { "A", "B" }, "A");     // option selector
+Display.DatePicker("Label", defaultValue: "2025-01-01"); // date input
+
+// ── Logging ──────────────────────────────────────────────────────────────────
 "starting pipeline".Log();    // extension method; appears in Log panel, returns value
 value.Log("label");           // optional label shown alongside the value
+
+// ── Per-notebook config ───────────────────────────────────────────────────────
 Config["key"]                 // per-notebook key/value store
 ```
 
@@ -207,6 +242,8 @@ Messages are newline-delimited JSON objects. The renderer sends to the kernel; t
 | `lint_result` | `{ diagnostics[] }` |
 | `autocomplete_result` | `{ items[] }` |
 | `vars_update` | `{ vars[] }` |
+| `var_point` | `{ name, value }` — from `Display.Plot`; consumed by the Graph panel |
+| `graph_clear` | — — from `Display.ClearGraph`; clears all Graph panel series |
 | `db_schema` | `{ connectionId, schema }` |
 | `db_ready` | `{ connectionId, varName }` |
 | `db_error` | `{ connectionId, message }` |
@@ -286,8 +323,12 @@ sharpnote/
 ├── vitest.config.js      # JS test configuration
 │
 ├── src/
-│   ├── renderer.jsx      # All React UI (~3 400 lines)
-│   └── styles.css        # Urban dark theme (~2 650 lines)
+│   ├── renderer.jsx      # Bundle entry + re-exports
+│   ├── styles.css        # Urban dark theme (~2 650 lines)
+│   ├── app/              # Root components (App.jsx, StatusBar.jsx)
+│   ├── components/       # UI components (editor/, output/, panels/, dock/, toolbar/, dialogs/)
+│   ├── hooks/            # Custom React hooks (useResize.js, …)
+│   └── config/           # Constants (docs-sections.js, themes, dock-layout defaults, …)
 │
 ├── kernel/
 │   ├── kernel.csproj     # .NET 8 project
@@ -317,7 +358,11 @@ sharpnote/
 │   │   ├── DataTable.test.jsx
 │   │   ├── VarsPanel.test.jsx
 │   │   ├── NugetPanel.test.jsx
-│   │   └── ConfigPanel.test.jsx
+│   │   ├── ConfigPanel.test.jsx
+│   │   ├── GraphPanel.test.jsx
+│   │   ├── TodoPanel.test.jsx
+│   │   ├── CommandPalette.test.jsx
+│   │   └── SettingsDialog.test.jsx
 │   └── main/                   # Main process tests (Node environment)
 │       ├── resolveLibraryPath.test.js
 │       ├── recentFiles.test.js
@@ -368,6 +413,14 @@ npm start
 ```
 
 This bundles the renderer with esbuild, then launches Electron. The kernel subprocess is started automatically when the first notebook is opened.
+
+**3. Your first cell**
+
+```csharp
+// In your first code cell:
+var nums = Enumerable.Range(1, 5).ToList();
+Display.Table(nums.Select(n => new { Number = n, Square = n * n }));
+```
 
 ---
 
@@ -433,28 +486,12 @@ npm run test:watch       # watch mode
 npm run test:coverage    # with V8 coverage report
 ```
 
-**142 tests across 14 files:**
+**551 JavaScript tests across 32 files.**
 
-| Suite | Environment | Count |
-|---|---|---|
-| `tests/renderer/utils.test.js` | happy-dom | 36 |
-| `tests/renderer/OutputBlock.test.jsx` | happy-dom | 15 |
-| `tests/renderer/CodeCell.test.jsx` | happy-dom | 12 |
-| `tests/renderer/TabBar.test.jsx` | happy-dom | 7 |
-| `tests/renderer/QuitDialog.test.jsx` | happy-dom | 8 |
-| `tests/renderer/FilesPanel.test.jsx` | happy-dom | 7 |
-| `tests/renderer/DataTable.test.jsx` | happy-dom | 9 |
-| `tests/renderer/VarsPanel.test.jsx` | happy-dom | 7 |
-| `tests/renderer/NugetPanel.test.jsx` | happy-dom | 8 |
-| `tests/renderer/ConfigPanel.test.jsx` | happy-dom | 9 |
-| `tests/main/resolveLibraryPath.test.js` | node | 6 |
-| `tests/main/recentFiles.test.js` | node | 5 |
-| `tests/main/fileOps.test.js` | node | 8 |
-| `tests/main/kernelLifecycle.test.js` | node | 5 |
+The renderer suite (`tests/renderer/`) uses happy-dom and covers React components including CodeCell, OutputBlock, TabBar, VarsPanel, ConfigPanel, NugetPanel, DataTable, FilesPanel, QuitDialog, GraphPanel, TodoPanel, CommandPalette, and SettingsDialog, as well as utility functions. The main-process suite (`tests/main/`) uses the Node environment and covers kernel lifecycle, file operations, recent-files persistence, and library path resolution.
 
 **Notable test infrastructure decisions:**
 
-- Vitest is pinned to **v2.1.9** — v3/v4 are missing the `rolldown` native binary for `darwin-arm64`.
 - `vi.mock('electron', factory)` does not intercept CJS `require('electron')` from within a dynamically-imported CJS module. `main.js` therefore uses `require(process.env.VITEST ? './__mocks__/electron.js' : 'electron')` directly.
 - The same limitation applies to `vi.mock('fs')`. `fileOps.test.js` avoids it by using a real temporary directory.
 - Renderer tests use **happy-dom** instead of jsdom (jsdom v29 has ESM-compatibility issues with `html-encoding-sniffer`).
@@ -467,7 +504,7 @@ npm run test:kernel
 dotnet test kernel/kernel.Tests/kernel.Tests.csproj --logger console
 ```
 
-**46 tests:**
+**56 C# tests** covering code generation, database provider introspection, cancellation token injection, NuGet directive parsing, lint diagnostics, and a full subprocess integration test that spawns the real kernel and exercises the JSON-line protocol end-to-end.
 
 | Test class | What it covers |
 |---|---|
