@@ -1,20 +1,39 @@
 import { defineConfig } from 'vitest/config';
 
-export default defineConfig({
+const shared = {
+  globals: true,
+  setupFiles: ['tests/setup.js'],
+  mockReset: false,
+};
+
+const esbuildJsx = {
   esbuild: {
     jsx: 'automatic',
     jsxImportSource: 'react',
   },
+};
+
+export default defineConfig({
+  ...esbuildJsx,
   test: {
-    globals: true,
-    environment: 'happy-dom',
-    include: ['tests/**/*.test.{js,jsx}'],
-    setupFiles: ['tests/setup.js'],
-    environmentMatchGlobs: [
-      // main process tests run in Node
-      ['tests/main/**', 'node'],
+    projects: [
+      {
+        // Renderer tests: React components with happy-dom
+        ...esbuildJsx,
+        test: {
+          ...shared,
+          include: ['tests/renderer/**/*.test.{js,jsx}'],
+          environment: 'happy-dom',
+        },
+      },
+      {
+        // Main process tests: Node.js environment (no DOM)
+        test: {
+          ...shared,
+          include: ['tests/main/**/*.test.{js,jsx}'],
+          environment: 'node',
+        },
+      },
     ],
-    // Make vi.mock('electron') automatically use __mocks__/electron.js
-    mockReset: false,
   },
 });
