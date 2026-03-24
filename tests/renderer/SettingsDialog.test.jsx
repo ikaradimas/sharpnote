@@ -320,6 +320,163 @@ describe('Shortcuts section', () => {
   });
 });
 
+// ── Appearance — lintEnabled toggle ──────────────────────────────────────────
+
+describe('Appearance — lintEnabled toggle', () => {
+  it('renders the linter toggle checkbox', () => {
+    render(<SettingsDialog {...makeProps({ lintEnabled: true, onLintEnabledChange: vi.fn() })} />);
+    expect(screen.getByText(/Code linter/)).toBeInTheDocument();
+  });
+
+  it('checkbox is checked when lintEnabled=true', () => {
+    render(<SettingsDialog {...makeProps({ lintEnabled: true, onLintEnabledChange: vi.fn() })} />);
+    const checkboxes = document.querySelectorAll('.settings-toggle-row input[type="checkbox"]');
+    const lintBox = [...checkboxes].find((cb) => cb.closest('.settings-toggle-row')?.textContent?.includes('Code linter'));
+    expect(lintBox?.checked).toBe(true);
+  });
+
+  it('checkbox is unchecked when lintEnabled=false', () => {
+    render(<SettingsDialog {...makeProps({ lintEnabled: false, onLintEnabledChange: vi.fn() })} />);
+    const checkboxes = document.querySelectorAll('.settings-toggle-row input[type="checkbox"]');
+    const lintBox = [...checkboxes].find((cb) => cb.closest('.settings-toggle-row')?.textContent?.includes('Code linter'));
+    expect(lintBox?.checked).toBe(false);
+  });
+
+  it('calls onLintEnabledChange(false) when unchecked', () => {
+    const onLintChange = vi.fn();
+    render(<SettingsDialog {...makeProps({ lintEnabled: true, onLintEnabledChange: onLintChange })} />);
+    const checkboxes = document.querySelectorAll('.settings-toggle-row input[type="checkbox"]');
+    const lintBox = [...checkboxes].find((cb) => cb.closest('.settings-toggle-row')?.textContent?.includes('Code linter'));
+    fireEvent.click(lintBox);
+    expect(onLintChange).toHaveBeenCalledWith(false);
+  });
+
+  it('calls onLintEnabledChange(true) when checked', () => {
+    const onLintChange = vi.fn();
+    render(<SettingsDialog {...makeProps({ lintEnabled: false, onLintEnabledChange: onLintChange })} />);
+    const checkboxes = document.querySelectorAll('.settings-toggle-row input[type="checkbox"]');
+    const lintBox = [...checkboxes].find((cb) => cb.closest('.settings-toggle-row')?.textContent?.includes('Code linter'));
+    fireEvent.click(lintBox);
+    expect(onLintChange).toHaveBeenCalledWith(true);
+  });
+});
+
+// ── Shortcuts — search ────────────────────────────────────────────────────────
+
+describe('Shortcuts section — search', () => {
+  function openShortcuts() {
+    const btn = [...document.querySelectorAll('.settings-section-btn')].find((b) => b.textContent === 'Shortcuts');
+    fireEvent.click(btn);
+  }
+
+  it('renders a search input in the Shortcuts section', () => {
+    render(<SettingsDialog {...makeProps()} />);
+    openShortcuts();
+    expect(document.querySelector('.shortcuts-search')).toBeInTheDocument();
+  });
+
+  it('search filters shortcuts by description', () => {
+    render(<SettingsDialog {...makeProps()} />);
+    openShortcuts();
+    const search = document.querySelector('.shortcuts-search');
+    fireEvent.change(search, { target: { value: 'graph' } });
+    expect(screen.getByText('Graph panel')).toBeInTheDocument();
+    // unrelated shortcut should not appear
+    expect(screen.queryByText('New notebook')).toBeNull();
+  });
+
+  it('shows empty state when search matches nothing', () => {
+    render(<SettingsDialog {...makeProps()} />);
+    openShortcuts();
+    fireEvent.change(document.querySelector('.shortcuts-search'), { target: { value: 'zzznothing' } });
+    expect(screen.getByText('No shortcuts found')).toBeInTheDocument();
+  });
+
+  it('clearing search restores all groups', () => {
+    render(<SettingsDialog {...makeProps()} />);
+    openShortcuts();
+    const search = document.querySelector('.shortcuts-search');
+    fireEvent.change(search, { target: { value: 'graph' } });
+    fireEvent.change(search, { target: { value: '' } });
+    expect(screen.getByText('New notebook')).toBeInTheDocument();
+    expect(screen.getByText('Graph panel')).toBeInTheDocument();
+  });
+});
+
+// ── Shortcuts — custom bindings + edit/reset ──────────────────────────────────
+
+describe('Shortcuts section — custom bindings and edit/reset', () => {
+  function openShortcuts() {
+    const btn = [...document.querySelectorAll('.settings-section-btn')].find((b) => b.textContent === 'Shortcuts');
+    fireEvent.click(btn);
+  }
+
+  it('displays custom shortcut binding instead of default when provided', () => {
+    render(<SettingsDialog {...makeProps({ customShortcuts: { 'panel-graph': 'Ctrl+G' } })} />);
+    openShortcuts();
+    // Should show kbd elements for Ctrl and G
+    const kbds = [...document.querySelectorAll('kbd')].map((k) => k.textContent);
+    expect(kbds).toContain('G');
+  });
+
+  it('edit button (✎) is visible on hover for reassignable shortcuts', () => {
+    render(<SettingsDialog {...makeProps()} />);
+    openShortcuts();
+    // Edit buttons exist in DOM (visibility is CSS-only)
+    expect(document.querySelectorAll('.shortcut-edit-btn').length).toBeGreaterThan(0);
+  });
+
+  it('clicking edit button shows capture mode text', () => {
+    render(<SettingsDialog {...makeProps()} />);
+    openShortcuts();
+    const editBtn = document.querySelector('.shortcut-edit-btn');
+    fireEvent.click(editBtn);
+    expect(screen.getByText('Press a key combination…')).toBeInTheDocument();
+  });
+
+  it('pressing Escape in capture mode cancels without calling onShortcutsChange', () => {
+    const onShortcuts = vi.fn();
+    render(<SettingsDialog {...makeProps({ onShortcutsChange: onShortcuts })} />);
+    openShortcuts();
+    const editBtn = document.querySelector('.shortcut-edit-btn');
+    fireEvent.click(editBtn);
+    const capture = screen.getByText('Press a key combination…');
+    fireEvent.keyDown(capture, { key: 'Escape' });
+    expect(onShortcuts).not.toHaveBeenCalled();
+    expect(screen.queryByText('Press a key combination…')).toBeNull();
+  });
+
+  it('pressing a key combo in capture mode calls onShortcutsChange with the new binding', () => {
+    const onShortcuts = vi.fn();
+    render(<SettingsDialog {...makeProps({ onShortcutsChange: onShortcuts })} />);
+    openShortcuts();
+    fireEvent.click(document.querySelector('.shortcut-edit-btn'));
+    const capture = screen.getByText('Press a key combination…');
+    fireEvent.keyDown(capture, { key: 'R', ctrlKey: true, shiftKey: true });
+    expect(onShortcuts).toHaveBeenCalledWith(expect.any(String), 'Ctrl+Shift+R');
+  });
+
+  it('reset button (↺) is only shown when a custom shortcut override exists', () => {
+    render(<SettingsDialog {...makeProps({ customShortcuts: {} })} />);
+    openShortcuts();
+    expect(document.querySelectorAll('.shortcut-reset-btn').length).toBe(0);
+  });
+
+  it('reset button appears when customShortcuts has an entry', () => {
+    render(<SettingsDialog {...makeProps({ customShortcuts: { 'panel-graph': 'Ctrl+G' } })} />);
+    openShortcuts();
+    expect(document.querySelectorAll('.shortcut-reset-btn').length).toBe(1);
+  });
+
+  it('clicking reset button calls onShortcutsChange(id, null)', () => {
+    const onShortcuts = vi.fn();
+    render(<SettingsDialog {...makeProps({ customShortcuts: { 'panel-graph': 'Ctrl+G' }, onShortcutsChange: onShortcuts })} />);
+    openShortcuts();
+    fireEvent.click(document.querySelector('.shortcut-reset-btn'));
+    expect(onShortcuts).toHaveBeenCalledWith('panel-graph', null);
+  });
+});
+
 // ── Export / Import buttons ───────────────────────────────────────────────────
 
 describe('Export / Import buttons', () => {

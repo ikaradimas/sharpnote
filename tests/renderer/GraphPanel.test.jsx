@@ -86,6 +86,82 @@ describe('GraphPanel — chart type selector', () => {
   });
 });
 
+// ── Clear button ──────────────────────────────────────────────────────────────
+
+describe('GraphPanel — clear button', () => {
+  it('renders Clear button when onClearGraph is provided', () => {
+    render(<GraphPanel varHistory={HIST} onClearGraph={() => {}} />);
+    expect(screen.getByTitle('Clear all graph data')).toBeInTheDocument();
+  });
+
+  it('does not render Clear button when onClearGraph is not provided', () => {
+    render(<GraphPanel varHistory={HIST} />);
+    expect(screen.queryByTitle('Clear all graph data')).toBeNull();
+  });
+
+  it('calls onClearGraph when Clear button is clicked', () => {
+    const onClear = vi.fn();
+    render(<GraphPanel varHistory={HIST} onClearGraph={onClear} />);
+    fireEvent.click(screen.getByTitle('Clear all graph data'));
+    expect(onClear).toHaveBeenCalledOnce();
+  });
+});
+
+// ── Avg / max overlays ────────────────────────────────────────────────────────
+
+describe('GraphPanel — avg/max overlays', () => {
+  it('renders avg and max checkboxes for each variable', () => {
+    render(<GraphPanel varHistory={{ x: [1, 2, 3] }} />);
+    expect(screen.getByTitle('Show average line')).toBeInTheDocument();
+    expect(screen.getByTitle('Show max line')).toBeInTheDocument();
+  });
+
+  it('avg checkbox is unchecked by default', () => {
+    render(<GraphPanel varHistory={{ x: [1, 2, 3] }} />);
+    const avgBox = screen.getByTitle('Show average line').querySelector('input');
+    expect(avgBox.checked).toBe(false);
+  });
+
+  it('max checkbox is unchecked by default', () => {
+    render(<GraphPanel varHistory={{ x: [1, 2, 3] }} />);
+    const maxBox = screen.getByTitle('Show max line').querySelector('input');
+    expect(maxBox.checked).toBe(false);
+  });
+
+  it('avg checkbox becomes checked after click', () => {
+    render(<GraphPanel varHistory={{ x: [1, 2, 3] }} />);
+    const avgBox = screen.getByTitle('Show average line').querySelector('input');
+    fireEvent.click(avgBox);
+    expect(avgBox.checked).toBe(true);
+  });
+
+  it('max checkbox becomes checked after click', () => {
+    render(<GraphPanel varHistory={{ x: [1, 2, 3] }} />);
+    const maxBox = screen.getByTitle('Show max line').querySelector('input');
+    fireEvent.click(maxBox);
+    expect(maxBox.checked).toBe(true);
+  });
+
+  it('avg and max checkboxes can both be checked independently', () => {
+    render(<GraphPanel varHistory={{ x: [1, 2, 3] }} />);
+    const avgBox = screen.getByTitle('Show average line').querySelector('input');
+    const maxBox = screen.getByTitle('Show max line').querySelector('input');
+    fireEvent.click(avgBox);
+    fireEvent.click(maxBox);
+    expect(avgBox.checked).toBe(true);
+    expect(maxBox.checked).toBe(true);
+  });
+
+  it('each variable has its own independent overlay checkboxes', () => {
+    render(<GraphPanel varHistory={{ x: [1, 2], y: [3, 4] }} />);
+    const avgBoxes = screen.getAllByTitle('Show average line');
+    expect(avgBoxes).toHaveLength(2);
+    fireEvent.click(avgBoxes[0].querySelector('input'));
+    expect(avgBoxes[0].querySelector('input').checked).toBe(true);
+    expect(avgBoxes[1].querySelector('input').checked).toBe(false);
+  });
+});
+
 // ── Legend toggle ──────────────────────────────────────────────────────────────
 
 describe('GraphPanel — legend toggle', () => {

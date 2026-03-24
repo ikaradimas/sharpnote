@@ -286,4 +286,21 @@ public class DisplayTests : IAsyncDisposable
         msg.GetProperty("content").GetProperty("value").GetString()
             .Should().Be("2025-06-15");
     }
+
+    // ── Display.ClearGraph ────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task ClearGraph_EmitsGraphClearMessage()
+    {
+        await StartKernelAsync();
+        var id = NewId();
+        ClearMessages();
+        await SendAsync(new { type = "execute", id, code = "Display.ClearGraph();" });
+
+        var msg = await WaitForMessageAsync(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "graph_clear",
+            timeoutMs: 15_000);
+
+        msg.ValueKind.Should().NotBe(JsonValueKind.Undefined);
+    }
 }
