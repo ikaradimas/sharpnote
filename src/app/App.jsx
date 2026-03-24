@@ -1601,8 +1601,11 @@ ${cellsHtml}
 
   const handleQuitSave = useCallback(async (selectedIds) => {
     setQuitDirtyNbs(null);
-    for (const id of selectedIds) await handleSave(id);
-    window.electronAPI?.confirmQuit();
+    try {
+      for (const id of selectedIds) await handleSave(id);
+    } finally {
+      window.electronAPI?.confirmQuit();
+    }
   }, [handleSave]);
 
   const handleQuitDiscard = useCallback(() => {
