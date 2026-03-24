@@ -599,7 +599,7 @@ Widgets are live UI controls rendered inline in cell output. Their values **pers
 |--------|-----------|
 | Slider | \`Display.Slider(label, min, max, step, defaultValue)\` |
 | Dropdown | \`Display.Dropdown(label, options[], defaultValue)\` |
-| Date Picker | \`Display.DatePicker(label, defaultDate)\` |
+| Date Picker | \`Display.DatePicker(label, defaultValue)\` |
 
 All three return a \`WidgetHandle\` with implicit conversions to \`double\`, \`int\`, \`float\`, and \`string\`.`),
 
@@ -612,7 +612,7 @@ var temperature = Display.Slider("Temperature (°C)", min: -20, max: 50, step: 0
 var unit = Display.Dropdown("Unit", new[] { "Celsius", "Fahrenheit", "Kelvin" });
 
 // Date Picker: calendar date
-var reportDate = Display.DatePicker("Report Date", defaultDate: "2025-01-01");
+var reportDate = Display.DatePicker("Report Date", defaultValue: "2025-01-01");
 
 // Use the values in code
 double converted = unit.StringValue switch {
