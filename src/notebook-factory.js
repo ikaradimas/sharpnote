@@ -617,7 +617,10 @@ export function createNotebook(withExamples = false) {
     attachedDbs: [],   // [{ connectionId, status, varName, schema, error }]
     dbPanelOpen: false,
     vars: [],
+    varHistory: {},
     varsPanelOpen: false,
     tocPanelOpen: false,
+    outputHistory: {},
+    staleCellIds: [],
   };
 }

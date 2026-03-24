@@ -6,6 +6,7 @@ import React, {
   useMemo,
 } from 'react';
 import { v4 as uuidv4 } from 'uuid';
+import { marked } from 'marked';
 import { DOCS_TAB_ID } from '../constants.js';
 import {
   makeLibEditorId, isLibEditorId, isNotebookId,
@@ -24,6 +25,7 @@ import { DockDropOverlay } from '../components/dock/DockDropOverlay.jsx';
 import { QuitDialog } from '../components/dialogs/QuitDialog.jsx';
 import { AboutDialog } from '../components/dialogs/AboutDialog.jsx';
 import { SettingsDialog } from '../components/dialogs/SettingsDialog.jsx';
+import { CommandPalette } from '../components/dialogs/CommandPalette.jsx';
 import { StatusBar } from './StatusBar.jsx';
 import { renderPanelContent } from '../components/dock/renderPanelContent.jsx';
 
@@ -63,6 +65,11 @@ export function App() {
   const [lineAltEnabled, setLineAltEnabled] = useState(true);
   const lineAltEnabledRef = useRef(true);
   useEffect(() => { lineAltEnabledRef.current = lineAltEnabled; }, [lineAltEnabled]);
+
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+
+  // Refs for reactive cell dependency tracking
+  const prevVarsSnapRef = useRef({}); // cellId -> vars snapshot before run
 
   // Dock layout state
   const [dockLayout, setDockLayout] = useState(DEFAULT_DOCK_LAYOUT);
@@ -384,7 +391,36 @@ export function App() {
             const extra = msg.cancelled
               ? { outputs: { ...n.outputs, [msg.id]: [...(n.outputs[msg.id] || []), { type: 'interrupted' }] } }
               : {};
-            return { running: next, cellResults: { ...(n.cellResults || {}), [msg.id]: result }, ...extra };
+
+            // Reactive cell dependencies: detect which downstream cells may be stale
+            let staleCellIds = [...(n.staleCellIds || [])].filter((id) => id !== msg.id);
+            if (!msg.cancelled && msg.success) {
+              const prevSnap = prevVarsSnapRef.current[msg.id] || [];
+              delete prevVarsSnapRef.current[msg.id];
+              const prevMap = Object.fromEntries(prevSnap.map((v) => [v.name, v.value]));
+              const changedNames = (n.vars || [])
+                .filter((v) => v.name in prevMap && prevMap[v.name] !== v.value)
+                .map((v) => v.name);
+
+              if (changedNames.length > 0) {
+                const runIdx = n.cells.findIndex((c) => c.id === msg.id);
+                for (const cell of n.cells.slice(runIdx + 1)) {
+                  if (cell.type !== 'code' || staleCellIds.includes(cell.id)) continue;
+                  const usesChanged = changedNames.some((name) => {
+                    try { return new RegExp(`\\b${name}\\b`).test(cell.content || ''); }
+                    catch { return false; }
+                  });
+                  if (usesChanged) staleCellIds.push(cell.id);
+                }
+              }
+            }
+
+            return {
+              running: next,
+              cellResults: { ...(n.cellResults || {}), [msg.id]: result },
+              staleCellIds,
+              ...extra,
+            };
           });
           break;
         }
@@ -428,15 +464,27 @@ export function App() {
           }));
           break;
 
-        case 'vars_update':
-          setNb(notebookId, { vars: msg.vars });
+        case 'vars_update': {
+          setNb(notebookId, (n) => {
+            const hist = { ...(n.varHistory || {}) };
+            for (const v of msg.vars) {
+              if (!v.isNull) {
+                const num = Number(v.value);
+                if (isFinite(num)) {
+                  hist[v.name] = [...(hist[v.name] || []).slice(-49), num];
+                }
+              }
+            }
+            return { vars: msg.vars, varHistory: hist };
+          });
           break;
+        }
 
         case 'nuget_preload_complete':
           break;
 
         case 'reset_complete':
-          setNb(notebookId, { kernelStatus: 'ready', vars: [] });
+          setNb(notebookId, { kernelStatus: 'ready', vars: [], varHistory: {}, outputHistory: {}, staleCellIds: [] });
           break;
 
         case 'db_schema':
@@ -506,12 +554,25 @@ export function App() {
   const runCell = useCallback((notebookId, cell) => {
     if (!window.electronAPI || cell.type !== 'code') return Promise.resolve();
 
+    // Snapshot vars before running for reactive dependency detection
+    prevVarsSnapRef.current[cell.id] = [...(notebooksRef.current.find((n) => n.id === notebookId)?.vars || [])];
+
     return new Promise((resolve) => {
-      setNb(notebookId, (n) => ({
-        outputs: { ...n.outputs, [cell.id]: [] },
-        cellResults: { ...(n.cellResults || {}), [cell.id]: null },
-        running: new Set([...n.running, cell.id]),
-      }));
+      setNb(notebookId, (n) => {
+        // Preserve previous outputs in history (max 5 snapshots)
+        const prevOutputs = n.outputs[cell.id];
+        const newOutputHistory = { ...(n.outputHistory || {}) };
+        if (prevOutputs && prevOutputs.length > 0) {
+          newOutputHistory[cell.id] = [...(newOutputHistory[cell.id] || []).slice(-4), prevOutputs];
+        }
+        return {
+          outputs: { ...n.outputs, [cell.id]: [] },
+          outputHistory: newOutputHistory,
+          cellResults: { ...(n.cellResults || {}), [cell.id]: null },
+          running: new Set([...n.running, cell.id]),
+          staleCellIds: (n.staleCellIds || []).filter((id) => id !== cell.id),
+        };
+      });
 
       pendingResolversRef.current[cell.id] = resolve;
 
@@ -894,6 +955,85 @@ export function App() {
     });
 
     return result;
+  }, []);
+
+  const handleExportHtml = useCallback(async () => {
+    const nbId = activeIdRef.current;
+    if (!isNotebookId(nbId)) return;
+    const nb = notebooksRef.current.find((n) => n.id === nbId);
+    if (!nb) return;
+
+    const title = getNotebookDisplayName(nb.path, nb.title, 'notebook');
+
+    const escHtml = (s) => String(s ?? '')
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+    const renderOutput = (msg) => {
+      if (msg.type === 'stdout') return `<pre class="out-stdout">${escHtml(msg.content)}</pre>`;
+      if (msg.type === 'error') return `<pre class="out-error">${escHtml(msg.message)}</pre>`;
+      if (msg.type === 'display') {
+        if (msg.format === 'html') return `<div class="out-html">${msg.content}</div>`;
+        if (msg.format === 'table' && Array.isArray(msg.content) && msg.content.length > 0) {
+          const cols = Object.keys(msg.content[0]);
+          const head = cols.map((c) => `<th>${escHtml(c)}</th>`).join('');
+          const rows = msg.content.map((r) =>
+            `<tr>${cols.map((c) => `<td>${escHtml(r[c])}</td>`).join('')}</tr>`
+          ).join('');
+          return `<table><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table>`;
+        }
+        if (msg.format === 'csv') return `<pre class="out-stdout">${escHtml(msg.content)}</pre>`;
+      }
+      if (msg.type === 'interrupted') return '<p class="out-error">⏹ Interrupted</p>';
+      return '';
+    };
+
+    const cellsHtml = nb.cells.map((cell, i) => {
+      if (cell.type === 'markdown') {
+        return `<div class="md-cell">${marked.parse(cell.content || '')}</div>`;
+      }
+      const outs = (nb.outputs[cell.id] || []).map(renderOutput).join('');
+      return `<div class="code-cell">
+  <div class="cell-hdr"><span class="cell-num">[${i + 1}]</span><span class="cell-lang">C#</span></div>
+  <pre class="cell-src">${escHtml(cell.content)}</pre>
+  ${outs ? `<div class="cell-out">${outs}</div>` : ''}
+</div>`;
+    }).join('\n');
+
+    const html = `<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${escHtml(title)}</title>
+<style>
+body{font-family:system-ui,sans-serif;max-width:900px;margin:40px auto;padding:0 20px;background:#1e1e1e;color:#d4d4d4}
+h1,h2,h3,h4{color:#e8e8e8}a{color:#4fc3f7}
+code,pre{font-family:Consolas,monospace}code{background:#2a2a2a;padding:2px 5px;border-radius:3px;font-size:.88em}
+pre{background:#2a2a2a;padding:12px 16px;border-radius:4px;overflow-x:auto;margin:0}
+blockquote{border-left:3px solid #555;margin:0;padding-left:12px;color:#aaa}
+table{border-collapse:collapse;width:100%;font-size:12px;margin:4px 0}
+th{background:#252525;padding:6px 10px;text-align:left;color:#9cdcfe}
+td{padding:5px 10px;border-bottom:1px solid #2d2d2d}
+.code-cell{margin:12px 0;border:1px solid #2d2d2d;border-radius:4px;overflow:hidden}
+.md-cell{padding:4px 0}
+.cell-hdr{background:#252525;padding:4px 12px;display:flex;gap:8px;font-size:11px;color:#666}
+.cell-num{color:#555}.cell-lang{color:#569cd6}
+.cell-src{background:#1e1e1e;padding:12px 16px;color:#d4d4d4}
+.cell-out{padding:8px 12px;border-top:1px solid #2a2a2a}
+.out-stdout{color:#d4d4d4;white-space:pre-wrap;font-size:12px;padding:0;background:none}
+.out-error{color:#f48771;white-space:pre-wrap;font-size:12px;padding:0;background:none}
+.out-html{padding:4px 0}
+</style>
+</head><body>
+<h1>${escHtml(title)}</h1>
+${cellsHtml}
+</body></html>`;
+
+    await window.electronAPI?.saveFile({
+      content: html,
+      defaultName: `${title}.html`,
+      filters: [{ name: 'HTML File', extensions: ['html'] }],
+    });
   }, []);
 
   const handleCloseTab = useCallback((tabId) => {
@@ -1349,6 +1489,8 @@ export function App() {
     'toggle-api':      () => setApiPanelOpen((v) => !v),
     about: () => setAboutOpen(true),
     settings: () => setSettingsOpen(true),
+    'export-html': handleExportHtml,
+    'command-palette': () => setCommandPaletteOpen(true),
   };
 
   // Sync open tabs to main process so it can build the Window menu.
@@ -1398,6 +1540,18 @@ export function App() {
       menuHandlersRef.current[action]?.();
     });
   }, [handleOpenRecent]);
+
+  // ── Command palette keyboard shortcut ─────────────────────────────────────
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setCommandPaletteOpen((v) => !v);
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   // ── Quit guard ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -1497,6 +1651,7 @@ export function App() {
       vars: {
         onToggle: nbId ? () => setNb(nbId, (n) => ({ varsPanelOpen: !n.varsPanelOpen })) : () => {},
         vars: activeNb?.vars ?? [],
+        varHistory: activeNb?.varHistory ?? {},
       },
       toc: {
         onToggle: nbId ? () => setNb(nbId, (n) => ({ tocPanelOpen: !n.tocPanelOpen })) : () => {},
@@ -1683,6 +1838,12 @@ export function App() {
           onSaveSelected={handleQuitSave}
           onDiscardAll={handleQuitDiscard}
           onCancel={() => setQuitDirtyNbs(null)}
+        />
+      )}
+      {commandPaletteOpen && (
+        <CommandPalette
+          onExecute={(id) => menuHandlersRef.current[id]?.()}
+          onClose={() => setCommandPaletteOpen(false)}
         />
       )}
     </div>

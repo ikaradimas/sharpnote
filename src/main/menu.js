@@ -107,6 +107,8 @@ function buildMenu() {
       { type: 'separator' },
       { label: 'Save',           accelerator: 'CmdOrCtrl+S',       click: () => send('save') },
       { label: 'Save As…',       accelerator: 'CmdOrCtrl+Shift+S', click: () => send('save-as') },
+      { type: 'separator' },
+      { label: 'Export as HTML…', click: () => send('export-html') },
       ...(process.platform !== 'darwin' ? [
         { type: 'separator' },
         { role: 'quit' },
@@ -155,6 +157,8 @@ function buildMenu() {
       { label: 'Library',           accelerator: 'CmdOrCtrl+Shift+L', click: () => send('toggle-library') },
       { label: 'File Explorer',     accelerator: 'CmdOrCtrl+Shift+E', click: () => send('toggle-files') },
       { label: 'API Browser',       accelerator: 'CmdOrCtrl+Shift+A', click: () => send('toggle-api') },
+      { type: 'separator' },
+      { label: 'Command Palette',   accelerator: 'CmdOrCtrl+K',       click: () => send('command-palette') },
       { type: 'separator' },
       { label: 'Settings…',         accelerator: 'CmdOrCtrl+,',       click: () => send('settings') },
     ],

@@ -32,7 +32,6 @@ function CellControls({ onMoveUp, onMoveDown, onDelete }) {
 
 function formatElapsed(ms) {
   if (ms < 60_000) {
-    // Show two decimal places below 10 s, one decimal above.
     return ms < 10_000
       ? `${(ms / 1000).toFixed(2)}s`
       : `${(ms / 1000).toFixed(1)}s`;
@@ -49,6 +48,9 @@ export function CodeCell({
   cell,
   cellIndex,
   outputs,
+  outputHistory,
+  notebookId,
+  isStale,
   lastResult = null,
   isRunning,
   anyRunning,
@@ -74,6 +76,13 @@ export function CodeCell({
   const [lastDuration, setLastDuration] = useState(null);
   const [lastRanAt, setLastRanAt] = useState(null);
   const elapsedRef = useRef(0);
+  // Output history browsing: -1 = current, 0 = oldest historical, histLen-1 = newest historical
+  const [histIdx, setHistIdx] = useState(-1);
+
+  // Reset to current when a new run starts or outputs change
+  useEffect(() => {
+    setHistIdx(-1);
+  }, [isRunning, outputs]);
 
   useEffect(() => {
     if (!isRunning) return;
@@ -101,9 +110,19 @@ export function CodeCell({
     return () => document.removeEventListener('mousedown', handler);
   }, [dropdownOpen]);
 
+  const histLen = outputHistory ? outputHistory.length : 0;
+  const displayedOutputs = histIdx >= 0 && histLen > 0
+    ? outputHistory[histIdx]
+    : outputs;
+
   return (
-    <div className={`cell code-cell${isRunning ? ' running' : ''}${locked ? ' cell-locked' : ''}`}>
+    <div className={`cell code-cell${isRunning ? ' running' : ''}${locked ? ' cell-locked' : ''}${isStale ? ' cell-stale' : ''}`}>
       {cellIndex != null && <span className="cell-index-badge">{cellIndex + 1}</span>}
+      {isStale && (
+        <div className="cell-stale-banner" title="Variables used in this cell may have changed — consider re-running">
+          ↺ upstream variables changed
+        </div>
+      )}
       <div className="code-cell-header">
         <span className="cell-lang-label">C#</span>
         <div className="cell-run-group" ref={dropdownRef}>
@@ -115,7 +134,7 @@ export function CodeCell({
           ) : (
             <>
               <button className="run-btn" onClick={onRun} disabled={anyRunning || !kernelReady} title="Run (Ctrl+Enter)">▶ Run</button>
-              <button className="cell-run-chevron" onClick={() => setDropdownOpen(v => !v)}
+              <button className="cell-run-chevron" onClick={() => setDropdownOpen((v) => !v)}
                       disabled={anyRunning || !kernelReady} title="More run options">▾</button>
             </>
           )}
@@ -160,7 +179,7 @@ export function CodeCell({
         readOnly={locked}
         cellIndex={cellIndex}
       />
-      <CellOutput messages={outputs} />
+      <CellOutput messages={displayedOutputs} notebookId={notebookId} />
       <div className="code-cell-footer">
         {(isRunning || lastDuration !== null) && (
           <span className="cell-execution-timer">
@@ -178,6 +197,26 @@ export function CodeCell({
                 {lastRanAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
               </span>
             )}
+          </span>
+        )}
+        {histLen > 0 && !isRunning && (
+          <span className="output-history-nav">
+            <button
+              className="hist-nav-btn"
+              onClick={() => setHistIdx((i) => Math.max(i === -1 ? histLen - 1 : i - 1, 0))}
+              disabled={histIdx === 0}
+              title="Previous run output"
+            >‹</button>
+            <span className="hist-nav-label">
+              {histIdx === -1 ? `current` : `run −${histLen - histIdx}`}
+              {` / ${histLen + 1}`}
+            </span>
+            <button
+              className="hist-nav-btn"
+              onClick={() => setHistIdx((i) => i >= histLen - 1 ? -1 : i + 1)}
+              disabled={histIdx === -1}
+              title="Next run output"
+            >›</button>
           </span>
         )}
         <button

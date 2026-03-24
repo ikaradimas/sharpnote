@@ -470,4 +470,104 @@ export const DOCS_SECTIONS = [
       { type: 'p', text: 'The Export… and Import… buttons at the bottom of the sidebar let you back up and restore your entire configuration as a single JSON file. The exported file includes theme, editor font size, panel font size, dock layout, saved dock layout presets, pinned notebooks, database connections, and saved API configurations. Importing applies all fields that are present in the file and immediately persists them — missing fields are left unchanged.' },
     ],
   },
+  {
+    id: 'command-palette', title: 'Command Palette',
+    content: [
+      { type: 'p', text: 'The Command Palette provides a fast keyboard-driven interface to every action in SharpNote without leaving the keyboard.' },
+      { type: 'h3', text: 'Opening the Palette' },
+      { type: 'ul', items: [
+        '⌘K (macOS) / Ctrl+K (Windows/Linux) — toggle the palette open/closed',
+        'Tools → Command Palette in the menu bar',
+        'Press Escape to close without executing a command',
+      ]},
+      { type: 'h3', text: 'Searching' },
+      { type: 'p', text: 'Start typing to filter the command list. The filter is case-insensitive and matches any substring of the command label. Arrow keys move the selection; Enter executes the selected command.' },
+      { type: 'h3', text: 'Available Commands' },
+      { type: 'ul', items: [
+        'All File operations (New, Open, Save, Save As, Export as HTML)',
+        'All Run operations (Run All, Reset Kernel, Clear Output)',
+        'All panel toggles (Logs, Packages, Config, DB, Variables, ToC, Library, Files, API Browser)',
+        'Settings and Documentation',
+      ]},
+    ],
+  },
+  {
+    id: 'output-history', title: 'Cell Output History',
+    content: [
+      { type: 'p', text: 'SharpNote remembers the outputs from the last 5 executions of each code cell, so you can compare results across runs without re-running.' },
+      { type: 'h3', text: 'Navigating History' },
+      { type: 'p', text: 'After a cell has been run at least twice, a navigator appears in its footer: ‹ run −N / total ›. Click ‹ or › to step through historical outputs. The label shows which run is displayed relative to the current one.' },
+      { type: 'h3', text: 'Notes' },
+      { type: 'ul', items: [
+        'History is in-memory only — it is not persisted when the notebook is saved or the kernel resets',
+        'Only the last 5 outputs are retained per cell; older entries are discarded automatically',
+        'Navigating history does not affect the current cell state or re-run anything',
+      ]},
+    ],
+  },
+  {
+    id: 'reactive-deps', title: 'Reactive Cell Dependencies',
+    content: [
+      { type: 'p', text: 'When a code cell runs successfully and changes one or more variables, SharpNote analyses the cells below it and flags any that appear to use those changed variables.' },
+      { type: 'h3', text: 'Stale Cell Banner' },
+      { type: 'p', text: 'A "↺ upstream variables changed" banner appears at the top of a flagged cell. This is a hint, not a guarantee — the detection uses simple identifier matching and may produce false positives or miss some cases.' },
+      { type: 'h3', text: 'Clearing the Hint' },
+      { type: 'p', text: 'The banner disappears as soon as the cell is run, or when the kernel is reset. Running the flagged cell clears it regardless of whether the output changed.' },
+    ],
+  },
+  {
+    id: 'variable-sparklines', title: 'Variable Sparklines',
+    content: [
+      { type: 'p', text: 'The Variables panel tracks the history of numeric variables across executions and displays a sparkline (mini trend chart) for each one.' },
+      { type: 'h3', text: 'How It Works' },
+      { type: 'ul', items: [
+        'Each time a cell runs successfully, all numeric variables in scope are recorded',
+        'Up to 50 data points are retained per variable',
+        'A sparkline appears in the rightmost column of the Variables panel when at least 2 data points exist',
+      ]},
+      { type: 'h3', text: 'Notes' },
+      { type: 'ul', items: [
+        'Only variables whose value parses as a finite number (int, double, float, decimal, etc.) show sparklines',
+        'History is reset when the kernel resets',
+        'String and complex type variables still appear in the table but without a sparkline',
+      ]},
+    ],
+  },
+  {
+    id: 'notebook-export', title: 'Notebook Export',
+    content: [
+      { type: 'p', text: 'Export the current notebook as a self-contained HTML file that can be shared, archived, or viewed in any browser — no SharpNote required.' },
+      { type: 'h3', text: 'Exporting' },
+      { type: 'ul', items: [
+        'File → Export as HTML… opens a save dialog',
+        'The Command Palette (⌘K) → "Export as HTML…"',
+      ]},
+      { type: 'h3', text: 'What Is Included' },
+      { type: 'ul', items: [
+        'All cell source code (code cells) and rendered markdown (markdown cells)',
+        'All output from the last run of each cell: stdout, errors, HTML output, and tables',
+        'Graphs are not rendered in the export (Chart.js is not bundled); they appear as a note',
+        'Widget outputs are not included in the export',
+        'The current cell output snapshot only — output history is not exported',
+      ]},
+      { type: 'h3', text: 'Styling' },
+      { type: 'p', text: 'The exported file uses a built-in dark theme stylesheet. No external resources are loaded — the file is fully standalone.' },
+    ],
+  },
+  {
+    id: 'widgets', title: 'Interactive Widgets',
+    content: [
+      { type: 'p', text: 'Interactive widgets let you add sliders and dropdowns directly to cell output. Their values persist between cell executions, enabling lightweight parameter exploration without re-coding.' },
+      { type: 'h3', text: 'Creating Widgets' },
+      { type: 'code', text: '// Slider — returns a WidgetHandle with an implicit double conversion\nvar alpha = Display.Slider("Alpha", min: 0, max: 1, step: 0.01, defaultValue: 0.5);\nConsole.WriteLine($"alpha = {alpha.Value}");\n\n// Dropdown — returns a WidgetHandle with an implicit string conversion\nvar color = Display.Dropdown("Color", new[] { "Red", "Green", "Blue" }, "Green");\nConsole.WriteLine($"selected = {color.StringValue}");\n\n// Implicit conversion — use the handle directly in expressions\ndouble factor = Display.Slider("Factor", 1, 10, 0.5, 3);\nvar result = someValue * factor; // factor is implicitly cast to double' },
+      { type: 'h3', text: 'Value Persistence' },
+      { type: 'p', text: 'Widget values are keyed by cell ID and widget position. When you re-run a cell, each widget restores the last value set by the user. Moving the slider or changing the dropdown does not automatically re-run the cell — use Run (Ctrl+Enter) to re-execute with the updated value.' },
+      { type: 'h3', text: 'WidgetHandle API' },
+      { type: 'ul', items: [
+        '.Value — current value as double',
+        '.StringValue — current value as string',
+        'Implicit conversion to double, int, float, string — allows direct use in expressions',
+      ]},
+    ],
+  },
 ];
