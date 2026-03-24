@@ -221,6 +221,13 @@ public class DisplayHelper
     public void Markdown(string markdown, string? title = null) =>
         Send(new { type = "display", id = _currentId, format = "markdown", content = (object)markdown, title });
 
+    /// <summary>
+    /// Pushes a single numeric data point to the Graph panel immediately, without waiting
+    /// for the cell to finish. Useful for plotting loop variables in real time.
+    /// </summary>
+    public void Plot(string name, double value) =>
+        Send(new { type = "var_point", name, value });
+
     // ── Internal helpers ──────────────────────────────────────────────────────
 
     internal static List<Dictionary<string, object?>> ToRowDicts(List<object?> items)

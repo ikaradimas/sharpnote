@@ -467,6 +467,15 @@ export function App() {
           }));
           break;
 
+        case 'var_point': {
+          setNb(notebookId, (n) => {
+            const hist = { ...(n.varHistory || {}) };
+            hist[msg.name] = [...(hist[msg.name] || []).slice(-49), msg.value];
+            return { varHistory: hist };
+          });
+          break;
+        }
+
         case 'vars_update': {
           setNb(notebookId, (n) => {
             const hist = { ...(n.varHistory || {}) };

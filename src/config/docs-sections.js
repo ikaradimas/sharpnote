@@ -599,6 +599,9 @@ export const DOCS_SECTIONS = [
         'Legend button toggles the chart legend',
         'Auto-assigned colors distinguish variables',
       ]},
+      { type: 'h3', text: 'Live Plotting with Display.Plot' },
+      { type: 'p', text: 'Push data points to the graph mid-execution using Display.Plot(name, value). This streams values into the Graph panel in real time without waiting for the cell to finish.' },
+      { type: 'code', text: 'var iter = 0;\nwhile (iter < 1000) {\n  iter++;\n  Display.Plot("iter", iter);\n  await Task.Delay(20);\n}' },
     ],
   },
   {
