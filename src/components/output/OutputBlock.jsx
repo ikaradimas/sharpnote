@@ -2,6 +2,8 @@ import React from 'react';
 import { parseCsv, tableToCSV } from '../../utils.js';
 import { DataTable } from './DataTable.jsx';
 import { GraphOutput } from './GraphOutput.jsx';
+import { WidgetOutput } from './WidgetOutput.jsx';
+import { MarkdownOutput } from './MarkdownOutput.jsx';
 
 async function exportMsg(msg) {
   if (!window.electronAPI?.saveFile) return;
@@ -36,7 +38,7 @@ async function exportMsg(msg) {
   }
 }
 
-export function OutputBlock({ msg, index }) {
+export function OutputBlock({ msg, index, notebookId }) {
   const canExport = msg.type === 'stdout' ||
     (msg.type === 'display' && ['html', 'table', 'csv', 'graph'].includes(msg.format));
 
@@ -59,6 +61,10 @@ export function OutputBlock({ msg, index }) {
       inner = <DataTable rows={parseCsv(msg.content)} />;
     } else if (msg.format === 'graph') {
       inner = <GraphOutput config={msg.content} />;
+    } else if (msg.format === 'widget') {
+      inner = <WidgetOutput spec={msg.content} notebookId={notebookId} />;
+    } else if (msg.format === 'markdown') {
+      inner = <MarkdownOutput content={msg.content} />;
     }
   } else if (msg.type === 'interrupted') {
     inner = <div className="output-interrupted">⏹ Execution interrupted</div>;
@@ -83,11 +89,13 @@ export function OutputBlock({ msg, index }) {
   );
 }
 
-export function CellOutput({ messages }) {
+export function CellOutput({ messages, notebookId }) {
   if (!messages || messages.length === 0) return null;
   return (
     <div className="cell-output">
-      {messages.map((msg, i) => <OutputBlock key={msg.handleId || i} msg={msg} index={i} />)}
+      {messages.map((msg, i) => (
+        <OutputBlock key={msg.handleId || i} msg={msg} index={i} notebookId={notebookId} />
+      ))}
     </div>
   );
 }

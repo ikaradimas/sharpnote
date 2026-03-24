@@ -470,4 +470,195 @@ export const DOCS_SECTIONS = [
       { type: 'p', text: 'The Export… and Import… buttons at the bottom of the sidebar let you back up and restore your entire configuration as a single JSON file. The exported file includes theme, editor font size, panel font size, dock layout, saved dock layout presets, pinned notebooks, database connections, and saved API configurations. Importing applies all fields that are present in the file and immediately persists them — missing fields are left unchanged.' },
     ],
   },
+  {
+    id: 'command-palette', title: 'Command Palette',
+    content: [
+      { type: 'p', text: 'The Command Palette provides a fast keyboard-driven interface to every action in SharpNote without leaving the keyboard.' },
+      { type: 'h3', text: 'Opening the Palette' },
+      { type: 'ul', items: [
+        '⌘K (macOS) / Ctrl+K (Windows/Linux) — toggle the palette open/closed',
+        'Tools → Command Palette in the menu bar',
+        'Press Escape to close without executing a command',
+      ]},
+      { type: 'h3', text: 'Searching' },
+      { type: 'p', text: 'Start typing to filter the command list. The filter is case-insensitive and matches any substring of the command label. Arrow keys move the selection; Enter executes the selected command.' },
+      { type: 'h3', text: 'Available Commands' },
+      { type: 'ul', items: [
+        'All File operations (New, Open, Save, Save As, Export as HTML)',
+        'All Run operations (Run All, Reset Kernel, Clear Output)',
+        'All panel toggles (Logs, Packages, Config, DB, Variables, ToC, Library, Files, API Browser)',
+        'Settings and Documentation',
+      ]},
+    ],
+  },
+  {
+    id: 'output-history', title: 'Cell Output History',
+    content: [
+      { type: 'p', text: 'SharpNote remembers the outputs from the last 5 executions of each code cell, so you can compare results across runs without re-running.' },
+      { type: 'h3', text: 'Navigating History' },
+      { type: 'p', text: 'After a cell has been run at least twice, a navigator appears in its footer: ‹ run −N / total ›. Click ‹ or › to step through historical outputs. The label shows which run is displayed relative to the current one.' },
+      { type: 'h3', text: 'Notes' },
+      { type: 'ul', items: [
+        'History is in-memory only — it is not persisted when the notebook is saved or the kernel resets',
+        'Only the last 5 outputs are retained per cell; older entries are discarded automatically',
+        'Navigating history does not affect the current cell state or re-run anything',
+      ]},
+    ],
+  },
+  {
+    id: 'reactive-deps', title: 'Reactive Cell Dependencies',
+    content: [
+      { type: 'p', text: 'When a code cell runs successfully and changes one or more variables, SharpNote analyses the cells below it and flags any that appear to use those changed variables.' },
+      { type: 'h3', text: 'Stale Cell Banner' },
+      { type: 'p', text: 'A "↺ upstream variables changed" banner appears at the top of a flagged cell. This is a hint, not a guarantee — the detection uses simple identifier matching and may produce false positives or miss some cases.' },
+      { type: 'h3', text: 'Clearing the Hint' },
+      { type: 'p', text: 'The banner disappears as soon as the cell is run, or when the kernel is reset. Running the flagged cell clears it regardless of whether the output changed.' },
+    ],
+  },
+  {
+    id: 'variable-sparklines', title: 'Variable Sparklines',
+    content: [
+      { type: 'p', text: 'The Variables panel tracks the history of numeric variables across executions and displays a sparkline (mini trend chart) for each one.' },
+      { type: 'h3', text: 'How It Works' },
+      { type: 'ul', items: [
+        'Each time a cell runs successfully, all numeric variables in scope are recorded',
+        'Up to 50 data points are retained per variable',
+        'A sparkline appears in the rightmost column of the Variables panel when at least 2 data points exist',
+      ]},
+      { type: 'h3', text: 'Notes' },
+      { type: 'ul', items: [
+        'Only variables whose value parses as a finite number (int, double, float, decimal, etc.) show sparklines',
+        'History is reset when the kernel resets',
+        'String and complex type variables still appear in the table but without a sparkline',
+      ]},
+    ],
+  },
+  {
+    id: 'notebook-export', title: 'Notebook Export',
+    content: [
+      { type: 'p', text: 'Export the current notebook as a self-contained HTML file that can be shared, archived, or viewed in any browser — no SharpNote required.' },
+      { type: 'h3', text: 'Exporting' },
+      { type: 'ul', items: [
+        'File → Export as HTML… opens a save dialog',
+        'The Command Palette (⌘K) → "Export as HTML…"',
+      ]},
+      { type: 'h3', text: 'What Is Included' },
+      { type: 'ul', items: [
+        'All cell source code (code cells) and rendered markdown (markdown cells)',
+        'All output from the last run of each cell: stdout, errors, HTML output, and tables',
+        'Graphs are not rendered in the export (Chart.js is not bundled); they appear as a note',
+        'Widget outputs are not included in the export',
+        'The current cell output snapshot only — output history is not exported',
+      ]},
+      { type: 'h3', text: 'Styling' },
+      { type: 'p', text: 'The exported file uses a built-in dark theme stylesheet. No external resources are loaded — the file is fully standalone.' },
+    ],
+  },
+  {
+    id: 'widgets', title: 'Interactive Widgets',
+    content: [
+      { type: 'p', text: 'Interactive widgets let you add sliders, dropdowns, and date pickers directly to cell output. Their values persist between cell executions, enabling lightweight parameter exploration without re-coding.' },
+      { type: 'h3', text: 'Creating Widgets' },
+      { type: 'code', text: '// Slider\nvar alpha = Display.Slider("Alpha", min: 0, max: 1, step: 0.01, defaultValue: 0.5);\n\n// Dropdown\nvar color = Display.Dropdown("Color", new[] { "Red", "Green", "Blue" }, "Green");\n\n// Date Picker\nvar date = Display.DatePicker("Report Date", defaultValue: "2025-01-01");\nConsole.WriteLine($"Selected date: {date.StringValue}");\n\n// Implicit conversion\ndouble factor = Display.Slider("Factor", 1, 10, 0.5, 3);\nvar result = someValue * factor;' },
+      { type: 'h3', text: 'Value Persistence' },
+      { type: 'p', text: 'Widget values are keyed by cell ID and widget position. When you re-run a cell, each widget restores the last value set by the user. Interacting with a widget does not automatically re-run the cell — use Run (Ctrl+Enter) to re-execute with the updated value.' },
+      { type: 'h3', text: 'WidgetHandle API' },
+      { type: 'ul', items: [
+        '.Value — current value as double',
+        '.StringValue — current value as string',
+        'Implicit conversion to double, int, float, string — allows direct use in expressions',
+      ]},
+    ],
+  },
+  {
+    id: 'display-markdown', title: 'Display.Markdown',
+    content: [
+      { type: 'p', text: 'Display.Markdown(text) renders a markdown string as rich output from C# code, with full Mermaid diagram and KaTeX math support.' },
+      { type: 'h3', text: 'Basic Usage' },
+      { type: 'code', text: 'Display.Markdown("## Hello\\n\\nThis is **bold** and $E=mc^2$");\n\n// Dynamic report\nvar rows = items.Select(i => $"| {i.Name} | {i.Value} |");\nDisplay.Markdown($@"\n### Results\n| Name | Value |\n|------|-------|\n{string.Join("\\n", rows)}\n");' },
+      { type: 'h3', text: 'Mermaid Diagrams' },
+      { type: 'code', text: 'Display.Markdown(@"\n```mermaid\nflowchart LR\n    A --> B --> C\n```\n");' },
+      { type: 'h3', text: 'KaTeX Math' },
+      { type: 'code', text: 'Display.Markdown("Inline: $x^2 + y^2 = r^2$\\n\\nBlock:\\n$$E = mc^2$$");' },
+    ],
+  },
+  {
+    id: 'graph-panel', title: 'Graph Panel',
+    content: [
+      { type: 'p', text: 'The Graph panel renders a live time-series chart of numeric variable history, updated after every cell execution.' },
+      { type: 'h3', text: 'Opening the Panel' },
+      { type: 'ul', items: [
+        'Tools menu → Graph',
+        'Keyboard: Ctrl+Shift+R',
+        'Application menu: Tools → Graph',
+      ]},
+      { type: 'h3', text: 'Controls' },
+      { type: 'ul', items: [
+        'Check / uncheck variable names to add or remove them from the chart',
+        'Chart type selector: Line, Area, or Column',
+        'Legend button toggles the chart legend',
+        'Auto-assigned colors distinguish variables',
+      ]},
+      { type: 'h3', text: 'Live Plotting with Display.Plot' },
+      { type: 'p', text: 'Push data points to the graph mid-execution using Display.Plot(name, value, mode). This streams values into the Graph panel in real time without waiting for the cell to finish.' },
+      { type: 'ul', items: [
+        'PlotMode.Value (default) — plots the raw value',
+        'PlotMode.RateOfChange — plots the delta since the previous call for that variable name',
+      ]},
+      { type: 'code', text: 'Display.Plot("position", position);                          // raw\nDisplay.Plot("velocity", velocity, PlotMode.RateOfChange);  // Δ per tick' },
+    ],
+  },
+  {
+    id: 'todo-panel', title: 'To Do Panel',
+    content: [
+      { type: 'p', text: 'The To Do panel automatically scans all code cells for // TODO, // FIXME, and // BUG comments and presents them as a clickable list.' },
+      { type: 'h3', text: 'Supported Tags' },
+      { type: 'code', text: '// TODO: implement rate limiting\n// FIXME: off-by-one error on line 42\n// BUG this crashes when the list is empty' },
+      { type: 'h3', text: 'Navigation' },
+      { type: 'p', text: 'Click any item to scroll to the corresponding cell and briefly highlight it. Open with Tools → To Do or Ctrl+Shift+O.' },
+    ],
+  },
+  {
+    id: 'var-inspect', title: 'Variable Inspection',
+    content: [
+      { type: 'p', text: 'Click the ⊕ button on any row in the Variables panel to open an inspection dialog for that variable.' },
+      { type: 'h3', text: 'Dialog Features' },
+      { type: 'ul', items: [
+        'Displays the variable name, type, and current value',
+        'Load Full Value fetches the full JSON-serialized value from the kernel',
+        'Copy button copies the displayed value to the clipboard',
+      ]},
+    ],
+  },
+  {
+    id: 'log-cell-links', title: 'Log Panel Cell Links',
+    content: [
+      { type: 'p', text: 'Cell IDs that appear in log entries are rendered as clickable links. Clicking one scrolls the notebook to that cell and briefly highlights it.' },
+      { type: 'p', text: 'Each code cell displays its 8-character ID in muted text in the cell header — this is the same ID shown in kernel log entries.' },
+    ],
+  },
+  {
+    id: 'keyboard-shortcuts', title: 'Keyboard Shortcuts',
+    content: [
+      { type: 'p', text: 'The full list of keyboard shortcuts is available in Settings → Shortcuts.' },
+      { type: 'h3', text: 'Essential Shortcuts' },
+      { type: 'ul', items: [
+        'Ctrl+Enter — Run the focused cell',
+        'Ctrl+Shift+Return — Run all cells',
+        'Ctrl+K — Command palette',
+        'Ctrl+N — New notebook',
+        'Ctrl+S — Save',
+        'F1 — Documentation',
+      ]},
+      { type: 'h3', text: 'Panel Shortcuts' },
+      { type: 'ul', items: [
+        'Ctrl+Shift+G — Logs',
+        'Ctrl+Shift+V — Variables',
+        'Ctrl+Shift+R — Graph panel',
+        'Ctrl+Shift+O — To Do panel',
+        'Ctrl+Shift+D — Database',
+        'Ctrl+Shift+A — API Browser',
+      ]},
+    ],
+  },
 ];

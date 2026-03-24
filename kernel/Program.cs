@@ -35,6 +35,7 @@ partial class Program
 
     // Cancellation token source for the current execution (set/cleared per execute)
     private static CancellationTokenSource? _execCts;
+    private static readonly Dictionary<string, JsonElement> _widgetValues = new();
 
     // ── Entry point ───────────────────────────────────────────────────────────
 
@@ -52,7 +53,7 @@ partial class Program
                 .FirstOrDefault(a => a.GetName().Name == name);
         };
 
-        var display = new DisplayHelper(realStdout);
+        var display = new DisplayHelper(realStdout, _widgetValues);
         var globals = new ScriptGlobals { Display = display };
 
         var options = ScriptOptions.Default
@@ -194,6 +195,23 @@ partial class Program
                 case "db_refresh":
                 {
                     await HandleDbRefresh(msg, realStdout);
+                    break;
+                }
+
+                case "widget_change":
+                {
+                    if (msg.TryGetProperty("widgetKey", out var wkProp))
+                    {
+                        var widgetKey = wkProp.GetString();
+                        if (widgetKey != null && msg.TryGetProperty("value", out var wvProp))
+                            _widgetValues[widgetKey] = wvProp.Clone();
+                    }
+                    break;
+                }
+
+                case "var_inspect":
+                {
+                    HandleVarInspect(msg, realStdout);
                     break;
                 }
 

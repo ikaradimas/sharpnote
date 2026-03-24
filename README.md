@@ -61,7 +61,19 @@
 - **Table of Contents** — live heading outline from markdown cells; click any entry to scroll to it
 - **API Browser** — enter any OpenAPI 3.x or Swagger 2.0 spec URL (JSON or YAML) to explore endpoints grouped by tag; expandable detail shows parameters, request body, and response schema types; **Try it** form sends live requests with path/query/body inputs; supports Bearer, API Key, and Basic auth applied to every request; save and recall multiple APIs with their auth config; all requests proxied through the main process for http:// local dev servers
 - **Settings dialog** — ⌘, / Ctrl+, opens a tabbed preferences dialog: Appearance (font size slider with live preview, theme picker), Paths (open Library / user data / log / documents folders in Finder), Startup (manage pinned notebooks that reopen on launch); Export… / Import… buttons back up and restore all settings (theme, font size, dock layout, DB connections, API configs) as a single JSON file
-- **Dark theme** — purpose-built urban dark CSS (~2 650 lines); no UI framework dependency
+- **Command Palette** — ⌘K / Ctrl+K opens a fuzzy-search overlay of every action in the app; keyboard-navigable with arrow keys and Enter; results filter as you type
+- **Cell Output History** — re-running a cell preserves the previous outputs; a ‹ › navigator in the cell footer lets you browse the last 5 runs to compare results across executions
+- **Reactive Cell Dependencies** — after a successful execution, downstream cells that reference any variable whose value changed are flagged with a "↺ upstream variables changed" banner, clearing automatically when those cells are run
+- **Variable Sparklines** — the Variables panel tracks the history of numeric variables and renders a mini trend sparkline for each one, updated after every execution
+- **Notebook Export** — File → Export as HTML… generates a self-contained dark-themed HTML file containing all cell sources, markdown renders, and outputs; no external dependencies required to view it
+- **Interactive Widgets** — `Display.Slider()`, `Display.Dropdown()`, and `Display.DatePicker()` render live controls in cell output; widget values persist between cell executions and are sent back to the kernel on change
+- **Display.Markdown** — `Display.Markdown(text)` renders markdown from C# code with Mermaid diagram and KaTeX math support, enabling dynamic reports and documentation generation
+- **Graph panel** — time-series chart of numeric variable history; select variables to plot, switch between line / area / column chart types, collapsible legend; updated after every cell execution (`Ctrl+Shift+R`); use `Display.Plot(name, value)` inside a loop to stream data points in real time
+- **To Do panel** — auto-scans code cells for `// TODO`, `// FIXME`, and `// BUG` comments; click any item to scroll to and highlight the originating cell (`Ctrl+Shift+O`)
+- **Variable Inspection** — click ⊕ in the Variables panel to open a full-value inspection dialog; Load Full Value fetches the complete JSON-serialised representation from the kernel with a copy-to-clipboard button
+- **Keyboard Shortcuts reference** — Settings → Shortcuts shows a read-only reference table of all keyboard shortcuts grouped by category
+- **Log panel cell links** — cell IDs that appear in log entries are rendered as clickable links that navigate directly to the corresponding cell; code cells show their ID in muted text in the header
+- **Dark theme** — purpose-built urban dark CSS; no UI framework dependency
 
 ---
 
@@ -116,7 +128,7 @@ All UI is a single ~3 400-line React file bundled by esbuild. Key components:
 | `LibraryPanel` | Code snippet library with subfolder nav and CodeMirror preview |
 | `NugetPanel` | Package list + add form + custom source management |
 | `ConfigPanel` | Key/value editor for per-notebook config passed to the kernel |
-| `VarsPanel` | Live variable snapshot from the kernel (name, type, value) |
+| `VarsPanel` | Live variable snapshot from the kernel (name, type, value) with numeric sparkline history |
 | `TocPanel` | Table of Contents — heading outline extracted from markdown cells |
 | `DbPanel` | Connection form, schema tree, attach/detach DB |
 | `DockZone` | Resizable panel zone (left / right / bottom / float) |

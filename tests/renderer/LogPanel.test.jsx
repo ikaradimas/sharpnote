@@ -181,3 +181,32 @@ describe('clear live log', () => {
     expect(screen.getByText('No entries')).toBeInTheDocument();
   });
 });
+
+// ── Cell ID links ──────────────────────────────────────────────────────────────
+
+describe('cell ID links', () => {
+  const CELL_ID = 'a1b2c3d4'; // 8-char base-36
+
+  it('renders a clickable link for a known cell ID in a log message', () => {
+    const onNav = vi.fn();
+    const cells = [{ id: CELL_ID }];
+    render(<LogPanel isOpen onToggle={vi.fn()} cells={cells} onNavigateToCell={onNav} />);
+    pushEntry(makeEntry(`Error in cell ${CELL_ID}`));
+    expect(document.querySelector('.log-cell-link')).toBeInTheDocument();
+  });
+
+  it('does not render a link for an unknown 8-char token', () => {
+    render(<LogPanel isOpen onToggle={vi.fn()} cells={[]} onNavigateToCell={vi.fn()} />);
+    pushEntry(makeEntry('token zzzzzzzz here'));
+    expect(document.querySelector('.log-cell-link')).toBeNull();
+  });
+
+  it('calls onNavigateToCell with the cell ID when link is clicked', () => {
+    const onNav = vi.fn();
+    const cells = [{ id: CELL_ID }];
+    render(<LogPanel isOpen onToggle={vi.fn()} cells={cells} onNavigateToCell={onNav} />);
+    pushEntry(makeEntry(`Error in cell ${CELL_ID}`));
+    fireEvent.click(document.querySelector('.log-cell-link'));
+    expect(onNav).toHaveBeenCalledWith(CELL_ID);
+  });
+});

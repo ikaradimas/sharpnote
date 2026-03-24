@@ -38,9 +38,10 @@ export function NotebookView({
   onLoadLayout,
   onDeleteLayout,
 }) {
-  const { cells, outputs, cellResults, running, kernelStatus,
+  const { cells, outputs, outputHistory, cellResults, running, kernelStatus,
           config, logPanelOpen, nugetPanelOpen, configPanelOpen,
-          dbPanelOpen, varsPanelOpen, tocPanelOpen, path: notebookPath } = nb;
+          dbPanelOpen, varsPanelOpen, tocPanelOpen, graphPanelOpen, todoPanelOpen,
+          path: notebookPath, staleCellIds } = nb;
 
   const addCell = (type, afterIndex = null) => {
     const newCell = makeCell(type, '');
@@ -118,6 +119,10 @@ export function NotebookView({
         onToggleFiles={onToggleFiles}
         apiPanelOpen={apiPanelOpen}
         onToggleApi={onToggleApi}
+        graphPanelOpen={graphPanelOpen}
+        onToggleGraph={() => { if (!graphPanelOpen) onFocusPanel?.('graph'); onSetNb((n) => ({ graphPanelOpen: !n.graphPanelOpen })); }}
+        todoPanelOpen={todoPanelOpen}
+        onToggleTodo={() => { if (!todoPanelOpen) onFocusPanel?.('todo'); onSetNb((n) => ({ todoPanelOpen: !n.todoPanelOpen })); }}
         theme={theme}
         onThemeChange={onThemeChange}
         lineAltEnabled={lineAltEnabled}
@@ -169,6 +174,9 @@ export function NotebookView({
                 cell={cell}
                 cellIndex={index}
                 outputs={outputs[cell.id]}
+                outputHistory={outputHistory?.[cell.id] ?? []}
+                notebookId={nb.id}
+                isStale={(staleCellIds || []).includes(cell.id)}
                 lastResult={cellResults?.[cell.id] ?? null}
                 isRunning={running.has(cell.id)}
                 anyRunning={running.size > 0}

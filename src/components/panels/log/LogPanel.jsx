@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useResize } from '../../../hooks/useResize.js';
 import { formatLogTime } from '../../../utils.js';
 
@@ -10,7 +10,43 @@ function parseLogContent(text) {
   });
 }
 
-function LogEntry({ entry }) {
+// Regex for 8-character base-36 cell IDs
+const CELL_ID_RE = /\b([0-9a-z]{8})\b/g;
+
+function MessageWithLinks({ message, cellIdSet, onNavigate }) {
+  if (!cellIdSet || cellIdSet.size === 0) return <>{message}</>;
+
+  const parts = [];
+  let lastIndex = 0;
+  let match;
+  CELL_ID_RE.lastIndex = 0;
+  while ((match = CELL_ID_RE.exec(message)) !== null) {
+    if (cellIdSet.has(match[1])) {
+      if (match.index > lastIndex) {
+        parts.push(<span key={lastIndex}>{message.slice(lastIndex, match.index)}</span>);
+      }
+      const cellId = match[1];
+      parts.push(
+        <button
+          key={match.index}
+          className="log-cell-link"
+          title={`Jump to cell ${cellId}`}
+          onClick={() => onNavigate?.(cellId)}
+        >
+          {cellId}
+        </button>
+      );
+      lastIndex = match.index + 8;
+    }
+  }
+  if (parts.length === 0) return <>{message}</>;
+  if (lastIndex < message.length) {
+    parts.push(<span key={lastIndex}>{message.slice(lastIndex)}</span>);
+  }
+  return <>{parts}</>;
+}
+
+function LogEntry({ entry, cellIdSet, onNavigate }) {
   const msg = entry.message || '';
   const isCollapsible = msg.includes('\n') || msg.length > 120;
   const [collapsed, setCollapsed] = useState(isCollapsible);
@@ -32,7 +68,11 @@ function LogEntry({ entry }) {
         )}
       </span>
       <span className={`log-message${collapsed ? ' log-message-collapsed' : ''}`}>
-        {msg}
+        <MessageWithLinks
+          message={msg}
+          cellIdSet={cellIdSet}
+          onNavigate={onNavigate}
+        />
         {entry.memoryMb != null && (
           <span className="log-memory"> · {entry.memoryMb.toFixed(0)} MB</span>
         )}
@@ -41,7 +81,7 @@ function LogEntry({ entry }) {
   );
 }
 
-export function LogPanel({ isOpen, onToggle, currentMemoryMb = null }) {
+export function LogPanel({ isOpen, onToggle, currentMemoryMb = null, cells, onNavigateToCell }) {
   const [width, onResizeMouseDown] = useResize(320, 'left');
   const [logFiles, setLogFiles] = useState([]);
   const [selectedFile, setSelectedFile] = useState('live');
@@ -50,6 +90,11 @@ export function LogPanel({ isOpen, onToggle, currentMemoryMb = null }) {
   const scrollRef = useRef(null);
   const memoryRef = useRef(currentMemoryMb);
   useEffect(() => { memoryRef.current = currentMemoryMb; }, [currentMemoryMb]);
+
+  const cellIdSet = useMemo(
+    () => new Set((cells || []).map((c) => c.id)),
+    [cells]
+  );
 
   useEffect(() => {
     if (!isOpen || !window.electronAPI) return;
@@ -131,7 +176,14 @@ export function LogPanel({ isOpen, onToggle, currentMemoryMb = null }) {
       <div className="log-entries" ref={scrollRef}>
         {entries.length === 0
           ? <div className="log-empty">No entries</div>
-          : entries.map((e, i) => <LogEntry key={i} entry={e} />)
+          : entries.map((e, i) => (
+            <LogEntry
+              key={i}
+              entry={e}
+              cellIdSet={cellIdSet}
+              onNavigate={onNavigateToCell}
+            />
+          ))
         }
       </div>
     </div>

@@ -169,9 +169,15 @@ function killKernelForId(notebookId) {
       entry.process.stdin.write(JSON.stringify({ type: 'exit' }) + '\n');
     } catch (_) {}
   }
+  // Destroy stdout/stderr immediately to release the readline event-loop reference.
+  // With 'dotnet run' in development, killing the wrapper does not kill the actual
+  // kernel child process; that child keeps the stdout pipe's write-end open so
+  // readline never sees EOF and the Node event loop stays alive, preventing exit.
+  try { entry.process.stdout.destroy(); } catch (_) {}
+  try { entry.process.stderr.destroy(); } catch (_) {}
   setTimeout(() => {
     if (entry.process) {
-      entry.process.kill();
+      try { entry.process.kill(); } catch (_) {}
     }
     kernels.delete(notebookId);
   }, 500);
