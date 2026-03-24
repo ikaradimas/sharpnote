@@ -198,6 +198,11 @@ function registerAllHandlers() {
     return { success: true };
   });
 
+  // Rebuild menu with updated custom shortcuts.
+  ipcMain.handle('rebuild-menu', (_event, customShortcuts) => {
+    Menu.setApplicationMenu(menuBuilder.buildMenu(customShortcuts || {}));
+  });
+
   // Window-tabs sync.
   ipcMain.on('update-window-tabs', (_event, tabs) => {
     menuBuilder.setWindowTabs(tabs);

@@ -12,14 +12,17 @@ export const PALETTE_COMMANDS = [
   { id: 'docs',             label: 'Documentation',             keys: 'F1' },
   { id: 'toggle-logs',      label: 'Toggle Logs Panel',         keys: '⌘⇧G' },
   { id: 'toggle-packages',  label: 'Toggle Packages Panel',     keys: '⌘⇧P' },
-  { id: 'toggle-config',    label: 'Toggle Config Panel' },
+  { id: 'toggle-config',    label: 'Toggle Config Panel',       keys: '⌘⇧,' },
   { id: 'toggle-db',        label: 'Toggle Database Panel',     keys: '⌘⇧D' },
   { id: 'toggle-vars',      label: 'Toggle Variables Panel',    keys: '⌘⇧V' },
   { id: 'toggle-toc',       label: 'Toggle Table of Contents',  keys: '⌘⇧T' },
   { id: 'toggle-library',   label: 'Toggle Library Panel',      keys: '⌘⇧L' },
   { id: 'toggle-files',     label: 'Toggle File Explorer',      keys: '⌘⇧E' },
   { id: 'toggle-api',       label: 'Toggle API Browser',        keys: '⌘⇧A' },
+  { id: 'toggle-graph',     label: 'Toggle Graph Panel',        keys: '⌘⇧R' },
+  { id: 'toggle-todo',      label: 'Toggle To Do Panel',        keys: '⌘⇧O' },
   { id: 'settings',         label: 'Settings…',                 keys: '⌘,' },
+  { id: 'about',            label: 'About SharpNote' },
 ];
 
 export function CommandPalette({ onExecute, onClose }) {

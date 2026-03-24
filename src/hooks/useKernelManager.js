@@ -207,16 +207,12 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
           break;
 
         case 'vars_update':
-          setNb(notebookId, (n) => {
-            const hist = { ...(n.varHistory || {}) };
-            for (const v of msg.vars) {
-              if (!v.isNull) {
-                const num = Number(v.value);
-                if (isFinite(num)) hist[v.name] = [...(hist[v.name] || []).slice(-49), num];
-              }
-            }
-            return { vars: msg.vars, varHistory: hist };
-          });
+          setNb(notebookId, { vars: msg.vars });
+          break;
+          break;
+
+        case 'graph_clear':
+          setNb(notebookId, { varHistory: {} });
           break;
 
         case 'nuget_preload_complete':

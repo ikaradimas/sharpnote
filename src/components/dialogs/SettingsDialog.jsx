@@ -11,7 +11,7 @@ const PANEL_FONT_SIZE_DEFAULT = 11.5;
 
 // ── Appearance section ────────────────────────────────────────────────────────
 
-function AppearanceSection({ theme, fontSize, onThemeChange, onFontSizeChange, panelFontSize, onPanelFontSizeChange, lineAltEnabled, onLineAltChange }) {
+function AppearanceSection({ theme, fontSize, onThemeChange, onFontSizeChange, panelFontSize, onPanelFontSizeChange, lineAltEnabled, onLineAltChange, lintEnabled, onLintEnabledChange }) {
   return (
     <div className="settings-section">
       <div className="settings-group">
@@ -72,6 +72,14 @@ function AppearanceSection({ theme, fontSize, onThemeChange, onFontSizeChange, p
             onChange={(e) => onLineAltChange(e.target.checked)}
           />
           <span>Alternating row colors</span>
+        </label>
+        <label className="settings-toggle-row">
+          <input
+            type="checkbox"
+            checked={!!lintEnabled}
+            onChange={(e) => onLintEnabledChange(e.target.checked)}
+          />
+          <span>Code linter (shows diagnostics while typing)</span>
         </label>
       </div>
 
@@ -196,59 +204,152 @@ function StartupSection({ pinnedPaths, onUnpin }) {
 
 const SHORTCUTS = [
   { group: 'Notebook', items: [
-    { keys: 'Ctrl+N',       desc: 'New notebook' },
-    { keys: 'Ctrl+O',       desc: 'Open notebook' },
-    { keys: 'Ctrl+S',       desc: 'Save' },
-    { keys: 'Ctrl+Shift+S', desc: 'Save as…' },
-    { keys: 'Ctrl+Shift+Return', desc: 'Run all cells' },
+    { id: 'nb-new',     keys: 'Ctrl+N',           desc: 'New notebook' },
+    { id: 'nb-open',    keys: 'Ctrl+O',           desc: 'Open notebook' },
+    { id: 'nb-save',    keys: 'Ctrl+S',           desc: 'Save' },
+    { id: 'nb-save-as', keys: 'Ctrl+Shift+S',     desc: 'Save as…' },
+    { id: 'nb-run-all', keys: 'Ctrl+Shift+Return', desc: 'Run all cells' },
   ]},
   { group: 'Cell', items: [
-    { keys: 'Ctrl+Enter',   desc: 'Run cell' },
-    { keys: 'Ctrl+=',       desc: 'Increase font size' },
-    { keys: 'Ctrl+-',       desc: 'Decrease font size' },
-    { keys: 'Ctrl+0',       desc: 'Reset font size' },
+    { keys: 'Ctrl+Enter', desc: 'Run cell' },
+    { keys: 'Ctrl+=',     desc: 'Increase font size' },
+    { keys: 'Ctrl+-',     desc: 'Decrease font size' },
+    { keys: 'Ctrl+0',     desc: 'Reset font size' },
   ]},
   { group: 'Panels', items: [
-    { keys: 'Ctrl+Shift+,', desc: 'Config panel' },
-    { keys: 'Ctrl+Shift+P', desc: 'Packages panel' },
-    { keys: 'Ctrl+Shift+G', desc: 'Logs panel' },
-    { keys: 'Ctrl+Shift+D', desc: 'Database panel' },
-    { keys: 'Ctrl+Shift+V', desc: 'Variables panel' },
-    { keys: 'Ctrl+Shift+T', desc: 'Table of Contents' },
-    { keys: 'Ctrl+Shift+L', desc: 'Library panel' },
-    { keys: 'Ctrl+Shift+E', desc: 'File Explorer' },
-    { keys: 'Ctrl+Shift+A', desc: 'API Browser' },
-    { keys: 'Ctrl+Shift+R', desc: 'Graph panel' },
-    { keys: 'Ctrl+Shift+O', desc: 'To Do panel' },
+    { id: 'panel-config',   keys: 'Ctrl+Shift+,', desc: 'Config panel' },
+    { id: 'panel-packages', keys: 'Ctrl+Shift+P', desc: 'Packages panel' },
+    { id: 'panel-logs',     keys: 'Ctrl+Shift+G', desc: 'Logs panel' },
+    { id: 'panel-db',       keys: 'Ctrl+Shift+D', desc: 'Database panel' },
+    { id: 'panel-vars',     keys: 'Ctrl+Shift+V', desc: 'Variables panel' },
+    { id: 'panel-toc',      keys: 'Ctrl+Shift+T', desc: 'Table of Contents' },
+    { id: 'panel-library',  keys: 'Ctrl+Shift+L', desc: 'Library panel' },
+    { id: 'panel-files',    keys: 'Ctrl+Shift+E', desc: 'File Explorer' },
+    { id: 'panel-api',      keys: 'Ctrl+Shift+A', desc: 'API Browser' },
+    { id: 'panel-graph',    keys: 'Ctrl+Shift+R', desc: 'Graph panel' },
+    { id: 'panel-todo',     keys: 'Ctrl+Shift+O', desc: 'To Do panel' },
   ]},
   { group: 'App', items: [
-    { keys: 'Ctrl+K',       desc: 'Command palette' },
-    { keys: 'Ctrl+,',       desc: 'Settings' },
-    { keys: 'F1',           desc: 'Documentation' },
+    { id: 'app-palette',  keys: 'Ctrl+K', desc: 'Command palette' },
+    { id: 'app-settings', keys: 'Ctrl+,', desc: 'Settings' },
+    { id: 'app-docs',     keys: 'F1',     desc: 'Documentation' },
   ]},
 ];
 
-function ShortcutsSection() {
+function formatKeyEvent(e) {
+  const parts = [];
+  if (e.ctrlKey || e.metaKey) parts.push('Ctrl');
+  if (e.altKey)   parts.push('Alt');
+  if (e.shiftKey) parts.push('Shift');
+  const key = e.key === ' ' ? 'Space' : e.key.length === 1 ? e.key.toUpperCase() : e.key;
+  if (!['Control', 'Alt', 'Shift', 'Meta'].includes(e.key)) parts.push(key);
+  return parts.join('+');
+}
+
+function KeysDisplay({ keys }) {
+  const parts = keys.split('+');
+  return (
+    <span className="shortcut-keys">
+      {parts.map((k, i) => (
+        <React.Fragment key={i}>
+          {i > 0 && <span className="shortcut-plus">+</span>}
+          <kbd className="shortcut-kbd">{k}</kbd>
+        </React.Fragment>
+      ))}
+    </span>
+  );
+}
+
+function ShortcutsSection({ customShortcuts = {}, onShortcutsChange }) {
+  const [query, setQuery] = useState('');
+  const [capturing, setCapturing] = useState(null); // shortcut id being captured
+
+  const allItems = SHORTCUTS.flatMap(({ group, items }) => items.map((item) => ({ ...item, group })));
+  const filtered = query.trim()
+    ? allItems.filter((item) => item.desc.toLowerCase().includes(query.toLowerCase()))
+    : null;
+
+  const handleCaptureKeyDown = (e, id) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.key === 'Escape') { setCapturing(null); return; }
+    const combo = formatKeyEvent(e);
+    if (!combo || combo === 'Ctrl' || combo === 'Shift' || combo === 'Alt') return;
+    onShortcutsChange?.(id, combo);
+    setCapturing(null);
+  };
+
+  const renderItem = ({ id, keys, desc }) => {
+    const displayKeys = id ? (customShortcuts[id] ?? keys) : keys;
+    const isCustom = id && customShortcuts[id];
+    const isCap = capturing === id;
+    return (
+      <div key={id ?? desc} className="shortcut-row">
+        {isCap ? (
+          <span
+            className="shortcut-capture"
+            tabIndex={0}
+            autoFocus
+            onKeyDown={(e) => handleCaptureKeyDown(e, id)}
+            onBlur={() => setCapturing(null)}
+          >
+            Press a key combination…
+          </span>
+        ) : (
+          <KeysDisplay keys={displayKeys} />
+        )}
+        <span className="shortcut-desc">{desc}</span>
+        {id && !isCap && (
+          <div className="shortcut-actions">
+            <button
+              className="shortcut-edit-btn"
+              title="Reassign shortcut"
+              onClick={() => setCapturing(id)}
+            >
+              ✎
+            </button>
+            {isCustom && (
+              <button
+                className="shortcut-reset-btn"
+                title="Reset to default"
+                onClick={() => onShortcutsChange?.(id, null)}
+              >
+                ↺
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="settings-section">
-      {SHORTCUTS.map(({ group, items }) => (
-        <div key={group} className="settings-group">
-          <div className="settings-group-label">{group}</div>
-          <div className="shortcuts-table">
-            {items.map(({ keys, desc }) => (
-              <div key={keys} className="shortcut-row">
-                <span className="shortcut-keys">{keys.split('+').map((k, i) => (
-                  <React.Fragment key={k}>
-                    {i > 0 && <span className="shortcut-plus">+</span>}
-                    <kbd className="shortcut-kbd">{k}</kbd>
-                  </React.Fragment>
-                ))}</span>
-                <span className="shortcut-desc">{desc}</span>
-              </div>
-            ))}
+      <div className="settings-group">
+        <input
+          className="shortcuts-search"
+          placeholder="Search shortcuts…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          spellCheck={false}
+        />
+      </div>
+      {filtered ? (
+        filtered.length === 0 ? (
+          <div className="shortcuts-empty">No shortcuts found</div>
+        ) : (
+          <div className="settings-group">
+            <div className="shortcuts-table">{filtered.map(renderItem)}</div>
           </div>
-        </div>
-      ))}
+        )
+      ) : (
+        SHORTCUTS.map(({ group, items }) => (
+          <div key={group} className="settings-group">
+            <div className="settings-group-label">{group}</div>
+            <div className="shortcuts-table">{items.map(renderItem)}</div>
+          </div>
+        ))
+      )}
     </div>
   );
 }
@@ -271,6 +372,10 @@ export function SettingsDialog({
   onPanelFontSizeChange,
   lineAltEnabled,
   onLineAltChange,
+  lintEnabled,
+  onLintEnabledChange,
+  customShortcuts,
+  onShortcutsChange,
   pinnedPaths,
   onUnpin,
   onExport,
@@ -354,10 +459,12 @@ export function SettingsDialog({
                 onPanelFontSizeChange={onPanelFontSizeChange}
                 lineAltEnabled={lineAltEnabled}
                 onLineAltChange={onLineAltChange}
+                lintEnabled={lintEnabled}
+                onLintEnabledChange={onLintEnabledChange}
               />
             )}
             {activeSection === 'shortcuts' && (
-              <ShortcutsSection />
+              <ShortcutsSection customShortcuts={customShortcuts} onShortcutsChange={onShortcutsChange} />
             )}
             {activeSection === 'paths' && (
               <PathsSection paths={paths} />

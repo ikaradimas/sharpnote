@@ -93,6 +93,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // App settings
   loadAppSettings:  () => ipcRenderer.invoke('app-settings-load'),
   saveAppSettings: (s) => ipcRenderer.invoke('app-settings-save', s),
+  rebuildMenu: (customShortcuts) => ipcRenderer.invoke('rebuild-menu', customShortcuts),
 
   // Window menu tab sync
   updateWindowTabs: (tabs) => ipcRenderer.send('update-window-tabs', tabs),

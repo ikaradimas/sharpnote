@@ -39,6 +39,14 @@ export function App() {
   const lineAltEnabledRef = useRef(true);
   useEffect(() => { lineAltEnabledRef.current = lineAltEnabled; }, [lineAltEnabled]);
 
+  const [lintEnabled, setLintEnabled] = useState(true);
+  const lintEnabledRef = useRef(true);
+  useEffect(() => { lintEnabledRef.current = lintEnabled; }, [lintEnabled]);
+
+  const [customShortcuts, setCustomShortcuts] = useState({});
+  const customShortcutsRef = useRef({});
+  useEffect(() => { customShortcutsRef.current = customShortcuts; }, [customShortcuts]);
+
   const [fontSize, setFontSizeState] = useState(12.6);
   const fontSizeRef = useRef(12.6);
   useEffect(() => { fontSizeRef.current = fontSize; }, [fontSize]);
@@ -104,6 +112,8 @@ export function App() {
     window.electronAPI?.saveAppSettings({
       theme: themeRef.current,
       lineAltEnabled: lineAltEnabledRef.current,
+      lintEnabled: lintEnabledRef.current,
+      customShortcuts: customShortcutsRef.current,
       pinnedTabs: [...pinnedPathsRef.current],
       dockLayout: dockLayoutRef.current,
       savedLayouts: savedLayoutsRef.current,
@@ -126,6 +136,11 @@ export function App() {
     window.electronAPI?.loadAppSettings().then((s) => {
       if (s?.theme) setTheme(s.theme);
       if (typeof s?.lineAltEnabled === 'boolean') setLineAltEnabled(s.lineAltEnabled);
+      if (typeof s?.lintEnabled === 'boolean') setLintEnabled(s.lintEnabled);
+      if (s?.customShortcuts && typeof s.customShortcuts === 'object') {
+        setCustomShortcuts(s.customShortcuts);
+        window.electronAPI?.rebuildMenu(s.customShortcuts);
+      }
       if (s?.dockLayout) {
         setDockLayout({
           ...DEFAULT_DOCK_LAYOUT,
@@ -152,6 +167,21 @@ export function App() {
   useEffect(() => {
     saveSettingsRef.current();
   }, [lineAltEnabled]);
+
+  useEffect(() => {
+    saveSettingsRef.current();
+  }, [lintEnabled]);
+
+  const handleShortcutsChange = useCallback((id, combo) => {
+    setCustomShortcuts((prev) => {
+      const next = { ...prev };
+      if (combo == null) delete next[id]; else next[id] = combo;
+      customShortcutsRef.current = next;
+      saveSettingsRef.current();
+      window.electronAPI?.rebuildMenu(next);
+      return next;
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── DB reconnect when connections first load ───────────────────────────────
   useEffect(() => {
@@ -687,6 +717,7 @@ export function App() {
       graph: {
         onToggle: nbId ? () => setNb(nbId, (n) => ({ graphPanelOpen: !n.graphPanelOpen })) : () => {},
         varHistory: activeNb?.varHistory ?? {},
+        onClearGraph: nbId ? () => setNb(nbId, { varHistory: {} }) : null,
       },
       todo: {
         onToggle: nbId ? () => setNb(nbId, (n) => ({ todoPanelOpen: !n.todoPanelOpen })) : () => {},
@@ -777,6 +808,7 @@ export function App() {
                     onThemeChange={setTheme}
                     lineAltEnabled={lineAltEnabled}
                     onLineAltChange={setLineAltEnabled}
+                    lintEnabled={lintEnabled}
                     dockLayout={dockLayout}
                     savedLayouts={savedLayouts}
                     onSaveLayout={handleSaveLayout}
@@ -841,6 +873,10 @@ export function App() {
           onPanelFontSizeChange={(size) => window.electronAPI?.setPanelFontSize(size)}
           lineAltEnabled={lineAltEnabled}
           onLineAltChange={setLineAltEnabled}
+          lintEnabled={lintEnabled}
+          onLintEnabledChange={setLintEnabled}
+          customShortcuts={customShortcuts}
+          onShortcutsChange={handleShortcutsChange}
           pinnedPaths={pinnedPaths}
           onUnpin={handleTogglePin}
           onExport={handleExportSettings}

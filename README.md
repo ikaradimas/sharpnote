@@ -50,7 +50,7 @@
 - **Database integration** — connect to SQLite, SQLite (In-Memory), SQL Server, PostgreSQL, or Redis; for relational providers the schema is introspected and a typed `DbContext` + POCO classes are code-generated and injected; Redis injects a `StackExchange.Redis.IDatabase` variable
 - **Code Library** — file-based snippet library stored in `~/Documents/SharpNote Notebooks/Library/`; subfolder navigation, syntax-highlighted preview, insert-as-cell with animation
 - **Dock layout** — panels can be docked to left / right / bottom zones, floated freely, or dragged between zones; opening a panel via the toolbar auto-switches to its tab and briefly highlights it; tab bars show scroll-shadow indicators when tabs overflow; layouts can be saved and restored by name
-- **Autocomplete** — Roslyn `ResolveCompletion` backed; falls back to a C# keyword list while the kernel is starting
+- **Autocomplete** — Roslyn `ResolveCompletion` backed; falls back to a C# keyword list while the kernel is starting; Tab accepts a completion (Enter remains a normal newline); a toggle in Settings → Appearance enables or disables the live linter
 - **Lint** — real-time Roslyn diagnostics; squiggles rendered via the CodeMirror lint extension
 - **Cell execution control** — Run, Stop (interrupt via cancellation token injection), Run From Here, Run To Here
 - **Memory sparkline** — kernel reports heap usage every 3 s; rendered as an SVG bar chart in the status bar
@@ -68,10 +68,10 @@
 - **Notebook Export** — File → Export as HTML… generates a self-contained dark-themed HTML file containing all cell sources, markdown renders, and outputs; no external dependencies required to view it
 - **Interactive Widgets** — `Display.Slider()`, `Display.Dropdown()`, and `Display.DatePicker()` render live controls in cell output; widget values persist between cell executions and are sent back to the kernel on change
 - **Display.Markdown** — `Display.Markdown(text)` renders markdown from C# code with Mermaid diagram and KaTeX math support, enabling dynamic reports and documentation generation
-- **Graph panel** — time-series chart of numeric variable history; select variables to plot, switch between line / area / column chart types, collapsible legend; updated after every cell execution (`Ctrl+Shift+R`); use `Display.Plot(name, value)` inside a loop to stream data points in real time
+- **Graph panel** — live time-series chart driven by `Display.Plot(name, value)` calls; per-variable avg / max overlay lines; Clear button and `Display.ClearGraph()` API; chart type, legend toggle (`Ctrl+Shift+R`)
 - **To Do panel** — auto-scans code cells for `// TODO`, `// FIXME`, and `// BUG` comments; click any item to scroll to and highlight the originating cell (`Ctrl+Shift+O`)
 - **Variable Inspection** — click ⊕ in the Variables panel to open a full-value inspection dialog; Load Full Value fetches the complete JSON-serialised representation from the kernel with a copy-to-clipboard button
-- **Keyboard Shortcuts reference** — Settings → Shortcuts shows a read-only reference table of all keyboard shortcuts grouped by category
+- **Keyboard Shortcuts** — Settings → Shortcuts shows all shortcuts grouped by category with a search box; click any reassignable shortcut to capture a custom key combination; custom bindings are persisted and applied to the application menu instantly
 - **Log panel cell links** — cell IDs that appear in log entries are rendered as clickable links that navigate directly to the corresponding cell; code cells show their ID in muted text in the header
 - **Dark theme** — purpose-built urban dark CSS; no UI framework dependency
 

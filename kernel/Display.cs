@@ -247,6 +247,11 @@ public class DisplayHelper
         Send(new { type = "var_point", name, value = plotValue });
     }
 
+    /// <summary>
+    /// Clears all data from the Graph panel immediately.
+    /// </summary>
+    public void ClearGraph() => Send(new { type = "graph_clear" });
+
     // ── Internal helpers ──────────────────────────────────────────────────────
 
     internal static List<Dictionary<string, object?>> ToRowDicts(List<object?> items)

@@ -14,17 +14,23 @@ const PALETTE = [
   'rgba(255,198,109,1)',
 ];
 
-export function GraphPanel({ varHistory }) {
+function mean(arr) {
+  if (!arr.length) return 0;
+  return arr.reduce((s, v) => s + v, 0) / arr.length;
+}
+
+export function GraphPanel({ varHistory, onClearGraph }) {
   const hist = varHistory || {};
   const varNames = Object.keys(hist);
 
-  const [selected, setSelected] = useState(() => new Set(varNames.slice(0, 4)));
+  const [selected, setSelected]   = useState(() => new Set(varNames.slice(0, 4)));
+  const [overlays, setOverlays]   = useState({});   // { [name]: Set<'avg'|'max'> }
   const [chartType, setChartType] = useState('line');
   const [showLegend, setShowLegend] = useState(true);
   const canvasRef = useRef(null);
-  const chartRef = useRef(null);
+  const chartRef  = useRef(null);
 
-  // Keep selected set in sync when new vars appear / old ones disappear
+  // Keep selected set in sync when vars appear / disappear
   const namesKey = varNames.join(',');
   useEffect(() => {
     setSelected((prev) => {
@@ -37,14 +43,28 @@ export function GraphPanel({ varHistory }) {
 
   const colorForIndex = (i) => PALETTE[i % PALETTE.length];
 
+  const toggle = (name) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name); else next.add(name);
+      return next;
+    });
+
+  const toggleOverlay = (name, key) =>
+    setOverlays((prev) => {
+      const cur = new Set(prev[name] || []);
+      if (cur.has(key)) cur.delete(key); else cur.add(key);
+      return { ...prev, [name]: cur };
+    });
+
   const datasets = useMemo(() => {
-    const selectedArr = [...selected];
     const nameIndex = Object.fromEntries(varNames.map((n, i) => [n, i]));
-    return selectedArr.map((name) => {
+    const result = [];
+    for (const name of selected) {
       const data = hist[name] || [];
       const color = colorForIndex(nameIndex[name] ?? 0);
       const fill = chartType === 'area';
-      return {
+      result.push({
         label: name,
         data,
         borderColor: color,
@@ -53,12 +73,43 @@ export function GraphPanel({ varHistory }) {
         tension: 0.3,
         pointRadius: data.length <= 20 ? 3 : 0,
         pointHoverRadius: 4,
-      };
-    });
+      });
+      const ov = overlays[name] || new Set();
+      const dimColor = color.replace(',1)', ',0.45)');
+      if (ov.has('avg') && data.length > 0) {
+        const avg = mean(data);
+        result.push({
+          label: `${name} avg`,
+          data: Array(data.length).fill(avg),
+          borderColor: dimColor,
+          backgroundColor: dimColor,
+          borderDash: [4, 2],
+          fill: false,
+          tension: 0,
+          pointRadius: 0,
+          pointHoverRadius: 0,
+        });
+      }
+      if (ov.has('max') && data.length > 0) {
+        const maxVal = Math.max(...data);
+        result.push({
+          label: `${name} max`,
+          data: Array(data.length).fill(maxVal),
+          borderColor: dimColor,
+          backgroundColor: dimColor,
+          borderDash: [2, 2],
+          fill: false,
+          tension: 0,
+          pointRadius: 0,
+          pointHoverRadius: 0,
+        });
+      }
+    }
+    return result;
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected, hist, chartType, namesKey]);
+  }, [selected, hist, chartType, overlays, namesKey]);
 
-  const maxLen = datasets.reduce((m, d) => Math.max(m, d.data.length), 0);
+  const maxLen = datasets.filter((d) => !d.borderDash).reduce((m, d) => Math.max(m, d.data.length), 0);
   const labels = useMemo(
     () => Array.from({ length: maxLen }, (_, i) => String(i + 1)),
     [maxLen]
@@ -97,14 +148,6 @@ export function GraphPanel({ varHistory }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [datasets, labels, chartType, showLegend]);
 
-  const toggle = (name) =>
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(name)) next.delete(name);
-      else next.add(name);
-      return next;
-    });
-
   return (
     <div className="graph-panel">
       <div className="graph-panel-header">
@@ -126,29 +169,61 @@ export function GraphPanel({ varHistory }) {
           >
             Legend
           </button>
+          {onClearGraph && (
+            <button
+              className="graph-clear-btn"
+              onClick={onClearGraph}
+              title="Clear all graph data"
+            >
+              Clear
+            </button>
+          )}
         </div>
       </div>
 
       {varNames.length === 0 ? (
-        <div className="graph-panel-empty">No numeric variables yet — run a cell that assigns a number</div>
+        <div className="graph-panel-empty">No data yet — use Display.Plot() to stream values</div>
       ) : (
         <div className="graph-panel-body">
           <div className="graph-panel-vars">
-            {varNames.map((name, i) => (
-              <label key={name} className="graph-var-row">
-                <span
-                  className="graph-var-dot"
-                  style={{ background: colorForIndex(i), flexShrink: 0 }}
-                />
-                <input
-                  type="checkbox"
-                  className="graph-var-check"
-                  checked={selected.has(name)}
-                  onChange={() => toggle(name)}
-                />
-                <span className="graph-var-name">{name}</span>
-              </label>
-            ))}
+            {varNames.map((name, i) => {
+              const ov = overlays[name] || new Set();
+              return (
+                <div key={name} className="graph-var-row">
+                  <label className="graph-var-check-row">
+                    <span
+                      className="graph-var-dot"
+                      style={{ background: colorForIndex(i), flexShrink: 0 }}
+                    />
+                    <input
+                      type="checkbox"
+                      className="graph-var-check"
+                      checked={selected.has(name)}
+                      onChange={() => toggle(name)}
+                    />
+                    <span className="graph-var-name">{name}</span>
+                  </label>
+                  <div className="graph-var-overlays">
+                    <label className="graph-overlay-label" title="Show average line">
+                      <input
+                        type="checkbox"
+                        checked={ov.has('avg')}
+                        onChange={() => toggleOverlay(name, 'avg')}
+                      />
+                      avg
+                    </label>
+                    <label className="graph-overlay-label" title="Show max line">
+                      <input
+                        type="checkbox"
+                        checked={ov.has('max')}
+                        onChange={() => toggleOverlay(name, 'max')}
+                      />
+                      max
+                    </label>
+                  </div>
+                </div>
+              );
+            })}
           </div>
           <div className="graph-canvas-wrap">
             {selected.size === 0 ? (

@@ -21,6 +21,7 @@ export function NotebookView({
   onRename,
   requestCompletions,
   requestLint,
+  lintEnabled = true,
   libraryPanelOpen,
   onToggleLibrary,
   filesPanelOpen,
@@ -193,6 +194,7 @@ export function NotebookView({
                 onToggleLock={() => updateCellProp(cell.id, 'locked', !(cell.locked || false))}
                 requestCompletions={(code, pos) => requestCompletions(nb.id, code, pos)}
                 requestLint={(code) => requestLint(nb.id, code)}
+                lintEnabled={lintEnabled}
               />
             )}
             <AddBar

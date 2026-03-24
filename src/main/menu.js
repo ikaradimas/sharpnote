@@ -27,7 +27,14 @@ function setWindowTabs(tabs) {
   _windowTabs = Array.isArray(tabs) ? tabs : [];
 }
 
-function buildMenu() {
+// Convert user-friendly key string (e.g. "Ctrl+Shift+R") to Electron accelerator.
+// Replaces "Ctrl" with "CmdOrCtrl" so it works on both platforms.
+function toAccelerator(keys) {
+  return keys.replace(/\bCtrl\b/g, 'CmdOrCtrl');
+}
+
+function buildMenu(customShortcuts = {}) {
+  const accel = (id, def) => toAccelerator(customShortcuts[id] || def);
   const recentFiles = _getRecentFiles ? _getRecentFiles() : [];
 
   const send = (action) => { if (_mainWindow) _mainWindow.webContents.send('menu-action', action); };
@@ -65,7 +72,7 @@ function buildMenu() {
       submenu: [
         { label: `About ${_app ? _app.name : 'SharpNote'}`, click: () => send('about') },
         { type: 'separator' },
-        { label: 'Preferences…', accelerator: 'CmdOrCtrl+,', click: () => send('settings') },
+        { label: 'Preferences…', accelerator: accel('app-settings', 'Ctrl+,'), click: () => send('settings') },
         { type: 'separator' },
         { role: 'services' },
         { type: 'separator' },
@@ -100,13 +107,13 @@ function buildMenu() {
   template.push({
     label: 'File',
     submenu: [
-      { label: 'New Notebook',   accelerator: 'CmdOrCtrl+N',       click: () => send('new') },
+      { label: 'New Notebook',   accelerator: accel('nb-new',     'Ctrl+N'),       click: () => send('new') },
       { type: 'separator' },
-      { label: 'Open…',          accelerator: 'CmdOrCtrl+O',       click: () => send('open') },
+      { label: 'Open…',          accelerator: accel('nb-open',    'Ctrl+O'),       click: () => send('open') },
       { label: 'Open Recent',    submenu: recentSubmenu },
       { type: 'separator' },
-      { label: 'Save',           accelerator: 'CmdOrCtrl+S',       click: () => send('save') },
-      { label: 'Save As…',       accelerator: 'CmdOrCtrl+Shift+S', click: () => send('save-as') },
+      { label: 'Save',           accelerator: accel('nb-save',    'Ctrl+S'),       click: () => send('save') },
+      { label: 'Save As…',       accelerator: accel('nb-save-as', 'Ctrl+Shift+S'), click: () => send('save-as') },
       { type: 'separator' },
       { label: 'Export as HTML…', click: () => send('export-html') },
       ...(process.platform !== 'darwin' ? [
@@ -129,7 +136,7 @@ function buildMenu() {
       ...fontSizeItems,
       ...(process.platform !== 'darwin' ? [
         { type: 'separator' },
-        { label: 'Preferences…', accelerator: 'CmdOrCtrl+,', click: () => send('settings') },
+        { label: 'Preferences…', accelerator: accel('app-settings', 'Ctrl+,'), click: () => send('settings') },
       ] : []),
     ],
   });
@@ -137,7 +144,7 @@ function buildMenu() {
   template.push({
     label: 'Run',
     submenu: [
-      { label: 'Run All Cells',    accelerator: 'CmdOrCtrl+Shift+Return', click: () => send('run-all') },
+      { label: 'Run All Cells',    accelerator: accel('nb-run-all', 'Ctrl+Shift+Return'), click: () => send('run-all') },
       { type: 'separator' },
       { label: 'Clear All Output', click: () => send('clear-output') },
       { type: 'separator' },
@@ -148,21 +155,21 @@ function buildMenu() {
   template.push({
     label: 'Tools',
     submenu: [
-      { label: 'Config',            accelerator: 'CmdOrCtrl+Shift+,', click: () => send('toggle-config') },
-      { label: 'Packages',          accelerator: 'CmdOrCtrl+Shift+P', click: () => send('toggle-packages') },
-      { label: 'Logs',              accelerator: 'CmdOrCtrl+Shift+G', click: () => send('toggle-logs') },
-      { label: 'Database',          accelerator: 'CmdOrCtrl+Shift+D', click: () => send('toggle-db') },
-      { label: 'Variables',         accelerator: 'CmdOrCtrl+Shift+V', click: () => send('toggle-vars') },
-      { label: 'Table of Contents', accelerator: 'CmdOrCtrl+Shift+T', click: () => send('toggle-toc') },
-      { label: 'Library',           accelerator: 'CmdOrCtrl+Shift+L', click: () => send('toggle-library') },
-      { label: 'File Explorer',     accelerator: 'CmdOrCtrl+Shift+E', click: () => send('toggle-files') },
-      { label: 'API Browser',       accelerator: 'CmdOrCtrl+Shift+A', click: () => send('toggle-api') },
-      { label: 'Graph',             accelerator: 'CmdOrCtrl+Shift+R', click: () => send('toggle-graph') },
-      { label: 'To Do',             accelerator: 'CmdOrCtrl+Shift+O', click: () => send('toggle-todo') },
+      { label: 'Config',            accelerator: accel('panel-config',   'Ctrl+Shift+,'), click: () => send('toggle-config') },
+      { label: 'Packages',          accelerator: accel('panel-packages', 'Ctrl+Shift+P'), click: () => send('toggle-packages') },
+      { label: 'Logs',              accelerator: accel('panel-logs',     'Ctrl+Shift+G'), click: () => send('toggle-logs') },
+      { label: 'Database',          accelerator: accel('panel-db',       'Ctrl+Shift+D'), click: () => send('toggle-db') },
+      { label: 'Variables',         accelerator: accel('panel-vars',     'Ctrl+Shift+V'), click: () => send('toggle-vars') },
+      { label: 'Table of Contents', accelerator: accel('panel-toc',      'Ctrl+Shift+T'), click: () => send('toggle-toc') },
+      { label: 'Library',           accelerator: accel('panel-library',  'Ctrl+Shift+L'), click: () => send('toggle-library') },
+      { label: 'File Explorer',     accelerator: accel('panel-files',    'Ctrl+Shift+E'), click: () => send('toggle-files') },
+      { label: 'API Browser',       accelerator: accel('panel-api',      'Ctrl+Shift+A'), click: () => send('toggle-api') },
+      { label: 'Graph',             accelerator: accel('panel-graph',    'Ctrl+Shift+R'), click: () => send('toggle-graph') },
+      { label: 'To Do',             accelerator: accel('panel-todo',     'Ctrl+Shift+O'), click: () => send('toggle-todo') },
       { type: 'separator' },
-      { label: 'Command Palette',   accelerator: 'CmdOrCtrl+K',       click: () => send('command-palette') },
+      { label: 'Command Palette',   accelerator: accel('app-palette',  'Ctrl+K'), click: () => send('command-palette') },
       { type: 'separator' },
-      { label: 'Settings…',         accelerator: 'CmdOrCtrl+,',       click: () => send('settings') },
+      { label: 'Settings…',         accelerator: accel('app-settings', 'Ctrl+,'), click: () => send('settings') },
     ],
   });
 
@@ -180,7 +187,7 @@ function buildMenu() {
   template.push({
     label: 'Help',
     submenu: [
-      { label: 'Documentation', accelerator: 'F1', click: () => send('docs') },
+      { label: 'Documentation', accelerator: accel('app-docs', 'F1'), click: () => send('docs') },
       { type: 'separator' },
       { label: 'About SharpNote…', click: () => send('about') },
     ],

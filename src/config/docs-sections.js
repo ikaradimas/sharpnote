@@ -460,6 +460,7 @@ export const DOCS_SECTIONS = [
       { type: 'ul', items: [
         'Editor Font Size — drag the slider (10–28 px) to resize the notebook editor font; a live preview updates as you drag. The Reset button restores the default of 12.6 px. The keyboard shortcuts ⌘= / ⌘- / ⌘0 still work outside the dialog.',
         'Panel Font Size — drag the slider (8–18 px) to scale all panel content (Logs, Variables, DB, etc.) uniformly. The Reset button restores the default of 11.5 px.',
+        'Code Editor — Alternating row colors: toggle alternating background shading on editor lines. Code linter: when enabled, the editor shows C# diagnostic squiggles while typing; disable to suppress linting.',
         'Theme — click any theme tile to switch the colour scheme immediately. Eight built-in themes are available: kl1nt, Nord, Dracula, Tokyo Night, Monokai, Catppuccin, Solarized Dark, and GitHub Light.',
       ]},
       { type: 'h3', text: 'Paths' },
@@ -486,8 +487,8 @@ export const DOCS_SECTIONS = [
       { type: 'ul', items: [
         'All File operations (New, Open, Save, Save As, Export as HTML)',
         'All Run operations (Run All, Reset Kernel, Clear Output)',
-        'All panel toggles (Logs, Packages, Config, DB, Variables, ToC, Library, Files, API Browser)',
-        'Settings and Documentation',
+        'All panel toggles (Logs, Packages, Config, DB, Variables, ToC, Library, Files, API Browser, Graph, To Do)',
+        'Settings, Documentation, and About',
       ]},
     ],
   },
@@ -585,7 +586,7 @@ export const DOCS_SECTIONS = [
   {
     id: 'graph-panel', title: 'Graph Panel',
     content: [
-      { type: 'p', text: 'The Graph panel renders a live time-series chart of numeric variable history, updated after every cell execution.' },
+      { type: 'p', text: 'The Graph panel renders a live time-series chart driven exclusively by Display.Plot() calls. Use it to stream numeric values mid-execution.' },
       { type: 'h3', text: 'Opening the Panel' },
       { type: 'ul', items: [
         'Tools menu → Graph',
@@ -595,9 +596,10 @@ export const DOCS_SECTIONS = [
       { type: 'h3', text: 'Controls' },
       { type: 'ul', items: [
         'Check / uncheck variable names to add or remove them from the chart',
+        'Per-variable avg and max checkboxes overlay reference lines on the chart',
         'Chart type selector: Line, Area, or Column',
         'Legend button toggles the chart legend',
-        'Auto-assigned colors distinguish variables',
+        'Clear button empties all graph data',
       ]},
       { type: 'h3', text: 'Live Plotting with Display.Plot' },
       { type: 'p', text: 'Push data points to the graph mid-execution using Display.Plot(name, value, mode). This streams values into the Graph panel in real time without waiting for the cell to finish.' },
@@ -606,6 +608,9 @@ export const DOCS_SECTIONS = [
         'PlotMode.RateOfChange — plots the delta since the previous call for that variable name',
       ]},
       { type: 'code', text: 'Display.Plot("position", position);                          // raw\nDisplay.Plot("velocity", velocity, PlotMode.RateOfChange);  // Δ per tick' },
+      { type: 'h3', text: 'Clearing the Graph' },
+      { type: 'p', text: 'Clear the graph from code using Display.ClearGraph(). This immediately removes all data points from the panel, useful when starting a new measurement run.' },
+      { type: 'code', text: 'Display.ClearGraph(); // clears all series from the Graph panel' },
     ],
   },
   {
@@ -640,7 +645,7 @@ export const DOCS_SECTIONS = [
   {
     id: 'keyboard-shortcuts', title: 'Keyboard Shortcuts',
     content: [
-      { type: 'p', text: 'The full list of keyboard shortcuts is available in Settings → Shortcuts.' },
+      { type: 'p', text: 'The full list of keyboard shortcuts is available in Settings → Shortcuts. You can search shortcuts by name and click any reassignable shortcut to assign a custom key combination. Custom bindings persist across sessions and are applied to the application menu immediately.' },
       { type: 'h3', text: 'Essential Shortcuts' },
       { type: 'ul', items: [
         'Ctrl+Enter — Run the focused cell',

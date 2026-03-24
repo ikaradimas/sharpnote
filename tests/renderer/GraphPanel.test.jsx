@@ -9,12 +9,12 @@ import { GraphPanel } from '../../src/renderer.jsx';
 describe('GraphPanel — empty state', () => {
   it('shows empty message when no varHistory', () => {
     render(<GraphPanel varHistory={{}} />);
-    expect(screen.getByText(/No numeric variables yet/)).toBeInTheDocument();
+    expect(screen.getByText(/No data yet/)).toBeInTheDocument();
   });
 
   it('shows empty message when varHistory is undefined', () => {
     render(<GraphPanel />);
-    expect(screen.getByText(/No numeric variables yet/)).toBeInTheDocument();
+    expect(screen.getByText(/No data yet/)).toBeInTheDocument();
   });
 });
 

@@ -67,6 +67,7 @@ export function CodeCell({
   onToggleLock,
   requestCompletions,
   requestLint,
+  lintEnabled = true,
 }) {
   const outputMode = cell.outputMode || 'auto';
   const locked = cell.locked || false;
@@ -177,6 +178,7 @@ export function CodeCell({
         onCtrlEnter={kernelReady && !anyRunning ? onRun : undefined}
         onRequestCompletions={requestCompletions}
         onRequestLint={requestLint}
+        lintEnabled={lintEnabled}
         readOnly={locked}
         cellIndex={cellIndex}
       />

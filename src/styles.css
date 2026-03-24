@@ -4903,6 +4903,12 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
   font-size: 10px; cursor: pointer;
 }
 .graph-legend-btn.active { color: var(--accent-primary); border-color: var(--accent-primary-dim); }
+.graph-clear-btn {
+  background: var(--bg-mid); border: 1px solid var(--border-subtle);
+  color: var(--text-muted); padding: 2px 6px; border-radius: 3px;
+  font-size: 10px; cursor: pointer;
+}
+.graph-clear-btn:hover { color: var(--text-primary); border-color: var(--text-muted); }
 .graph-panel-empty {
   padding: 24px 16px; color: var(--text-muted); font-size: 11px; text-align: center;
 }
@@ -4915,12 +4921,21 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
   flex-shrink: 0; max-height: 80px; overflow-y: auto;
 }
 .graph-var-row {
+  display: flex; align-items: center; gap: 6px;
+}
+.graph-var-check-row {
   display: flex; align-items: center; gap: 4px;
   cursor: pointer; user-select: none;
 }
 .graph-var-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
 .graph-var-check { cursor: pointer; accent-color: var(--accent-primary); }
 .graph-var-name { font-size: 10px; color: var(--text-secondary); font-family: var(--font-code); }
+.graph-var-overlays { display: flex; gap: 4px; }
+.graph-overlay-label {
+  display: flex; align-items: center; gap: 2px;
+  font-size: 9px; color: var(--text-muted); cursor: pointer; user-select: none;
+}
+.graph-overlay-label input { cursor: pointer; accent-color: var(--accent-primary); }
 .graph-canvas-wrap {
   flex: 1; min-height: 0; padding: 8px; position: relative;
 }
@@ -5057,4 +5072,25 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
   font-family: var(--font-ui); color: var(--text-secondary);
 }
 .shortcut-plus { font-size: 10px; color: var(--text-muted); }
-.shortcut-desc { font-size: 11px; color: var(--text-tertiary); }
+.shortcut-desc { font-size: 11px; color: var(--text-tertiary); flex: 1; }
+.shortcut-actions { display: flex; gap: 4px; margin-left: auto; opacity: 0; transition: opacity 0.1s; }
+.shortcut-row:hover .shortcut-actions { opacity: 1; }
+.shortcut-edit-btn, .shortcut-reset-btn {
+  background: none; border: 1px solid var(--border-subtle); border-radius: 3px;
+  color: var(--text-muted); font-size: 10px; padding: 1px 5px; cursor: pointer;
+}
+.shortcut-edit-btn:hover { color: var(--accent-primary); border-color: var(--accent-primary-dim); }
+.shortcut-reset-btn:hover { color: var(--text-secondary); }
+.shortcut-capture {
+  display: inline-flex; align-items: center; min-width: 160px;
+  padding: 2px 8px; border: 1px dashed var(--accent-primary); border-radius: 3px;
+  font-size: 10px; color: var(--accent-primary); cursor: text; outline: none;
+  font-family: var(--font-ui);
+}
+.shortcuts-search {
+  width: 100%; background: var(--bg-mid); border: 1px solid var(--border-subtle);
+  border-radius: 4px; color: var(--text-primary); padding: 5px 8px;
+  font-size: 11px; font-family: var(--font-ui); outline: none;
+}
+.shortcuts-search:focus { border-color: var(--accent-primary-dim); }
+.shortcuts-empty { font-size: 11px; color: var(--text-muted); padding: 8px 0; }

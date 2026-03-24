@@ -17,7 +17,7 @@ export function registerCursorPosSetter(fn) { _setCursorPos = fn; }
 
 export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
                       onRequestCompletions, onRequestLint, readOnly = false,
-                      cellIndex = null }) {
+                      lintEnabled = true, cellIndex = null }) {
   const containerRef = useRef(null);
   const viewRef = useRef(null);
   const onChangeRef = useRef(onChange);
@@ -25,6 +25,8 @@ export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
   const completionsRef = useRef(onRequestCompletions);
   const lintRef = useRef(onRequestLint);
   const readOnlyCompartmentRef = useRef(null);
+  const lintCompartmentRef     = useRef(null);
+  const lintEnabledRef         = useRef(lintEnabled);
   const cellIndexRef = useRef(cellIndex);
 
   useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
@@ -32,6 +34,7 @@ export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
   useEffect(() => { completionsRef.current = onRequestCompletions; }, [onRequestCompletions]);
   useEffect(() => { lintRef.current = onRequestLint; }, [onRequestLint]);
   useEffect(() => { cellIndexRef.current = cellIndex; }, [cellIndex]);
+  useEffect(() => { lintEnabledRef.current = lintEnabled; }, [lintEnabled]);
 
   // Toggle read-only without recreating the editor
   useEffect(() => {
@@ -70,6 +73,8 @@ export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
 
     const readOnlyCompartment = new Compartment();
     readOnlyCompartmentRef.current = readOnlyCompartment;
+    const lintCompartment = new Compartment();
+    lintCompartmentRef.current = lintCompartment;
 
     const extensions = [
       history(),
@@ -117,9 +122,13 @@ export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
         } catch { return null; }
       };
 
+      // Accept completions on Tab only (not Enter), so Enter remains a normal newline.
+      // completionKeymap already binds Tab → acceptCompletion; it falls through when
+      // no completion is active, so indentWithTab below handles the Tab-to-indent case.
+      const customCompletionKeymap = completionKeymap.filter((b) => b.key !== 'Enter');
       extensions.push(
         autocompletion({ override: [keywordSource, dynamicSource], defaultKeymap: true }),
-        keymap.of(completionKeymap),
+        keymap.of(customCompletionKeymap),
       );
 
       const lintSource = async (view) => {
@@ -135,7 +144,7 @@ export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
         } catch { return []; }
       };
 
-      extensions.push(linter(lintSource, { delay: 600 }));
+      extensions.push(lintCompartment.of(lintEnabledRef.current ? linter(lintSource, { delay: 600 }) : []));
     }
 
     const state = EditorState.create({ doc: value, extensions });
@@ -148,6 +157,22 @@ export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [language]);
+
+  // Hot-swap linter when lintEnabled changes
+  useEffect(() => {
+    const view = viewRef.current;
+    const compartment = lintCompartmentRef.current;
+    if (!view || !compartment) return;
+    const lintSource = async (v) => {
+      const fn = lintRef.current;
+      if (!fn) return [];
+      try {
+        const diags = await fn(v.state.doc.toString());
+        return (diags || []).map((d) => ({ from: d.from, to: d.to, severity: d.severity, message: d.message }));
+      } catch { return []; }
+    };
+    view.dispatch({ effects: compartment.reconfigure(lintEnabled ? linter(lintSource, { delay: 600 }) : []) });
+  }, [lintEnabled]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sync external value changes (e.g., load notebook)
   useEffect(() => {
