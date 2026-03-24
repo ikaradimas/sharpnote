@@ -192,10 +192,72 @@ function StartupSection({ pinnedPaths, onUnpin }) {
   );
 }
 
+// ── Keyboard shortcuts section ────────────────────────────────────────────────
+
+const SHORTCUTS = [
+  { group: 'Notebook', items: [
+    { keys: 'Ctrl+N',       desc: 'New notebook' },
+    { keys: 'Ctrl+O',       desc: 'Open notebook' },
+    { keys: 'Ctrl+S',       desc: 'Save' },
+    { keys: 'Ctrl+Shift+S', desc: 'Save as…' },
+    { keys: 'Ctrl+Shift+Return', desc: 'Run all cells' },
+  ]},
+  { group: 'Cell', items: [
+    { keys: 'Ctrl+Enter',   desc: 'Run cell' },
+    { keys: 'Ctrl+=',       desc: 'Increase font size' },
+    { keys: 'Ctrl+-',       desc: 'Decrease font size' },
+    { keys: 'Ctrl+0',       desc: 'Reset font size' },
+  ]},
+  { group: 'Panels', items: [
+    { keys: 'Ctrl+Shift+,', desc: 'Config panel' },
+    { keys: 'Ctrl+Shift+P', desc: 'Packages panel' },
+    { keys: 'Ctrl+Shift+G', desc: 'Logs panel' },
+    { keys: 'Ctrl+Shift+D', desc: 'Database panel' },
+    { keys: 'Ctrl+Shift+V', desc: 'Variables panel' },
+    { keys: 'Ctrl+Shift+T', desc: 'Table of Contents' },
+    { keys: 'Ctrl+Shift+L', desc: 'Library panel' },
+    { keys: 'Ctrl+Shift+E', desc: 'File Explorer' },
+    { keys: 'Ctrl+Shift+A', desc: 'API Browser' },
+    { keys: 'Ctrl+Shift+R', desc: 'Graph panel' },
+    { keys: 'Ctrl+Shift+O', desc: 'To Do panel' },
+  ]},
+  { group: 'App', items: [
+    { keys: 'Ctrl+K',       desc: 'Command palette' },
+    { keys: 'Ctrl+,',       desc: 'Settings' },
+    { keys: 'F1',           desc: 'Documentation' },
+  ]},
+];
+
+function ShortcutsSection() {
+  return (
+    <div className="settings-section">
+      {SHORTCUTS.map(({ group, items }) => (
+        <div key={group} className="settings-group">
+          <div className="settings-group-label">{group}</div>
+          <div className="shortcuts-table">
+            {items.map(({ keys, desc }) => (
+              <div key={keys} className="shortcut-row">
+                <span className="shortcut-keys">{keys.split('+').map((k, i) => (
+                  <React.Fragment key={k}>
+                    {i > 0 && <span className="shortcut-plus">+</span>}
+                    <kbd className="shortcut-kbd">{k}</kbd>
+                  </React.Fragment>
+                ))}</span>
+                <span className="shortcut-desc">{desc}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ── Settings dialog ───────────────────────────────────────────────────────────
 
 const SECTIONS = [
   { id: 'appearance', label: 'Appearance' },
+  { id: 'shortcuts',  label: 'Shortcuts' },
   { id: 'paths',      label: 'Paths' },
   { id: 'startup',    label: 'Startup' },
 ];
@@ -293,6 +355,9 @@ export function SettingsDialog({
                 lineAltEnabled={lineAltEnabled}
                 onLineAltChange={onLineAltChange}
               />
+            )}
+            {activeSection === 'shortcuts' && (
+              <ShortcutsSection />
             )}
             {activeSection === 'paths' && (
               <PathsSection paths={paths} />

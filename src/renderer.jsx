@@ -26,6 +26,9 @@ export { VarsPanel } from './components/panels/VarsPanel.jsx';
 export { FilesPanel } from './components/panels/FilesPanel.jsx';
 export { TabBar } from './components/toolbar/TabBar.jsx';
 export { QuitDialog } from './components/dialogs/QuitDialog.jsx';
+export { GraphPanel } from './components/panels/GraphPanel.jsx';
+export { TodoPanel } from './components/panels/TodoPanel.jsx';
+export { VarInspectDialog } from './components/dialogs/VarInspectDialog.jsx';
 
 // ── App bootstrap ─────────────────────────────────────────────────────────────
 import { App } from './app/App.jsx';

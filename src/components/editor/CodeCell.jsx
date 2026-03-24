@@ -125,6 +125,7 @@ export function CodeCell({
       )}
       <div className="code-cell-header">
         <span className="cell-lang-label">C#</span>
+        <span className="cell-id-label" title={`Cell ID: ${cell.id}`}>{cell.id}</span>
         <div className="cell-run-group" ref={dropdownRef}>
           {isRunning ? (
             <button className="cell-stop-btn" onClick={onInterrupt}

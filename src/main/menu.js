@@ -157,6 +157,8 @@ function buildMenu() {
       { label: 'Library',           accelerator: 'CmdOrCtrl+Shift+L', click: () => send('toggle-library') },
       { label: 'File Explorer',     accelerator: 'CmdOrCtrl+Shift+E', click: () => send('toggle-files') },
       { label: 'API Browser',       accelerator: 'CmdOrCtrl+Shift+A', click: () => send('toggle-api') },
+      { label: 'Graph',             accelerator: 'CmdOrCtrl+Shift+R', click: () => send('toggle-graph') },
+      { label: 'To Do',             accelerator: 'CmdOrCtrl+Shift+O', click: () => send('toggle-todo') },
       { type: 'separator' },
       { label: 'Command Palette',   accelerator: 'CmdOrCtrl+K',       click: () => send('command-palette') },
       { type: 'separator' },

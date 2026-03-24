@@ -40,8 +40,8 @@ export function NotebookView({
 }) {
   const { cells, outputs, outputHistory, cellResults, running, kernelStatus,
           config, logPanelOpen, nugetPanelOpen, configPanelOpen,
-          dbPanelOpen, varsPanelOpen, tocPanelOpen, path: notebookPath,
-          staleCellIds } = nb;
+          dbPanelOpen, varsPanelOpen, tocPanelOpen, graphPanelOpen, todoPanelOpen,
+          path: notebookPath, staleCellIds } = nb;
 
   const addCell = (type, afterIndex = null) => {
     const newCell = makeCell(type, '');
@@ -119,6 +119,10 @@ export function NotebookView({
         onToggleFiles={onToggleFiles}
         apiPanelOpen={apiPanelOpen}
         onToggleApi={onToggleApi}
+        graphPanelOpen={graphPanelOpen}
+        onToggleGraph={() => { if (!graphPanelOpen) onFocusPanel?.('graph'); onSetNb((n) => ({ graphPanelOpen: !n.graphPanelOpen })); }}
+        todoPanelOpen={todoPanelOpen}
+        onToggleTodo={() => { if (!todoPanelOpen) onFocusPanel?.('todo'); onSetNb((n) => ({ todoPanelOpen: !n.todoPanelOpen })); }}
         theme={theme}
         onThemeChange={onThemeChange}
         lineAltEnabled={lineAltEnabled}

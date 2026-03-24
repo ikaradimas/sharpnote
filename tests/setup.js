@@ -11,6 +11,16 @@ vi.mock('chart.js/auto', () => ({
   },
 }));
 
+vi.mock('chart.js', () => ({
+  Chart: class Chart {
+    static register() {}
+    constructor() {}
+    destroy() {}
+    update() {}
+  },
+  registerables: [],
+}));
+
 vi.mock('marked', () => ({
   marked: { parse: (s) => `<p>${String(s)}</p>` },
 }));

@@ -66,7 +66,13 @@
 - **Reactive Cell Dependencies** — after a successful execution, downstream cells that reference any variable whose value changed are flagged with a "↺ upstream variables changed" banner, clearing automatically when those cells are run
 - **Variable Sparklines** — the Variables panel tracks the history of numeric variables and renders a mini trend sparkline for each one, updated after every execution
 - **Notebook Export** — File → Export as HTML… generates a self-contained dark-themed HTML file containing all cell sources, markdown renders, and outputs; no external dependencies required to view it
-- **Interactive Widgets** — `Display.Slider(label, min, max, step, default)` and `Display.Dropdown(label, options[], default)` render live controls in cell output; widget values persist between cell executions and are sent back to the kernel on change
+- **Interactive Widgets** — `Display.Slider()`, `Display.Dropdown()`, and `Display.DatePicker()` render live controls in cell output; widget values persist between cell executions and are sent back to the kernel on change
+- **Display.Markdown** — `Display.Markdown(text)` renders markdown from C# code with Mermaid diagram and KaTeX math support, enabling dynamic reports and documentation generation
+- **Graph panel** — time-series chart of numeric variable history; select variables to plot, switch between line / area / column chart types, collapsible legend; updated after every cell execution (`Ctrl+Shift+R`)
+- **To Do panel** — auto-scans code cells for `// TODO`, `// FIXME`, and `// BUG` comments; click any item to scroll to and highlight the originating cell (`Ctrl+Shift+O`)
+- **Variable Inspection** — click ⊕ in the Variables panel to open a full-value inspection dialog; Load Full Value fetches the complete JSON-serialised representation from the kernel with a copy-to-clipboard button
+- **Keyboard Shortcuts reference** — Settings → Shortcuts shows a read-only reference table of all keyboard shortcuts grouped by category
+- **Log panel cell links** — cell IDs that appear in log entries are rendered as clickable links that navigate directly to the corresponding cell; code cells show their ID in muted text in the header
 - **Dark theme** — purpose-built urban dark CSS; no UI framework dependency
 
 ---

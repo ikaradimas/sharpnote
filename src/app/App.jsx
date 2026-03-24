@@ -26,6 +26,7 @@ import { QuitDialog } from '../components/dialogs/QuitDialog.jsx';
 import { AboutDialog } from '../components/dialogs/AboutDialog.jsx';
 import { SettingsDialog } from '../components/dialogs/SettingsDialog.jsx';
 import { CommandPalette } from '../components/dialogs/CommandPalette.jsx';
+import { VarInspectDialog } from '../components/dialogs/VarInspectDialog.jsx';
 import { StatusBar } from './StatusBar.jsx';
 import { renderPanelContent } from '../components/dock/renderPanelContent.jsx';
 
@@ -67,6 +68,8 @@ export function App() {
   useEffect(() => { lineAltEnabledRef.current = lineAltEnabled; }, [lineAltEnabled]);
 
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  // varInspectDialog: null | { name, typeName, value, notebookId, fullValue }
+  const [varInspectDialog, setVarInspectDialog] = useState(null);
 
   // Refs for reactive cell dependency tracking
   const prevVarsSnapRef = useRef({}); // cellId -> vars snapshot before run
@@ -483,6 +486,14 @@ export function App() {
         case 'nuget_preload_complete':
           break;
 
+        case 'var_inspect_result':
+          setVarInspectDialog((prev) =>
+            prev && prev.name === msg.name
+              ? { ...prev, fullValue: msg.json }
+              : prev
+          );
+          break;
+
         case 'reset_complete':
           setNb(notebookId, { kernelStatus: 'ready', vars: [], varHistory: {}, outputHistory: {}, staleCellIds: [] });
           break;
@@ -687,6 +698,17 @@ export function App() {
     const result = await window.electronAPI.saveNotebook(data);
     if (result.success) setNb(notebookId, { path: result.filePath, isDirty: false });
   }, [buildNotebookData, setNb]);
+
+  // Scroll to and briefly flash a specific cell in the active notebook
+  const handleNavigateToCell = useCallback((notebookId, cellId) => {
+    const pane = document.querySelector(`.notebook-pane[data-nb="${notebookId}"]`);
+    if (!pane) return;
+    const wrapper = pane.querySelector(`.cell-wrapper[data-cell-id="${cellId}"]`);
+    if (!wrapper) return;
+    wrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    wrapper.classList.add('cell-flash');
+    wrapper.addEventListener('animationend', () => wrapper.classList.remove('cell-flash'), { once: true });
+  }, []);
 
   // handleLoad always opens a NEW tab
   const handleLoad = useCallback(async () => {
@@ -1270,7 +1292,7 @@ ${cellsHtml}
     if (panelId === 'api')     { setApiPanelOpen(false);     return; }
     const nbId = activeIdRef.current;
     if (isNotebookId(nbId)) {
-      const flagMap = { log: 'logPanelOpen', nuget: 'nugetPanelOpen', config: 'configPanelOpen', db: 'dbPanelOpen', vars: 'varsPanelOpen', toc: 'tocPanelOpen' };
+      const flagMap = { log: 'logPanelOpen', nuget: 'nugetPanelOpen', config: 'configPanelOpen', db: 'dbPanelOpen', vars: 'varsPanelOpen', toc: 'tocPanelOpen', graph: 'graphPanelOpen', todo: 'todoPanelOpen' };
       const flag = flagMap[panelId];
       if (flag) setNb(nbId, { [flag]: false });
     }
@@ -1487,6 +1509,8 @@ ${cellsHtml}
     'toggle-toc':      () => { if (isNotebook()) setNb(activeIdRef.current, (n) => ({ tocPanelOpen: !n.tocPanelOpen })); },
     'toggle-files':    () => setFilesPanelOpen((v) => !v),
     'toggle-api':      () => setApiPanelOpen((v) => !v),
+    'toggle-graph':    () => { if (isNotebook()) setNb(activeIdRef.current, (n) => ({ graphPanelOpen: !n.graphPanelOpen })); },
+    'toggle-todo':     () => { if (isNotebook()) setNb(activeIdRef.current, (n) => ({ todoPanelOpen: !n.todoPanelOpen })); },
     about: () => setAboutOpen(true),
     settings: () => setSettingsOpen(true),
     'export-html': handleExportHtml,
@@ -1591,6 +1615,8 @@ ${cellsHtml}
     toc:     isNotebookId(activeId) ? (activeNb?.tocPanelOpen ?? false) : false,
     files:   filesPanelOpen,
     api:     apiPanelOpen,
+    graph:   isNotebookId(activeId) ? (activeNb?.graphPanelOpen ?? false) : false,
+    todo:    isNotebookId(activeId) ? (activeNb?.todoPanelOpen ?? false) : false,
   }), [activeId, activeNb, libraryPanelOpen, filesPanelOpen, apiPanelOpen]);
 
   const panelPropsMap = useMemo(() => {
@@ -1600,6 +1626,8 @@ ${cellsHtml}
         onToggle: nbId ? () => setNb(nbId, (n) => ({ logPanelOpen: !n.logPanelOpen })) : () => {},
         currentMemoryMb: activeNb?.memoryHistory?.length
           ? activeNb.memoryHistory[activeNb.memoryHistory.length - 1] : null,
+        cells: activeNb?.cells ?? [],
+        onNavigateToCell: nbId ? (cellId) => handleNavigateToCell(nbId, cellId) : () => {},
       },
       nuget: {
         onToggle: nbId ? () => setNb(nbId, (n) => ({ nugetPanelOpen: !n.nugetPanelOpen })) : () => {},
@@ -1652,6 +1680,10 @@ ${cellsHtml}
         onToggle: nbId ? () => setNb(nbId, (n) => ({ varsPanelOpen: !n.varsPanelOpen })) : () => {},
         vars: activeNb?.vars ?? [],
         varHistory: activeNb?.varHistory ?? {},
+        onInspect: nbId ? (name) => {
+          const v = (activeNb?.vars ?? []).find((vv) => vv.name === name);
+          setVarInspectDialog({ name, typeName: v?.typeName ?? '', value: v?.value ?? '', notebookId: nbId, fullValue: null });
+        } : null,
       },
       toc: {
         onToggle: nbId ? () => setNb(nbId, (n) => ({ tocPanelOpen: !n.tocPanelOpen })) : () => {},
@@ -1676,6 +1708,15 @@ ${cellsHtml}
       api: {
         onToggle: () => setApiPanelOpen((v) => !v),
         onInsert: handleInjectApiCall,
+      },
+      graph: {
+        onToggle: nbId ? () => setNb(nbId, (n) => ({ graphPanelOpen: !n.graphPanelOpen })) : () => {},
+        varHistory: activeNb?.varHistory ?? {},
+      },
+      todo: {
+        onToggle: nbId ? () => setNb(nbId, (n) => ({ todoPanelOpen: !n.todoPanelOpen })) : () => {},
+        cells: activeNb?.cells ?? [],
+        onNavigateToCell: nbId ? (cellId) => handleNavigateToCell(nbId, cellId) : () => {},
       },
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1844,6 +1885,19 @@ ${cellsHtml}
         <CommandPalette
           onExecute={(id) => menuHandlersRef.current[id]?.()}
           onClose={() => setCommandPaletteOpen(false)}
+        />
+      )}
+      {varInspectDialog && (
+        <VarInspectDialog
+          name={varInspectDialog.name}
+          typeName={varInspectDialog.typeName}
+          value={varInspectDialog.value}
+          fullValue={varInspectDialog.fullValue}
+          onLoadFull={() => {
+            const nbId = varInspectDialog.notebookId;
+            if (nbId) window.electronAPI?.sendToKernel(nbId, { type: 'var_inspect', name: varInspectDialog.name });
+          }}
+          onClose={() => setVarInspectDialog(null)}
         />
       )}
     </div>

@@ -48,6 +48,7 @@ describe('SettingsDialog rendering', () => {
     expect(labels).toContain('Appearance');
     expect(labels).toContain('Paths');
     expect(labels).toContain('Startup');
+    expect(labels).toContain('Shortcuts');
   });
 
   it('shows Appearance section by default', () => {
@@ -288,6 +289,34 @@ describe('Startup section — with pinned notebooks', () => {
     const unpinBtns = screen.getAllByTitle('Unpin this notebook');
     fireEvent.click(unpinBtns[0]);
     expect(props.onUnpin).toHaveBeenCalledWith('/home/user/notebooks/work.cnb');
+  });
+});
+
+// ── Shortcuts section ──────────────────────────────────────────────────────────
+
+describe('Shortcuts section', () => {
+  function clickShortcutsBtn() {
+    const btn = [...document.querySelectorAll('.settings-section-btn')].find((b) => b.textContent === 'Shortcuts');
+    fireEvent.click(btn);
+  }
+
+  it('switches to Shortcuts section on click', () => {
+    render(<SettingsDialog {...makeProps()} />);
+    clickShortcutsBtn();
+    // ShortcutsSection renders .shortcuts-table
+    expect(document.querySelector('.shortcuts-table')).toBeInTheDocument();
+  });
+
+  it('renders keyboard shortcut entries with kbd elements', () => {
+    render(<SettingsDialog {...makeProps()} />);
+    clickShortcutsBtn();
+    expect(document.querySelectorAll('kbd').length).toBeGreaterThan(0);
+  });
+
+  it('renders at least one shortcut group heading', () => {
+    render(<SettingsDialog {...makeProps()} />);
+    clickShortcutsBtn();
+    expect(document.querySelector('.settings-group-label')).toBeInTheDocument();
   });
 });
 

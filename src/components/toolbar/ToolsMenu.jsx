@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import {
   IconReset, IconConfig, IconPackages, IconLogs, IconDB,
   IconVars, IconToC, IconLibrary, IconFiles, IconApi,
+  IconGraph, IconTodo,
 } from './Icons.jsx';
 
 export function ToolsMenu({
@@ -16,6 +17,8 @@ export function ToolsMenu({
   libraryPanelOpen, onToggleLibrary,
   filesPanelOpen, onToggleFiles,
   apiPanelOpen, onToggleApi,
+  graphPanelOpen, onToggleGraph,
+  todoPanelOpen, onToggleTodo,
 }) {
   const [open, setOpen] = useState(false);
   const btnRef = useRef(null);
@@ -63,6 +66,8 @@ export function ToolsMenu({
     { icon: <IconLibrary />,   label: 'Library',           action: onToggleLibrary,  active: libraryPanelOpen },
     { icon: <IconFiles />,     label: 'File Explorer',     action: onToggleFiles,    active: filesPanelOpen },
     { icon: <IconApi />,       label: 'API Browser',       action: onToggleApi,      active: apiPanelOpen },
+    { icon: <IconGraph />,     label: 'Graph',             action: onToggleGraph,    active: graphPanelOpen },
+    { icon: <IconTodo />,      label: 'To Do',             action: onToggleTodo,     active: todoPanelOpen },
   ];
 
   const anyPanelActive = panelItems.some((p) => p.active);

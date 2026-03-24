@@ -590,6 +590,89 @@ $$f(x) = \\frac{1}{\\sigma\\sqrt{2\\pi}}\\, e^{-\\frac{(x-\\mu)^2}{2\\sigma^2}}$
 **Matrix multiplication** (element notation):
 
 $$(AB)_{ij} = \\sum_{k=1}^{p} A_{ik}\\, B_{kj}$$`),
+
+    md(`## 17 · Interactive Widgets
+
+Widgets are live UI controls rendered inline in cell output. Their values **persist across re-runs** — changing a slider and pressing Run reads the new position.
+
+| Widget | Kernel API |
+|--------|-----------|
+| Slider | \`Display.Slider(label, min, max, step, defaultValue)\` |
+| Dropdown | \`Display.Dropdown(label, options[], defaultValue)\` |
+| Date Picker | \`Display.DatePicker(label, defaultDate)\` |
+
+All three return a \`WidgetHandle\` with implicit conversions to \`double\`, \`int\`, \`float\`, and \`string\`.`),
+
+    cs(`// ── Slider + Dropdown + DatePicker demonstration ────────────────────────────
+
+// Slider: numeric range
+var temperature = Display.Slider("Temperature (°C)", min: -20, max: 50, step: 0.5, defaultValue: 22);
+
+// Dropdown: enumerated choice
+var unit = Display.Dropdown("Unit", new[] { "Celsius", "Fahrenheit", "Kelvin" });
+
+// Date Picker: calendar date
+var reportDate = Display.DatePicker("Report Date", defaultDate: "2025-01-01");
+
+// Use the values in code
+double converted = unit.StringValue switch {
+    "Fahrenheit" => temperature * 9.0 / 5.0 + 32,
+    "Kelvin"     => temperature + 273.15,
+    _            => (double)temperature,
+};
+
+string unitSymbol = unit.StringValue switch {
+    "Fahrenheit" => "°F", "Kelvin" => "K", _ => "°C"
+};
+
+Display.Html($@"
+<div style='font-family:sans-serif;padding:6px 0'>
+  <p style='color:#cdd6e0'>
+    <strong>{temperature:F1} °C</strong> =
+    <span style='color:#4ec9b0'>{converted:F2} {unitSymbol}</span>
+    &nbsp;·&nbsp; Report date: <span style='color:#c4964a'>{reportDate}</span>
+  </p>
+</div>");`),
+
+    md(`## 18 · Display.Markdown
+
+\`Display.Markdown(text)\` renders rich markdown from C# code — including **Mermaid diagrams** and **KaTeX math**.
+Useful for generating dynamic documentation, reports, or structured output.`),
+
+    cs(`// Generate a markdown report from computed data
+var items = new[] {
+    new { Name = "Alpha",   Score = 92, Grade = "A"  },
+    new { Name = "Beta",    Score = 78, Grade = "B+"  },
+    new { Name = "Gamma",   Score = 85, Grade = "A-" },
+};
+
+var rows = string.Join("\\n", items.Select(i =>
+    $"| {i.Name} | {i.Score} | {i.Grade} |"));
+
+Display.Markdown($@"
+### Results Summary
+
+| Name | Score | Grade |
+|------|-------|-------|
+{rows}
+
+> Best score: **{items.Max(i => i.Score)}** by *{items.OrderByDescending(i => i.Score).First().Name}*
+
+$$\\bar{{x}} = \\frac{{1}}{{n}} \\sum_{{i=1}}^{{n}} x_i = {items.Average(i => i.Score):F1}$$
+");`),
+
+    cs(`// Mermaid diagram generated from C# data
+var steps = new[] { "Fetch", "Parse", "Transform", "Validate", "Save" };
+var arrows = string.Join("\\n    ", steps.Zip(steps.Skip(1), (a, b) => $"{a} --> {b}"));
+
+Display.Markdown($@"
+### Pipeline Flow
+
+\`\`\`mermaid
+flowchart LR
+    {arrows}
+\`\`\`
+");`),
   ];
 }
 
@@ -620,6 +703,8 @@ export function createNotebook(withExamples = false) {
     varHistory: {},
     varsPanelOpen: false,
     tocPanelOpen: false,
+    graphPanelOpen: false,
+    todoPanelOpen: false,
     outputHistory: {},
     staleCellIds: [],
   };

@@ -118,6 +118,25 @@ export function IconFolderSvg() {
     </svg>
   );
 }
+export function IconGraph() {
+  return (
+    <svg {..._ic} stroke="currentColor" strokeWidth="1.1" strokeLinecap="round">
+      <polyline points="1.5,10 4,6 6.5,8 9,3.5 11.5,5" />
+      <line x1="1.5" y1="11.5" x2="11.5" y2="11.5" />
+      <line x1="1.5" y1="1.5" x2="1.5" y2="11.5" />
+    </svg>
+  );
+}
+export function IconTodo() {
+  return (
+    <svg {..._ic} stroke="currentColor" strokeWidth="1.1" strokeLinecap="round">
+      <polyline points="2,4 3.5,5.5 6,3" />
+      <line x1="7.5" y1="4.5" x2="11.5" y2="4.5" />
+      <polyline points="2,8 3.5,9.5 6,7" />
+      <line x1="7.5" y1="8.5" x2="11.5" y2="8.5" />
+    </svg>
+  );
+}
 export function IconFileSvg({ isNotebook }) {
   return (
     <svg width="12" height="13" viewBox="0 0 12 13" fill="none" stroke="currentColor" strokeWidth="1.2" style={{ opacity: isNotebook ? 0.9 : 0.5 }}>

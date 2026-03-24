@@ -209,6 +209,12 @@ partial class Program
                     break;
                 }
 
+                case "var_inspect":
+                {
+                    HandleVarInspect(msg, realStdout);
+                    break;
+                }
+
                 case "exit":
                     memCts.Cancel();
                     return;

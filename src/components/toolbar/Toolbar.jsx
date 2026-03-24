@@ -35,6 +35,10 @@ export function Toolbar({
   onToggleFiles,
   apiPanelOpen,
   onToggleApi,
+  graphPanelOpen,
+  onToggleGraph,
+  todoPanelOpen,
+  onToggleTodo,
   theme,
   onThemeChange,
   lineAltEnabled,
@@ -118,6 +122,10 @@ export function Toolbar({
         onToggleFiles={onToggleFiles}
         apiPanelOpen={apiPanelOpen}
         onToggleApi={onToggleApi}
+        graphPanelOpen={graphPanelOpen}
+        onToggleGraph={onToggleGraph}
+        todoPanelOpen={todoPanelOpen}
+        onToggleTodo={onToggleTodo}
       />
       {dockLayout && (
         <LayoutManager

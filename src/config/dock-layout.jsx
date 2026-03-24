@@ -3,8 +3,8 @@ import React from 'react';
 // ── Dock Layout System ────────────────────────────────────────────────────────
 
 export const DEFAULT_DOCK_LAYOUT = {
-  assignments: { log: 'right', nuget: 'bottom', config: 'bottom', db: 'bottom', library: 'left', vars: 'right', toc: 'left', files: 'left', api: 'right' },
-  order:       { log: 0, nuget: 0, config: 1, db: 2, library: 0, vars: 1, toc: 1, files: 2, api: 2 },
+  assignments: { log: 'right', nuget: 'bottom', config: 'bottom', db: 'bottom', library: 'left', vars: 'right', toc: 'left', files: 'left', api: 'right', graph: 'right', todo: 'bottom' },
+  order:       { log: 0, nuget: 0, config: 1, db: 2, library: 0, vars: 1, toc: 1, files: 2, api: 2, graph: 3, todo: 3 },
   sizes:       { left: 300, right: 320, bottom: 280 },
   floatPos:    {},
   zoneTab:     { left: 'library', right: 'log', bottom: 'nuget' },
@@ -93,6 +93,22 @@ function IconApi() {
   );
 }
 
+function IconGraph() {
+  return <svg {..._ic} stroke="currentColor" strokeWidth="1.1" strokeLinecap="round">
+    <polyline points="1.5,10 4,6 6.5,8 9,3.5 11.5,5" />
+    <line x1="1.5" y1="11.5" x2="11.5" y2="11.5" />
+    <line x1="1.5" y1="1.5" x2="1.5" y2="11.5" />
+  </svg>;
+}
+function IconTodo() {
+  return <svg {..._ic} stroke="currentColor" strokeWidth="1.1" strokeLinecap="round">
+    <polyline points="2,4 3.5,5.5 6,3" />
+    <line x1="7.5" y1="4.5" x2="11.5" y2="4.5" />
+    <polyline points="2,8 3.5,9.5 6,7" />
+    <line x1="7.5" y1="8.5" x2="11.5" y2="8.5" />
+  </svg>;
+}
+
 export const PANEL_META = {
   log:     { label: 'Logs',       icon: <IconLogs /> },
   nuget:   { label: 'Packages',   icon: <IconPackages /> },
@@ -103,6 +119,8 @@ export const PANEL_META = {
   toc:     { label: 'Table of Contents', icon: <IconToC /> },
   files:   { label: 'Files',      icon: <IconFiles /> },
   api:     { label: 'API Browser', icon: <IconApi /> },
+  graph:   { label: 'Graph',      icon: <IconGraph /> },
+  todo:    { label: 'To Do',      icon: <IconTodo /> },
 };
 
 // ── Dock drop zones ───────────────────────────────────────────────────────────

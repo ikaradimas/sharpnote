@@ -8,6 +8,8 @@ import { TocPanel } from '../panels/TocPanel.jsx';
 import { LibraryPanel } from '../panels/library/LibraryPanel.jsx';
 import { FilesPanel } from '../panels/FilesPanel.jsx';
 import { ApiPanel } from '../panels/ApiPanel.jsx';
+import { GraphPanel } from '../panels/GraphPanel.jsx';
+import { TodoPanel } from '../panels/TodoPanel.jsx';
 
 export function renderPanelContent(panelId, p) {
   if (!p) return null;
@@ -21,6 +23,8 @@ export function renderPanelContent(panelId, p) {
     case 'library': return <LibraryPanel {...p} />;
     case 'files':   return <FilesPanel {...p} />;
     case 'api':     return <ApiPanel {...p} />;
+    case 'graph':   return <GraphPanel {...p} />;
+    case 'todo':    return <TodoPanel {...p} />;
     default:        return null;
   }
 }

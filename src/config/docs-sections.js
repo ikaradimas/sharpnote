@@ -557,16 +557,100 @@ export const DOCS_SECTIONS = [
   {
     id: 'widgets', title: 'Interactive Widgets',
     content: [
-      { type: 'p', text: 'Interactive widgets let you add sliders and dropdowns directly to cell output. Their values persist between cell executions, enabling lightweight parameter exploration without re-coding.' },
+      { type: 'p', text: 'Interactive widgets let you add sliders, dropdowns, and date pickers directly to cell output. Their values persist between cell executions, enabling lightweight parameter exploration without re-coding.' },
       { type: 'h3', text: 'Creating Widgets' },
-      { type: 'code', text: '// Slider — returns a WidgetHandle with an implicit double conversion\nvar alpha = Display.Slider("Alpha", min: 0, max: 1, step: 0.01, defaultValue: 0.5);\nConsole.WriteLine($"alpha = {alpha.Value}");\n\n// Dropdown — returns a WidgetHandle with an implicit string conversion\nvar color = Display.Dropdown("Color", new[] { "Red", "Green", "Blue" }, "Green");\nConsole.WriteLine($"selected = {color.StringValue}");\n\n// Implicit conversion — use the handle directly in expressions\ndouble factor = Display.Slider("Factor", 1, 10, 0.5, 3);\nvar result = someValue * factor; // factor is implicitly cast to double' },
+      { type: 'code', text: '// Slider\nvar alpha = Display.Slider("Alpha", min: 0, max: 1, step: 0.01, defaultValue: 0.5);\n\n// Dropdown\nvar color = Display.Dropdown("Color", new[] { "Red", "Green", "Blue" }, "Green");\n\n// Date Picker\nvar date = Display.DatePicker("Report Date", defaultValue: "2025-01-01");\nConsole.WriteLine($"Selected date: {date.StringValue}");\n\n// Implicit conversion\ndouble factor = Display.Slider("Factor", 1, 10, 0.5, 3);\nvar result = someValue * factor;' },
       { type: 'h3', text: 'Value Persistence' },
-      { type: 'p', text: 'Widget values are keyed by cell ID and widget position. When you re-run a cell, each widget restores the last value set by the user. Moving the slider or changing the dropdown does not automatically re-run the cell — use Run (Ctrl+Enter) to re-execute with the updated value.' },
+      { type: 'p', text: 'Widget values are keyed by cell ID and widget position. When you re-run a cell, each widget restores the last value set by the user. Interacting with a widget does not automatically re-run the cell — use Run (Ctrl+Enter) to re-execute with the updated value.' },
       { type: 'h3', text: 'WidgetHandle API' },
       { type: 'ul', items: [
         '.Value — current value as double',
         '.StringValue — current value as string',
         'Implicit conversion to double, int, float, string — allows direct use in expressions',
+      ]},
+    ],
+  },
+  {
+    id: 'display-markdown', title: 'Display.Markdown',
+    content: [
+      { type: 'p', text: 'Display.Markdown(text) renders a markdown string as rich output from C# code, with full Mermaid diagram and KaTeX math support.' },
+      { type: 'h3', text: 'Basic Usage' },
+      { type: 'code', text: 'Display.Markdown("## Hello\\n\\nThis is **bold** and $E=mc^2$");\n\n// Dynamic report\nvar rows = items.Select(i => $"| {i.Name} | {i.Value} |");\nDisplay.Markdown($@"\n### Results\n| Name | Value |\n|------|-------|\n{string.Join("\\n", rows)}\n");' },
+      { type: 'h3', text: 'Mermaid Diagrams' },
+      { type: 'code', text: 'Display.Markdown(@"\n```mermaid\nflowchart LR\n    A --> B --> C\n```\n");' },
+      { type: 'h3', text: 'KaTeX Math' },
+      { type: 'code', text: 'Display.Markdown("Inline: $x^2 + y^2 = r^2$\\n\\nBlock:\\n$$E = mc^2$$");' },
+    ],
+  },
+  {
+    id: 'graph-panel', title: 'Graph Panel',
+    content: [
+      { type: 'p', text: 'The Graph panel renders a live time-series chart of numeric variable history, updated after every cell execution.' },
+      { type: 'h3', text: 'Opening the Panel' },
+      { type: 'ul', items: [
+        'Tools menu → Graph',
+        'Keyboard: Ctrl+Shift+R',
+        'Application menu: Tools → Graph',
+      ]},
+      { type: 'h3', text: 'Controls' },
+      { type: 'ul', items: [
+        'Check / uncheck variable names to add or remove them from the chart',
+        'Chart type selector: Line, Area, or Column',
+        'Legend button toggles the chart legend',
+        'Auto-assigned colors distinguish variables',
+      ]},
+    ],
+  },
+  {
+    id: 'todo-panel', title: 'To Do Panel',
+    content: [
+      { type: 'p', text: 'The To Do panel automatically scans all code cells for // TODO, // FIXME, and // BUG comments and presents them as a clickable list.' },
+      { type: 'h3', text: 'Supported Tags' },
+      { type: 'code', text: '// TODO: implement rate limiting\n// FIXME: off-by-one error on line 42\n// BUG this crashes when the list is empty' },
+      { type: 'h3', text: 'Navigation' },
+      { type: 'p', text: 'Click any item to scroll to the corresponding cell and briefly highlight it. Open with Tools → To Do or Ctrl+Shift+O.' },
+    ],
+  },
+  {
+    id: 'var-inspect', title: 'Variable Inspection',
+    content: [
+      { type: 'p', text: 'Click the ⊕ button on any row in the Variables panel to open an inspection dialog for that variable.' },
+      { type: 'h3', text: 'Dialog Features' },
+      { type: 'ul', items: [
+        'Displays the variable name, type, and current value',
+        'Load Full Value fetches the full JSON-serialized value from the kernel',
+        'Copy button copies the displayed value to the clipboard',
+      ]},
+    ],
+  },
+  {
+    id: 'log-cell-links', title: 'Log Panel Cell Links',
+    content: [
+      { type: 'p', text: 'Cell IDs that appear in log entries are rendered as clickable links. Clicking one scrolls the notebook to that cell and briefly highlights it.' },
+      { type: 'p', text: 'Each code cell displays its 8-character ID in muted text in the cell header — this is the same ID shown in kernel log entries.' },
+    ],
+  },
+  {
+    id: 'keyboard-shortcuts', title: 'Keyboard Shortcuts',
+    content: [
+      { type: 'p', text: 'The full list of keyboard shortcuts is available in Settings → Shortcuts.' },
+      { type: 'h3', text: 'Essential Shortcuts' },
+      { type: 'ul', items: [
+        'Ctrl+Enter — Run the focused cell',
+        'Ctrl+Shift+Return — Run all cells',
+        'Ctrl+K — Command palette',
+        'Ctrl+N — New notebook',
+        'Ctrl+S — Save',
+        'F1 — Documentation',
+      ]},
+      { type: 'h3', text: 'Panel Shortcuts' },
+      { type: 'ul', items: [
+        'Ctrl+Shift+G — Logs',
+        'Ctrl+Shift+V — Variables',
+        'Ctrl+Shift+R — Graph panel',
+        'Ctrl+Shift+O — To Do panel',
+        'Ctrl+Shift+D — Database',
+        'Ctrl+Shift+A — API Browser',
       ]},
     ],
   },

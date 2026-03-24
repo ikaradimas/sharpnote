@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { VarsPanel } from '../../src/renderer.jsx';
 
@@ -53,5 +53,27 @@ describe('VarsPanel', () => {
     render(<VarsPanel vars={makeVars()} />);
     expect(screen.getByText('Int32')).toBeInTheDocument();
     expect(screen.getByText('String')).toBeInTheDocument();
+  });
+});
+
+// ── Inspect button ─────────────────────────────────────────────────────────────
+
+describe('VarsPanel — inspect button', () => {
+  it('renders inspect buttons when onInspect is provided', () => {
+    render(<VarsPanel vars={makeVars()} onInspect={vi.fn()} />);
+    expect(document.querySelectorAll('.vars-inspect-btn').length).toBe(makeVars().length);
+  });
+
+  it('does not render inspect buttons without onInspect', () => {
+    render(<VarsPanel vars={makeVars()} />);
+    expect(document.querySelector('.vars-inspect-btn')).toBeNull();
+  });
+
+  it('calls onInspect with variable name when button is clicked', () => {
+    const onInspect = vi.fn();
+    render(<VarsPanel vars={makeVars()} onInspect={onInspect} />);
+    const btn = document.querySelector('.vars-inspect-btn');
+    fireEvent.click(btn);
+    expect(onInspect).toHaveBeenCalledWith('myInt');
   });
 });

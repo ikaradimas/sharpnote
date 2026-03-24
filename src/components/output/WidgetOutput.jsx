@@ -48,6 +48,23 @@ export function WidgetOutput({ spec, notebookId }) {
     );
   }
 
+  if (widgetType === 'datepicker') {
+    return (
+      <div className="widget-datepicker">
+        <label className="widget-label">{label}</label>
+        <input
+          type="date"
+          className="widget-date-input"
+          value={localValue}
+          onChange={(e) => {
+            setLocalValue(e.target.value);
+            sendChange(e.target.value);
+          }}
+        />
+      </div>
+    );
+  }
+
   if (widgetType === 'dropdown') {
     const { options } = spec;
     return (

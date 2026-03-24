@@ -193,6 +193,34 @@ public class DisplayHelper
         return new WidgetHandle(widgetKey, currentValue);
     }
 
+    /// <summary>
+    /// Renders an interactive date picker widget. The selected date persists between cell executions.
+    /// Use .StringValue to get the current date as an ISO-8601 string (YYYY-MM-DD).
+    /// </summary>
+    public WidgetHandle DatePicker(string label, string defaultValue = "")
+    {
+        var widgetKey = $"{_currentId}_w{_widgetCounter++}";
+        string currentValue = string.IsNullOrEmpty(defaultValue)
+            ? DateTime.Today.ToString("yyyy-MM-dd")
+            : defaultValue;
+        if (_widgetValues != null && _widgetValues.TryGetValue(widgetKey, out var stored)
+            && stored.ValueKind == JsonValueKind.String)
+        {
+            var s = stored.GetString();
+            if (!string.IsNullOrEmpty(s)) currentValue = s;
+        }
+
+        Send(new { type = "display", id = _currentId, format = "widget",
+                   content = new { widgetType = "datepicker", widgetKey, label, value = currentValue } });
+        return new WidgetHandle(widgetKey, currentValue);
+    }
+
+    /// <summary>
+    /// Renders a markdown string with full Mermaid diagram and KaTeX math support.
+    /// </summary>
+    public void Markdown(string markdown, string? title = null) =>
+        Send(new { type = "display", id = _currentId, format = "markdown", content = (object)markdown, title });
+
     // ── Internal helpers ──────────────────────────────────────────────────────
 
     internal static List<Dictionary<string, object?>> ToRowDicts(List<object?> items)

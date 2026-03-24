@@ -20,7 +20,7 @@ function Sparkline({ values }) {
   );
 }
 
-export function VarsPanel({ vars, varHistory }) {
+export function VarsPanel({ vars, varHistory, onInspect }) {
   const [search, setSearch] = useState('');
   const filtered = search
     ? vars.filter((v) =>
@@ -53,6 +53,7 @@ export function VarsPanel({ vars, varHistory }) {
                 <th>Type</th>
                 <th>Value</th>
                 <th className="vars-sparkline-col"></th>
+                <th className="vars-inspect-col"></th>
               </tr>
             </thead>
             <tbody>
@@ -67,6 +68,17 @@ export function VarsPanel({ vars, varHistory }) {
                     </td>
                     <td className="vars-sparkline-cell">
                       {hist && hist.length >= 2 && <Sparkline values={hist} />}
+                    </td>
+                    <td className="vars-inspect-cell">
+                      {onInspect && (
+                        <button
+                          className="vars-inspect-btn"
+                          title={`Inspect ${v.name}`}
+                          onClick={() => onInspect(v.name)}
+                        >
+                          ⊕
+                        </button>
+                      )}
                     </td>
                   </tr>
                 );
