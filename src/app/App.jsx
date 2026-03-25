@@ -92,9 +92,29 @@ export function App() {
     handleInsertLibraryFile, handleInjectApiCall, openPinnedNotebooks,
   } = useNotebookManager({ cancelPendingCellsRef, saveSettingsRef });
 
+  // ── Panel visibility (shared by close button, menu, and kernel messages) ─────
+
+  const setPanelVisible = useCallback((panelId, open) => {
+    // open: true = open, false = close, null = toggle
+    const globalSetters = { library: setLibraryPanelOpen, files: setFilesPanelOpen, api: setApiPanelOpen };
+    const nbFlagMap = {
+      log: 'logPanelOpen', nuget: 'nugetPanelOpen', config: 'configPanelOpen',
+      db: 'dbPanelOpen', vars: 'varsPanelOpen', toc: 'tocPanelOpen',
+      graph: 'graphPanelOpen', todo: 'todoPanelOpen',
+    };
+    if (globalSetters[panelId]) {
+      globalSetters[panelId](open === null ? (v) => !v : open);
+    } else {
+      const flag = nbFlagMap[panelId];
+      const nbId = activeIdRef.current;
+      if (flag && isNotebookId(nbId))
+        setNb(nbId, open === null ? (n) => ({ [flag]: !n[flag] }) : { [flag]: open });
+    }
+  }, [setNb, setLibraryPanelOpen, setFilesPanelOpen, setApiPanelOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const { runCell, runAll, runFrom, runTo, handleInterrupt, handleReset,
           requestCompletions, requestLint, cancelPendingCells } =
-    useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVarInspectDialog });
+    useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVarInspectDialog, onPanelVisible: setPanelVisible, setDbConnections });
   cancelPendingCellsRef.current = cancelPendingCells;
 
   const {
@@ -418,18 +438,7 @@ export function App() {
 
   // ── Panel close ────────────────────────────────────────────────────────────
 
-  const handlePanelClose = useCallback((panelId) => {
-    if (panelId === 'library') { setLibraryPanelOpen(false); return; }
-    if (panelId === 'files')   { setFilesPanelOpen(false);   return; }
-    if (panelId === 'api')     { setApiPanelOpen(false);     return; }
-    const nbId = activeIdRef.current;
-    if (isNotebookId(nbId)) {
-      const flagMap = { log: 'logPanelOpen', nuget: 'nugetPanelOpen', config: 'configPanelOpen',
-        db: 'dbPanelOpen', vars: 'varsPanelOpen', toc: 'tocPanelOpen', graph: 'graphPanelOpen', todo: 'todoPanelOpen' };
-      const flag = flagMap[panelId];
-      if (flag) setNb(nbId, { [flag]: false });
-    }
-  }, [setNb]); // eslint-disable-line react-hooks/exhaustive-deps
+  const handlePanelClose = useCallback((panelId) => setPanelVisible(panelId, false), [setPanelVisible]);
 
   // ── Settings export / import ───────────────────────────────────────────────
 
@@ -520,17 +529,17 @@ export function App() {
     reset:             () => { if (isNotebook()) handleReset(activeIdRef.current); },
     'clear-output':    () => { if (isNotebook()) setNb(activeIdRef.current, { outputs: {} }); },
     docs:              handleOpenDocs,
-    'toggle-packages': () => { if (isNotebook()) setNb(activeIdRef.current, (n) => ({ nugetPanelOpen:  !n.nugetPanelOpen  })); },
-    'toggle-config':   () => { if (isNotebook()) setNb(activeIdRef.current, (n) => ({ configPanelOpen: !n.configPanelOpen })); },
-    'toggle-logs':     () => { if (isNotebook()) setNb(activeIdRef.current, (n) => ({ logPanelOpen:    !n.logPanelOpen    })); },
-    'toggle-library':  () => setLibraryPanelOpen((v) => !v),
-    'toggle-db':       () => { if (isNotebook()) setNb(activeIdRef.current, (n) => ({ dbPanelOpen:     !n.dbPanelOpen     })); },
-    'toggle-vars':     () => { if (isNotebook()) setNb(activeIdRef.current, (n) => ({ varsPanelOpen:   !n.varsPanelOpen   })); },
-    'toggle-toc':      () => { if (isNotebook()) setNb(activeIdRef.current, (n) => ({ tocPanelOpen:    !n.tocPanelOpen    })); },
-    'toggle-files':    () => setFilesPanelOpen((v) => !v),
-    'toggle-api':      () => setApiPanelOpen((v) => !v),
-    'toggle-graph':    () => { if (isNotebook()) setNb(activeIdRef.current, (n) => ({ graphPanelOpen:  !n.graphPanelOpen  })); },
-    'toggle-todo':     () => { if (isNotebook()) setNb(activeIdRef.current, (n) => ({ todoPanelOpen:   !n.todoPanelOpen   })); },
+    'toggle-packages': () => setPanelVisible('nuget',   null),
+    'toggle-config':   () => setPanelVisible('config',  null),
+    'toggle-logs':     () => setPanelVisible('log',     null),
+    'toggle-library':  () => setPanelVisible('library', null),
+    'toggle-db':       () => setPanelVisible('db',      null),
+    'toggle-vars':     () => setPanelVisible('vars',    null),
+    'toggle-toc':      () => setPanelVisible('toc',     null),
+    'toggle-files':    () => setPanelVisible('files',   null),
+    'toggle-api':      () => setPanelVisible('api',     null),
+    'toggle-graph':    () => setPanelVisible('graph',   null),
+    'toggle-todo':     () => setPanelVisible('todo',    null),
     about:             () => setAboutOpen(true),
     settings:          () => setSettingsOpen(true),
     'export-html':     handleExportHtml,

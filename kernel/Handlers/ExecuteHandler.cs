@@ -38,7 +38,7 @@ partial class Program
         if (msg.TryGetProperty("config", out var cfgProp))
             foreach (var entry in cfgProp.EnumerateObject())
                 configDict[entry.Name] = entry.Value.GetString() ?? "";
-        ConfigContext.Current = new ConfigHelper(configDict);
+        ConfigContext.Current = new ConfigHelper(configDict, realStdout);
 
         // ── Parse #r "nuget: ..." directives ──────────────────────────────────
         var (cleanCode, nugetRefs) = ParseNugetDirectives(code);

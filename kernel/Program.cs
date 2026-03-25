@@ -54,7 +54,9 @@ partial class Program
         };
 
         var display = new DisplayHelper(realStdout, _widgetValues);
-        var globals = new ScriptGlobals { Display = display };
+        var panels  = new PanelsHelper(realStdout);
+        var db      = new DbHelper(realStdout);
+        var globals = new ScriptGlobals { Display = display, Panels = panels, Db = db };
 
         var options = ScriptOptions.Default
             .AddImports(
@@ -128,11 +130,34 @@ partial class Program
                     {
                         using var doc = JsonDocument.Parse(rawLine);
                         var root = doc.RootElement.Clone();
-                        // Interrupt is handled inline so it fires even mid-execution.
-                        if (root.TryGetProperty("type", out var tp) && tp.GetString() == "interrupt")
-                            _execCts?.Cancel();
-                        else
-                            await msgChannel.Writer.WriteAsync(root);
+                        // Interrupt and db_list_response are handled inline so they
+                        // fire even while the main channel loop is blocked awaiting execution.
+                        if (root.TryGetProperty("type", out var tp))
+                        {
+                            var msgType = tp.GetString();
+                            if (msgType == "interrupt")
+                            {
+                                _execCts?.Cancel();
+                            }
+                            else if (msgType == "db_list_response"
+                                && root.TryGetProperty("requestId", out var ridProp))
+                            {
+                                var requestId = ridProp.GetString()!;
+                                var conns = root.TryGetProperty("connections", out var connsProp)
+                                    ? connsProp.EnumerateArray()
+                                        .Select(c => new DbEntry(
+                                            c.GetProperty("name").GetString()!,
+                                            c.GetProperty("provider").GetString()!,
+                                            c.TryGetProperty("isAttached", out var ia) && ia.GetBoolean()))
+                                        .ToArray()
+                                    : Array.Empty<DbEntry>();
+                                db.ReceiveListResponse(requestId, conns);
+                            }
+                            else
+                            {
+                                await msgChannel.Writer.WriteAsync(root);
+                            }
+                        }
                     }
                     catch { }
                 }

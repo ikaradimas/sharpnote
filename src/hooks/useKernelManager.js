@@ -6,13 +6,15 @@ import { COMPLETION_TIMEOUT, LINT_TIMEOUT } from '../constants.js';
  * Manages kernel communication: message routing, cell execution,
  * completions, lint, interrupt, and reset.
  *
- * @param {object} opts
- * @param {function} opts.setNb            - Notebook state updater from useNotebookManager
- * @param {object}   opts.notebooksRef     - Ref to current notebooks array
- * @param {object}   opts.dbConnectionsRef - Ref to current DB connections array
+ * @param {object}   opts
+ * @param {function} opts.setNb               - Notebook state updater from useNotebookManager
+ * @param {object}   opts.notebooksRef        - Ref to current notebooks array
+ * @param {object}   opts.dbConnectionsRef    - Ref to current DB connections array
  * @param {function} opts.setVarInspectDialog - Dialog state setter for var_inspect_result
+ * @param {function} opts.onPanelVisible      - (panelId, open: true|false|null) — open, close, or toggle a panel
+ * @param {function} opts.setDbConnections    - DB connections state setter
  */
-export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVarInspectDialog }) {
+export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVarInspectDialog, onPanelVisible, setDbConnections }) {
   const pendingResolversRef   = useRef({});
   const pendingCompletionsRef = useRef({});
   const pendingLintRef        = useRef({});
@@ -209,10 +211,99 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
         case 'vars_update':
           setNb(notebookId, { vars: msg.vars });
           break;
-          break;
 
         case 'graph_clear':
           setNb(notebookId, { varHistory: {} });
+          break;
+
+        // ── Panel control ───────────────────────────────────────────────────────
+
+        case 'panel_open':
+          onPanelVisible?.(msg.panel, true);
+          break;
+
+        case 'panel_close':
+          onPanelVisible?.(msg.panel, false);
+          break;
+
+        case 'panel_toggle':
+          onPanelVisible?.(msg.panel, null);
+          break;
+
+        // ── DB management ───────────────────────────────────────────────────────
+
+        case 'db_add': {
+          const newConn = { id: uuidv4(), name: msg.name, provider: msg.provider, connectionString: msg.connectionString };
+          setDbConnections?.((cs) => [...cs, newConn]);
+          break;
+        }
+
+        case 'db_remove':
+          setDbConnections?.((cs) => cs.filter((c) => c.name !== msg.name));
+          break;
+
+        case 'db_attach': {
+          const conn = dbConnectionsRef.current.find((c) => c.name === msg.name);
+          if (!conn) break;
+          const varName = conn.name
+            .replace(/[^a-zA-Z0-9]+(.)/g, (_, ch) => ch.toUpperCase())
+            .replace(/^[A-Z]/, (ch) => ch.toLowerCase())
+            .replace(/^[^a-zA-Z]/, 'db');
+          setNb(notebookId, (n) => ({
+            attachedDbs: n.attachedDbs.some((d) => d.connectionId === conn.id)
+              ? n.attachedDbs
+              : [...n.attachedDbs, { connectionId: conn.id, status: 'connecting', varName }],
+          }));
+          window.electronAPI?.sendToKernel(notebookId, {
+            type: 'db_connect',
+            connectionId: conn.id,
+            name: conn.name,
+            provider: conn.provider,
+            connectionString: conn.connectionString,
+            varName,
+          });
+          break;
+        }
+
+        case 'db_detach': {
+          const connToDetach = dbConnectionsRef.current.find((c) => c.name === msg.name);
+          if (!connToDetach) break;
+          window.electronAPI?.sendToKernel(notebookId, {
+            type: 'db_disconnect',
+            connectionId: connToDetach.id,
+          });
+          break;
+        }
+
+        case 'db_list_request': {
+          const nb = notebooksRef.current.find((n) => n.id === notebookId);
+          const connections = (dbConnectionsRef.current || []).map((c) => ({
+            name: c.name,
+            provider: c.provider,
+            isAttached: !!(nb?.attachedDbs?.some((d) => d.connectionId === c.id && d.status === 'ready')),
+          }));
+          window.electronAPI?.sendToKernel(notebookId, {
+            type: 'db_list_response',
+            requestId: msg.requestId,
+            connections,
+          });
+          break;
+        }
+
+        // ── Config write-back ───────────────────────────────────────────────────
+
+        case 'config_set':
+          setNb(notebookId, (n) => {
+            const existing = n.config.findIndex((e) => e.key === msg.key);
+            const config = existing >= 0
+              ? n.config.map((e, i) => (i === existing ? { ...e, value: msg.value } : e))
+              : [...n.config, { key: msg.key, value: msg.value }];
+            return { config };
+          });
+          break;
+
+        case 'config_remove':
+          setNb(notebookId, (n) => ({ config: n.config.filter((e) => e.key !== msg.key) }));
           break;
 
         case 'nuget_preload_complete':
