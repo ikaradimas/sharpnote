@@ -152,7 +152,7 @@ export const DOCS_SECTIONS = [
       { type: 'ul', items: [
         'obj.Dump(title?) — alias for obj.Display(); renders the object in the output area',
         'list.DumpTable(title?) — alias for list.DisplayTable(); renders as a data table',
-        'Util.Cmd(command, args?, workingDir?) — run a shell command; display stdout/stderr and return the combined output string',
+        'Util.Cmd(command, args?, workingDir?) — run a shell command; display stdout/stderr as a preformatted block',
         'Util.Time(action, label?) — benchmark an Action and display elapsed time as a styled block',
         'Util.Time<T>(fn, label?) — benchmark a Func<T>, display timing, and return the result',
         'Util.Dif(a, b, labelA?, labelB?) — show a line-by-line LCS diff between two values',

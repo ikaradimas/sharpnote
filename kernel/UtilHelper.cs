@@ -28,10 +28,9 @@ public class UtilHelper
     // ── Util.Cmd ──────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Runs a shell command, displays stdout/stderr as a preformatted text block,
-    /// and returns the combined output string.
+    /// Runs a shell command and displays stdout/stderr as a preformatted text block.
     /// </summary>
-    public string Cmd(string command, string? args = null, string? workingDir = null)
+    public void Cmd(string command, string? args = null, string? workingDir = null)
     {
         var psi = new ProcessStartInfo
         {
@@ -55,17 +54,14 @@ public class UtilHelper
             if (sb.Length > 0) sb.AppendLine();
             sb.Append(stderr);
         }
-        var output = sb.ToString();
 
         _out.WriteLine(JsonSerializer.Serialize(new
         {
             type    = "display",
             id      = Program.CurrentCellId,
             format  = "html",
-            content = $"<pre class=\"util-cmd-output\">{System.Net.WebUtility.HtmlEncode(output)}</pre>",
+            content = $"<pre class=\"util-cmd-output\">{System.Net.WebUtility.HtmlEncode(sb.ToString())}</pre>",
         }));
-
-        return output;
     }
 
     // ── Util.Time ─────────────────────────────────────────────────────────────
