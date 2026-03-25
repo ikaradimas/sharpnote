@@ -5187,3 +5187,43 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 }
 .horizontal-output-item { flex: 0 0 auto; }
 .shortcuts-empty { font-size: 11px; color: var(--text-muted); padding: 8px 0; }
+
+
+/* ── Util.ConfirmAsync widget ────────────────────────────────────────────── */
+.confirm-widget {
+  display: inline-flex; flex-direction: column; gap: 8px;
+  padding: 10px 14px; border-radius: 6px;
+  border: 1px solid var(--border-subtle); margin: 2px 0;
+  min-width: 220px; max-width: 480px;
+}
+.confirm-widget--pending { background: var(--bg-elevated); }
+.confirm-widget-title {
+  font-size: 12px; font-weight: 600; color: var(--text-primary);
+}
+.confirm-widget-message {
+  font-size: 13px; color: var(--text-secondary);
+}
+.confirm-widget-buttons {
+  display: flex; gap: 8px; margin-top: 2px;
+}
+.confirm-btn {
+  padding: 4px 14px; border-radius: 4px; border: 1px solid var(--border-subtle);
+  font-size: 12px; cursor: pointer; font-family: inherit;
+  transition: opacity 0.1s;
+}
+.confirm-btn:hover { opacity: 0.8; }
+.confirm-btn--ok {
+  background: var(--accent-primary); color: #fff; border-color: var(--accent-primary);
+}
+.confirm-btn--cancel {
+  background: var(--bg-base); color: var(--text-secondary);
+}
+.confirm-widget--confirmed {
+  color: #98c379; font-size: 12px; font-style: italic;
+  border-color: rgba(152,195,121,0.3); background: rgba(152,195,121,0.07);
+  padding: 6px 12px;
+}
+.confirm-widget--cancelled {
+  color: var(--text-muted); font-size: 12px; font-style: italic;
+  padding: 6px 12px;
+}

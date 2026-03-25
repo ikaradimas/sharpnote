@@ -170,6 +170,14 @@ partial class Program
                                     : null;
                                 db.ReceiveAddResult(requestId, error);
                             }
+                            else if (msgType == "confirm_response"
+                                && root.TryGetProperty("requestId", out var cRidProp))
+                            {
+                                var requestId = cRidProp.GetString()!;
+                                var confirmed = root.TryGetProperty("confirmed", out var confProp)
+                                    && confProp.GetBoolean();
+                                util.ReceiveConfirmResponse(requestId, confirmed);
+                            }
                             else
                             {
                                 await msgChannel.Writer.WriteAsync(root);

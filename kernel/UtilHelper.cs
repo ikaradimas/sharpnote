@@ -1,10 +1,13 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace SharpNoteKernel;
 
@@ -19,6 +22,13 @@ public class UtilHelper
     // Cleared on kernel reset via ClearCacheStatic().
     private static readonly Dictionary<string, object?> _cache = new();
     private static readonly object _cacheLock = new();
+
+    // Pending confirm requests — keyed by requestId, resolved by ReceiveConfirmResponse.
+    private static readonly ConcurrentDictionary<string, TaskCompletionSource<bool>>
+        _pendingConfirms = new();
+
+    // Cancellation token for the current execution — set by SetCancellationToken.
+    private CancellationToken _currentToken = CancellationToken.None;
 
     internal UtilHelper(TextWriter output)
     {
@@ -315,6 +325,51 @@ public class UtilHelper
             format  = "html",
             content = $"<div class=\"util-highlight\" style=\"border-left-color:{color}\">{innerHtml}</div>",
         }));
+    }
+
+    // ── Util.ConfirmAsync ─────────────────────────────────────────────────────
+
+    /// <summary>Sets the cancellation token for the current execution (called by ExecuteHandler).</summary>
+    internal void SetCancellationToken(CancellationToken ct) => _currentToken = ct;
+
+    /// <summary>
+    /// Displays an OK / Cancel dialog in the cell output and asynchronously waits
+    /// for the user to respond. Returns <c>true</c> if OK was clicked, <c>false</c>
+    /// if Cancel was clicked or execution is interrupted.
+    /// </summary>
+    public async Task<bool> ConfirmAsync(string message, string? title = null)
+    {
+        var requestId = Guid.NewGuid().ToString("N");
+        var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _pendingConfirms[requestId] = tcs;
+
+        _out.WriteLine(JsonSerializer.Serialize(new
+        {
+            type    = "display",
+            id      = Program.CurrentCellId,
+            format  = "confirm",
+            content = new { requestId, message, title },
+        }));
+
+        try
+        {
+            return await tcs.Task.WaitAsync(_currentToken);
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
+        finally
+        {
+            _pendingConfirms.TryRemove(requestId, out _);
+        }
+    }
+
+    /// <summary>Called by the background stdin reader when a confirm_response arrives.</summary>
+    internal void ReceiveConfirmResponse(string requestId, bool confirmed)
+    {
+        if (_pendingConfirms.TryGetValue(requestId, out var tcs))
+            tcs.TrySetResult(confirmed);
     }
 
     // ── Util.Cache ────────────────────────────────────────────────────────────

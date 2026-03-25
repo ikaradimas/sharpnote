@@ -108,6 +108,7 @@ partial class Program
         var effectiveOptions = options.AddReferences(dbMetaRefs);
         _execCts = new CancellationTokenSource();
         var execToken = _execCts.Token;
+        UtilContext.Current.SetCancellationToken(execToken);
         var interrupted = false;
 
         // Strip trailing semicolon from the final expression statement so Roslyn

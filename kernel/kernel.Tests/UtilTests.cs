@@ -245,6 +245,86 @@ public class UtilTests : IAsyncDisposable
         counterVar.GetProperty("value").GetString().Should().Be("1");
     }
 
+    // ── Util.ConfirmAsync ─────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task ConfirmAsync_OkResponse_ReturnsTrue()
+    {
+        await StartKernelAsync();
+        var id = NewId();
+        ClearMessages();
+
+        // Start execution — it will block waiting for confirm_response
+        var executeTask = SendAsync(new { type = "execute", id,
+            code = "var result = await Util.ConfirmAsync(\"Delete all?\", \"Confirm\");\nresult.Display();" });
+
+        // Wait for the confirm display message
+        var confirmMsg = await WaitForMessageAsync(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "display" &&
+            el.TryGetProperty("format", out var f) && f.GetString() == "confirm",
+            timeoutMs: 15_000);
+
+        var requestId = confirmMsg.GetProperty("content").GetProperty("requestId").GetString()!;
+        confirmMsg.GetProperty("content").GetProperty("message").GetString().Should().Be("Delete all?");
+        confirmMsg.GetProperty("content").GetProperty("title").GetString().Should().Be("Confirm");
+
+        // Send the OK response
+        await SendAsync(new { type = "confirm_response", requestId, confirmed = true });
+
+        // Wait for execution to complete successfully
+        var complete = await WaitForMessageAsync(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "complete" &&
+            el.TryGetProperty("id", out var i) && i.GetString() == id,
+            timeoutMs: 10_000);
+
+        complete.GetProperty("success").GetBoolean().Should().BeTrue();
+
+        // result.Display() should have emitted "True"
+        List<JsonElement> all;
+        lock (_received) { all = _received.ToList(); }
+        var displayMsgs = all.Where(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "display" &&
+            el.TryGetProperty("format", out var f) && f.GetString() == "html").ToList();
+        displayMsgs.Should().Contain(el =>
+            el.GetProperty("content").GetString()!.Contains("True"));
+    }
+
+    [Fact]
+    public async Task ConfirmAsync_CancelResponse_ReturnsFalse()
+    {
+        await StartKernelAsync();
+        var id = NewId();
+        ClearMessages();
+
+        var executeTask = SendAsync(new { type = "execute", id,
+            code = "var result = await Util.ConfirmAsync(\"Proceed?\");\nresult.Display();" });
+
+        var confirmMsg = await WaitForMessageAsync(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "display" &&
+            el.TryGetProperty("format", out var f) && f.GetString() == "confirm",
+            timeoutMs: 15_000);
+
+        var requestId = confirmMsg.GetProperty("content").GetProperty("requestId").GetString()!;
+
+        // Send cancel
+        await SendAsync(new { type = "confirm_response", requestId, confirmed = false });
+
+        var complete = await WaitForMessageAsync(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "complete" &&
+            el.TryGetProperty("id", out var i) && i.GetString() == id,
+            timeoutMs: 10_000);
+
+        complete.GetProperty("success").GetBoolean().Should().BeTrue();
+
+        List<JsonElement> all;
+        lock (_received) { all = _received.ToList(); }
+        var displayMsgs = all.Where(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "display" &&
+            el.TryGetProperty("format", out var f) && f.GetString() == "html").ToList();
+        displayMsgs.Should().Contain(el =>
+            el.GetProperty("content").GetString()!.Contains("False"));
+    }
+
     // ── Util.HorizontalRun ────────────────────────────────────────────────────
 
     [Fact]

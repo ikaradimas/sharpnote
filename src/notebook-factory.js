@@ -39,7 +39,7 @@ An interactive C# notebook. Press **Ctrl+Enter** to run a cell, or click **▶ R
 | Config | \`Config["Key"]\` · \`Config.Set("Key","val")\` · \`Config.Remove("Key")\` |
 | Database | Attach via **DB** panel or \`Db.Add\` / \`Db.Attach\` → \`mydb.Users.ToList()\` |
 | Panels | \`Panels.Open/Close/CloseAll(PanelId.*)\` · \`Panels.Dock/Float\` |
-| Util | \`obj.Dump()\` · \`Util.Time()\` · \`Util.Dif()\` · \`Util.HorizontalRun()\` · \`Util.Cache()\` |
+| Util | \`obj.Dump()\` · \`Util.Time()\` · \`Util.Dif()\` · \`Util.HorizontalRun()\` · \`Util.Cache()\` · \`Util.ConfirmAsync()\` |
 | Auto-render | Return a value — type is detected automatically |`),
 
     md('## 1 · Basic C#'),
@@ -815,6 +815,7 @@ SharpNote includes a \`Util\` global with LinqPAD-compatible helpers.
 | \`Util.Highlight(obj, color?)\` | Wrap output in a colored highlight box |
 | \`Util.Cache<T>(key, fn)\` | Memoize a computation; cached until kernel reset |
 | \`Util.ClearCache()\` | Clear all memoized entries |
+| \`await Util.ConfirmAsync(msg, title?)\` | Show OK / Cancel dialog; pauses cell until user responds |
 
 **Table sorting** — click any column header to sort ascending.
 Click again to reverse; click a third time to restore the original order.`),
@@ -890,6 +891,19 @@ $"Loaded {dataset.Count:N0} rows (cached after first run)".Display();`),
 // The result is also returned as a string for further processing.
 
 Util.Cmd("dotnet", "--version");`),
+
+    cs(`// Util.ConfirmAsync — pause execution and ask the user before continuing.
+// The cell awaits the user's click; OK returns true, Cancel returns false.
+// Great for guarding destructive operations in an interactive notebook.
+
+if (await Util.ConfirmAsync("Proceed with the operation?", "Confirm"))
+{
+    "✓ User confirmed — running operation.".Display();
+}
+else
+{
+    "✕ Cancelled by user.".Display();
+}`),
   ];
 }
 

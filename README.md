@@ -63,7 +63,7 @@
 - **Lint** — real-time Roslyn diagnostics; squiggles rendered via the CodeMirror lint extension
 - **Reactive Cell Dependencies** — after a successful execution, downstream cells that reference any variable whose value changed are flagged with a "↺ upstream variables changed" banner, clearing automatically when those cells are run
 - **Cell Output History** — re-running a cell preserves the previous outputs; a ‹ › navigator in the cell footer lets you browse the last 5 runs to compare results across executions
-- **`Util` helper** — LinqPAD-compatible utilities available as a global: `.Dump()` / `.DumpTable()` aliases, `Util.Cmd()` shell command execution, `Util.Time()` benchmarking, `Util.Dif()` LCS line diff, `Util.HorizontalRun()` side-by-side layout, `Util.Metatext()` / `Util.Highlight()` styled output, `Util.Cache<T>()` cross-execution memoization cleared on kernel reset
+- **`Util` helper** — LinqPAD-compatible utilities available as a global: `.Dump()` / `.DumpTable()` aliases, `Util.Cmd()` shell command execution, `Util.Time()` benchmarking, `Util.Dif()` LCS line diff, `Util.HorizontalRun()` side-by-side layout, `Util.Metatext()` / `Util.Highlight()` styled output, `Util.Cache<T>()` cross-execution memoization cleared on kernel reset, `Util.ConfirmAsync()` interactive OK/Cancel dialogs that pause execution
 
 ### Output & Display
 
@@ -277,6 +277,8 @@ Util.Metatext("Generated at 2025-01-01");         // dimmed gray metadata text
 Util.Highlight(importantValue, "#ffe066");        // colored highlight box (default: amber)
 var data = Util.Cache("key", () => LoadData());  // memoize across executions until reset
 Util.ClearCache();                                // clear all cached values
+if (await Util.ConfirmAsync("Delete all?", "Confirm"))  // interactive OK/Cancel dialog
+    DeleteAll();
 ```
 
 **Cancellation:** `while`, `for`, `foreach`, and `do-while` loops are automatically rewritten by a Roslyn `CSharpSyntaxRewriter` to call `token.ThrowIfCancellationRequested()` at each iteration. This enables the Stop button to interrupt long-running cells without killing the kernel.
