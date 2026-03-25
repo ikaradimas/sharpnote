@@ -296,10 +296,10 @@ var conns = await Db.ListAsync()                    // DbEntry[] with IsAttached
     md(`### 10a · In-memory SQLite from code
 
 \`Db.Add\` + \`Db.Attach\` register and connect a database without touching the DB panel.
-Because \`Db.Attach\` triggers schema introspection over an async round-trip, the injected
-variable (\`scratch\`) is available to cells that run **after** the setup cell — not within it.
+\`Db.Attach\` triggers schema introspection via a round-trip to the renderer, so the injected
+variable (\`scratch\`) is available to the **next** cell, not the one that called \`Attach\`.
 
-**Run the cell below first, then run the query cell beneath it.**`),
+**Run the setup cell first, then run the query cell.**`),
 
     cs(`// ── Step 1: register and attach ──────────────────────────────────────────────
 // Run this cell once. The 'scratch' DbContext will be ready for the next cell.

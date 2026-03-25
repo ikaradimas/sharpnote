@@ -72,17 +72,9 @@ export function App() {
   useEffect(() => { libEditorsRef.current = libEditors; }, [libEditors]);
 
   // ── DB connections ─────────────────────────────────────────────────────────
-  const [dbConnections, setDbConnectionsRaw] = useState([]);
+  const [dbConnections, setDbConnections] = useState([]);
   const dbConnectionsRef = useRef([]);
-  // Keep ref in sync synchronously inside the updater so that a db_attach message
-  // processed in the same event loop as db_add can immediately find the new connection.
-  const setDbConnections = useCallback((updater) => {
-    setDbConnectionsRaw((prev) => {
-      const next = typeof updater === 'function' ? updater(prev) : updater;
-      dbConnectionsRef.current = next;
-      return next;
-    });
-  }, []);
+  useEffect(() => { dbConnectionsRef.current = dbConnections; }, [dbConnections]);
 
   // ── Cross-hook bridge refs ─────────────────────────────────────────────────
   const saveSettingsRef       = useRef(() => {});

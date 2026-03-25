@@ -250,6 +250,10 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
         case 'db_add': {
           const newConn = { id: uuidv4(), name: msg.name, provider: msg.provider, connectionString: msg.connectionString };
           setDbConnections?.((cs) => [...cs, newConn]);
+          // Also update the ref immediately: React's state updater is called lazily, so
+          // dbConnectionsRef.current would still be stale if db_attach arrives in the
+          // same IPC message batch (e.g. Db.Add and Db.Attach called in the same cell).
+          dbConnectionsRef.current = [...dbConnectionsRef.current, newConn];
           break;
         }
 
