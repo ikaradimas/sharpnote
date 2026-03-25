@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { EditorState, StateEffect, StateField, Compartment, Prec } from '@codemirror/state';
-import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter, showTooltip, tooltips } from '@codemirror/view';
+import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter, showTooltip } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
@@ -262,7 +262,7 @@ export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
         }, 120);
       });
 
-      extensions.push(sigField, tooltips({ position: 'absolute' }), sigListener);
+      extensions.push(sigField, sigListener);
     }
 
     const state = EditorState.create({ doc: value, extensions });
