@@ -59,6 +59,8 @@ partial class Program
         var display = new DisplayHelper(realStdout, _widgetValues);
         var panels  = new PanelsHelper(realStdout);
         var db      = new DbHelper(realStdout);
+        var util    = new UtilHelper(realStdout);
+        UtilContext.Current = util;
         var globals = new ScriptGlobals { Display = display, Panels = panels, Db = db };
 
         var options = ScriptOptions.Default
@@ -167,6 +169,14 @@ partial class Program
                                     ? errProp.GetString()
                                     : null;
                                 db.ReceiveAddResult(requestId, error);
+                            }
+                            else if (msgType == "confirm_response"
+                                && root.TryGetProperty("requestId", out var cRidProp))
+                            {
+                                var requestId = cRidProp.GetString()!;
+                                var confirmed = root.TryGetProperty("confirmed", out var confProp)
+                                    && confProp.GetBoolean();
+                                util.ReceiveConfirmResponse(requestId, confirmed);
                             }
                             else
                             {

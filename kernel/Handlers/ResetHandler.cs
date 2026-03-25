@@ -16,6 +16,7 @@ partial class Program
         TextWriter realStdout)
     {
         script = null;
+        UtilHelper.ClearCacheStatic();
         foreach (var info in attachedDbs.Values)
         {
             try { await InjectDbContextAsync(info, options, globals); }

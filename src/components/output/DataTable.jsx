@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 
 export function DataTable({ rows }) {
   if (!Array.isArray(rows) || rows.length === 0) {
@@ -6,21 +6,60 @@ export function DataTable({ rows }) {
   }
   const [page, setPage]         = useState(0);
   const [pageSize, setPageSize] = useState(20);
+  const [sortCol, setSortCol]   = useState(null);
+  const [sortDir, setSortDir]   = useState('asc');
 
-  const columns   = Object.keys(rows[0]);
-  const total     = rows.length;
+  const columns = Object.keys(rows[0]);
+
+  const sortedRows = useMemo(() => {
+    if (sortCol === null) return rows;
+    return [...rows].sort((a, b) => {
+      const av = a[sortCol];
+      const bv = b[sortCol];
+      if (av === null || av === undefined) return sortDir === 'asc' ?  1 : -1;
+      if (bv === null || bv === undefined) return sortDir === 'asc' ? -1 :  1;
+      const cmp = typeof av === 'number' && typeof bv === 'number'
+        ? av - bv
+        : String(av).localeCompare(String(bv), undefined, { numeric: true });
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+  }, [rows, sortCol, sortDir]);
+
+  const onSort = (col) => {
+    if (sortCol === col) {
+      if (sortDir === 'asc') setSortDir('desc');
+      else { setSortCol(null); setSortDir('asc'); }
+    } else {
+      setSortCol(col);
+      setSortDir('asc');
+    }
+    setPage(0);
+  };
+
+  const total     = sortedRows.length;
   const pageCount = Math.ceil(total / pageSize);
   const start     = page * pageSize;
   const end       = Math.min(start + pageSize, total);
-  const pageRows  = rows.slice(start, end);
+  const pageRows  = sortedRows.slice(start, end);
 
   const onPageSize = (e) => { setPageSize(Number(e.target.value)); setPage(0); };
+
+  const sortIndicator = (col) =>
+    sortCol !== col
+      ? <span className="sort-indicator">⇅</span>
+      : <span className="sort-indicator active">{sortDir === 'asc' ? '▲' : '▼'}</span>;
 
   return (
     <div className="data-table-wrap">
       <table className="data-table">
         <thead>
-          <tr>{columns.map((c) => <th key={c}>{c}</th>)}</tr>
+          <tr>
+            {columns.map((c) => (
+              <th key={c} className="sortable" onClick={() => onSort(c)}>
+                {c}{sortIndicator(c)}
+              </th>
+            ))}
+          </tr>
         </thead>
         <tbody>
           {pageRows.map((row, i) => (

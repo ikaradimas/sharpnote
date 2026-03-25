@@ -32,16 +32,19 @@ An interactive C# notebook. Press **Ctrl+Enter** to run a cell, or click **▶ R
 |---------|--------|
 | Console output | \`Console.WriteLine("hello")\` |
 | HTML | \`Display.Html("<b>bold</b>")\` |
-| Table | \`Display.Table(rows)\` · \`.DisplayTable()\` |
+| Table | \`Display.Table(rows)\` · \`.DisplayTable()\` · click headers to **sort** |
 | Chart | \`Display.Graph(chartJsConfig)\` |
 | NuGet | \`#r "nuget: Package, Version"\` |
 | Logging | \`value.Log()\` · \`value.Log("label")\` |
 | Config | \`Config["Key"]\` · \`Config.Set("Key","val")\` · \`Config.Remove("Key")\` |
 | Database | Attach via **DB** panel or \`Db.Add\` / \`Db.Attach\` → \`mydb.Users.ToList()\` |
 | Panels | \`Panels.Open/Close/CloseAll(PanelId.*)\` · \`Panels.Dock/Float\` |
+| Util | \`obj.Dump()\` · \`Util.Time()\` · \`Util.Dif()\` · \`Util.HorizontalRun()\` · \`Util.Cache()\` · \`Util.ConfirmAsync()\` |
 | Auto-render | Return a value — type is detected automatically |`),
 
     md('## 1 · Basic C#'),
+
+    md('### Variables, LINQ, and Auto-render'),
 
     cs(`// Variables, interpolation, LINQ
 var name = "SharpNote";
@@ -57,6 +60,8 @@ DateTime.Now`),
 
     md('## 2 · HTML & Tables'),
 
+    md('### HTML Output and Tables'),
+
     cs(`Display.Html(@"
   <h3 style='color:#4ec9b0;margin:0 0 6px'>Rich HTML output</h3>
   <p>Render <strong>any HTML</strong> — styled text, lists, badges, whatever you need.</p>
@@ -70,6 +75,8 @@ var products = new[] {
 Display.Table(products);`),
 
     md('## 3 · Extension Methods'),
+
+    md('### Extension Methods'),
 
     cs(`// .Display() auto-detects type
 "Extension methods work directly on any object!".Display();
@@ -88,6 +95,8 @@ cities.DisplayTable();`),
 Use \`#r "nuget: PackageName, Version"\` to load any NuGet package inline.
 The first run downloads and caches it; subsequent runs are instant.`),
 
+    md('### NuGet — Newtonsoft.Json'),
+
     cs(`#r "nuget: Newtonsoft.Json, 13.0.3"
 using Newtonsoft.Json;
 
@@ -101,6 +110,8 @@ var json = JsonConvert.SerializeObject(payload, Formatting.Indented);
 Display.Html($"<pre style='color:#9cdcfe;margin:0'>{json}</pre>");`),
 
     md('## 5 · Charts'),
+
+    md('### Line Chart — Revenue vs Costs'),
 
     cs(`// Return a Chart.js config object — set output mode to "graph"
 new {
@@ -136,6 +147,8 @@ new {
 
     md('## 6 · CSV'),
 
+    md('### Inline CSV'),
+
     cs(`// Parse and render CSV inline
 Display.Csv("Name,Score,Grade\\nAlice,95,A\\nBob,82,B\\nCharlie,78,C+\\nDiana,91,A-");`),
 
@@ -144,6 +157,8 @@ Display.Csv("Name,Score,Grade\\nAlice,95,A\\nBob,82,B\\nCharlie,78,C+\\nDiana,91
 \`Display.NewHtml()\`, \`NewTable()\`, and \`NewGraph()\` return a **handle** whose \`Update*\` methods
 replace the output in-place while the cell is still running — useful for progress indicators,
 streaming results, and live charts.`),
+
+    md('### Progress Bar'),
 
     cs(`// Animated progress bar
 string Bar(int pct) => $@"<div style='font-family:sans-serif;padding:2px 0'>
@@ -159,6 +174,8 @@ for (int i = 1; i <= 20; i++) {
     progress.UpdateHtml(Bar(i * 5));
 }
 progress.UpdateHtml("<span style='color:#4ec9b0;font-weight:600'>✓ Complete!</span>");`),
+
+    md('### Live Updating Chart'),
 
     cs(`// Live chart — data updates in-place without flicker
 var rng = new Random(42);
@@ -205,6 +222,8 @@ and to a daily rotating file in \`logs/YYYY-MM-DD.log\` beside the app.
 - \`value.Log("label")\` — prefixes the entry with a label
 - Entries tagged **USER** appear in teal; notebook activity tagged **NOTEBOOK** appears in blue`),
 
+    md('### Logging Basics'),
+
     cs(`// Plain string
 "Starting data pipeline".Log();
 
@@ -226,6 +245,8 @@ summary.Log("summary");
 Display.Html($@"<p style='color:#4ec9b0'>
   {passing.Count} of {scores.Length} scores passed (threshold {threshold:P0})
 </p>");`),
+
+    md('### Async Loop with Logging'),
 
     cs(`// Logging inside an async loop — useful for tracking long-running work
 var results = new List<(int Step, double Value)>();
@@ -254,6 +275,8 @@ This is useful for environment-specific settings (URLs, feature flags, credentia
 | \`Config.All\` | \`IReadOnlyDictionary<string,string>\` |
 
 Config is persisted in the \`.cnb\` file alongside packages and sources.`),
+
+    md('### Reading Config Values'),
 
     cs(`// Read config values (try editing them in the Config panel first)
 var env     = Config.Get("Environment", "development");
@@ -302,6 +325,8 @@ variable (\`scratch\`) is available to the **next** cell, not the one that calle
 
 **Run the setup cell first, then run the query cell.**`),
 
+    md('### Step 1 — Register and Attach'),
+
     cs(`// ── Step 1: register and attach ──────────────────────────────────────────────
 // Run this cell once. The 'scratch' DbContext will be ready for the next cell.
 
@@ -309,6 +334,8 @@ await Db.AddAsync("scratch", DbProvider.SqliteMemory, "");
 Db.Attach("scratch");   // triggers schema introspection; 'scratch' available next cell
 
 Display.Html("<p style='color:#4ec9b0'>Setup sent — run the query cell below.</p>");`),
+
+    md('### Step 2 — Create Schema, Insert, and Query'),
 
     cs(`// ── Step 2: create schema, insert, and query ─────────────────────────────────
 // Run after the setup cell above has completed.
@@ -348,6 +375,8 @@ orders
 // Clean up
 Db.Detach("scratch");
 Db.Remove("scratch");`),
+
+    md('### Querying an External Database'),
 
     cs(`// ── Querying an externally-registered database ───────────────────────────────
 // Replace "mydb" with the variable name shown in the DB panel (derived from
@@ -390,6 +419,8 @@ Display.Html(@"
 All cells in a notebook share a single execution context — types, variables, and \`using\`
 directives defined in one cell are available in every cell that runs afterwards.`),
 
+    md('### Shared State — Dataset Setup'),
+
     cs(`// Define a record type and build a dataset — both persist for the cells below.
 public record Sale(string Region, string Product, int Qty, decimal Revenue);
 
@@ -405,6 +436,8 @@ var sales = new List<Sale> {
 };
 
 $"Dataset ready: {sales.Count} sales records across {sales.Select(s => s.Region).Distinct().Count()} regions".Display();`),
+
+    md('### Shared State — Aggregation'),
 
     cs(`// 'sales' and the Sale record are still in scope — no redefinition needed.
 var byRegion = sales
@@ -424,6 +457,8 @@ byRegion.DisplayTable();`),
 
 \`await\` works at the top level in any cell — no wrapper needed.
 The example below calls a public test API; it requires an internet connection.`),
+
+    md('### Async HTTP Fetch'),
 
     cs(`using System.Net.Http;
 using System.Text.Json;
@@ -446,6 +481,8 @@ var rows = posts.EnumerateArray().Select(p => {
 rows.DisplayTable();`),
 
     md('## 13 · More Chart Types'),
+
+    md('### Doughnut Chart'),
 
     cs(`// Doughnut — category share
 new {
@@ -471,6 +508,8 @@ new {
         },
     },
 }`, 'graph'),
+
+    md('### Scatter Chart'),
 
     cs(`// Scatter — correlation between two variables
 var rng = new Random(12);
@@ -503,6 +542,8 @@ new {
 
 Pattern matching, switch expressions, list patterns, and the range operator all work
 out of the box — Roslyn scripting targets C# 12.`),
+
+    md('### Records and Pattern Matching'),
 
     cs(`// Records + switch expression + pattern matching
 public record Shape;
@@ -543,6 +584,8 @@ shapes
         Area = Math.Round(Area(s), 3),
     })
     .DisplayTable();`),
+
+    md('### List Patterns and Ranges'),
 
     cs(`// List patterns, ranges, and collection expressions
 int[] data = [3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5];
@@ -644,6 +687,8 @@ Widgets are live UI controls rendered inline in cell output. Their values **pers
 
 All three return a \`WidgetHandle\` with implicit conversions to \`double\`, \`int\`, \`float\`, and \`string\`.`),
 
+    md('### Slider, Dropdown, and Date Picker'),
+
     cs(`// ── Slider + Dropdown + DatePicker demonstration ────────────────────────────
 
 // Slider: numeric range
@@ -675,10 +720,31 @@ Display.Html($@"
   </p>
 </div>");`),
 
+    md(`### Confirm Dialog
+
+\`Util.ConfirmAsync(message, title?)\` renders an **OK / Cancel** dialog inline in the cell output
+and **pauses execution** until the user clicks. Returns \`true\` (OK) or \`false\` (Cancel).
+Useful for guarding destructive operations or branching on user intent mid-script.`),
+
+    cs(`// Util.ConfirmAsync — pause the cell and wait for user confirmation.
+// Click OK to proceed, or Cancel to skip the action.
+
+if (await Util.ConfirmAsync("Proceed with the operation?", "Confirm"))
+{
+    "✓ Confirmed — running operation.".Display();
+    // your code here
+}
+else
+{
+    "✕ Cancelled by user.".Display();
+}`),
+
     md(`## 18 · Display.Markdown
 
 \`Display.Markdown(text)\` renders rich markdown from C# code — including **Mermaid diagrams** and **KaTeX math**.
 Useful for generating dynamic documentation, reports, or structured output.`),
+
+    md('### Dynamic Markdown Report'),
 
     cs(`// Generate a markdown report from computed data
 var items = new[] {
@@ -701,6 +767,8 @@ Display.Markdown($@"
 
 $$\\bar{{x}} = \\frac{{1}}{{n}} \\sum_{{i=1}}^{{n}} x_i = {items.Average(i => i.Score):F1}$$
 ");`),
+
+    md('### Mermaid Diagram from Code'),
 
     cs(`// Mermaid diagram generated from C# data
 var steps = new[] { "Fetch", "Parse", "Transform", "Validate", "Save" };
@@ -725,6 +793,8 @@ flowchart LR
 | \`PlotMode.RateOfChange\` | Plot the change since the last call |
 
 Open the **Graph panel** (Ctrl+Shift+R), then run the cell below to see both series update in real time.`),
+
+    md('### Display.Plot — Raw Value and Rate of Change'),
 
     cs(`// ── Display.Plot: raw value vs. rate of change ───────────────────────────────
 // Open the Graph panel (Ctrl+Shift+R) before running.
@@ -758,6 +828,8 @@ Scripts can open, close, dock, and float panels — useful in setup notebooks th
 **DockZone constants:** \`DockZone.Left\` · \`DockZone.Right\` · \`DockZone.Bottom\`
 
 **PanelId constants:** \`Log\` · \`Packages\` · \`Config\` · \`Db\` · \`Library\` · \`Variables\` · \`Toc\` · \`Files\` · \`Api\` · \`Graph\` · \`Todo\``),
+
+    md('### Dock Panels to Zones'),
 
     cs(`// ── Dock panels to zones ─────────────────────────────────────────────────────
 // Arrange the workspace for a data-exploration session.
@@ -795,6 +867,130 @@ Panels.Open(PanelId.Graph);
 Panels.Dock(PanelId.Graph, DockZone.Right, 0.42);
 
 Display.Html("<p style='color:#4ec9b0'>Focused layout: Graph panel only.</p>");`),
+
+    md(`## 21 · Util — LinqPAD Utilities
+
+SharpNote includes a \`Util\` global with LinqPAD-compatible helpers.
+\`.Dump()\` is a direct alias for \`.Display()\` — LinqPAD notebooks work as-is.
+
+| Method | Description |
+|--------|-------------|
+| \`obj.Dump(title?)\` | Alias for \`.Display()\` — auto-renders the value |
+| \`list.DumpTable(title?)\` | Alias for \`.DisplayTable()\` — renders as a table |
+| \`Util.Cmd(cmd, args?)\` | Run a shell command; capture and display stdout/stderr |
+| \`Util.Time(action, label?)\` | Benchmark an Action; display elapsed time |
+| \`Util.Time<T>(fn, label?)\` | Benchmark a Func<T>; display timing and return the value |
+| \`Util.Dif(a, b, labelA?, labelB?)\` | Line-by-line diff between two values |
+| \`Util.HorizontalRun(gap, items…)\` | Render multiple items side by side |
+| \`Util.Metatext(text)\` | Dimmed metadata annotation |
+| \`Util.Highlight(obj, color?)\` | Wrap output in a colored highlight box |
+| \`Util.Cache<T>(key, fn)\` | Memoize a computation; cached until kernel reset |
+| \`Util.ClearCache()\` | Clear all memoized entries |
+| \`await Util.ConfirmAsync(msg, title?)\` | Show OK / Cancel dialog; pauses cell until user responds |
+
+**Table sorting** — click any column header to sort ascending.
+Click again to reverse; click a third time to restore the original order.`),
+
+    md('### .Dump() and .DumpTable()'),
+
+    cs(`// .Dump() — LinqPAD-compatible alias for .Display()
+"LinqPAD users feel right at home!".Dump();
+
+// Arrays auto-render as tables
+new[] {
+  new { Name = "Alice", Score = 95, Grade = "A"  },
+  new { Name = "Bob",   Score = 82, Grade = "B+" },
+  new { Name = "Carol", Score = 78, Grade = "C+" },
+}.Dump("exam results");     // try clicking the column headers to sort`),
+
+    md('### Util.Time — Benchmarking'),
+
+    cs(`// Util.Time — benchmark a block of code
+Util.Time(() => {
+    var _ = Enumerable.Range(1, 1_000_000).Sum(x => (long)x);
+}, "sum 1 million integers");
+
+// Util.Time<T> — benchmark and capture the return value
+var primes = Util.Time(
+    () => Enumerable.Range(2, 998)
+            .Where(n => !Enumerable.Range(2, (int)Math.Sqrt(n)).Any(d => n % d == 0))
+            .ToList(),
+    "find primes < 1000");
+
+$"Found {primes.Count} primes below 1000".Display();`),
+
+    md('### Util.Dif — Line Diff'),
+
+    cs(`// Util.Dif — line-by-line diff between two values
+// Great for comparing config snapshots, JSON payloads, or any two objects.
+
+var before = new { Name = "Alice", Score = 85, Status = "pending",  Tags = new[] { "new" } };
+var after  = new { Name = "Alice", Score = 92, Status = "approved", Tags = new[] { "new", "verified" } };
+
+Util.Dif(before, after, "before", "after");`),
+
+    md('### Util.HorizontalRun — Side-by-Side Layout'),
+
+    cs(`// Util.HorizontalRun — display multiple outputs side by side
+var q1 = new[] {
+    new { Month = "Jan", Revenue = 42 },
+    new { Month = "Feb", Revenue = 58 },
+    new { Month = "Mar", Revenue = 51 },
+};
+var q2 = new[] {
+    new { Month = "Apr", Revenue = 74 },
+    new { Month = "May", Revenue = 83 },
+    new { Month = "Jun", Revenue = 91 },
+};
+
+Util.Metatext("H1 vs H2 revenue (click column headers to sort each table)");
+Util.HorizontalRun("24px", q1, q2);`),
+
+    md('### Util.Highlight — Colored Boxes'),
+
+    cs(`// Util.Highlight — draw attention to important output
+var health = new { Status = "Healthy", Latency = "12ms", Uptime = "99.9%", Errors = 0 };
+Util.Highlight(health, "#4ec9b0");         // teal — all good
+
+var warning = new { Status = "Degraded", Latency = "340ms", Uptime = "97.2%", Errors = 14 };
+Util.Highlight(warning, "#f4b246");        // amber — attention needed`),
+
+    md('### Util.Cache — Memoization'),
+
+    cs(`// Util.Cache — memoize expensive computations across cell runs.
+// Run this cell multiple times — the log entry only appears on the first run.
+// Reset the kernel to clear cached values.
+
+var dataset = Util.Cache("heavy-dataset", () => {
+    "cache miss — computing...".Log("Util.Cache");
+    return Enumerable.Range(1, 10_000)
+        .Select(i => new { Id = i, Value = Math.Round(Math.Sin(i * 0.1) * 100, 2) })
+        .ToList();
+});
+
+$"Loaded {dataset.Count:N0} rows (cached after first run)".Display();`),
+
+    md('### Util.Cmd — Shell Commands'),
+
+    cs(`// Util.Cmd — run a shell command and display the output
+// The result is also returned as a string for further processing.
+
+Util.Cmd("dotnet", "--version");`),
+
+    md('### Util.ConfirmAsync — Confirm Dialog'),
+
+    cs(`// Util.ConfirmAsync — pause execution and ask the user before continuing.
+// The cell awaits the user's click; OK returns true, Cancel returns false.
+// Great for guarding destructive operations in an interactive notebook.
+
+if (await Util.ConfirmAsync("Proceed with the operation?", "Confirm"))
+{
+    "✓ User confirmed — running operation.".Display();
+}
+else
+{
+    "✕ Cancelled by user.".Display();
+}`),
   ];
 }
 
