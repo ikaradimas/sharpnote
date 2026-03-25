@@ -12,9 +12,12 @@ import { COMPLETION_TIMEOUT, LINT_TIMEOUT } from '../constants.js';
  * @param {object}   opts.dbConnectionsRef    - Ref to current DB connections array
  * @param {function} opts.setVarInspectDialog - Dialog state setter for var_inspect_result
  * @param {function} opts.onPanelVisible      - (panelId, open: true|false|null) — open, close, or toggle a panel
+ * @param {function} opts.onPanelDock         - (panelId, zone, size: number|null) — dock panel to a zone
+ * @param {function} opts.onPanelFloat        - (panelId, x, y, w, h) — float panel with optional position/size
+ * @param {function} opts.onPanelCloseAll     - () — close all open panels
  * @param {function} opts.setDbConnections    - DB connections state setter
  */
-export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVarInspectDialog, onPanelVisible, setDbConnections }) {
+export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVarInspectDialog, onPanelVisible, onPanelDock, onPanelFloat, onPanelCloseAll, setDbConnections }) {
   const pendingResolversRef   = useRef({});
   const pendingCompletionsRef = useRef({});
   const pendingLintRef        = useRef({});
@@ -228,6 +231,18 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
 
         case 'panel_toggle':
           onPanelVisible?.(msg.panel, null);
+          break;
+
+        case 'panel_dock':
+          onPanelDock?.(msg.panel, msg.zone, msg.size ?? null);
+          break;
+
+        case 'panel_float':
+          onPanelFloat?.(msg.panel, msg.x ?? null, msg.y ?? null, msg.w ?? null, msg.h ?? null);
+          break;
+
+        case 'panel_close_all':
+          onPanelCloseAll?.();
           break;
 
         // ── DB management ───────────────────────────────────────────────────────

@@ -321,4 +321,107 @@ public class PanelControlTests : IAsyncDisposable
 
         msg.GetProperty("key").GetString().Should().Be("mykey");
     }
+
+    // ── Panels.CloseAll ───────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Panels_CloseAll_EmitsPanelCloseAllMessage()
+    {
+        await StartKernelAsync();
+        var id = NewId();
+        ClearMessages();
+        await SendAsync(new { type = "execute", id, code = "Panels.CloseAll();" });
+
+        await WaitForMessageAsync(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "panel_close_all");
+    }
+
+    // ── Panels.Dock ───────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Panels_Dock_EmitsPanelDockMessage()
+    {
+        await StartKernelAsync();
+        var id = NewId();
+        ClearMessages();
+        await SendAsync(new { type = "execute", id, code = "Panels.Dock(PanelId.Graph, DockZone.Right);" });
+
+        var msg = await WaitForMessageAsync(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "panel_dock" &&
+            el.TryGetProperty("panel", out var p) && p.GetString() == "graph");
+
+        msg.GetProperty("panel").GetString().Should().Be("graph");
+        msg.GetProperty("zone").GetString().Should().Be("right");
+        msg.GetProperty("size").ValueKind.Should().Be(JsonValueKind.Null);
+    }
+
+    [Fact]
+    public async Task Panels_Dock_WithFractionalSize_EmitsSize()
+    {
+        await StartKernelAsync();
+        var id = NewId();
+        ClearMessages();
+        await SendAsync(new { type = "execute", id, code = "Panels.Dock(PanelId.Log, DockZone.Bottom, 0.35);" });
+
+        var msg = await WaitForMessageAsync(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "panel_dock" &&
+            el.TryGetProperty("panel", out var p) && p.GetString() == "log");
+
+        msg.GetProperty("zone").GetString().Should().Be("bottom");
+        msg.GetProperty("size").GetDouble().Should().BeApproximately(0.35, 0.001);
+    }
+
+    [Fact]
+    public async Task Panels_Dock_WithAbsoluteSize_EmitsSize()
+    {
+        await StartKernelAsync();
+        var id = NewId();
+        ClearMessages();
+        await SendAsync(new { type = "execute", id, code = "Panels.Dock(PanelId.Db, DockZone.Left, 340.0);" });
+
+        var msg = await WaitForMessageAsync(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "panel_dock" &&
+            el.TryGetProperty("panel", out var p) && p.GetString() == "db");
+
+        msg.GetProperty("zone").GetString().Should().Be("left");
+        msg.GetProperty("size").GetDouble().Should().BeApproximately(340.0, 0.001);
+    }
+
+    // ── Panels.Float ──────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Panels_Float_EmitsPanelFloatMessage()
+    {
+        await StartKernelAsync();
+        var id = NewId();
+        ClearMessages();
+        await SendAsync(new { type = "execute", id, code = "Panels.Float(PanelId.Variables);" });
+
+        var msg = await WaitForMessageAsync(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "panel_float" &&
+            el.TryGetProperty("panel", out var p) && p.GetString() == "vars");
+
+        msg.GetProperty("x").ValueKind.Should().Be(JsonValueKind.Null);
+        msg.GetProperty("y").ValueKind.Should().Be(JsonValueKind.Null);
+        msg.GetProperty("w").ValueKind.Should().Be(JsonValueKind.Null);
+        msg.GetProperty("h").ValueKind.Should().Be(JsonValueKind.Null);
+    }
+
+    [Fact]
+    public async Task Panels_Float_WithPositionAndSize_EmitsCoordinates()
+    {
+        await StartKernelAsync();
+        var id = NewId();
+        ClearMessages();
+        await SendAsync(new { type = "execute", id, code = "Panels.Float(PanelId.Graph, x: 300, y: 150, width: 480, height: 360);" });
+
+        var msg = await WaitForMessageAsync(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "panel_float" &&
+            el.TryGetProperty("panel", out var p) && p.GetString() == "graph");
+
+        msg.GetProperty("x").GetInt32().Should().Be(300);
+        msg.GetProperty("y").GetInt32().Should().Be(150);
+        msg.GetProperty("w").GetInt32().Should().Be(480);
+        msg.GetProperty("h").GetInt32().Should().Be(360);
+    }
 }

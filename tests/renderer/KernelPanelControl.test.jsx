@@ -38,6 +38,9 @@ function mountHook(overrides = {}) {
     dbConnectionsRef:    { current: [] },
     setVarInspectDialog: vi.fn(),
     onPanelVisible:      vi.fn(),
+    onPanelDock:         vi.fn(),
+    onPanelFloat:        vi.fn(),
+    onPanelCloseAll:     vi.fn(),
     setDbConnections:    vi.fn(),
     ...overrides,
   };
@@ -202,5 +205,53 @@ describe('KernelPanelControl — db_detach', () => {
     mountHook({ dbConnectionsRef: { current: [conn] } });
     act(() => emit('nb-1', 'db_detach', { name: 'mydb' }));
     expect(mockSendToKernel).toHaveBeenCalledWith('nb-1', expect.objectContaining({ type: 'db_disconnect', connectionId: 'conn-2' }));
+  });
+});
+
+// ── panel_dock ────────────────────────────────────────────────────────────────
+
+describe('KernelPanelControl — panel_dock', () => {
+  it('calls onPanelDock(panel, zone, null) when no size provided', () => {
+    const opts = mountHook();
+    act(() => emit('nb-1', 'panel_dock', { panel: 'graph', zone: 'right' }));
+    expect(opts.onPanelDock).toHaveBeenCalledWith('graph', 'right', null);
+  });
+
+  it('calls onPanelDock with fractional size', () => {
+    const opts = mountHook();
+    act(() => emit('nb-1', 'panel_dock', { panel: 'log', zone: 'bottom', size: 0.35 }));
+    expect(opts.onPanelDock).toHaveBeenCalledWith('log', 'bottom', 0.35);
+  });
+
+  it('calls onPanelDock with absolute pixel size', () => {
+    const opts = mountHook();
+    act(() => emit('nb-1', 'panel_dock', { panel: 'db', zone: 'left', size: 340 }));
+    expect(opts.onPanelDock).toHaveBeenCalledWith('db', 'left', 340);
+  });
+});
+
+// ── panel_float ───────────────────────────────────────────────────────────────
+
+describe('KernelPanelControl — panel_float', () => {
+  it('calls onPanelFloat with nulls when no position provided', () => {
+    const opts = mountHook();
+    act(() => emit('nb-1', 'panel_float', { panel: 'vars' }));
+    expect(opts.onPanelFloat).toHaveBeenCalledWith('vars', null, null, null, null);
+  });
+
+  it('calls onPanelFloat with position and size', () => {
+    const opts = mountHook();
+    act(() => emit('nb-1', 'panel_float', { panel: 'graph', x: 300, y: 150, w: 480, h: 360 }));
+    expect(opts.onPanelFloat).toHaveBeenCalledWith('graph', 300, 150, 480, 360);
+  });
+});
+
+// ── panel_close_all ───────────────────────────────────────────────────────────
+
+describe('KernelPanelControl — panel_close_all', () => {
+  it('calls onPanelCloseAll()', () => {
+    const opts = mountHook();
+    act(() => emit('nb-1', 'panel_close_all', {}));
+    expect(opts.onPanelCloseAll).toHaveBeenCalledOnce();
   });
 });

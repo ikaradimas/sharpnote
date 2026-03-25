@@ -72,7 +72,7 @@
 - **Table of Contents** — live heading outline from markdown cells; click any entry to scroll to it
 - **To Do panel** — auto-scans code cells for `// TODO`, `// FIXME`, and `// BUG` comments; click any item to scroll to and highlight the originating cell (`Ctrl+Shift+O`)
 - **Config panel** — per-notebook key/value store; readable via `Config["key"]` and writable from code via `Config.Set(key, value)` / `Config.Remove(key)` — changes reflect in the panel in real time
-- **Panel scripting API** — `Panels.Open/Close/Toggle(PanelId.*)` lets scripts control panel visibility; `Db.Add/Remove/Attach/Detach/ListAsync` manage database connections entirely from code
+- **Panel scripting API** — `Panels.Open/Close/Toggle/CloseAll` controls panel visibility; `Panels.Dock(PanelId.*, DockZone.*, size?)` and `Panels.Float(PanelId.*, x?, y?, width?, height?)` move panels between dock zones or float them with precise position and size; `Db.Add/Remove/Attach/Detach/ListAsync` manages database connections from code
 - **Dock layout** — panels can be docked to left / right / bottom zones, floated freely, or dragged between zones; opening a panel via the toolbar auto-switches to its tab and briefly highlights it; tab bars show scroll-shadow indicators when tabs overflow; layouts can be saved and restored by name
 
 ### Data & Integration
@@ -217,7 +217,12 @@ Config.Remove("ApiKey");     // delete an entry
 Panels.Open(PanelId.Graph);   // open the Graph panel
 Panels.Close(PanelId.Log);    // close the Log panel
 Panels.Toggle(PanelId.Db);    // toggle the DB panel
-// PanelId constants: Log, Packages, Config, Db, Library, Variables, Toc, Files, Api, Graph, Todo
+Panels.CloseAll();            // close every open panel
+Panels.Dock(PanelId.Graph, DockZone.Right, 0.35); // dock at 35% of window width
+Panels.Dock(PanelId.Log, DockZone.Bottom, 200);   // dock at 200 px tall
+Panels.Float(PanelId.Variables, x: 800, y: 120, width: 400, height: 500); // float with position+size
+// PanelId constants:  Log, Packages, Config, Db, Library, Variables, Toc, Files, Api, Graph, Todo
+// DockZone constants: Left, Right, Bottom
 
 // ── Database management ───────────────────────────────────────────────────────
 Db.Add("mydb", DbProvider.Sqlite, "Data Source=/data/mydb.db"); // add to global list
@@ -266,6 +271,9 @@ Messages are newline-delimited JSON objects. The renderer sends to the kernel; t
 | `panel_open` | `{ panel }` — from `Panels.Open`; opens the named panel |
 | `panel_close` | `{ panel }` — from `Panels.Close`; closes the named panel |
 | `panel_toggle` | `{ panel }` — from `Panels.Toggle`; toggles the named panel |
+| `panel_close_all` | — — from `Panels.CloseAll`; closes all open panels |
+| `panel_dock` | `{ panel, zone, size? }` — from `Panels.Dock`; moves panel to zone; `size < 1` = fraction, `size ≥ 1` = pixels |
+| `panel_float` | `{ panel, x?, y?, w?, h? }` — from `Panels.Float`; floats panel with optional position/size |
 | `db_add` | `{ name, provider, connectionString }` — from `Db.Add` |
 | `db_remove` | `{ name }` — from `Db.Remove` |
 | `db_attach` | `{ name }` — from `Db.Attach`; triggers `db_connect` to the kernel |

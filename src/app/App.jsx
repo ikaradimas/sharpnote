@@ -92,7 +92,16 @@ export function App() {
     handleInsertLibraryFile, handleInjectApiCall, openPinnedNotebooks,
   } = useNotebookManager({ cancelPendingCellsRef, saveSettingsRef });
 
-  // ── Panel visibility (shared by close button, menu, and kernel messages) ─────
+  const {
+    dockLayout, setDockLayout, savedLayouts, setSavedLayouts,
+    draggingPanel, hoveredDropZone, layoutKey, flashingPanel,
+    dockLayoutRef, savedLayoutsRef,
+    handlePanelZoneChange, handleZoneTabChange, handleFocusPanel,
+    handleZoneResizeEnd, handleFloatMove, handleStartDrag,
+    handleSaveLayout, handleLoadLayout, handleDeleteLayout,
+  } = useDockLayout({ saveSettingsRef });
+
+  // ── Panel visibility and layout (shared by close button, menu, and kernel messages) ──
 
   const setPanelVisible = useCallback((panelId, open) => {
     // open: true = open, false = close, null = toggle
@@ -112,19 +121,57 @@ export function App() {
     }
   }, [setNb, setLibraryPanelOpen, setFilesPanelOpen, setApiPanelOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const setPanelDock = useCallback((panelId, zone, size) => {
+    setDockLayout((prev) => {
+      const assignments = { ...prev.assignments, [panelId]: zone };
+      const zoneTab     = { ...prev.zoneTab, [zone]: panelId };
+      if (size == null) return { ...prev, assignments, zoneTab };
+      const dim = zone === 'bottom' ? window.innerHeight : window.innerWidth;
+      const px  = size > 0 && size < 1 ? Math.round(dim * size) : Math.round(size);
+      return { ...prev, assignments, zoneTab, sizes: { ...prev.sizes, [zone]: px } };
+    });
+    saveSettingsRef.current();
+  }, [setDockLayout, saveSettingsRef]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const setPanelFloat = useCallback((panelId, x, y, w, h) => {
+    setDockLayout((prev) => {
+      const existing = prev.floatPos[panelId] ?? { x: 200, y: 100, w: DEFAULT_FLOAT_W, h: DEFAULT_FLOAT_H };
+      return {
+        ...prev,
+        assignments: { ...prev.assignments, [panelId]: 'float' },
+        floatPos: {
+          ...prev.floatPos,
+          [panelId]: { x: x ?? existing.x, y: y ?? existing.y, w: w ?? existing.w, h: h ?? existing.h },
+        },
+      };
+    });
+    saveSettingsRef.current();
+  }, [setDockLayout, saveSettingsRef]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const setPanelCloseAll = useCallback(() => {
+    setLibraryPanelOpen(false);
+    setFilesPanelOpen(false);
+    setApiPanelOpen(false);
+    const nbId = activeIdRef.current;
+    if (isNotebookId(nbId))
+      setNb(nbId, () => ({
+        logPanelOpen: false, nugetPanelOpen: false, configPanelOpen: false,
+        dbPanelOpen: false, varsPanelOpen: false, tocPanelOpen: false,
+        graphPanelOpen: false, todoPanelOpen: false,
+      }));
+  }, [setNb, setLibraryPanelOpen, setFilesPanelOpen, setApiPanelOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const { runCell, runAll, runFrom, runTo, handleInterrupt, handleReset,
           requestCompletions, requestLint, cancelPendingCells } =
-    useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVarInspectDialog, onPanelVisible: setPanelVisible, setDbConnections });
+    useKernelManager({
+      setNb, notebooksRef, dbConnectionsRef, setVarInspectDialog,
+      onPanelVisible: setPanelVisible,
+      onPanelDock:    setPanelDock,
+      onPanelFloat:   setPanelFloat,
+      onPanelCloseAll: setPanelCloseAll,
+      setDbConnections,
+    });
   cancelPendingCellsRef.current = cancelPendingCells;
-
-  const {
-    dockLayout, setDockLayout, savedLayouts, setSavedLayouts,
-    draggingPanel, hoveredDropZone, layoutKey, flashingPanel,
-    dockLayoutRef, savedLayoutsRef,
-    handlePanelZoneChange, handleZoneTabChange, handleFocusPanel,
-    handleZoneResizeEnd, handleFloatMove, handleStartDrag,
-    handleSaveLayout, handleLoadLayout, handleDeleteLayout,
-  } = useDockLayout({ saveSettingsRef });
 
   // Wire up the settings-persist function. Called by hooks and effects whenever
   // settings need persisting. Reads all state from stable refs in one place.
