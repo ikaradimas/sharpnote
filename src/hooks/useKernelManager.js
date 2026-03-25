@@ -1,21 +1,27 @@
 import { useRef, useCallback, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { COMPLETION_TIMEOUT, LINT_TIMEOUT } from '../constants.js';
+import { COMPLETION_TIMEOUT, LINT_TIMEOUT, SIGNATURE_TIMEOUT } from '../constants.js';
 
 /**
  * Manages kernel communication: message routing, cell execution,
  * completions, lint, interrupt, and reset.
  *
- * @param {object} opts
- * @param {function} opts.setNb            - Notebook state updater from useNotebookManager
- * @param {object}   opts.notebooksRef     - Ref to current notebooks array
- * @param {object}   opts.dbConnectionsRef - Ref to current DB connections array
+ * @param {object}   opts
+ * @param {function} opts.setNb               - Notebook state updater from useNotebookManager
+ * @param {object}   opts.notebooksRef        - Ref to current notebooks array
+ * @param {object}   opts.dbConnectionsRef    - Ref to current DB connections array
  * @param {function} opts.setVarInspectDialog - Dialog state setter for var_inspect_result
+ * @param {function} opts.onPanelVisible      - (panelId, open: true|false|null) — open, close, or toggle a panel
+ * @param {function} opts.onPanelDock         - (panelId, zone, size: number|null) — dock panel to a zone
+ * @param {function} opts.onPanelFloat        - (panelId, x, y, w, h) — float panel with optional position/size
+ * @param {function} opts.onPanelCloseAll     - () — close all open panels
+ * @param {function} opts.setDbConnections    - DB connections state setter
  */
-export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVarInspectDialog }) {
+export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVarInspectDialog, onPanelVisible, onPanelDock, onPanelFloat, onPanelCloseAll, setDbConnections }) {
   const pendingResolversRef   = useRef({});
   const pendingCompletionsRef = useRef({});
   const pendingLintRef        = useRef({});
+  const pendingSignatureRef   = useRef({});
   const prevVarsSnapRef       = useRef({});
 
   const cancelPendingCells = useCallback((cells) => {
@@ -179,6 +185,15 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
           break;
         }
 
+        case 'signature_result': {
+          const resolve = pendingSignatureRef.current[msg.requestId];
+          if (resolve) {
+            delete pendingSignatureRef.current[msg.requestId];
+            resolve({ signatures: msg.signatures || [], activeParam: msg.activeParam || 0 });
+          }
+          break;
+        }
+
         case 'nuget_status':
           setNb(notebookId, (n) => ({
             nugetPackages: n.nugetPackages.map((p) =>
@@ -209,10 +224,135 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
         case 'vars_update':
           setNb(notebookId, { vars: msg.vars });
           break;
-          break;
 
         case 'graph_clear':
           setNb(notebookId, { varHistory: {} });
+          break;
+
+        // ── Panel control ───────────────────────────────────────────────────────
+
+        case 'panel_open':
+          onPanelVisible?.(msg.panel, true);
+          break;
+
+        case 'panel_close':
+          onPanelVisible?.(msg.panel, false);
+          break;
+
+        case 'panel_toggle':
+          onPanelVisible?.(msg.panel, null);
+          break;
+
+        case 'panel_dock':
+          onPanelDock?.(msg.panel, msg.zone, msg.size ?? null);
+          break;
+
+        case 'panel_float':
+          onPanelFloat?.(msg.panel, msg.x ?? null, msg.y ?? null, msg.w ?? null, msg.h ?? null);
+          break;
+
+        case 'panel_close_all':
+          onPanelCloseAll?.();
+          break;
+
+        // ── DB management ───────────────────────────────────────────────────────
+
+        case 'db_add': {
+          const duplicate = dbConnectionsRef.current.some(
+            (c) => c.name.toLowerCase() === msg.name.toLowerCase()
+          );
+          if (duplicate) {
+            if (msg.requestId) {
+              window.electronAPI?.sendToKernel(notebookId, {
+                type: 'db_add_result',
+                requestId: msg.requestId,
+                error: `A connection named "${msg.name}" already exists.`,
+              });
+            }
+            break;
+          }
+          const newConn = { id: uuidv4(), name: msg.name, provider: msg.provider, connectionString: msg.connectionString };
+          setDbConnections?.((cs) => [...cs, newConn]);
+          // Also update the ref immediately: React's state updater is called lazily, so
+          // dbConnectionsRef.current would still be stale if db_attach arrives in the
+          // same IPC message batch (e.g. Db.Add and Db.Attach called in the same cell).
+          dbConnectionsRef.current = [...dbConnectionsRef.current, newConn];
+          if (msg.requestId) {
+            window.electronAPI?.sendToKernel(notebookId, {
+              type: 'db_add_result',
+              requestId: msg.requestId,
+            });
+          }
+          break;
+        }
+
+        case 'db_remove':
+          setDbConnections?.((cs) => cs.filter((c) => c.name !== msg.name));
+          break;
+
+        case 'db_attach': {
+          const conn = dbConnectionsRef.current.find((c) => c.name === msg.name);
+          if (!conn) break;
+          const varName = conn.name
+            .replace(/[^a-zA-Z0-9]+(.)/g, (_, ch) => ch.toUpperCase())
+            .replace(/^[A-Z]/, (ch) => ch.toLowerCase())
+            .replace(/^[^a-zA-Z]/, 'db');
+          setNb(notebookId, (n) => ({
+            attachedDbs: n.attachedDbs.some((d) => d.connectionId === conn.id)
+              ? n.attachedDbs
+              : [...n.attachedDbs, { connectionId: conn.id, status: 'connecting', varName }],
+          }));
+          window.electronAPI?.sendToKernel(notebookId, {
+            type: 'db_connect',
+            connectionId: conn.id,
+            name: conn.name,
+            provider: conn.provider,
+            connectionString: conn.connectionString,
+            varName,
+            ...(msg.cellId ? { cellId: msg.cellId } : {}),
+          });
+          break;
+        }
+
+        case 'db_detach': {
+          const connToDetach = dbConnectionsRef.current.find((c) => c.name === msg.name);
+          if (!connToDetach) break;
+          window.electronAPI?.sendToKernel(notebookId, {
+            type: 'db_disconnect',
+            connectionId: connToDetach.id,
+          });
+          break;
+        }
+
+        case 'db_list_request': {
+          const nb = notebooksRef.current.find((n) => n.id === notebookId);
+          const connections = (dbConnectionsRef.current || []).map((c) => ({
+            name: c.name,
+            provider: c.provider,
+            isAttached: !!(nb?.attachedDbs?.some((d) => d.connectionId === c.id && d.status === 'ready')),
+          }));
+          window.electronAPI?.sendToKernel(notebookId, {
+            type: 'db_list_response',
+            requestId: msg.requestId,
+            connections,
+          });
+          break;
+        }
+
+        // ── Config write-back ───────────────────────────────────────────────────
+
+        case 'config_set':
+          setNb(notebookId, (n) => {
+            const existing = n.config.findIndex((e) => e.key === msg.key);
+            const config = existing >= 0
+              ? n.config.map((e, i) => (i === existing ? { ...e, value: msg.value } : e))
+              : [...n.config, { key: msg.key, value: msg.value }];
+            return { config };
+          });
+          break;
+
+        case 'config_remove':
+          setNb(notebookId, (n) => ({ config: n.config.filter((e) => e.key !== msg.key) }));
           break;
 
         case 'nuget_preload_complete':
@@ -249,13 +389,22 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
           break;
 
         case 'db_error':
-          setNb(notebookId, (n) => ({
-            attachedDbs: n.attachedDbs.map((d) =>
+          setNb(notebookId, (n) => {
+            const attachedDbs = n.attachedDbs.map((d) =>
               d.connectionId === msg.connectionId
                 ? { ...d, status: 'error', error: msg.message }
                 : d
-            ),
-          }));
+            );
+            if (!msg.cellId) return { attachedDbs };
+            const cellOutputs = n.outputs[msg.cellId] || [];
+            return {
+              attachedDbs,
+              outputs: {
+                ...n.outputs,
+                [msg.cellId]: [...cellOutputs, { type: 'error', id: msg.cellId, message: msg.message }],
+              },
+            };
+          });
           break;
 
         case 'db_disconnected':
@@ -390,6 +539,21 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
     });
   }, []);
 
+  const requestSignature = useCallback((notebookId, code, position) => {
+    return new Promise((resolve) => {
+      if (!window.electronAPI) return resolve(null);
+      const requestId = uuidv4();
+      pendingSignatureRef.current[requestId] = resolve;
+      window.electronAPI.sendToKernel(notebookId, { type: 'signature', requestId, code, position });
+      setTimeout(() => {
+        if (pendingSignatureRef.current[requestId]) {
+          delete pendingSignatureRef.current[requestId];
+          resolve(null);
+        }
+      }, SIGNATURE_TIMEOUT);
+    });
+  }, []);
+
   return {
     runCell,
     runAll,
@@ -399,6 +563,7 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
     handleReset,
     requestCompletions,
     requestLint,
+    requestSignature,
     cancelPendingCells,
   };
 }

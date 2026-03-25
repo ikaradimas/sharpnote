@@ -36,8 +36,9 @@ An interactive C# notebook. Press **Ctrl+Enter** to run a cell, or click **▶ R
 | Chart | \`Display.Graph(chartJsConfig)\` |
 | NuGet | \`#r "nuget: Package, Version"\` |
 | Logging | \`value.Log()\` · \`value.Log("label")\` |
-| Config | \`Config["Key"]\` · \`Config.Get("Key", "default")\` |
-| Database | Attach via **DB** panel → \`mydb.Users.ToList()\` |
+| Config | \`Config["Key"]\` · \`Config.Set("Key","val")\` · \`Config.Remove("Key")\` |
+| Database | Attach via **DB** panel or \`Db.Add\` / \`Db.Attach\` → \`mydb.Users.ToList()\` |
+| Panels | \`Panels.Open/Close/CloseAll(PanelId.*)\` · \`Panels.Dock/Float\` |
 | Auto-render | Return a value — type is detected automatically |`),
 
     md('## 1 · Basic C#'),
@@ -271,25 +272,86 @@ Display.Html($@"
 
     md(`## 10 · Databases
 
-Use the **DB** button in the toolbar to open the database panel.
+There are two ways to connect a database to a notebook:
 
-1. Click **+ Add** to register a named connection (SQLite, SQL Server, or PostgreSQL)
-2. Click **Attach** to connect it to this notebook — the kernel introspects the schema and injects a typed \`DbContext\` variable
-3. The variable name is derived from the connection name (e.g. *"My CRM"* → \`myCrm\`)
-4. All tables appear as strongly-typed \`DbSet<T>\` properties — autocomplete works out of the box
+**Via the DB panel** — click **+ Add** to register a connection, then **Attach** to connect it. The kernel introspects the schema and injects a typed \`DbContext\` variable. The variable name is derived from the connection name (e.g. *"My CRM"* → \`myCrm\`).
+
+**From code** — use the \`Db\` global to register and attach connections programmatically (see the in-memory example below):
+
+\`\`\`
+Db.Add(name, DbProvider.Sqlite, connectionString)  // register
+Db.Attach(name)                                     // attach → injects DbContext
+Db.Detach(name) / Db.Remove(name)                   // clean up
+var conns = await Db.ListAsync()                    // DbEntry[] with IsAttached flag
+\`\`\`
 
 | Task | Expression |
 |------|------------|
 | Fetch all rows | \`mydb.Users.ToList()\` |
 | Filter | \`mydb.Orders.Where(o => o.Total > 100).ToList()\` |
 | Project | \`mydb.Products.Select(p => new { p.Name, p.Price }).ToList()\` |
-| Count | \`mydb.Users.Count()\` |
-| Raw SQL | \`mydb.Users.FromSqlRaw("SELECT * FROM users WHERE active=1").ToList()\` |
-| Async | \`await mydb.Orders.ToListAsync()\` |
+| Raw SQL | \`mydb.Database.SqlQueryRaw<T>("SELECT …").ToList()\` |
+| Add connection | \`await Db.AddAsync(name, provider, connStr)\` — throws if name already exists |
+| Async | \`await mydb.Orders.ToListAsync()\` |`),
 
-The connection string stored in the DB panel is passed directly to EF Core — no code changes needed when switching environments.`),
+    md(`### 10a · In-memory SQLite from code
 
-    cs(`// ── Replace "mydb" with your actual connection variable name ──────────────
+\`Db.Add\` + \`Db.Attach\` register and connect a database without touching the DB panel.
+\`Db.Attach\` triggers schema introspection via a round-trip to the renderer, so the injected
+variable (\`scratch\`) is available to the **next** cell, not the one that called \`Attach\`.
+
+**Run the setup cell first, then run the query cell.**`),
+
+    cs(`// ── Step 1: register and attach ──────────────────────────────────────────────
+// Run this cell once. The 'scratch' DbContext will be ready for the next cell.
+
+await Db.AddAsync("scratch", DbProvider.SqliteMemory, "");
+Db.Attach("scratch");   // triggers schema introspection; 'scratch' available next cell
+
+Display.Html("<p style='color:#4ec9b0'>Setup sent — run the query cell below.</p>");`),
+
+    cs(`// ── Step 2: create schema, insert, and query ─────────────────────────────────
+// Run after the setup cell above has completed.
+
+scratch.Database.ExecuteSqlRaw(@"
+    CREATE TABLE IF NOT EXISTS Orders (
+        Id      INTEGER PRIMARY KEY,
+        Product TEXT    NOT NULL,
+        Qty     INTEGER NOT NULL,
+        Price   REAL    NOT NULL
+    )");
+scratch.Database.ExecuteSqlRaw(@"
+    INSERT INTO Orders VALUES
+        (1, 'Widget A', 3,  9.99),
+        (2, 'Widget B', 1, 24.99),
+        (3, 'Widget A', 7,  9.99),
+        (4, 'Gadget',   2, 49.99)");
+
+record Order(long Id, string Product, int Qty, double Price);
+var orders = scratch.Database
+    .SqlQueryRaw<Order>("SELECT Id, Product, Qty, Price FROM Orders ORDER BY Id")
+    .ToList();
+
+Display.Table(orders);
+
+// LINQ aggregation
+orders
+    .GroupBy(o => o.Product)
+    .Select(g => new {
+        Product = g.Key,
+        Units   = g.Sum(o => o.Qty),
+        Revenue = Math.Round(g.Sum(o => o.Qty * o.Price), 2),
+    })
+    .OrderByDescending(s => s.Revenue)
+    .DisplayTable();
+
+// Clean up
+Db.Detach("scratch");
+Db.Remove("scratch");`),
+
+    cs(`// ── Querying an externally-registered database ───────────────────────────────
+// Replace "mydb" with the variable name shown in the DB panel (derived from
+// the connection name you entered when registering it).
 
 // 1. List all rows as a table
 // mydb.Users.ToList().DisplayTable();
@@ -305,44 +367,23 @@ The connection string stored in the DB panel is passed directly to EF Core — n
 
 // 3. Aggregate stats
 // var stats = new {
-//     Total  = mydb.Orders.Count(),
+//     Total   = mydb.Orders.Count(),
 //     Revenue = mydb.Orders.Sum(o => (decimal?)o.Total) ?? 0,
 //     Avg     = mydb.Orders.Average(o => (decimal?)o.Total) ?? 0,
 // };
 // stats.Display();
 
-// 4. Raw SQL (useful for complex queries or non-EF operations)
-// mydb.Database.ExecuteSqlRaw("UPDATE settings SET value='1' WHERE key='maintenance'");
+// ── Connection string reference ───────────────────────────────────────────────
+// SQLite:      Data Source=/path/to/database.db
+// SQL Server:  Server=localhost;Database=MyDb;User Id=sa;Password=…;TrustServerCertificate=True
+// PostgreSQL:  Host=localhost;Database=mydb;Username=postgres;Password=…
+// Redis:       localhost:6379
 
 Display.Html(@"
 <p style='color:#5a7080;font-style:italic;font-size:12px'>
-  Attach a database in the <strong style='color:#c4964a'>DB panel</strong> to run these examples.<br>
-  The variable name shown in the schema panel (e.g. <code style='color:#6889a0'>mydb</code>)
-  is what you use in code.
+  Attach a database in the <strong style='color:#c4964a'>DB panel</strong> (or run the in-memory
+  example above) to query it here.
 </p>");`),
-
-    cs(`// ── Connection string examples ────────────────────────────────────────────
-//
-// SQLite  (file path):
-//   Data Source=/path/to/database.db
-//
-// SQL Server:
-//   Server=localhost;Database=MyDb;User Id=sa;Password=secret;TrustServerCertificate=True
-//
-// PostgreSQL:
-//   Host=localhost;Database=mydb;Username=postgres;Password=secret
-//
-// ── Multiple databases in the same notebook ───────────────────────────────
-// Attach more than one connection — each gets its own variable:
-//
-//   crm.Customers.ToList()          // "CRM" connection
-//   analytics.PageViews.Count()     // "Analytics" connection
-//
-// ── Reset-safe ────────────────────────────────────────────────────────────
-// All attached databases are automatically re-injected after a kernel reset,
-// so your variables are always available without re-attaching.
-
-Display.Html(@"<pre style='color:#6889a0;margin:0'>// Ready — attach a DB and start querying</pre>");`),
 
     md(`## 11 · Shared State & Records
 
@@ -701,6 +742,59 @@ for (int step = 0; step < 200; step++)
 
     await Task.Delay(30);
 }`),
+
+    md(`## 20 · Panels Layout API
+
+Scripts can open, close, dock, and float panels — useful in setup notebooks that configure the workspace before you start working.
+
+| Method | Description |
+|--------|-------------|
+| \`Panels.Open(PanelId.*)\` | Make a panel visible |
+| \`Panels.Close(PanelId.*)\` | Hide a panel |
+| \`Panels.CloseAll()\` | Close every open panel at once |
+| \`Panels.Dock(PanelId.*, DockZone.*, size?)\` | Move to a dock zone; \`size < 1\` = fraction of window, \`size ≥ 1\` = pixels |
+| \`Panels.Float(PanelId.*, x?, y?, width?, height?)\` | Float with optional exact position and size |
+
+**DockZone constants:** \`DockZone.Left\` · \`DockZone.Right\` · \`DockZone.Bottom\`
+
+**PanelId constants:** \`Log\` · \`Packages\` · \`Config\` · \`Db\` · \`Library\` · \`Variables\` · \`Toc\` · \`Files\` · \`Api\` · \`Graph\` · \`Todo\``),
+
+    cs(`// ── Dock panels to zones ─────────────────────────────────────────────────────
+// Arrange the workspace for a data-exploration session.
+
+// Right zone: Graph at 38% of window width, Variables below it
+Panels.Open(PanelId.Graph);
+Panels.Dock(PanelId.Graph, DockZone.Right, 0.38);
+
+Panels.Open(PanelId.Variables);
+Panels.Dock(PanelId.Variables, DockZone.Right);
+
+// Bottom zone: Log panel at 160 px tall
+Panels.Open(PanelId.Log);
+Panels.Dock(PanelId.Log, DockZone.Bottom, 160);
+
+Display.Html("<p style='color:#4ec9b0'>Layout applied — Graph and Variables on the right, Log at the bottom.</p>");`),
+
+    cs(`// ── Float panels with precise position and size ───────────────────────────────
+// Float two panels side by side on the right half of the screen.
+
+Panels.Open(PanelId.Variables);
+Panels.Float(PanelId.Variables, x: 880, y: 80, width: 380, height: 480);
+
+Panels.Open(PanelId.Config);
+Panels.Float(PanelId.Config, x: 880, y: 580, width: 380, height: 260);
+
+Display.Html("<p style='color:#4ec9b0'>Variables and Config floating — drag them anywhere.</p>");`),
+
+    cs(`// ── CloseAll then open only what you need ────────────────────────────────────
+// Clear every open panel, then set a focused single-panel layout.
+
+Panels.CloseAll();
+
+Panels.Open(PanelId.Graph);
+Panels.Dock(PanelId.Graph, DockZone.Right, 0.42);
+
+Display.Html("<p style='color:#4ec9b0'>Focused layout: Graph panel only.</p>");`),
   ];
 }
 

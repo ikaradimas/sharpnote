@@ -60,7 +60,19 @@ vi.mock('@codemirror/view', () => ({
   lineNumbers: () => ({ lineNumbers: true }),
   highlightActiveLine: () => ({ highlightActiveLine: true }),
   highlightActiveLineGutter: () => ({ highlightActiveLineGutter: true }),
+  showTooltip: { from: (f) => ({ showTooltip: f }) },
+  tooltips: () => ({ tooltips: true }),
 }));
+
+const mockStateEffect = { define: () => { const e = (v) => ({ effect: v }); e.is = () => false; return e; } };
+const mockStateField = {
+  define: ({ create, update, provide }) => ({
+    stateField: true,
+    create,
+    update,
+    provide,
+  }),
+};
 
 vi.mock('@codemirror/state', () => ({
   EditorState: {
@@ -68,6 +80,9 @@ vi.mock('@codemirror/state', () => ({
     readOnly: { of: (v) => ({ readOnly: v }) },
   },
   Compartment: mockCompartment,
+  Prec: { highest: (ext) => ext },
+  StateEffect: mockStateEffect,
+  StateField: mockStateField,
 }));
 
 vi.mock('@codemirror/commands', () => ({
@@ -97,6 +112,7 @@ vi.mock('@codemirror/legacy-modes/mode/clike', () => ({
 vi.mock('@codemirror/autocomplete', () => ({
   autocompletion: () => ({ autocompletion: true }),
   completionKeymap: [],
+  acceptCompletion: () => false,
 }));
 
 vi.mock('@codemirror/lint', () => ({

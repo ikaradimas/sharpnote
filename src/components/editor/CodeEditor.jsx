@@ -1,12 +1,12 @@
 import React, { useEffect, useRef } from 'react';
-import { EditorState, Compartment } from '@codemirror/state';
-import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter } from '@codemirror/view';
+import { EditorState, StateEffect, StateField, Compartment, Prec } from '@codemirror/state';
+import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter, showTooltip } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { StreamLanguage } from '@codemirror/language';
 import { csharp } from '@codemirror/legacy-modes/mode/clike';
-import { autocompletion, completionKeymap } from '@codemirror/autocomplete';
+import { autocompletion, completionKeymap, acceptCompletion } from '@codemirror/autocomplete';
 import { linter } from '@codemirror/lint';
 import { CSHARP_KEYWORDS } from '../../config/csharp-keywords.js';
 
@@ -16,7 +16,7 @@ export let _setCursorPos = null;
 export function registerCursorPosSetter(fn) { _setCursorPos = fn; }
 
 export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
-                      onRequestCompletions, onRequestLint, readOnly = false,
+                      onRequestCompletions, onRequestLint, onRequestSignature, readOnly = false,
                       lintEnabled = true, cellIndex = null }) {
   const containerRef = useRef(null);
   const viewRef = useRef(null);
@@ -24,6 +24,7 @@ export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
   const onCtrlEnterRef = useRef(onCtrlEnter);
   const completionsRef = useRef(onRequestCompletions);
   const lintRef = useRef(onRequestLint);
+  const signatureRef = useRef(onRequestSignature);
   const readOnlyCompartmentRef = useRef(null);
   const lintCompartmentRef     = useRef(null);
   const lintEnabledRef         = useRef(lintEnabled);
@@ -33,6 +34,7 @@ export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
   useEffect(() => { onCtrlEnterRef.current = onCtrlEnter; }, [onCtrlEnter]);
   useEffect(() => { completionsRef.current = onRequestCompletions; }, [onRequestCompletions]);
   useEffect(() => { lintRef.current = onRequestLint; }, [onRequestLint]);
+  useEffect(() => { signatureRef.current = onRequestSignature; }, [onRequestSignature]);
   useEffect(() => { cellIndexRef.current = cellIndex; }, [cellIndex]);
   useEffect(() => { lintEnabledRef.current = lintEnabled; }, [lintEnabled]);
 
@@ -93,6 +95,11 @@ export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
 
     if (language === 'csharp') {
       const keywordSource = (ctx) => {
+        // Suppress keyword list in member-access context — the async dynamicSource
+        // will return the correct member list and we don't want keyword noise.
+        const textBefore = ctx.state.doc.sliceString(0, ctx.pos);
+        if (/\w\.\w*$/.test(textBefore)) return null;
+
         const word = ctx.matchBefore(/\w*/);
         if (!word || (word.from === word.to && !ctx.explicit)) return null;
         return {
@@ -113,22 +120,41 @@ export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
         if (!isMemberAccess && !ctx.explicit && (!word || word.text.length < 2)) return null;
         try {
           const items = await fn(code, pos);
-          if (!items?.length) return null;
-          return {
-            from: word?.from ?? pos,
-            options: items.map((i) => ({ label: i.label, type: i.type || 'text', detail: i.detail })),
-            validFor: /^\w*$/,
-          };
+          if (items?.length) {
+            return {
+              from: word?.from ?? pos,
+              options: items.map((i) => ({ label: i.label, type: i.type || 'text', detail: i.detail })),
+              validFor: /^\w*$/,
+            };
+          }
+          // In member-access context, keep the dropdown open with a "no results" indicator
+          // instead of hiding it. Use from:pos so the filter text is always empty and the
+          // sentinel is never filtered out by CodeMirror's client-side matching.
+          if (isMemberAccess) {
+            return {
+              from: pos,
+              options: [{ label: '(no members found)', type: 'text', apply: () => {} }],
+            };
+          }
+          return null;
         } catch { return null; }
       };
 
       // Accept completions on Tab only (not Enter), so Enter remains a normal newline.
-      // completionKeymap already binds Tab → acceptCompletion; it falls through when
-      // no completion is active, so indentWithTab below handles the Tab-to-indent case.
-      const customCompletionKeymap = completionKeymap.filter((b) => b.key !== 'Enter');
+      // - defaultKeymap: false prevents autocompletion from registering Enter at high priority.
+      // - Prec.highest ensures Tab → acceptCompletion beats indentWithTab (normal priority).
+      // - acceptCompletion returns false when no completion is active, so Tab falls through
+      //   to indentWithTab for normal indent behaviour.
+      // completionKeymap has no Tab binding — add it explicitly.
+      // acceptCompletion returns false when no completion is active, so Tab
+      // falls through to indentWithTab for normal indent behaviour.
+      const completionKeys = [
+        { key: 'Tab', run: acceptCompletion },
+        ...completionKeymap.filter((b) => b.key !== 'Enter'),
+      ];
       extensions.push(
-        autocompletion({ override: [keywordSource, dynamicSource], defaultKeymap: true }),
-        keymap.of(customCompletionKeymap),
+        autocompletion({ override: [keywordSource, dynamicSource], defaultKeymap: false }),
+        Prec.highest(keymap.of(completionKeys)),
       );
 
       const lintSource = async (view) => {
@@ -145,6 +171,103 @@ export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
       };
 
       extensions.push(lintCompartment.of(lintEnabledRef.current ? linter(lintSource, { delay: 600 }) : []));
+
+      // ── Signature help tooltip ──────────────────────────────────────────────
+      const setSigTip = StateEffect.define();
+      const sigField = StateField.define({
+        create: () => null,
+        update(val, tr) {
+          for (const e of tr.effects) if (e.is(setSigTip)) return e.value;
+          return val;
+        },
+        provide: f => showTooltip.from(f),
+      });
+
+      let sigTimer = null;
+      const sigListener = EditorView.updateListener.of((update) => {
+        if (!update.selectionSet && !update.docChanged) return;
+        clearTimeout(sigTimer);
+        sigTimer = setTimeout(() => {
+          const fn = signatureRef.current;
+          const view = update.view;
+          const state = view.state;
+          const pos = state.selection.main.head;
+          const code = state.doc.toString();
+          const textBefore = code.slice(0, pos);
+
+          // Quick check: are we inside any '(' ?
+          let depth = 0;
+          let hasParen = false;
+          for (let i = textBefore.length - 1; i >= 0; i--) {
+            if (textBefore[i] === ')') depth++;
+            else if (textBefore[i] === '(') {
+              if (depth === 0) { hasParen = true; break; }
+              depth--;
+            }
+          }
+          if (!hasParen || !fn) {
+            view.dispatch({ effects: setSigTip.of(null) });
+            return;
+          }
+
+          fn(code, pos).then(result => {
+            if (!result?.signatures?.length) {
+              view.dispatch({ effects: setSigTip.of(null) });
+              return;
+            }
+            // Find the opening paren position for tooltip anchor
+            let d = 0, anchorPos = pos;
+            for (let i = textBefore.length - 1; i >= 0; i--) {
+              if (textBefore[i] === ')') d++;
+              else if (textBefore[i] === '(') {
+                if (d === 0) { anchorPos = i + 1; break; }
+                d--;
+              }
+            }
+            view.dispatch({
+              effects: setSigTip.of({
+                pos: anchorPos,
+                above: true,
+                strictSide: true,
+                arrow: false,
+                create() {
+                  const dom = document.createElement('div');
+                  dom.className = 'cm-signature-help';
+                  result.signatures.forEach((sig) => {
+                    const line = document.createElement('div');
+                    line.className = 'cm-sig-line';
+                    const parenOpen = sig.label.indexOf('(');
+                    const parenClose = sig.label.lastIndexOf(')');
+                    if (parenOpen < 0 || !sig.parameters?.length) {
+                      line.textContent = sig.label;
+                    } else {
+                      line.appendChild(document.createTextNode(sig.label.slice(0, parenOpen + 1)));
+                      sig.parameters.forEach((p, i) => {
+                        if (i > 0) line.appendChild(document.createTextNode(', '));
+                        if (i === result.activeParam) {
+                          const em = document.createElement('strong');
+                          em.className = 'cm-sig-active';
+                          em.textContent = p.label;
+                          line.appendChild(em);
+                        } else {
+                          line.appendChild(document.createTextNode(p.label));
+                        }
+                      });
+                      line.appendChild(document.createTextNode(sig.label.slice(parenClose)));
+                    }
+                    dom.appendChild(line);
+                  });
+                  return { dom };
+                },
+              }),
+            });
+          }).catch(() => {
+            view.dispatch({ effects: setSigTip.of(null) });
+          });
+        }, 120);
+      });
+
+      extensions.push(sigField, sigListener);
     }
 
     const state = EditorState.create({ doc: value, extensions });

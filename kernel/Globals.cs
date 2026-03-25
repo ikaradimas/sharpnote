@@ -37,9 +37,14 @@ public static class LogContext
 
 public class ConfigHelper
 {
-    private readonly IReadOnlyDictionary<string, string> _values;
+    private readonly Dictionary<string, string> _values;
+    private readonly TextWriter _out;
 
-    public ConfigHelper(IReadOnlyDictionary<string, string> values) => _values = values;
+    public ConfigHelper(IReadOnlyDictionary<string, string> values, TextWriter output)
+    {
+        _values = new Dictionary<string, string>(values);
+        _out    = output;
+    }
 
     /// <summary>Returns the value for <paramref name="key"/>, or an empty string if not set.</summary>
     public string this[string key] => _values.TryGetValue(key, out var v) ? v : "";
@@ -54,6 +59,26 @@ public class ConfigHelper
     /// <summary>All config entries as a read-only dictionary.</summary>
     public IReadOnlyDictionary<string, string> All => _values;
 
+    /// <summary>
+    /// Adds or updates <paramref name="key"/> in the Config panel and makes it
+    /// immediately available via <c>Config[key]</c> in the current execution.
+    /// </summary>
+    public void Set(string key, string value)
+    {
+        _values[key] = value;
+        _out.WriteLine(JsonSerializer.Serialize(new { type = "config_set", key, value }));
+    }
+
+    /// <summary>
+    /// Removes <paramref name="key"/> from the Config panel. The change takes
+    /// effect immediately — subsequent <c>Config[key]</c> calls return <c>""</c>.
+    /// </summary>
+    public void Remove(string key)
+    {
+        _values.Remove(key);
+        _out.WriteLine(JsonSerializer.Serialize(new { type = "config_remove", key }));
+    }
+
     public override string ToString() =>
         _values.Count == 0 ? "(empty)" : string.Join(", ", _values.Select(kv => $"{kv.Key}={kv.Value}"));
 }
@@ -63,7 +88,7 @@ public class ConfigHelper
 public static class ConfigContext
 {
     public static ConfigHelper Current { get; internal set; } =
-        new ConfigHelper(new Dictionary<string, string>());
+        new ConfigHelper(new Dictionary<string, string>(), TextWriter.Null);
 }
 
 // ── Script globals ────────────────────────────────────────────────────────────
@@ -71,6 +96,8 @@ public static class ConfigContext
 public class ScriptGlobals
 {
     public DisplayHelper Display { get; set; } = null!;
+    public PanelsHelper  Panels  { get; set; } = null!;
+    public DbHelper      Db      { get; set; } = null!;
     public ConfigHelper Config => ConfigContext.Current;
     // Injected per-execution so loop-injection checks can cancel tight loops.
     // Named with underscores to discourage accidental use in user code.

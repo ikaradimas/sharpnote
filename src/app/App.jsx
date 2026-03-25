@@ -92,11 +92,6 @@ export function App() {
     handleInsertLibraryFile, handleInjectApiCall, openPinnedNotebooks,
   } = useNotebookManager({ cancelPendingCellsRef, saveSettingsRef });
 
-  const { runCell, runAll, runFrom, runTo, handleInterrupt, handleReset,
-          requestCompletions, requestLint, cancelPendingCells } =
-    useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVarInspectDialog });
-  cancelPendingCellsRef.current = cancelPendingCells;
-
   const {
     dockLayout, setDockLayout, savedLayouts, setSavedLayouts,
     draggingPanel, hoveredDropZone, layoutKey, flashingPanel,
@@ -105,6 +100,78 @@ export function App() {
     handleZoneResizeEnd, handleFloatMove, handleStartDrag,
     handleSaveLayout, handleLoadLayout, handleDeleteLayout,
   } = useDockLayout({ saveSettingsRef });
+
+  // ── Panel visibility and layout (shared by close button, menu, and kernel messages) ──
+
+  const setPanelVisible = useCallback((panelId, open) => {
+    // open: true = open, false = close, null = toggle
+    const globalSetters = { library: setLibraryPanelOpen, files: setFilesPanelOpen, api: setApiPanelOpen };
+    const nbFlagMap = {
+      log: 'logPanelOpen', nuget: 'nugetPanelOpen', config: 'configPanelOpen',
+      db: 'dbPanelOpen', vars: 'varsPanelOpen', toc: 'tocPanelOpen',
+      graph: 'graphPanelOpen', todo: 'todoPanelOpen',
+    };
+    if (globalSetters[panelId]) {
+      globalSetters[panelId](open === null ? (v) => !v : open);
+    } else {
+      const flag = nbFlagMap[panelId];
+      const nbId = activeIdRef.current;
+      if (flag && isNotebookId(nbId))
+        setNb(nbId, open === null ? (n) => ({ [flag]: !n[flag] }) : { [flag]: open });
+    }
+  }, [setNb, setLibraryPanelOpen, setFilesPanelOpen, setApiPanelOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const setPanelDock = useCallback((panelId, zone, size) => {
+    setDockLayout((prev) => {
+      const assignments = { ...prev.assignments, [panelId]: zone };
+      const zoneTab     = { ...prev.zoneTab, [zone]: panelId };
+      if (size == null) return { ...prev, assignments, zoneTab };
+      const dim = zone === 'bottom' ? window.innerHeight : window.innerWidth;
+      const px  = size > 0 && size < 1 ? Math.round(dim * size) : Math.round(size);
+      return { ...prev, assignments, zoneTab, sizes: { ...prev.sizes, [zone]: px } };
+    });
+    saveSettingsRef.current();
+  }, [setDockLayout, saveSettingsRef]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const setPanelFloat = useCallback((panelId, x, y, w, h) => {
+    setDockLayout((prev) => {
+      const existing = prev.floatPos[panelId] ?? { x: 200, y: 100, w: DEFAULT_FLOAT_W, h: DEFAULT_FLOAT_H };
+      return {
+        ...prev,
+        assignments: { ...prev.assignments, [panelId]: 'float' },
+        floatPos: {
+          ...prev.floatPos,
+          [panelId]: { x: x ?? existing.x, y: y ?? existing.y, w: w ?? existing.w, h: h ?? existing.h },
+        },
+      };
+    });
+    saveSettingsRef.current();
+  }, [setDockLayout, saveSettingsRef]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const setPanelCloseAll = useCallback(() => {
+    setLibraryPanelOpen(false);
+    setFilesPanelOpen(false);
+    setApiPanelOpen(false);
+    const nbId = activeIdRef.current;
+    if (isNotebookId(nbId))
+      setNb(nbId, () => ({
+        logPanelOpen: false, nugetPanelOpen: false, configPanelOpen: false,
+        dbPanelOpen: false, varsPanelOpen: false, tocPanelOpen: false,
+        graphPanelOpen: false, todoPanelOpen: false,
+      }));
+  }, [setNb, setLibraryPanelOpen, setFilesPanelOpen, setApiPanelOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const { runCell, runAll, runFrom, runTo, handleInterrupt, handleReset,
+          requestCompletions, requestLint, requestSignature, cancelPendingCells } =
+    useKernelManager({
+      setNb, notebooksRef, dbConnectionsRef, setVarInspectDialog,
+      onPanelVisible: setPanelVisible,
+      onPanelDock:    setPanelDock,
+      onPanelFloat:   setPanelFloat,
+      onPanelCloseAll: setPanelCloseAll,
+      setDbConnections,
+    });
+  cancelPendingCellsRef.current = cancelPendingCells;
 
   // Wire up the settings-persist function. Called by hooks and effects whenever
   // settings need persisting. Reads all state from stable refs in one place.
@@ -418,18 +485,7 @@ export function App() {
 
   // ── Panel close ────────────────────────────────────────────────────────────
 
-  const handlePanelClose = useCallback((panelId) => {
-    if (panelId === 'library') { setLibraryPanelOpen(false); return; }
-    if (panelId === 'files')   { setFilesPanelOpen(false);   return; }
-    if (panelId === 'api')     { setApiPanelOpen(false);     return; }
-    const nbId = activeIdRef.current;
-    if (isNotebookId(nbId)) {
-      const flagMap = { log: 'logPanelOpen', nuget: 'nugetPanelOpen', config: 'configPanelOpen',
-        db: 'dbPanelOpen', vars: 'varsPanelOpen', toc: 'tocPanelOpen', graph: 'graphPanelOpen', todo: 'todoPanelOpen' };
-      const flag = flagMap[panelId];
-      if (flag) setNb(nbId, { [flag]: false });
-    }
-  }, [setNb]); // eslint-disable-line react-hooks/exhaustive-deps
+  const handlePanelClose = useCallback((panelId) => setPanelVisible(panelId, false), [setPanelVisible]);
 
   // ── Settings export / import ───────────────────────────────────────────────
 
@@ -520,17 +576,17 @@ export function App() {
     reset:             () => { if (isNotebook()) handleReset(activeIdRef.current); },
     'clear-output':    () => { if (isNotebook()) setNb(activeIdRef.current, { outputs: {} }); },
     docs:              handleOpenDocs,
-    'toggle-packages': () => { if (isNotebook()) setNb(activeIdRef.current, (n) => ({ nugetPanelOpen:  !n.nugetPanelOpen  })); },
-    'toggle-config':   () => { if (isNotebook()) setNb(activeIdRef.current, (n) => ({ configPanelOpen: !n.configPanelOpen })); },
-    'toggle-logs':     () => { if (isNotebook()) setNb(activeIdRef.current, (n) => ({ logPanelOpen:    !n.logPanelOpen    })); },
-    'toggle-library':  () => setLibraryPanelOpen((v) => !v),
-    'toggle-db':       () => { if (isNotebook()) setNb(activeIdRef.current, (n) => ({ dbPanelOpen:     !n.dbPanelOpen     })); },
-    'toggle-vars':     () => { if (isNotebook()) setNb(activeIdRef.current, (n) => ({ varsPanelOpen:   !n.varsPanelOpen   })); },
-    'toggle-toc':      () => { if (isNotebook()) setNb(activeIdRef.current, (n) => ({ tocPanelOpen:    !n.tocPanelOpen    })); },
-    'toggle-files':    () => setFilesPanelOpen((v) => !v),
-    'toggle-api':      () => setApiPanelOpen((v) => !v),
-    'toggle-graph':    () => { if (isNotebook()) setNb(activeIdRef.current, (n) => ({ graphPanelOpen:  !n.graphPanelOpen  })); },
-    'toggle-todo':     () => { if (isNotebook()) setNb(activeIdRef.current, (n) => ({ todoPanelOpen:   !n.todoPanelOpen   })); },
+    'toggle-packages': () => setPanelVisible('nuget',   null),
+    'toggle-config':   () => setPanelVisible('config',  null),
+    'toggle-logs':     () => setPanelVisible('log',     null),
+    'toggle-library':  () => setPanelVisible('library', null),
+    'toggle-db':       () => setPanelVisible('db',      null),
+    'toggle-vars':     () => setPanelVisible('vars',    null),
+    'toggle-toc':      () => setPanelVisible('toc',     null),
+    'toggle-files':    () => setPanelVisible('files',   null),
+    'toggle-api':      () => setPanelVisible('api',     null),
+    'toggle-graph':    () => setPanelVisible('graph',   null),
+    'toggle-todo':     () => setPanelVisible('todo',    null),
     about:             () => setAboutOpen(true),
     settings:          () => setSettingsOpen(true),
     'export-html':     handleExportHtml,
@@ -788,6 +844,7 @@ export function App() {
                     onRename={(newName) => handleRenameTab(notebook.id, newName)}
                     requestCompletions={requestCompletions}
                     requestLint={requestLint}
+                    requestSignature={requestSignature}
                     libraryPanelOpen={libraryPanelOpen}
                     onToggleLibrary={() => {
                       if (!libraryPanelOpen) handleFocusPanel('library');

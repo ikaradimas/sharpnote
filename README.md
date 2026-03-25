@@ -71,7 +71,8 @@
 - **Log panel cell links** — cell IDs that appear in log entries are rendered as clickable links that navigate directly to the corresponding cell; code cells show their ID in muted text in the header
 - **Table of Contents** — live heading outline from markdown cells; click any entry to scroll to it
 - **To Do panel** — auto-scans code cells for `// TODO`, `// FIXME`, and `// BUG` comments; click any item to scroll to and highlight the originating cell (`Ctrl+Shift+O`)
-- **Config panel** — per-notebook key/value store passed into the kernel as a `Config["key"]` helper
+- **Config panel** — per-notebook key/value store; readable via `Config["key"]` and writable from code via `Config.Set(key, value)` / `Config.Remove(key)` — changes reflect in the panel in real time
+- **Panel scripting API** — `Panels.Open/Close/Toggle/CloseAll` controls panel visibility; `Panels.Dock(PanelId.*, DockZone.*, size?)` and `Panels.Float(PanelId.*, x?, y?, width?, height?)` move panels between dock zones or float them with precise position and size; `Db.Add/Remove/Attach/Detach/ListAsync` manages database connections from code
 - **Dock layout** — panels can be docked to left / right / bottom zones, floated freely, or dragged between zones; opening a panel via the toolbar auto-switches to its tab and briefly highlights it; tab bars show scroll-shadow indicators when tabs overflow; layouts can be saved and restored by name
 
 ### Data & Integration
@@ -108,7 +109,7 @@
                      │  JSON lines over child_process stdin/stdout
           ┌──────────▼──────────┐   ┌─────────────────────┐
           │  kernel (notebook A) │   │  kernel (notebook B) │
-          │  .NET 8 / Roslyn     │   │  .NET 8 / Roslyn     │
+          │  .NET 10 / Roslyn     │   │  .NET 10 / Roslyn     │
           └─────────────────────┘   └─────────────────────┘
 ```
 
@@ -170,7 +171,7 @@ The UI is organized across `src/app/`, `src/components/`, `src/hooks/`, and `src
 
 ### C# Kernel (`kernel/`)
 
-The kernel is a self-contained .NET 8 console application that communicates with the main process via **JSON lines over stdin/stdout**.
+The kernel is a self-contained .NET 10 console application that communicates with the main process via **JSON lines over stdin/stdout**.
 
 | File | Responsibility |
 |---|---|
@@ -208,7 +209,28 @@ Display.DatePicker("Label", defaultValue: "2025-01-01"); // date input
 value.Log("label");           // optional label shown alongside the value
 
 // ── Per-notebook config ───────────────────────────────────────────────────────
-Config["key"]                 // per-notebook key/value store
+Config["key"]                 // read a per-notebook key/value entry
+Config.Set("ApiKey", "abc"); // upsert an entry; Config panel updates in real time
+Config.Remove("ApiKey");     // delete an entry
+
+// ── Panel control ─────────────────────────────────────────────────────────────
+Panels.Open(PanelId.Graph);   // open the Graph panel
+Panels.Close(PanelId.Log);    // close the Log panel
+Panels.Toggle(PanelId.Db);    // toggle the DB panel
+Panels.CloseAll();            // close every open panel
+Panels.Dock(PanelId.Graph, DockZone.Right, 0.35); // dock at 35% of window width
+Panels.Dock(PanelId.Log, DockZone.Bottom, 200);   // dock at 200 px tall
+Panels.Float(PanelId.Variables, x: 800, y: 120, width: 400, height: 500); // float with position+size
+// PanelId constants:  Log, Packages, Config, Db, Library, Variables, Toc, Files, Api, Graph, Todo
+// DockZone constants: Left, Right, Bottom
+
+// ── Database management ───────────────────────────────────────────────────────
+Db.Add("mydb", DbProvider.Sqlite, "Data Source=/data/mydb.db"); // add to global list
+Db.Attach("mydb");                        // attach to this notebook; injects typed DbContext
+var conns = await Db.ListAsync();         // DbEntry[] { Name, Provider, IsAttached }
+Db.Detach("mydb");                        // detach from this notebook
+Db.Remove("mydb");                        // remove from global connection list
+// DbProvider constants: Sqlite, SqliteMemory, SqlServer, PostgreSql, Redis
 ```
 
 **Cancellation:** `while`, `for`, `foreach`, and `do-while` loops are automatically rewritten by a Roslyn `CSharpSyntaxRewriter` to call `token.ThrowIfCancellationRequested()` at each iteration. This enables the Stop button to interrupt long-running cells without killing the kernel.
@@ -228,6 +250,8 @@ Messages are newline-delimited JSON objects. The renderer sends to the kernel; t
 | `autocomplete` | `{ requestId, code, position }` |
 | `db_connect` | `{ connectionId, provider, connectionString }` |
 | `db_disconnect` | `{ connectionId }` |
+| `db_list_response` | `{ requestId, connections: [{name, provider, isAttached}] }` |
+| `widget_change` | `{ widgetKey, value }` |
 | `exit` | `{}` |
 
 **Kernel → Renderer:**
@@ -244,6 +268,19 @@ Messages are newline-delimited JSON objects. The renderer sends to the kernel; t
 | `vars_update` | `{ vars[] }` |
 | `var_point` | `{ name, value }` — from `Display.Plot`; consumed by the Graph panel |
 | `graph_clear` | — — from `Display.ClearGraph`; clears all Graph panel series |
+| `panel_open` | `{ panel }` — from `Panels.Open`; opens the named panel |
+| `panel_close` | `{ panel }` — from `Panels.Close`; closes the named panel |
+| `panel_toggle` | `{ panel }` — from `Panels.Toggle`; toggles the named panel |
+| `panel_close_all` | — — from `Panels.CloseAll`; closes all open panels |
+| `panel_dock` | `{ panel, zone, size? }` — from `Panels.Dock`; moves panel to zone; `size < 1` = fraction, `size ≥ 1` = pixels |
+| `panel_float` | `{ panel, x?, y?, w?, h? }` — from `Panels.Float`; floats panel with optional position/size |
+| `db_add` | `{ name, provider, connectionString }` — from `Db.Add` |
+| `db_remove` | `{ name }` — from `Db.Remove` |
+| `db_attach` | `{ name }` — from `Db.Attach`; triggers `db_connect` to the kernel |
+| `db_detach` | `{ name }` — from `Db.Detach`; triggers `db_disconnect` to the kernel |
+| `db_list_request` | `{ requestId }` — from `Db.ListAsync`; renderer replies with `db_list_response` |
+| `config_set` | `{ key, value }` — from `Config.Set`; upserts Config panel entry |
+| `config_remove` | `{ key }` — from `Config.Remove`; deletes Config panel entry |
 | `db_schema` | `{ connectionId, schema }` |
 | `db_ready` | `{ connectionId, varName }` |
 | `db_error` | `{ connectionId, message }` |
@@ -331,7 +368,7 @@ sharpnote/
 │   └── config/           # Constants (docs-sections.js, themes, dock-layout defaults, …)
 │
 ├── kernel/
-│   ├── kernel.csproj     # .NET 8 project
+│   ├── kernel.csproj     # .NET 10 project
 │   ├── Program.cs        # Protocol loop, Roslyn execution, display system
 │   ├── DbProvider.cs     # IDbProvider + SQLite/SQL Server/PostgreSQL
 │   ├── DbCodeGen.cs      # Schema → C# POCO + DbContext codegen

@@ -1012,6 +1012,35 @@ body {
   color: #4a7a8a;
 }
 
+/* ── Signature help tooltip ─────────────────────────────────────────────── */
+.cm-signature-help {
+  background: #252526;
+  border: 1px solid #3c3c3c;
+  border-radius: 3px;
+  padding: 4px 8px;
+  font-family: 'Consolas', 'Fira Code', monospace;
+  font-size: 12px;
+  color: #d4d4d4;
+  max-width: 500px;
+  pointer-events: none;
+}
+
+.cm-sig-line {
+  line-height: 1.5;
+}
+
+.cm-sig-line + .cm-sig-line {
+  border-top: 1px solid #3c3c3c;
+  margin-top: 2px;
+  padding-top: 2px;
+}
+
+.cm-sig-active {
+  color: #ffffff;
+  font-weight: bold;
+  text-decoration: underline;
+}
+
 /* ── Export Button ───────────────────────────────────────────────────────── */
 
 .output-block {
@@ -3214,6 +3243,12 @@ body {
 }
 
 .db-connstr-input { width: 100%; }
+
+.db-form-error {
+  color: #f44747;
+  font-size: 11px;
+  padding: 2px 0;
+}
 
 .db-form-actions {
   display: flex;

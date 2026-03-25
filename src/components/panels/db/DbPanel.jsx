@@ -37,10 +37,11 @@ function DbSchemaTree({ schema }) {
   );
 }
 
-function DbConnectionForm({ connection, onSave, onCancel }) {
+function DbConnectionForm({ connection, existingNames, onSave, onCancel }) {
   const [name, setName] = useState(connection?.name ?? '');
   const [provider, setProvider] = useState(connection?.provider ?? 'sqlite');
   const [connStr, setConnStr] = useState(connection?.connectionString ?? '');
+  const [error, setError] = useState('');
 
   const providerMeta = DB_PROVIDERS.find((p) => p.key === provider);
 
@@ -50,6 +51,14 @@ function DbConnectionForm({ connection, onSave, onCancel }) {
     if (!n) return;
     // Connection string is optional for in-memory providers; required for all others
     if (!providerMeta?.optionalConnStr && !cs) return;
+    const isDuplicate = existingNames.some(
+      (existing) => existing.toLowerCase() === n.toLowerCase()
+    );
+    if (isDuplicate) {
+      setError(`A connection named "${n}" already exists.`);
+      return;
+    }
+    setError('');
     const id = connection?.id ?? uuidv4();
     onSave({ id, name: n, provider, connectionString: cs });
   };
@@ -79,6 +88,7 @@ function DbConnectionForm({ connection, onSave, onCancel }) {
         onChange={(e) => setConnStr(e.target.value)}
         spellCheck={false}
       />
+      {error && <div className="db-form-error">{error}</div>}
       <div className="db-form-actions">
         <button className="nuget-remove-btn db-form-btn" onClick={onCancel}>Cancel</button>
         <button className="nuget-add-btn db-form-btn" onClick={handleSave}>Save</button>
@@ -153,6 +163,9 @@ export function DbPanel({
           {editingConn && (
             <DbConnectionForm
               connection={editingConn === 'new' ? null : editingConn}
+              existingNames={connections
+                .filter((c) => editingConn === 'new' || c.id !== editingConn.id)
+                .map((c) => c.name)}
               onSave={handleSaveConn}
               onCancel={() => setEditingConn(null)}
             />

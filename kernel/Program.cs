@@ -35,6 +35,9 @@ partial class Program
 
     // Cancellation token source for the current execution (set/cleared per execute)
     private static CancellationTokenSource? _execCts;
+
+    // ID of the cell currently being executed — set by HandleExecute, read by DbHelper
+    internal static string? CurrentCellId;
     private static readonly Dictionary<string, JsonElement> _widgetValues = new();
 
     // ── Entry point ───────────────────────────────────────────────────────────
@@ -54,7 +57,9 @@ partial class Program
         };
 
         var display = new DisplayHelper(realStdout, _widgetValues);
-        var globals = new ScriptGlobals { Display = display };
+        var panels  = new PanelsHelper(realStdout);
+        var db      = new DbHelper(realStdout);
+        var globals = new ScriptGlobals { Display = display, Panels = panels, Db = db };
 
         var options = ScriptOptions.Default
             .AddImports(
@@ -67,13 +72,16 @@ partial class Program
                 "System.Threading.Tasks",
                 "System.Text.Json",
                 "System.Net",
-                "SharpNoteKernel"
+                "SharpNoteKernel",
+                "Microsoft.EntityFrameworkCore"
             )
             .AddReferences(
                 typeof(object).Assembly,
                 typeof(Enumerable).Assembly,
                 typeof(System.Net.WebUtility).Assembly,
-                typeof(DisplayHelper).Assembly
+                typeof(DisplayHelper).Assembly,
+                typeof(Microsoft.EntityFrameworkCore.DbContext).Assembly,
+                typeof(Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions).Assembly
             );
 
         // PosixSignalRegistration works for piped (non-terminal) processes,
@@ -128,11 +136,43 @@ partial class Program
                     {
                         using var doc = JsonDocument.Parse(rawLine);
                         var root = doc.RootElement.Clone();
-                        // Interrupt is handled inline so it fires even mid-execution.
-                        if (root.TryGetProperty("type", out var tp) && tp.GetString() == "interrupt")
-                            _execCts?.Cancel();
-                        else
-                            await msgChannel.Writer.WriteAsync(root);
+                        // Interrupt and db_list_response are handled inline so they
+                        // fire even while the main channel loop is blocked awaiting execution.
+                        if (root.TryGetProperty("type", out var tp))
+                        {
+                            var msgType = tp.GetString();
+                            if (msgType == "interrupt")
+                            {
+                                _execCts?.Cancel();
+                            }
+                            else if (msgType == "db_list_response"
+                                && root.TryGetProperty("requestId", out var ridProp))
+                            {
+                                var requestId = ridProp.GetString()!;
+                                var conns = root.TryGetProperty("connections", out var connsProp)
+                                    ? connsProp.EnumerateArray()
+                                        .Select(c => new DbEntry(
+                                            c.GetProperty("name").GetString()!,
+                                            c.GetProperty("provider").GetString()!,
+                                            c.TryGetProperty("isAttached", out var ia) && ia.GetBoolean()))
+                                        .ToArray()
+                                    : Array.Empty<DbEntry>();
+                                db.ReceiveListResponse(requestId, conns);
+                            }
+                            else if (msgType == "db_add_result"
+                                && root.TryGetProperty("requestId", out var addRidProp))
+                            {
+                                var requestId = addRidProp.GetString()!;
+                                var error = root.TryGetProperty("error", out var errProp)
+                                    ? errProp.GetString()
+                                    : null;
+                                db.ReceiveAddResult(requestId, error);
+                            }
+                            else
+                            {
+                                await msgChannel.Writer.WriteAsync(root);
+                            }
+                        }
                     }
                     catch { }
                 }
@@ -164,6 +204,12 @@ partial class Program
                 case "autocomplete":
                 {
                     HandleAutocomplete(msg, realStdout);
+                    break;
+                }
+
+                case "signature":
+                {
+                    HandleSignature(msg, realStdout);
                     break;
                 }
 
