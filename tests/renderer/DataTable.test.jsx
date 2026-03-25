@@ -58,4 +58,59 @@ describe('DataTable', () => {
     // With 50 per page, page 1 of 2 is visible
     expect(document.querySelector('.table-pager-page').textContent).toMatch(/page 1 \/ 2/);
   });
+
+  // ── Column sorting ────────────────────────────────────────────────────────
+
+  it('column headers have sortable class', () => {
+    render(<DataTable rows={[{ a: 1 }, { a: 2 }]} />);
+    expect(document.querySelector('th.sortable')).not.toBeNull();
+  });
+
+  it('clicking column header sorts ascending', () => {
+    const rows = [{ name: 'Charlie' }, { name: 'Alice' }, { name: 'Bob' }];
+    render(<DataTable rows={rows} />);
+    const th = screen.getByText(/^name/);
+    fireEvent.click(th);
+    const cells = document.querySelectorAll('tbody td');
+    expect(cells[0].textContent).toBe('Alice');
+    expect(cells[1].textContent).toBe('Bob');
+    expect(cells[2].textContent).toBe('Charlie');
+  });
+
+  it('clicking sorted column toggles to descending', () => {
+    const rows = [{ name: 'Charlie' }, { name: 'Alice' }, { name: 'Bob' }];
+    render(<DataTable rows={rows} />);
+    const th = screen.getByText(/^name/);
+    fireEvent.click(th);  // asc
+    fireEvent.click(th);  // desc
+    const cells = document.querySelectorAll('tbody td');
+    expect(cells[0].textContent).toBe('Charlie');
+    expect(cells[1].textContent).toBe('Bob');
+    expect(cells[2].textContent).toBe('Alice');
+  });
+
+  it('third click on same column resets sort order', () => {
+    const rows = [{ name: 'Charlie' }, { name: 'Alice' }, { name: 'Bob' }];
+    render(<DataTable rows={rows} />);
+    const th = screen.getByText(/^name/);
+    fireEvent.click(th);  // asc
+    fireEvent.click(th);  // desc
+    fireEvent.click(th);  // reset
+    const cells = document.querySelectorAll('tbody td');
+    // Original order restored
+    expect(cells[0].textContent).toBe('Charlie');
+    expect(cells[1].textContent).toBe('Alice');
+    expect(cells[2].textContent).toBe('Bob');
+  });
+
+  it('numeric columns sort numerically not lexically', () => {
+    const rows = [{ n: 10 }, { n: 9 }, { n: 100 }];
+    render(<DataTable rows={rows} />);
+    const th = screen.getByText(/^n/);
+    fireEvent.click(th);
+    const cells = document.querySelectorAll('tbody td');
+    expect(cells[0].textContent).toBe('9');
+    expect(cells[1].textContent).toBe('10');
+    expect(cells[2].textContent).toBe('100');
+  });
 });

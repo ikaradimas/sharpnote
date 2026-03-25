@@ -19,6 +19,7 @@ export { getSectionHeadingLevel, getCollapsedSections };
 // ── Component exports (for test re-exports) ───────────────────────────────────
 export { DataTable } from './components/output/DataTable.jsx';
 export { OutputBlock } from './components/output/OutputBlock.jsx';
+export { HorizontalOutput } from './components/output/HorizontalOutput.jsx';
 export { CodeCell } from './components/editor/CodeCell.jsx';
 export { NugetPanel } from './components/panels/nuget/NugetPanel.jsx';
 export { ConfigPanel } from './components/panels/ConfigPanel.jsx';

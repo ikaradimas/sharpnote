@@ -5128,4 +5128,62 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
   font-size: 11px; font-family: var(--font-ui); outline: none;
 }
 .shortcuts-search:focus { border-color: var(--accent-primary-dim); }
+
+/* ── Util.* display helpers ──────────────────────────────────────────────── */
+
+/* Util.Time */
+.util-time {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 8px; border: 1px solid var(--border-subtle); border-radius: 4px;
+  font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary);
+  margin: 2px 0;
+}
+.util-time-label { color: var(--text-muted); }
+.util-time-value { color: var(--accent-primary); font-weight: 600; }
+
+/* Util.Cmd */
+.util-cmd-output { margin: 0; white-space: pre-wrap; word-break: break-all; }
+
+/* Util.Metatext */
+.util-metatext {
+  font-size: 11px; color: var(--text-tertiary);
+  font-style: italic; padding: 1px 0; margin: 2px 0;
+}
+
+/* Util.Highlight */
+.util-highlight {
+  border-left: 3px solid #ffe066;
+  padding: 4px 8px; margin: 2px 0; border-radius: 0 4px 4px 0;
+}
+
+/* Util.Dif */
+.util-dif { margin: 2px 0; }
+.util-dif-header {
+  font-size: 11px; color: var(--text-muted); margin-bottom: 2px;
+  display: flex; align-items: center; gap: 4px;
+}
+.diff-del-label { color: #e06c75; }
+.diff-add-label { color: #98c379; }
+.util-dif-sep   { color: var(--text-tertiary); }
+.util-dif-lines { margin: 0; padding: 4px 6px; }
+.diff-del { background: rgba(224, 108, 117, 0.15); color: #e06c75; display: block; }
+.diff-add { background: rgba(152, 195, 121, 0.15); color: #98c379; display: block; }
+.diff-ctx { color: var(--text-secondary); display: block; }
+
+/* DataTable column sorting */
+.data-table th.sortable {
+  cursor: pointer; user-select: none;
+}
+.data-table th.sortable:hover { color: var(--accent-primary); }
+.sort-indicator {
+  margin-left: 4px; font-size: 10px; opacity: 0.4;
+}
+.sort-indicator.active { opacity: 1; color: var(--accent-primary); }
+
+/* Util.HorizontalRun */
+.horizontal-output {
+  display: flex; flex-direction: row; flex-wrap: wrap;
+  align-items: flex-start; gap: 12px;
+}
+.horizontal-output-item { flex: 0 0 auto; }
 .shortcuts-empty { font-size: 11px; color: var(--text-muted); padding: 8px 0; }

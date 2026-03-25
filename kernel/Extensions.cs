@@ -18,6 +18,9 @@ public static class SharpNoteExtensions
         AutoDisplay(d, obj, title);
     }
 
+    /// <summary>LinqPAD-compatible alias for <see cref="Display"/>.</summary>
+    public static void Dump(this object? obj, string? title = null) => obj.Display(title);
+
     public static void DisplayTable<T>(this IEnumerable<T> rows, string? title = null)
     {
         var d = DisplayContext.Current;
@@ -25,6 +28,9 @@ public static class SharpNoteExtensions
         var dicts = DisplayHelper.ToRowDicts(rows.Cast<object?>().ToList());
         d.TableFromDicts(dicts, title);
     }
+
+    /// <summary>LinqPAD-compatible alias for <see cref="DisplayTable{T}"/>.</summary>
+    public static void DumpTable<T>(this IEnumerable<T> rows, string? title = null) => rows.DisplayTable(title);
 
     public static void DisplayHtml(this string html, string? title = null)
     {

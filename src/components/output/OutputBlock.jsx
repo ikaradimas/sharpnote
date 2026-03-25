@@ -4,6 +4,7 @@ import { DataTable } from './DataTable.jsx';
 import { GraphOutput } from './GraphOutput.jsx';
 import { WidgetOutput } from './WidgetOutput.jsx';
 import { MarkdownOutput } from './MarkdownOutput.jsx';
+import { HorizontalOutput } from './HorizontalOutput.jsx';
 
 async function exportMsg(msg) {
   if (!window.electronAPI?.saveFile) return;
@@ -65,6 +66,8 @@ export function OutputBlock({ msg, index, notebookId }) {
       inner = <WidgetOutput spec={msg.content} notebookId={notebookId} />;
     } else if (msg.format === 'markdown') {
       inner = <MarkdownOutput content={msg.content} />;
+    } else if (msg.format === 'horizontal') {
+      inner = <HorizontalOutput items={msg.content} separator={msg.separator} />;
     }
   } else if (msg.type === 'interrupted') {
     inner = <div className="output-interrupted">⏹ Execution interrupted</div>;

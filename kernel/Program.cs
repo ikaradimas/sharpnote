@@ -59,6 +59,8 @@ partial class Program
         var display = new DisplayHelper(realStdout, _widgetValues);
         var panels  = new PanelsHelper(realStdout);
         var db      = new DbHelper(realStdout);
+        var util    = new UtilHelper(realStdout);
+        UtilContext.Current = util;
         var globals = new ScriptGlobals { Display = display, Panels = panels, Db = db };
 
         var options = ScriptOptions.Default

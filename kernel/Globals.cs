@@ -91,6 +91,14 @@ public static class ConfigContext
         new ConfigHelper(new Dictionary<string, string>(), TextWriter.Null);
 }
 
+// ── UtilContext ───────────────────────────────────────────────────────────────
+
+public static class UtilContext
+{
+    public static UtilHelper Current { get; internal set; } =
+        new UtilHelper(TextWriter.Null);
+}
+
 // ── Script globals ────────────────────────────────────────────────────────────
 
 public class ScriptGlobals
@@ -98,7 +106,8 @@ public class ScriptGlobals
     public DisplayHelper Display { get; set; } = null!;
     public PanelsHelper  Panels  { get; set; } = null!;
     public DbHelper      Db      { get; set; } = null!;
-    public ConfigHelper Config => ConfigContext.Current;
+    public ConfigHelper  Config  => ConfigContext.Current;
+    public UtilHelper    Util    => UtilContext.Current;
     // Injected per-execution so loop-injection checks can cancel tight loops.
     // Named with underscores to discourage accidental use in user code.
     public CancellationToken __ct__ { get; set; }

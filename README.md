@@ -84,6 +84,8 @@
 - **To Do panel** — auto-scans code cells for `// TODO`, `// FIXME`, and `// BUG` comments; click any item to scroll to and highlight the originating cell (`Ctrl+Shift+O`)
 - **Config panel** — per-notebook key/value store; readable via `Config["key"]` and writable from code via `Config.Set(key, value)` / `Config.Remove(key)` — changes reflect in the panel in real time
 - **Panel scripting API** — `Panels.Open/Close/Toggle/CloseAll` controls panel visibility; `Panels.Dock(PanelId.*, DockZone.*, size?)` and `Panels.Float(PanelId.*, x?, y?, width?, height?)` move panels between dock zones or float them with precise position and size; `Db.Add/Remove/Attach/Detach/ListAsync` manages database connections from code
+- **`Util` helper** — LinqPAD-compatible utilities: `.Dump()` / `.DumpTable()` aliases, `Util.Cmd()` shell execution, `Util.Time()` benchmarking, `Util.Dif()` diff viewer, `Util.HorizontalRun()` side-by-side layout, `Util.Metatext()` / `Util.Highlight()` styled output, `Util.Cache()` cross-execution memoization
+- **Table column sorting** — click any column header to sort ascending/descending; click again to reverse; third click resets to original order
 - **Dock layout** — panels can be docked to left / right / bottom zones, floated freely, or dragged between zones; opening a panel via the toolbar auto-switches to its tab and briefly highlights it; tab bars show scroll-shadow indicators when tabs overflow; layouts can be saved and restored by name
 
 ### Data & Integration
@@ -262,6 +264,19 @@ var conns = await Db.ListAsync();         // DbEntry[] { Name, Provider, IsAttac
 Db.Detach("mydb");                        // detach from this notebook
 Db.Remove("mydb");                        // remove from global connection list
 // DbProvider constants: Sqlite, SqliteMemory, SqlServer, PostgreSql, Redis
+
+// ── Util — LinqPAD-compatible utilities ──────────────────────────────────────
+obj.Dump();                                       // alias for obj.Display()
+list.DumpTable();                                 // alias for list.DisplayTable()
+Util.Cmd("git", "log --oneline -10");             // run shell command, display output
+Util.Time(() => DoWork(), "label");               // benchmark Action, display elapsed time
+var result = Util.Time(() => Compute(), "fn");    // benchmark Func<T>, display timing + return
+Util.Dif(before, after, "before", "after");       // line-by-line diff of two values
+Util.HorizontalRun("12px", tableA, tableB);       // render multiple items side by side
+Util.Metatext("Generated at 2025-01-01");         // dimmed gray metadata text
+Util.Highlight(importantValue, "#ffe066");        // colored highlight box (default: amber)
+var data = Util.Cache("key", () => LoadData());  // memoize across executions until reset
+Util.ClearCache();                                // clear all cached values
 ```
 
 **Cancellation:** `while`, `for`, `foreach`, and `do-while` loops are automatically rewritten by a Roslyn `CSharpSyntaxRewriter` to call `token.ThrowIfCancellationRequested()` at each iteration. This enables the Stop button to interrupt long-running cells without killing the kernel.
