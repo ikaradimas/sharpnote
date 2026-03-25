@@ -48,4 +48,33 @@ async function closeApp(app) {
   }
 }
 
-module.exports = { launchApp, closeApp, kernelBuilt };
+/**
+ * Mock Electron's native dialog.showMessageBox so tests can click buttons
+ * that normally block on a native OS dialog (e.g. "New Notebook").
+ *
+ * @param {import('@playwright/test').ElectronApplication} app
+ * @param {number} responseIndex  The button index to return (0 = first button)
+ */
+async function mockNativeDialog(app, responseIndex = 0) {
+  await app.evaluate(({ dialog }, idx) => {
+    if (!dialog.__origShowMessageBox) {
+      dialog.__origShowMessageBox = dialog.showMessageBox.bind(dialog);
+    }
+    dialog.showMessageBox = () =>
+      Promise.resolve({ response: idx, checkboxChecked: false });
+  }, responseIndex);
+}
+
+/**
+ * Restore the original dialog.showMessageBox after a test.
+ */
+async function restoreNativeDialog(app) {
+  await app.evaluate(({ dialog }) => {
+    if (dialog.__origShowMessageBox) {
+      dialog.showMessageBox = dialog.__origShowMessageBox;
+      delete dialog.__origShowMessageBox;
+    }
+  });
+}
+
+module.exports = { launchApp, closeApp, kernelBuilt, mockNativeDialog, restoreNativeDialog };

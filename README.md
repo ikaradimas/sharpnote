@@ -35,6 +35,7 @@
   - [Maintenance](#maintenance)
   - [Testing](#testing)
     - [JavaScript — Vitest](#javascript--vitest)
+    - [E2E — Playwright](#e2e--playwright)
     - [C# — xUnit](#c--xunit)
   - [Notebook File Format](#notebook-file-format)
 
@@ -532,6 +533,55 @@ The renderer suite (`tests/renderer/`) uses happy-dom and covers React component
 - `vi.mock('electron', factory)` does not intercept CJS `require('electron')` from within a dynamically-imported CJS module. `main.js` therefore uses `require(process.env.VITEST ? './__mocks__/electron.js' : 'electron')` directly.
 - The same limitation applies to `vi.mock('fs')`. `fileOps.test.js` avoids it by using a real temporary directory.
 - Renderer tests use **happy-dom** instead of jsdom (jsdom v29 has ESM-compatibility issues with `html-encoding-sniffer`).
+
+### E2E — Playwright
+
+End-to-end tests drive the real Electron app via Playwright's `_electron` API.
+
+```bash
+npm run test:e2e           # headless (builds renderer first)
+npm run test:e2e:headed    # same but with the Electron window visible
+```
+
+**Prerequisites:**
+
+```bash
+npx playwright install     # download Chromium/Electron browser binaries (first time only)
+```
+
+Tests that exercise kernel execution (cell output, variables panel) additionally require a built kernel binary:
+
+```bash
+npm run build:kernel:mac   # macOS
+npm run build:kernel:win   # Windows
+```
+
+Those tests skip automatically with a helpful message when no binary is found — all UI tests run without a kernel.
+
+**Test files** (`tests/e2e/`):
+
+| File | Scope | Kernel required |
+|---|---|---|
+| `app.startup.test.js` | Window title, kernel status badge, initial notebook | No |
+| `toolbar.test.js` | Toolbar items, Run All, +Code/+Markdown, Save/Open, Tools menu | No |
+| `tabs.test.js` | Tab bar, new tab, switching, dirty indicator, rename, color, close | No |
+| `cells.lifecycle.test.js` | Add/move/lock/delete cells, output mode selector | No |
+| `cells.markdown.test.js` | Markdown edit/commit/cancel/render cycle | No |
+| `panels.test.js` | Variables, Config, Logs, Packages, Database, ToC panels via Tools menu | No |
+| `dialogs.test.js` | About, Settings, Command Palette dialogs | No |
+| `output.test.js` | stdout, auto-display, errors, status icons, HTML output | Yes |
+| `vars.panel.test.js` | Variable tracking, type/value display, search, live updates | Yes |
+
+**Helper modules** (`tests/e2e/helpers/`):
+
+- `electron.js` — `launchApp`, `closeApp`, `kernelBuilt`, `mockNativeDialog`, `restoreNativeDialog`
+- `ui.js` — `MOD` (platform key), `sendMenuAction`, `openToolsMenu`, `togglePanel`, `clearAndType`, `runFirstCell`
+
+**Notable infrastructure decisions:**
+
+- Native OS dialogs (e.g. "New Notebook" type chooser) are blocked by monkeypatching `dialog.showMessageBox` via `app.evaluate` before triggering the action, then restoring it after.
+- `Meta+A` is used for select-all inside CodeMirror on macOS (`Ctrl+A` moves to line start there); the `MOD` constant selects the right modifier per platform.
+- `openToolsMenu` checks whether the popup is already visible before clicking — panel items don't close the menu, so a second call would otherwise toggle it shut.
 
 ### C# — xUnit
 
