@@ -133,6 +133,30 @@ export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef }) {
     window.electronAPI.startKernel(nb.id);
   }, []);
 
+  const handleImportPolyglot = useCallback(async () => {
+    if (!window.electronAPI) return;
+    const result = await window.electronAPI.importPolyglotNotebook();
+    if (!result.success) {
+      if (result.error) alert(`Import failed:\n${result.error}`);
+      return;
+    }
+
+    const nb = {
+      ...createNotebook(false),
+      title: result.title || 'Imported Notebook',
+      path: null,
+      cells: result.cells.map((c) => makeCell(c.type, c.content)),
+      isDirty: true,
+    };
+    setNotebooks((prev) => [...prev, nb]);
+    setActiveId(nb.id);
+    window.electronAPI.startKernel(nb.id);
+
+    if (result.skippedCount > 0) {
+      alert(`Imported ${result.cells.length} cell${result.cells.length !== 1 ? 's' : ''} from ${result.format.toUpperCase()} notebook.\n${result.skippedCount} non-C# cell${result.skippedCount !== 1 ? 's' : ''} were skipped.`);
+    }
+  }, []);
+
   // ── Tab management ─────────────────────────────────────────────────────────
 
   const handleNew = useCallback(async () => {
@@ -422,6 +446,7 @@ ${cellsHtml}
     // Handlers
     handleNew,
     handleLoad,
+    handleImportPolyglot,
     handleOpenRecent,
     handleCloseTab,
     handleReorder,

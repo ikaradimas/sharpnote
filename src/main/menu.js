@@ -111,6 +111,7 @@ function buildMenu(customShortcuts = {}) {
       { type: 'separator' },
       { label: 'Open…',          accelerator: accel('nb-open',    'Ctrl+O'),       click: () => send('open') },
       { label: 'Open Recent',    submenu: recentSubmenu },
+      { label: 'Import Polyglot Notebook…',                                        click: () => send('import-polyglot') },
       { type: 'separator' },
       { label: 'Save',           accelerator: accel('nb-save',    'Ctrl+S'),       click: () => send('save') },
       { label: 'Save As…',       accelerator: accel('nb-save-as', 'Ctrl+Shift+S'), click: () => send('save-as') },

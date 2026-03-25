@@ -2,6 +2,7 @@
 
 const path = require('path');
 const fs   = require('fs');
+const { parseDib, parseIpynb } = require('./polyglot-import');
 
 let _mainWindow   = null;
 let _addRecentFile = null;
@@ -100,6 +101,55 @@ function register(ipcMain, { mainWindow, dialog, addRecentFile, writeLog } = {})
       return { success: true, data, filePath: filePaths[0] };
     } catch (err) {
       _writeLog('LOAD', `Open failed: ${err.message}`);
+      return { success: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('import-polyglot-notebook', async () => {
+    const { filePaths, canceled } = await _dialog.showOpenDialog(_mainWindow, {
+      title: 'Import Polyglot Notebook',
+      filters: [
+        { name: 'Polyglot Notebooks', extensions: ['dib', 'ipynb'] },
+        { name: '.NET Interactive (.dib)', extensions: ['dib'] },
+        { name: 'Jupyter Notebook (.ipynb)', extensions: ['ipynb'] },
+      ],
+      properties: ['openFile'],
+    });
+    if (canceled || !filePaths.length) return { success: false };
+
+    const filePath = filePaths[0];
+    const ext      = path.extname(filePath).toLowerCase();
+
+    try {
+      const content = fs.readFileSync(filePath, 'utf-8');
+      const baseName = path.basename(filePath, ext);
+
+      let result;
+      if (ext === '.dib') {
+        const parsed = parseDib(content);
+        result = { ...parsed, title: baseName, format: 'dib' };
+      } else if (ext === '.ipynb') {
+        const parsed = parseIpynb(content);
+        result = { ...parsed, title: parsed.title || baseName, format: 'ipynb' };
+      } else {
+        return { success: false, error: 'Unrecognised file extension. Expected .dib or .ipynb.' };
+      }
+
+      if (result.cells.length === 0) {
+        return {
+          success: false,
+          error: `No C# or Markdown cells found in this notebook.${
+            result.skippedCount > 0
+              ? ` (${result.skippedCount} non-C# cell${result.skippedCount !== 1 ? 's' : ''} were skipped)`
+              : ''
+          }`,
+        };
+      }
+
+      _writeLog('IMPORT', `Polyglot import: ${path.basename(filePath)} → ${result.cells.length} cells, ${result.skippedCount} skipped`);
+      return { success: true, ...result, filePath };
+    } catch (err) {
+      _writeLog('IMPORT', `Polyglot import failed: ${err.message}`);
       return { success: false, error: err.message };
     }
   });
