@@ -32,13 +32,14 @@ An interactive C# notebook. Press **Ctrl+Enter** to run a cell, or click **▶ R
 |---------|--------|
 | Console output | \`Console.WriteLine("hello")\` |
 | HTML | \`Display.Html("<b>bold</b>")\` |
-| Table | \`Display.Table(rows)\` · \`.DisplayTable()\` |
+| Table | \`Display.Table(rows)\` · \`.DisplayTable()\` · click headers to **sort** |
 | Chart | \`Display.Graph(chartJsConfig)\` |
 | NuGet | \`#r "nuget: Package, Version"\` |
 | Logging | \`value.Log()\` · \`value.Log("label")\` |
 | Config | \`Config["Key"]\` · \`Config.Set("Key","val")\` · \`Config.Remove("Key")\` |
 | Database | Attach via **DB** panel or \`Db.Add\` / \`Db.Attach\` → \`mydb.Users.ToList()\` |
 | Panels | \`Panels.Open/Close/CloseAll(PanelId.*)\` · \`Panels.Dock/Float\` |
+| Util | \`obj.Dump()\` · \`Util.Time()\` · \`Util.Dif()\` · \`Util.HorizontalRun()\` · \`Util.Cache()\` |
 | Auto-render | Return a value — type is detected automatically |`),
 
     md('## 1 · Basic C#'),
@@ -795,6 +796,100 @@ Panels.Open(PanelId.Graph);
 Panels.Dock(PanelId.Graph, DockZone.Right, 0.42);
 
 Display.Html("<p style='color:#4ec9b0'>Focused layout: Graph panel only.</p>");`),
+
+    md(`## 21 · Util — LinqPAD Utilities
+
+SharpNote includes a \`Util\` global with LinqPAD-compatible helpers.
+\`.Dump()\` is a direct alias for \`.Display()\` — LinqPAD notebooks work as-is.
+
+| Method | Description |
+|--------|-------------|
+| \`obj.Dump(title?)\` | Alias for \`.Display()\` — auto-renders the value |
+| \`list.DumpTable(title?)\` | Alias for \`.DisplayTable()\` — renders as a table |
+| \`Util.Cmd(cmd, args?)\` | Run a shell command; capture and display stdout/stderr |
+| \`Util.Time(action, label?)\` | Benchmark an Action; display elapsed time |
+| \`Util.Time<T>(fn, label?)\` | Benchmark a Func<T>; display timing and return the value |
+| \`Util.Dif(a, b, labelA?, labelB?)\` | Line-by-line diff between two values |
+| \`Util.HorizontalRun(gap, items…)\` | Render multiple items side by side |
+| \`Util.Metatext(text)\` | Dimmed metadata annotation |
+| \`Util.Highlight(obj, color?)\` | Wrap output in a colored highlight box |
+| \`Util.Cache<T>(key, fn)\` | Memoize a computation; cached until kernel reset |
+| \`Util.ClearCache()\` | Clear all memoized entries |
+
+**Table sorting** — click any column header to sort ascending.
+Click again to reverse; click a third time to restore the original order.`),
+
+    cs(`// .Dump() — LinqPAD-compatible alias for .Display()
+"LinqPAD users feel right at home!".Dump();
+
+// Arrays auto-render as tables
+new[] {
+  new { Name = "Alice", Score = 95, Grade = "A"  },
+  new { Name = "Bob",   Score = 82, Grade = "B+" },
+  new { Name = "Carol", Score = 78, Grade = "C+" },
+}.Dump("exam results");     // try clicking the column headers to sort`),
+
+    cs(`// Util.Time — benchmark a block of code
+Util.Time(() => {
+    var _ = Enumerable.Range(1, 1_000_000).Sum(x => (long)x);
+}, "sum 1 million integers");
+
+// Util.Time<T> — benchmark and capture the return value
+var primes = Util.Time(
+    () => Enumerable.Range(2, 998)
+            .Where(n => !Enumerable.Range(2, (int)Math.Sqrt(n)).Any(d => n % d == 0))
+            .ToList(),
+    "find primes < 1000");
+
+$"Found {primes.Count} primes below 1000".Display();`),
+
+    cs(`// Util.Dif — line-by-line diff between two values
+// Great for comparing config snapshots, JSON payloads, or any two objects.
+
+var before = new { Name = "Alice", Score = 85, Status = "pending",  Tags = new[] { "new" } };
+var after  = new { Name = "Alice", Score = 92, Status = "approved", Tags = new[] { "new", "verified" } };
+
+Util.Dif(before, after, "before", "after");`),
+
+    cs(`// Util.HorizontalRun — display multiple outputs side by side
+var q1 = new[] {
+    new { Month = "Jan", Revenue = 42 },
+    new { Month = "Feb", Revenue = 58 },
+    new { Month = "Mar", Revenue = 51 },
+};
+var q2 = new[] {
+    new { Month = "Apr", Revenue = 74 },
+    new { Month = "May", Revenue = 83 },
+    new { Month = "Jun", Revenue = 91 },
+};
+
+Util.Metatext("H1 vs H2 revenue (click column headers to sort each table)");
+Util.HorizontalRun("24px", q1, q2);`),
+
+    cs(`// Util.Highlight — draw attention to important output
+var health = new { Status = "Healthy", Latency = "12ms", Uptime = "99.9%", Errors = 0 };
+Util.Highlight(health, "#4ec9b0");         // teal — all good
+
+var warning = new { Status = "Degraded", Latency = "340ms", Uptime = "97.2%", Errors = 14 };
+Util.Highlight(warning, "#f4b246");        // amber — attention needed`),
+
+    cs(`// Util.Cache — memoize expensive computations across cell runs.
+// Run this cell multiple times — the log entry only appears on the first run.
+// Reset the kernel to clear cached values.
+
+var dataset = Util.Cache("heavy-dataset", () => {
+    "cache miss — computing...".Log("Util.Cache");
+    return Enumerable.Range(1, 10_000)
+        .Select(i => new { Id = i, Value = Math.Round(Math.Sin(i * 0.1) * 100, 2) })
+        .ToList();
+});
+
+$"Loaded {dataset.Count:N0} rows (cached after first run)".Display();`),
+
+    cs(`// Util.Cmd — run a shell command and display the output
+// The result is also returned as a string for further processing.
+
+Util.Cmd("dotnet", "--version");`),
   ];
 }
 

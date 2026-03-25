@@ -63,6 +63,7 @@
 - **Lint** — real-time Roslyn diagnostics; squiggles rendered via the CodeMirror lint extension
 - **Reactive Cell Dependencies** — after a successful execution, downstream cells that reference any variable whose value changed are flagged with a "↺ upstream variables changed" banner, clearing automatically when those cells are run
 - **Cell Output History** — re-running a cell preserves the previous outputs; a ‹ › navigator in the cell footer lets you browse the last 5 runs to compare results across executions
+- **`Util` helper** — LinqPAD-compatible utilities available as a global: `.Dump()` / `.DumpTable()` aliases, `Util.Cmd()` shell execution with output capture, `Util.Time()` benchmarking, `Util.Dif()` LCS line diff, `Util.HorizontalRun()` side-by-side layout, `Util.Metatext()` / `Util.Highlight()` styled output, `Util.Cache<T>()` cross-execution memoization cleared on kernel reset
 
 ### Output & Display
 
@@ -70,6 +71,7 @@
 - **Display.Markdown** — `Display.Markdown(text)` renders markdown from C# code with Mermaid diagram and KaTeX math support, enabling dynamic reports and documentation generation
 - **Graph panel** — live time-series chart driven by `Display.Plot(name, value)` calls; per-variable avg / max overlay lines; Clear button and `Display.ClearGraph()` API; chart type, legend toggle (`Ctrl+Shift+R`)
 - **Interactive Widgets** — `Display.Slider()`, `Display.Dropdown()`, and `Display.DatePicker()` render live controls in cell output; widget values persist between cell executions and are sent back to the kernel on change
+- **Table column sorting** — click any column header to sort ascending; click again for descending; third click restores original order; numeric columns sort numerically, not lexically
 - **Notebook Export** — File → Export as HTML… generates a self-contained dark-themed HTML file containing all cell sources, markdown renders, and outputs; no external dependencies required to view it
 - **Memory sparkline** — kernel reports heap usage every 3 s; rendered as an SVG bar chart in the status bar
 
@@ -84,8 +86,6 @@
 - **To Do panel** — auto-scans code cells for `// TODO`, `// FIXME`, and `// BUG` comments; click any item to scroll to and highlight the originating cell (`Ctrl+Shift+O`)
 - **Config panel** — per-notebook key/value store; readable via `Config["key"]` and writable from code via `Config.Set(key, value)` / `Config.Remove(key)` — changes reflect in the panel in real time
 - **Panel scripting API** — `Panels.Open/Close/Toggle/CloseAll` controls panel visibility; `Panels.Dock(PanelId.*, DockZone.*, size?)` and `Panels.Float(PanelId.*, x?, y?, width?, height?)` move panels between dock zones or float them with precise position and size; `Db.Add/Remove/Attach/Detach/ListAsync` manages database connections from code
-- **`Util` helper** — LinqPAD-compatible utilities: `.Dump()` / `.DumpTable()` aliases, `Util.Cmd()` shell execution, `Util.Time()` benchmarking, `Util.Dif()` diff viewer, `Util.HorizontalRun()` side-by-side layout, `Util.Metatext()` / `Util.Highlight()` styled output, `Util.Cache()` cross-execution memoization
-- **Table column sorting** — click any column header to sort ascending/descending; click again to reverse; third click resets to original order
 - **Dock layout** — panels can be docked to left / right / bottom zones, floated freely, or dragged between zones; opening a panel via the toolbar auto-switches to its tab and briefly highlights it; tab bars show scroll-shadow indicators when tabs overflow; layouts can be saved and restored by name
 
 ### Data & Integration
