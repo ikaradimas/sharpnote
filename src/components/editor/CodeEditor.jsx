@@ -113,12 +113,23 @@ export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
         if (!isMemberAccess && !ctx.explicit && (!word || word.text.length < 2)) return null;
         try {
           const items = await fn(code, pos);
-          if (!items?.length) return null;
-          return {
-            from: word?.from ?? pos,
-            options: items.map((i) => ({ label: i.label, type: i.type || 'text', detail: i.detail })),
-            validFor: /^\w*$/,
-          };
+          if (items?.length) {
+            return {
+              from: word?.from ?? pos,
+              options: items.map((i) => ({ label: i.label, type: i.type || 'text', detail: i.detail })),
+              validFor: /^\w*$/,
+            };
+          }
+          // In member-access context, keep the dropdown open with a "no results" indicator
+          // instead of hiding it. Use from:pos so the filter text is always empty and the
+          // sentinel is never filtered out by CodeMirror's client-side matching.
+          if (isMemberAccess) {
+            return {
+              from: pos,
+              options: [{ label: '(no members found)', type: 'text', apply: () => {} }],
+            };
+          }
+          return null;
         } catch { return null; }
       };
 

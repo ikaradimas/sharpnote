@@ -9,7 +9,7 @@ export const DOCS_SECTIONS = [
       { type: 'ul', items: [
         'Notebook — a .cnb file containing cells, packages, config, and database attachment state',
         'Cell — a unit of code or markdown; code cells persist state across the kernel session',
-        'Kernel — a .NET 8 process per tab that executes C# and keeps all variables alive between cells',
+        'Kernel — a .NET 10 process per tab that executes C# and keeps all variables alive between cells',
         'Tab — each open notebook has its own tab and a fully independent kernel process',
         'Code Library — a shared folder of reusable .cs/.csx snippets available to all notebooks',
         'DB Panel — attach live database connections and query them with typed EF Core DbContexts',
@@ -219,7 +219,7 @@ export const DOCS_SECTIONS = [
     id: 'kernel', title: 'Kernel',
     content: [
       { type: 'h3', text: 'What Is the Kernel' },
-      { type: 'p', text: 'Each notebook tab spawns its own .NET 8 kernel process. The kernel receives code snippets over stdin and returns structured results over stdout as newline-delimited JSON. It runs Roslyn scripting, handles NuGet restores, and manages EF Core DbContext instances for attached databases.' },
+      { type: 'p', text: 'Each notebook tab spawns its own .NET 10 kernel process. The kernel receives code snippets over stdin and returns structured results over stdout as newline-delimited JSON. It runs Roslyn scripting, handles NuGet restores, and manages EF Core DbContext instances for attached databases.' },
       { type: 'h3', text: 'Status Indicator' },
       { type: 'p', text: 'The coloured dot in the toolbar shows kernel state:' },
       { type: 'ul', items: [

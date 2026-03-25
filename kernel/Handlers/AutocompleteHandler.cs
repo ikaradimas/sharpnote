@@ -71,13 +71,12 @@ partial class Program
     {
         var textBefore = position <= code.Length ? code[..position] : code;
 
-        // Member access: "expr." or "expr.partial"
+        // Member access: "expr." or "expr.partial" — always return member list (may be empty)
         var memberMatch = Regex.Match(textBefore, @"\b(\w+)\.(\w*)$");
         if (memberMatch.Success)
         {
             var objName = memberMatch.Groups[1].Value;
-            var members = GetMembersForExpr(objName, state);
-            if (members.Count > 0) return members;
+            return GetMembersForExpr(objName, state);
         }
 
         // General context: keywords + state variables
@@ -103,26 +102,49 @@ partial class Program
 
     internal static List<object> GetMembersForExpr(string name, ScriptState<object?>? state)
     {
-        // Try live variable
+        // Try live variable — use runtime type if value is available, declared type otherwise
         if (state != null)
         {
             var v = state.Variables.FirstOrDefault(
                 x => string.Equals(x.Name, name, StringComparison.Ordinal));
-            if (v?.Value != null)
-                return ReflectMembers(v.Value.GetType(), isStatic: false);
+            if (v != null)
+            {
+                var type = v.Value?.GetType() ?? v.Type;
+                if (type != null)
+                    return ReflectMembers(type, isStatic: false);
+            }
         }
 
         // Try well-known static type
-        if (WellKnownTypes.TryGetValue(name, out var type))
-            return ReflectMembers(type, isStatic: true);
+        if (WellKnownTypes.TryGetValue(name, out var wellKnown))
+            return ReflectMembers(wellKnown, isStatic: true);
+
+        // Try user-defined types from Roslyn script assemblies (dynamic / in-memory)
+        foreach (var asm in AppDomain.CurrentDomain.GetAssemblies()
+            .Where(a => string.IsNullOrEmpty(a.Location)))
+        {
+            try
+            {
+                var t = asm.GetTypes().FirstOrDefault(
+                    t => string.Equals(t.Name, name, StringComparison.Ordinal));
+                if (t != null)
+                    return ReflectMembers(t, isStatic: true);
+            }
+            catch { /* skip assemblies that throw on GetTypes */ }
+        }
 
         return new List<object>();
     }
 
     internal static List<object> ReflectMembers(Type type, bool isStatic)
     {
+        // Enum types expose their values as public static fields; include both
+        // static and instance so callers get the enum values AND System.Enum methods.
         var flags = BindingFlags.Public |
-                    (isStatic ? BindingFlags.Static : BindingFlags.Instance);
+                    (isStatic || type.IsEnum ? BindingFlags.Static : BindingFlags.Instance);
+        if (type.IsEnum)
+            flags |= BindingFlags.Instance; // also include ToString, GetType, etc.
+
         var seen  = new HashSet<string>(StringComparer.Ordinal);
         var items = new List<object>();
 
@@ -137,7 +159,7 @@ partial class Program
                 PropertyInfo pi =>
                     ("property", pi.PropertyType.Name),
                 FieldInfo fi =>
-                    ("variable", fi.FieldType.Name),
+                    (type.IsEnum ? "enum" : "variable", fi.FieldType.Name),
                 _ => ("", null)
             };
 

@@ -109,7 +109,7 @@
                      │  JSON lines over child_process stdin/stdout
           ┌──────────▼──────────┐   ┌─────────────────────┐
           │  kernel (notebook A) │   │  kernel (notebook B) │
-          │  .NET 8 / Roslyn     │   │  .NET 8 / Roslyn     │
+          │  .NET 10 / Roslyn     │   │  .NET 10 / Roslyn     │
           └─────────────────────┘   └─────────────────────┘
 ```
 
@@ -171,7 +171,7 @@ The UI is organized across `src/app/`, `src/components/`, `src/hooks/`, and `src
 
 ### C# Kernel (`kernel/`)
 
-The kernel is a self-contained .NET 8 console application that communicates with the main process via **JSON lines over stdin/stdout**.
+The kernel is a self-contained .NET 10 console application that communicates with the main process via **JSON lines over stdin/stdout**.
 
 | File | Responsibility |
 |---|---|
@@ -368,7 +368,7 @@ sharpnote/
 │   └── config/           # Constants (docs-sections.js, themes, dock-layout defaults, …)
 │
 ├── kernel/
-│   ├── kernel.csproj     # .NET 8 project
+│   ├── kernel.csproj     # .NET 10 project
 │   ├── Program.cs        # Protocol loop, Roslyn execution, display system
 │   ├── DbProvider.cs     # IDbProvider + SQLite/SQL Server/PostgreSQL
 │   ├── DbCodeGen.cs      # Schema → C# POCO + DbContext codegen
