@@ -244,6 +244,7 @@ body {
   gap: 0;
   min-height: 0;
   background: var(--bg-base);
+  position: relative; /* establishes offsetParent for .cell-wrapper children */
 }
 .notebook > .cell-wrapper:first-child {
   margin-top: 24px;

@@ -74,14 +74,10 @@ describe('TocPanel', () => {
   });
 
   it('clicking a heading item calls scrollTo on the .notebook container', () => {
-    const mockContainer = {
-      scrollTop: 100,
-      scrollTo: vi.fn(),
-      getBoundingClientRect: () => ({ top: 50 }),
-    };
+    const mockContainer = { scrollTo: vi.fn() };
     const mockCell = {
       closest: vi.fn(() => mockContainer),
-      getBoundingClientRect: () => ({ top: 200 }),
+      offsetTop: 742,
     };
     vi.spyOn(document, 'querySelector').mockReturnValueOnce(mockCell);
 
@@ -89,7 +85,7 @@ describe('TocPanel', () => {
     fireEvent.click(screen.getByText('Section One'));
 
     expect(mockContainer.scrollTo).toHaveBeenCalledWith({
-      top: 100 + 200 - 50 - 8, // scrollTop + cellTop - containerTop - offset
+      top: 742 - 8, // cell.offsetTop - 8
       behavior: 'smooth',
     });
   });

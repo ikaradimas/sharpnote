@@ -19,12 +19,10 @@ export function TocPanel({ cells }) {
       cell.scrollIntoView({ behavior: 'smooth', block: 'start' });
       return;
     }
-    const cellRect = cell.getBoundingClientRect();
-    const containerRect = container.getBoundingClientRect();
-    container.scrollTo({
-      top: container.scrollTop + cellRect.top - containerRect.top - 8,
-      behavior: 'smooth',
-    });
+    // .notebook has position:relative, so cell.offsetTop is the stable absolute
+    // offset within the scroll container — independent of current scroll position
+    // or any ongoing animation/transition.
+    container.scrollTo({ top: cell.offsetTop - 8, behavior: 'smooth' });
   };
 
   return (
