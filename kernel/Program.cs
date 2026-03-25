@@ -35,6 +35,9 @@ partial class Program
 
     // Cancellation token source for the current execution (set/cleared per execute)
     private static CancellationTokenSource? _execCts;
+
+    // ID of the cell currently being executed — set by HandleExecute, read by DbHelper
+    internal static string? CurrentCellId;
     private static readonly Dictionary<string, JsonElement> _widgetValues = new();
 
     // ── Entry point ───────────────────────────────────────────────────────────
@@ -69,7 +72,8 @@ partial class Program
                 "System.Threading.Tasks",
                 "System.Text.Json",
                 "System.Net",
-                "SharpNoteKernel"
+                "SharpNoteKernel",
+                "Microsoft.EntityFrameworkCore"
             )
             .AddReferences(
                 typeof(object).Assembly,
