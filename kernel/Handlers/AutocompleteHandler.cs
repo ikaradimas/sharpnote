@@ -79,22 +79,46 @@ partial class Program
             return GetMembersForExpr(objName, state);
         }
 
-        // General context: keywords + state variables
+        // General context: keywords + state variables + type names
         var items = new List<object>();
+        var seen  = new HashSet<string>(StringComparer.Ordinal);
+
         foreach (var kw in CSharpKeywords)
+        {
+            seen.Add(kw);
             items.Add(new { label = kw, type = "keyword", detail = (string?)null });
+        }
 
         if (state != null)
         {
             foreach (var v in state.Variables)
             {
-                items.Add(new
-                {
-                    label  = v.Name,
-                    type   = "variable",
-                    detail = v.Type?.Name,
-                });
+                if (seen.Add(v.Name))
+                    items.Add(new { label = v.Name, type = "variable", detail = v.Type?.Name });
             }
+        }
+
+        // Well-known type names (Console, Math, DateTime, …)
+        foreach (var typeName in WellKnownTypes.Keys)
+        {
+            if (seen.Add(typeName))
+                items.Add(new { label = typeName, type = "class", detail = (string?)null });
+        }
+
+        // User-defined types from Roslyn dynamic (in-memory) assemblies
+        foreach (var asm in AppDomain.CurrentDomain.GetAssemblies()
+            .Where(a => string.IsNullOrEmpty(a.Location)))
+        {
+            try
+            {
+                foreach (var t in asm.GetTypes()
+                    .Where(t => t.IsPublic && !t.Name.Contains('<') && !t.Name.Contains('+')))
+                {
+                    if (seen.Add(t.Name))
+                        items.Add(new { label = t.Name, type = "class", detail = (string?)null });
+                }
+            }
+            catch { /* skip assemblies that throw on GetTypes */ }
         }
 
         return items;

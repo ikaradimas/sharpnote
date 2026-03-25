@@ -95,6 +95,11 @@ export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
 
     if (language === 'csharp') {
       const keywordSource = (ctx) => {
+        // Suppress keyword list in member-access context — the async dynamicSource
+        // will return the correct member list and we don't want keyword noise.
+        const textBefore = ctx.state.doc.sliceString(0, ctx.pos);
+        if (/\w\.\w*$/.test(textBefore)) return null;
+
         const word = ctx.matchBefore(/\w*/);
         if (!word || (word.from === word.to && !ctx.explicit)) return null;
         return {

@@ -25,6 +25,7 @@ partial class Program
         Action<ScriptOptions> setOptions)
     {
         var id = msg.GetProperty("id").GetString()!;
+        CurrentCellId = id;
         var code = msg.GetProperty("code").GetString()!;
         var outputMode = msg.TryGetProperty("outputMode", out var omProp)
             ? omProp.GetString() ?? "auto"
@@ -109,6 +110,10 @@ partial class Program
         var execToken = _execCts.Token;
         var interrupted = false;
 
+        // Strip trailing semicolon from the final expression statement so Roslyn
+        // captures its return value (e.g. `DateTime.Compare(a,b);` → displays the int).
+        cleanCode = TrimFinalExprSemicolon(cleanCode);
+
         // Inject __ct__.ThrowIfCancellationRequested() into every loop body so
         // tight synchronous loops respond to Stop without killing the kernel.
         globals.__ct__ = execToken;
@@ -188,9 +193,35 @@ partial class Program
             realStdout.WriteLine(JsonSerializer.Serialize(new { type = "vars_update", vars }));
         }
 
+        CurrentCellId = null;
         var wasCancelled = !success && errorMessage == "Execution interrupted";
         realStdout.WriteLine(JsonSerializer.Serialize(new
         { type = "complete", id, success, cancelled = wasCancelled }));
+    }
+
+    // Strip the semicolon from the last expression statement so the script
+    // captures its return value.  Only fires when the final top-level statement
+    // is an expression statement (method call, comparison, etc.) — assignments,
+    // declarations, and control-flow are left untouched.
+    private static string TrimFinalExprSemicolon(string code)
+    {
+        var tree = CSharpSyntaxTree.ParseText(code,
+            new CSharpParseOptions(LanguageVersion.Latest,
+                Microsoft.CodeAnalysis.DocumentationMode.None,
+                Microsoft.CodeAnalysis.SourceCodeKind.Script));
+        var root = tree.GetRoot();
+
+        var last = root.ChildNodes()
+            .OfType<Microsoft.CodeAnalysis.CSharp.Syntax.GlobalStatementSyntax>()
+            .LastOrDefault();
+        if (last?.Statement is Microsoft.CodeAnalysis.CSharp.Syntax.ExpressionStatementSyntax exprStmt)
+        {
+            var semi = exprStmt.SemicolonToken;
+            if (!semi.IsMissing)
+                return code[..semi.SpanStart] + code[semi.Span.End..];
+        }
+
+        return code;
     }
 
     // Safe ToString for variable inspector
