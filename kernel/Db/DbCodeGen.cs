@@ -183,6 +183,8 @@ public static class DbCodeGen
             MetadataReference.CreateFromFile(typeof(Microsoft.EntityFrameworkCore.DbContext).Assembly.Location),
             MetadataReference.CreateFromFile(Assembly.Load("Microsoft.EntityFrameworkCore.Relational").Location),
             MetadataReference.CreateFromFile(Assembly.Load("System.Linq.Expressions").Location),
+            MetadataReference.CreateFromFile(Assembly.Load("System.ComponentModel.Primitives").Location),
+            MetadataReference.CreateFromFile(Assembly.Load("System.ComponentModel.Annotations").Location),
         };
 
         // Add all provider assemblies from RequiredAssemblies

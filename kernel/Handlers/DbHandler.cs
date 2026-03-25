@@ -73,6 +73,7 @@ partial class Program
         var varName       = msg.TryGetProperty("varName", out var vnProp)
             ? vnProp.GetString() ?? DbCodeGen.SanitizeVarName(connName)
             : DbCodeGen.SanitizeVarName(connName);
+        var cellId        = msg.TryGetProperty("cellId", out var cidProp) ? cidProp.GetString() : null;
 
         try
         {
@@ -140,7 +141,7 @@ partial class Program
         }
         catch (Exception ex)
         {
-            lock (realStdout) { realStdout.WriteLine(JsonSerializer.Serialize(new { type = "db_error", connectionId, message = ex.Message })); }
+            lock (realStdout) { realStdout.WriteLine(JsonSerializer.Serialize(new { type = "db_error", connectionId, cellId, message = ex.Message })); }
         }
     }
 
