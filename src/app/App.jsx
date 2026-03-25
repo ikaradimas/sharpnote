@@ -86,7 +86,7 @@ export function App() {
     notebooks, setNotebooks, activeId, setActiveId, docsOpen,
     pinnedPaths, setPinnedPaths, notebooksRef, activeIdRef, pinnedPathsRef,
     setNb, setNbDirty, buildNotebookData,
-    handleNew, handleLoad, handleOpenRecent, handleCloseTab, handleReorder,
+    handleNew, handleLoad, handleImportPolyglot, handleOpenRecent, handleCloseTab, handleReorder,
     handleRenameTab, handleSetTabColor, handleSave, handleSaveAs, handleExportHtml,
     handleOpenDocs, handleCloseDocs, handleTogglePin, handleNavigateToCell,
     handleInsertLibraryFile, handleInjectApiCall, openPinnedNotebooks,
@@ -564,8 +564,9 @@ export function App() {
   const isNotebook = () => isNotebookId(activeIdRef.current);
 
   menuHandlersRef.current = {
-    new:  handleNew,
-    open: handleLoad,
+    new:              handleNew,
+    open:             handleLoad,
+    'import-polyglot': handleImportPolyglot,
     save: () => {
       const id = activeIdRef.current;
       if (isLibEditorId(id)) handleSaveLibEditor(id);

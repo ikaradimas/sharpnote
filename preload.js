@@ -38,6 +38,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveNotebook: (data) => ipcRenderer.invoke('save-notebook', data),
   saveNotebookTo: (filePath, data) => ipcRenderer.invoke('save-notebook-to', { filePath, data }),
   loadNotebook: () => ipcRenderer.invoke('load-notebook'),
+  importPolyglotNotebook: () => ipcRenderer.invoke('import-polyglot-notebook'),
   saveFile: (opts) => ipcRenderer.invoke('save-file', opts),
 
   // Font size
