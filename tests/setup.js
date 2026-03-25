@@ -98,6 +98,7 @@ vi.mock('@codemirror/legacy-modes/mode/clike', () => ({
 vi.mock('@codemirror/autocomplete', () => ({
   autocompletion: () => ({ autocompletion: true }),
   completionKeymap: [],
+  acceptCompletion: () => false,
 }));
 
 vi.mock('@codemirror/lint', () => ({

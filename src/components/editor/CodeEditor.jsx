@@ -6,7 +6,7 @@ import { oneDark } from '@codemirror/theme-one-dark';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { StreamLanguage } from '@codemirror/language';
 import { csharp } from '@codemirror/legacy-modes/mode/clike';
-import { autocompletion, completionKeymap } from '@codemirror/autocomplete';
+import { autocompletion, completionKeymap, acceptCompletion } from '@codemirror/autocomplete';
 import { linter } from '@codemirror/lint';
 import { CSHARP_KEYWORDS } from '../../config/csharp-keywords.js';
 
@@ -138,7 +138,13 @@ export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
       // - Prec.highest ensures Tab → acceptCompletion beats indentWithTab (normal priority).
       // - acceptCompletion returns false when no completion is active, so Tab falls through
       //   to indentWithTab for normal indent behaviour.
-      const completionKeys = completionKeymap.filter((b) => b.key !== 'Enter');
+      // completionKeymap has no Tab binding — add it explicitly.
+      // acceptCompletion returns false when no completion is active, so Tab
+      // falls through to indentWithTab for normal indent behaviour.
+      const completionKeys = [
+        { key: 'Tab', run: acceptCompletion },
+        ...completionKeymap.filter((b) => b.key !== 'Enter'),
+      ];
       extensions.push(
         autocompletion({ override: [keywordSource, dynamicSource], defaultKeymap: false }),
         Prec.highest(keymap.of(completionKeys)),
