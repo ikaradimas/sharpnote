@@ -465,6 +465,7 @@ export const DOCS_SECTIONS = [
   {
     id: 'shortcuts', title: 'Keyboard Shortcuts',
     content: [
+      { type: 'p', text: 'These are the default shortcuts. Most can be reassigned in Settings → Shortcuts.' },
       { type: 'shortcuts', rows: [
         { keys: '⌘ N', desc: 'New notebook' },
         { keys: '⌘ O', desc: 'Open notebook in a new tab' },
