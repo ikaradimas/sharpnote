@@ -23,6 +23,7 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
   const pendingLintRef        = useRef({});
   const pendingSignatureRef   = useRef({});
   const prevVarsSnapRef       = useRef({});
+  const runAllRef             = useRef(null);
 
   const cancelPendingCells = useCallback((cells) => {
     cells.forEach((cell) => {
@@ -52,6 +53,11 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
           setNb(notebookId, { kernelStatus: 'ready', vars: [] });
           const nb = notebooksRef.current.find((n) => n.id === notebookId);
           if (!nb) break;
+
+          // Auto-run on open
+          if (nb.autoRun) {
+            setTimeout(() => runAllRef.current?.(notebookId), 200);
+          }
 
           const pending = nb.nugetPackages.filter((p) => p.status === 'pending');
           if (pending.length > 0 && window.electronAPI) {
@@ -465,6 +471,39 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
     for (const cell of nb.cells.filter((c) => c.type === 'code')) await runCell(notebookId, cell);
   }, [runCell]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Keep the ref in sync so the ready handler can call runAll
+  runAllRef.current = runAll;
+
+  const runSqlCell = useCallback((notebookId, cell) => {
+    if (!window.electronAPI || cell.type !== 'sql') return Promise.resolve();
+    const nb = notebooksRef.current.find((n) => n.id === notebookId);
+    const attached = nb?.attachedDbs?.find((d) => d.connectionId === (cell.db || '') && d.status === 'ready');
+    if (!attached) return Promise.resolve();
+
+    return new Promise((resolve) => {
+      setNb(notebookId, (n) => {
+        const prevOutputs = n.outputs[cell.id];
+        const newOutputHistory = { ...(n.outputHistory || {}) };
+        if (prevOutputs?.length > 0) {
+          newOutputHistory[cell.id] = [...(newOutputHistory[cell.id] || []).slice(-4), prevOutputs];
+        }
+        return {
+          outputs: { ...n.outputs, [cell.id]: [] },
+          outputHistory: newOutputHistory,
+          cellResults: { ...(n.cellResults || {}), [cell.id]: null },
+          running: new Set([...n.running, cell.id]),
+        };
+      });
+      pendingResolversRef.current[cell.id] = resolve;
+      window.electronAPI.sendToKernel(notebookId, {
+        type: 'execute_sql',
+        id: cell.id,
+        sql: cell.content,
+        varName: attached.varName,
+      });
+    });
+  }, [setNb]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const runFrom = useCallback(async (notebookId, cellId) => {
     const nb = notebooksRef.current.find((n) => n.id === notebookId);
     if (!nb || nb.running.size > 0) return;
@@ -556,6 +595,7 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
 
   return {
     runCell,
+    runSqlCell,
     runAll,
     runFrom,
     runTo,

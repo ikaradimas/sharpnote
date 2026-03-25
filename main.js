@@ -155,6 +155,27 @@ function registerAllHandlers() {
     }
   });
 
+  // Export active notebook as PDF
+  ipcMain.handle('export-pdf', async () => {
+    const { filePath, canceled } = await dialog.showSaveDialog({
+      title: 'Export Notebook as PDF',
+      defaultPath: 'notebook.pdf',
+      filters: [{ name: 'PDF Document', extensions: ['pdf'] }],
+    });
+    if (canceled || !filePath) return { success: false };
+    try {
+      const data = await mainWindow.webContents.printToPDF({
+        printBackground: true,
+        pageSize: 'A4',
+        margins: { marginType: 'custom', top: 0.5, bottom: 0.5, left: 0.5, right: 0.5 },
+      });
+      fs.writeFileSync(filePath, data);
+      return { success: true, filePath };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
   // App info.
   ipcMain.handle('get-app-version', () => app.getVersion());
   ipcMain.handle('get-app-paths', () => ({

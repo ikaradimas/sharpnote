@@ -49,6 +49,41 @@ public class WidgetHandle
     public override string ToString() => _stringValue;
 }
 
+// ── ProgressHandle ────────────────────────────────────────────────────────────
+
+public class ProgressHandle
+{
+    private readonly DisplayHelper _display;
+    public string HandleId { get; }
+    private readonly string? _label;
+    private readonly int _total;
+    private int _current;
+
+    internal ProgressHandle(DisplayHelper display, string handleId, string? label, int total)
+    {
+        _display = display;
+        HandleId = handleId;
+        _label   = label;
+        _total   = total;
+    }
+
+    /// <summary>Updates the progress bar to <paramref name="current"/> out of total.</summary>
+    public void Report(int current)
+    {
+        _current = current;
+        var pct  = _total > 0 ? (double)current / _total * 100.0 : 0.0;
+        _display.SendUpdate("progress",
+            (object)new { label = _label, current, total = _total, pct, done = false }, HandleId);
+    }
+
+    /// <summary>Marks the progress bar as complete.</summary>
+    public void Complete()
+    {
+        _display.SendUpdate("progress",
+            (object)new { label = _label, current = _total, total = _total, pct = 100.0, done = true }, HandleId);
+    }
+}
+
 // ── DisplayHandle ─────────────────────────────────────────────────────────────
 
 public class DisplayHandle
@@ -158,6 +193,10 @@ public class DisplayHelper
     internal void SendUpdate(string format, object content, string handleId) =>
         Send(new { type = "display", id = _currentId, format, content, handleId, update = true });
 
+    /// <summary>Emits a collapsible object tree for complex objects.</summary>
+    internal void Tree(string json, string? title = null) =>
+        Send(new { type = "display", id = _currentId, format = "tree", content = (object)json, title });
+
     private DisplayHandle NewHandle() =>
         new(this, Guid.NewGuid().ToString("N")[..12]);
 
@@ -223,6 +262,26 @@ public class DisplayHelper
         Send(new { type = "display", id = _currentId, format = "widget",
                    content = new { widgetType = "datepicker", widgetKey, label, value = currentValue } });
         return new WidgetHandle(widgetKey, currentValue);
+    }
+
+    /// <summary>
+    /// Renders an image from a URL, file path, or base64 data URI.
+    /// </summary>
+    public void Image(string source, string? alt = null, int? width = null, int? height = null) =>
+        Send(new { type = "display", id = _currentId, format = "image",
+                   content = new { src = source, alt, width, height } });
+
+    /// <summary>
+    /// Renders a live-updating progress bar. Call <see cref="ProgressHandle.Report"/> to
+    /// update and <see cref="ProgressHandle.Complete"/> when done.
+    /// </summary>
+    public ProgressHandle Progress(string? label = null, int total = 100)
+    {
+        var h = NewHandle();
+        Send(new { type = "display", id = _currentId, format = "progress",
+                   content = new { label, current = 0, total, pct = 0.0, done = false },
+                   handleId = h.HandleId });
+        return new ProgressHandle(this, h.HandleId, label, total);
     }
 
     /// <summary>

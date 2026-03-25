@@ -7,7 +7,13 @@ function shortId() {
 }
 
 export function makeCell(type = 'code', content = '') {
-  return { id: shortId(), type, content, ...(type === 'code' ? { outputMode: 'auto', locked: false } : {}) };
+  return {
+    id: shortId(),
+    type,
+    content,
+    ...(type === 'code' ? { outputMode: 'auto', locked: false } : {}),
+    ...(type === 'sql'  ? { db: '' } : {}),
+  };
 }
 
 // ── NuGet default sources ─────────────────────────────────────────────────────
@@ -1025,5 +1031,6 @@ export function createNotebook(withExamples = false) {
     todoPanelOpen: false,
     outputHistory: {},
     staleCellIds: [],
+    autoRun: false,
   };
 }

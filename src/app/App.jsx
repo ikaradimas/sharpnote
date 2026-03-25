@@ -161,7 +161,7 @@ export function App() {
       }));
   }, [setNb, setLibraryPanelOpen, setFilesPanelOpen, setApiPanelOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const { runCell, runAll, runFrom, runTo, handleInterrupt, handleReset,
+  const { runCell, runSqlCell, runAll, runFrom, runTo, handleInterrupt, handleReset,
           requestCompletions, requestLint, requestSignature, cancelPendingCells } =
     useKernelManager({
       setNb, notebooksRef, dbConnectionsRef, setVarInspectDialog,
@@ -591,6 +591,7 @@ export function App() {
     about:             () => setAboutOpen(true),
     settings:          () => setSettingsOpen(true),
     'export-html':     handleExportHtml,
+    'export-pdf':      () => window.electronAPI?.exportPdf(),
     'command-palette': () => setCommandPaletteOpen(true),
   };
 
@@ -835,6 +836,7 @@ export function App() {
                     onSetNb={(updater) => setNb(notebook.id, updater)}
                     onSetNbDirty={(updater) => setNbDirty(notebook.id, updater)}
                     onRunCell={runCell}
+                    onRunSqlCell={runSqlCell}
                     onRunAll={runAll}
                     onInterrupt={handleInterrupt}
                     onRunFrom={runFrom}

@@ -116,8 +116,8 @@ public static class SharpNoteExtensions
 
         try
         {
-            var json = JsonSerializer.Serialize(obj, new JsonSerializerOptions { WriteIndented = true });
-            d.Html($"<pre>{System.Net.WebUtility.HtmlEncode(json)}</pre>", title);
+            var json = JsonSerializer.Serialize(obj, new JsonSerializerOptions { WriteIndented = false });
+            d.Tree(json, title);
         }
         catch
         {

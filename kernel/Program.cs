@@ -178,6 +178,16 @@ partial class Program
                                     && confProp.GetBoolean();
                                 util.ReceiveConfirmResponse(requestId, confirmed);
                             }
+                            else if (msgType == "prompt_response"
+                                && root.TryGetProperty("requestId", out var pRidProp))
+                            {
+                                var requestId = pRidProp.GetString()!;
+                                var value = root.TryGetProperty("value", out var valProp)
+                                    && valProp.ValueKind == JsonValueKind.String
+                                    ? valProp.GetString()
+                                    : null;
+                                util.ReceivePromptResponse(requestId, value);
+                            }
                             else
                             {
                                 await msgChannel.Writer.WriteAsync(root);
@@ -239,6 +249,12 @@ partial class Program
                 case "db_connect":
                 {
                     await HandleDbConnect(msg, options, globals, realStdout);
+                    break;
+                }
+
+                case "execute_sql":
+                {
+                    await HandleExecuteSql(msg, options, globals, realStdout);
                     break;
                 }
 

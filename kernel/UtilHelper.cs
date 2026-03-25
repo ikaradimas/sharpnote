@@ -27,6 +27,10 @@ public class UtilHelper
     private static readonly ConcurrentDictionary<string, TaskCompletionSource<bool>>
         _pendingConfirms = new();
 
+    // Pending prompt requests — keyed by requestId, resolved by ReceivePromptResponse.
+    private static readonly ConcurrentDictionary<string, TaskCompletionSource<string?>>
+        _pendingPrompts = new();
+
     // Cancellation token for the current execution — set by SetCancellationToken.
     private CancellationToken _currentToken = CancellationToken.None;
 
@@ -370,6 +374,47 @@ public class UtilHelper
     {
         if (_pendingConfirms.TryGetValue(requestId, out var tcs))
             tcs.TrySetResult(confirmed);
+    }
+
+    // ── Util.PromptAsync ──────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Displays a text-input dialog in the cell output and asynchronously waits for the user
+    /// to submit a value. Returns the entered string, or <c>null</c> if cancelled or interrupted.
+    /// </summary>
+    public async Task<string?> PromptAsync(string message, string? title = null, string? defaultValue = null)
+    {
+        var requestId = Guid.NewGuid().ToString("N");
+        var tcs = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _pendingPrompts[requestId] = tcs;
+
+        _out.WriteLine(JsonSerializer.Serialize(new
+        {
+            type    = "display",
+            id      = Program.CurrentCellId,
+            format  = "prompt",
+            content = new { requestId, message, title, defaultValue },
+        }));
+
+        try
+        {
+            return await tcs.Task.WaitAsync(_currentToken);
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+        finally
+        {
+            _pendingPrompts.TryRemove(requestId, out _);
+        }
+    }
+
+    /// <summary>Called by the background stdin reader when a prompt_response arrives.</summary>
+    internal void ReceivePromptResponse(string requestId, string? value)
+    {
+        if (_pendingPrompts.TryGetValue(requestId, out var tcs))
+            tcs.TrySetResult(value);
     }
 
     // ── Util.Cache ────────────────────────────────────────────────────────────

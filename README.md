@@ -88,11 +88,18 @@
 - **Lint** — real-time Roslyn diagnostics; squiggles rendered via the CodeMirror lint extension
 - **Reactive Cell Dependencies** — after a successful execution, downstream cells that reference any variable whose value changed are flagged with a "↺ upstream variables changed" banner, clearing automatically when those cells are run
 - **Cell Output History** — re-running a cell preserves the previous outputs; a ‹ › navigator in the cell footer lets you browse the last 5 runs to compare results across executions
-- **`Util` helper** — LinqPAD-compatible utilities available as a global: `.Dump()` / `.DumpTable()` aliases, `Util.Cmd()` shell command execution, `Util.Time()` benchmarking, `Util.Dif()` LCS line diff, `Util.HorizontalRun()` side-by-side layout, `Util.Metatext()` / `Util.Highlight()` styled output, `Util.Cache<T>()` cross-execution memoization cleared on kernel reset, `Util.ConfirmAsync()` interactive OK/Cancel dialogs that pause execution
+- **`Util` helper** — LinqPAD-compatible utilities available as a global: `.Dump()` / `.DumpTable()` aliases, `Util.Cmd()` shell command execution, `Util.Time()` benchmarking, `Util.Dif()` LCS line diff, `Util.HorizontalRun()` side-by-side layout, `Util.Metatext()` / `Util.Highlight()` styled output, `Util.Cache<T>()` cross-execution memoization cleared on kernel reset, `Util.ConfirmAsync()` interactive OK/Cancel dialogs that pause execution, `Util.PromptAsync()` text-input dialogs
+- **Cell folding** — collapse any code cell to a single-line preview using the ▾/▸ toggle in the cell header; the cell remains executable while folded; fold state is persisted in the `.cnb` file
+- **Cell output toggle** — show or hide cell output with the ▾ Output / ▸ Output toggle above each output block; useful for decluttering long-running cells
+- **Find in Notebook** — `Ctrl+F` opens a floating search bar that searches across all cell contents; ↑ / ↓ buttons (or Enter / Shift+Enter) navigate between matches; matched cells are highlighted; press Escape to close
+- **Auto-run on open** — the ⚡ toolbar button enables auto-run mode per notebook; when enabled, all code cells are run automatically when the notebook opens and the kernel becomes ready; state is saved in the `.cnb` file
 
 ### Output & Display
 
-- **Rich output** — `Display.Html()`, `Display.Table()`, `Display.Graph()` (Chart.js), `Display.Csv()`, and `Console.Write` captured as `stdout`
+- **Rich output** — `Display.Html()`, `Display.Table()`, `Display.Graph()` (Chart.js), `Display.Csv()`, `Display.Image()` (URL / file path / base64 data URI), and `Console.Write` captured as `stdout`
+- **Object tree viewer** — complex objects displayed via `.Display()` / `.Dump()` render as an interactive collapsible tree instead of a flat JSON block; nested objects and arrays can be expanded or collapsed individually
+- **Progress bars** — `Display.Progress(label, total)` creates a live-updating progress bar; call `.Report(n)` to update the fill and percentage, `.Complete()` to mark it done; updates stream to the output in real time
+- **PDF export** — File → Export as PDF… exports the active notebook's output to a paginated A4 PDF using Electron's `printToPDF()`
 - **Display.Markdown** — `Display.Markdown(text)` renders markdown from C# code with Mermaid diagram and KaTeX math support, enabling dynamic reports and documentation generation
 - **Graph panel** — live time-series chart driven by `Display.Plot(name, value)` calls; per-variable avg / max overlay lines; Clear button and `Display.ClearGraph()` API; chart type, legend toggle (`Ctrl+Shift+R`)
 - **Interactive Widgets** — `Display.Slider()`, `Display.Dropdown()`, and `Display.DatePicker()` render live controls in cell output; widget values persist between cell executions and are sent back to the kernel on change
@@ -117,6 +124,7 @@
 
 - **NuGet integration** — add packages via `#r "nuget: PackageName, Version"` directives or through the Packages panel; multiple package sources supported
 - **Database integration** — connect to SQLite, SQLite (In-Memory), SQL Server, PostgreSQL, or Redis; for relational providers the schema is introspected and a typed `DbContext` + POCO classes are code-generated and injected; Redis injects a `StackExchange.Redis.IDatabase` variable
+- **SQL cells** — add a SQL cell (+ SQL button) to write and execute raw SQL queries directly against any attached database; SELECT results render as a data table; DDL / DML shows a "N rows affected" status; the database is selected from a dropdown showing all attached connections
 - **Code Library** — file-based snippet library stored in `~/Documents/SharpNote Notebooks/Library/`; subfolder navigation, syntax-highlighted preview, insert-as-cell with animation
 - **API Browser** — enter any OpenAPI 3.x or Swagger 2.0 spec URL (JSON or YAML) to explore endpoints grouped by tag; expandable detail shows parameters, request body, and response schema types; **Try it** form sends live requests with path/query/body inputs; supports Bearer, API Key, and Basic auth applied to every request; save and recall multiple APIs with their auth config; all requests proxied through the main process for http:// local dev servers
 
