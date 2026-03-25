@@ -11,6 +11,13 @@ export function useResize(defaultSize, side, onEnd) {
   const onEndRef = useRef(onEnd);
   useEffect(() => { sizeRef.current = size; }, [size]);
   useEffect(() => { onEndRef.current = onEnd; }, [onEnd]);
+  // Sync size when the caller supplies a new defaultSize (e.g. from Panels.Dock).
+  // This is a no-op when defaultSize hasn't changed (e.g. after a user drag that
+  // already wrote the same value back via onResizeEnd).
+  useEffect(() => {
+    setSize(defaultSize);
+    sizeRef.current = defaultSize;
+  }, [defaultSize]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onMouseDown = useCallback((e) => {
     e.preventDefault();
