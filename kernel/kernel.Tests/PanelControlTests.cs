@@ -173,9 +173,10 @@ public class PanelControlTests : IAsyncDisposable
         await SendAsync(new
         {
             type = "execute", id,
-            code = "Db.Add(\"mydb\", DbProvider.Sqlite, \"Data Source=test.db\");",
+            code = "await Db.AddAsync(\"mydb\", DbProvider.Sqlite, \"Data Source=test.db\");",
         });
 
+        // Wait for the kernel to emit a db_add message with a requestId
         var msg = await WaitForMessageAsync(el =>
             el.TryGetProperty("type", out var t) && t.GetString() == "db_add" &&
             el.TryGetProperty("name", out var n) && n.GetString() == "mydb");
@@ -183,6 +184,16 @@ public class PanelControlTests : IAsyncDisposable
         msg.GetProperty("name").GetString().Should().Be("mydb");
         msg.GetProperty("provider").GetString().Should().Be("sqlite");
         msg.GetProperty("connectionString").GetString().Should().Be("Data Source=test.db");
+
+        // Send back a success result so the kernel completes
+        var requestId = msg.GetProperty("requestId").GetString()!;
+        await SendAsync(new { type = "db_add_result", requestId });
+
+        var complete = await WaitForMessageAsync(
+            el => el.TryGetProperty("type", out var t) && t.GetString() == "complete" &&
+                  el.TryGetProperty("id",   out var i) && i.GetString() == id,
+            timeoutMs: 15_000);
+        complete.GetProperty("success").GetBoolean().Should().BeTrue();
     }
 
     // ── Db.Remove ─────────────────────────────────────────────────────────────
