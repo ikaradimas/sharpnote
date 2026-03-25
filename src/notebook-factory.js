@@ -293,12 +293,24 @@ var conns = await Db.ListAsync()                    // DbEntry[] with IsAttached
 | Raw SQL | \`mydb.Database.SqlQueryRaw<T>("SELECT …").ToList()\` |
 | Async | \`await mydb.Orders.ToListAsync()\` |`),
 
-    cs(`// ── In-memory SQLite — self-contained, no setup needed ────────────────────────
-// Db.Add + Db.Attach register and connect the database from code.
-// An in-memory database starts empty; create the schema with raw SQL.
+    md(`### 10a · In-memory SQLite from code
+
+\`Db.Add\` + \`Db.Attach\` register and connect a database without touching the DB panel.
+Because \`Db.Attach\` triggers schema introspection over an async round-trip, the injected
+variable (\`scratch\`) is available to cells that run **after** the setup cell — not within it.
+
+**Run the cell below first, then run the query cell beneath it.**`),
+
+    cs(`// ── Step 1: register and attach ──────────────────────────────────────────────
+// Run this cell once. The 'scratch' DbContext will be ready for the next cell.
 
 Db.Add("scratch", DbProvider.SqliteMemory, "");
-Db.Attach("scratch");   // injects a typed DbContext as 'scratch'
+Db.Attach("scratch");   // triggers schema introspection; 'scratch' available next cell
+
+Display.Html("<p style='color:#4ec9b0'>Setup sent — run the query cell below.</p>");`),
+
+    cs(`// ── Step 2: create schema, insert, and query ─────────────────────────────────
+// Run after the setup cell above has completed.
 
 scratch.Database.ExecuteSqlRaw(@"
     CREATE TABLE IF NOT EXISTS Orders (
@@ -321,18 +333,18 @@ var orders = scratch.Database
 
 Display.Table(orders);
 
-// LINQ aggregation over the results
-var summary = orders
+// LINQ aggregation
+orders
     .GroupBy(o => o.Product)
     .Select(g => new {
         Product = g.Key,
         Units   = g.Sum(o => o.Qty),
         Revenue = Math.Round(g.Sum(o => o.Qty * o.Price), 2),
     })
-    .OrderByDescending(s => s.Revenue);
-summary.DisplayTable();
+    .OrderByDescending(s => s.Revenue)
+    .DisplayTable();
 
-// Clean up when done
+// Clean up
 Db.Detach("scratch");
 Db.Remove("scratch");`),
 
