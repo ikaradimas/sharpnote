@@ -5,6 +5,7 @@ export const DOCS_SECTIONS = [
     id: 'overview', title: 'Overview',
     content: [
       { type: 'p', text: 'SharpNote is a desktop C# scripting environment. Notebooks are ordered sequences of code and markdown cells that share state within a dedicated .NET kernel process.' },
+      { type: 'img', src: 'docs/screenshots/overview.png', alt: 'SharpNote main window', caption: 'SharpNote — multi-tab C# notebook with dock layout' },
       { type: 'h3', text: 'Key Concepts' },
       { type: 'ul', items: [
         'Notebook — a .cnb file containing cells, packages, config, and database attachment state',
@@ -90,6 +91,7 @@ export const DOCS_SECTIONS = [
   {
     id: 'execution', title: 'Running Code',
     content: [
+      { type: 'img', src: 'docs/screenshots/execution.png', alt: 'Code cell execution', caption: 'C# cell with output — variables, string interpolation, and .Display()' },
       { type: 'h3', text: 'Running a Single Cell' },
       { type: 'ul', items: [
         'Click the ▶ Run button in the cell header',
@@ -182,9 +184,11 @@ export const DOCS_SECTIONS = [
       { type: 'p', text: 'Display.Html("<b>bold</b>") renders HTML directly in the output area. Use this for custom formatting, styled results, or embedded content.' },
       { type: 'h3', text: 'Data Tables' },
       { type: 'p', text: 'Display.Table(myList) or myList.DisplayTable() renders an object collection as a scrollable table with column headers derived from property names. Display.Csv(csv) parses and renders a CSV string as a table. Set the output mode to "table".' },
+      { type: 'img', src: 'docs/screenshots/table.png', alt: 'Data table output', caption: 'DisplayTable() — sortable columns, pagination, and hover highlighting' },
       { type: 'h3', text: 'Graphs (Chart.js)' },
       { type: 'p', text: 'Display.Graph(spec) renders an interactive Chart.js chart. Set the output mode to "graph" and pass an anonymous object matching the Chart.js config schema:' },
       { type: 'code', text: 'Display.Graph(new {\n  type = "bar",\n  data = new {\n    labels = new[] { "Jan", "Feb", "Mar" },\n    datasets = new[] { new {\n      label = "Sales",\n      data  = new[] { 120, 95, 140 },\n      backgroundColor = "rgba(196,150,74,0.7)",\n    }}\n  },\n  options = new { responsive = true }\n});' },
+      { type: 'img', src: 'docs/screenshots/graph.png', alt: 'Chart.js bar graph output', caption: 'Interactive Chart.js bar chart with grouped datasets' },
       { type: 'h3', text: 'Errors' },
       { type: 'p', text: 'Compilation and runtime errors appear in red. Stack traces are shown in a dimmer colour below the main error message. An error in one cell does not prevent other cells from running.' },
       { type: 'h3', text: 'Exporting Output' },
@@ -195,6 +199,7 @@ export const DOCS_SECTIONS = [
     id: 'database', title: 'Databases',
     content: [
       { type: 'p', text: 'The DB panel lets you connect to databases, browse their schema, and query them with fully-typed EF Core DbContexts — all without leaving the notebook. Click the DB button in the toolbar to open the panel.' },
+      { type: 'img', src: 'docs/screenshots/db.png', alt: 'Database panel', caption: 'DB panel — add connections, browse schema, attach to notebooks' },
       { type: 'h3', text: 'Supported Providers' },
       { type: 'ul', items: [
         'SQLite — local file-based database',
@@ -400,6 +405,7 @@ export const DOCS_SECTIONS = [
     id: 'variables', title: 'Variables',
     content: [
       { type: 'p', text: 'Open the Variables panel with the Variables button in the toolbar. It shows a live snapshot of all global variables in the active kernel session, updated automatically after each cell execution.' },
+      { type: 'img', src: 'docs/screenshots/vars.png', alt: 'Variables panel', caption: 'Variables panel — live snapshot of all kernel-session globals' },
       { type: 'h3', text: 'Variable List' },
       { type: 'p', text: 'Each row shows the variable name, its declared .NET type, and a string representation of its current value. null values are displayed with a distinct style.' },
       { type: 'h3', text: 'Filtering' },
@@ -410,6 +416,7 @@ export const DOCS_SECTIONS = [
     id: 'toc', title: 'Table of Contents',
     content: [
       { type: 'p', text: 'Open the Table of Contents panel with the ToC button in the toolbar. It lists all headings extracted from markdown cells in the active notebook.' },
+      { type: 'img', src: 'docs/screenshots/toc.png', alt: 'Table of Contents panel', caption: 'ToC panel — click any heading to scroll the notebook to it' },
       { type: 'p', text: 'Click any entry to scroll the notebook smoothly to that heading. Heading levels (H1–H6) are reflected as indentation in the list.' },
       { type: 'p', text: 'If the notebook contains no markdown cells with headings, the panel shows "No headings found".' },
     ],
@@ -418,6 +425,7 @@ export const DOCS_SECTIONS = [
     id: 'layout', title: 'Dock Layout',
     content: [
       { type: 'p', text: 'Panels (Log, NuGet, Config, DB, Variables, ToC, Library, File Explorer) live in a flexible dock layout. Each panel can be placed in one of four zones or floated as a free window.' },
+      { type: 'img', src: 'docs/screenshots/dock.png', alt: 'Dock layout with multiple panels', caption: 'Dock layout — multiple panels visible simultaneously across left, right, and bottom zones' },
       { type: 'h3', text: 'Zones' },
       { type: 'ul', items: [
         'Left — vertical strip; default: Library',
@@ -505,6 +513,7 @@ export const DOCS_SECTIONS = [
     id: 'api-browser', title: 'API Browser',
     content: [
       { type: 'p', text: 'The API Browser panel lets you explore, invoke, and save OpenAPI/Swagger specifications. Open it from the Tools menu (⌘⇧A) or the Tools dropdown in the toolbar.' },
+      { type: 'img', src: 'docs/screenshots/api.png', alt: 'API Browser panel', caption: 'API Browser — load any OpenAPI/Swagger spec, try endpoints, save configurations' },
       { type: 'h3', text: 'Loading a Spec' },
       { type: 'p', text: 'Enter any public or local URL that returns an OpenAPI 3.x or Swagger 2.x spec and press Enter or click Load. Both JSON and YAML formats are accepted. Local dev-server URLs (http://) are fetched through the main process to bypass browser CSP restrictions.' },
       { type: 'h3', text: 'Authentication' },
@@ -543,6 +552,7 @@ export const DOCS_SECTIONS = [
     id: 'settings', title: 'Settings',
     content: [
       { type: 'p', text: 'Open the Settings dialog (⌘, on macOS, Ctrl+, on Windows/Linux, or Tools → Settings…) to configure appearance, paths, and startup behaviour.' },
+      { type: 'img', src: 'docs/screenshots/settings.png', alt: 'Settings dialog', caption: 'Settings — appearance, font sizes, themes, paths, pinned notebooks, and export/import' },
       { type: 'h3', text: 'Appearance' },
       { type: 'ul', items: [
         'Editor Font Size — drag the slider (10–28 px) to resize the notebook editor font; a live preview updates as you drag. The Reset button restores the default of 12.6 px. The keyboard shortcuts ⌘= / ⌘- / ⌘0 still work outside the dialog.',
@@ -562,6 +572,7 @@ export const DOCS_SECTIONS = [
     id: 'command-palette', title: 'Command Palette',
     content: [
       { type: 'p', text: 'The Command Palette provides a fast keyboard-driven interface to every action in SharpNote without leaving the keyboard.' },
+      { type: 'img', src: 'docs/screenshots/command-palette.png', alt: 'Command Palette', caption: 'Command Palette (⌘K) — fuzzy search across all actions' },
       { type: 'h3', text: 'Opening the Palette' },
       { type: 'ul', items: [
         '⌘K (macOS) / Ctrl+K (Windows/Linux) — toggle the palette open/closed',
@@ -646,6 +657,7 @@ export const DOCS_SECTIONS = [
     id: 'widgets', title: 'Interactive Widgets',
     content: [
       { type: 'p', text: 'Interactive widgets let you add sliders, dropdowns, and date pickers directly to cell output. Their values persist between cell executions, enabling lightweight parameter exploration without re-coding.' },
+      { type: 'img', src: 'docs/screenshots/confirm-widget.png', alt: 'Confirm widget', caption: 'Util.ConfirmAsync() — interactive OK/Cancel dialog that pauses cell execution' },
       { type: 'h3', text: 'Creating Widgets' },
       { type: 'code', text: '// Create controls — values persist between cell runs\nvar alpha  = Display.Slider("Smoothing α", min: 0, max: 1, step: 0.05, defaultValue: 0.3);\nvar method = Display.Dropdown("Method", new[] { "EMA", "SMA", "Raw" }, "EMA");\nvar since  = Display.DatePicker("Since", defaultValue: "2025-01-01");\n\n// Use the values directly — implicit conversion to double/string\nConsole.WriteLine($"Method={method.StringValue}, α={alpha:F2}, since={since.StringValue}");\n\n// Adjust controls in the output, then press Ctrl+Enter to re-run with new values' },
       { type: 'h3', text: 'Value Persistence' },

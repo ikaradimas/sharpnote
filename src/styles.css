@@ -2624,6 +2624,27 @@ body {
   font-family: var(--font-ui);
 }
 
+.docs-figure {
+  margin: 16px 0 20px;
+  text-align: center;
+}
+
+.docs-img {
+  max-width: 100%;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.docs-caption {
+  display: block;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: var(--font-ui);
+  font-style: italic;
+}
+
 /* ── Workspace + Notebooks container + panes ─────────────────────────────── */
 
 .workspace {

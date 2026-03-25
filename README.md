@@ -19,6 +19,7 @@
 
 - [SharpNote](#sharpnote)
   - [Table of Contents](#table-of-contents)
+  - [Screenshots](#screenshots)
   - [Features](#features)
   - [Architecture](#architecture)
     - [Electron Main Process (`main.js`)](#electron-main-process-mainjs)
@@ -48,6 +49,30 @@
     - [Adding a DB provider](#adding-a-db-provider)
   - [Keyboard Shortcuts](#keyboard-shortcuts)
   - [Notebook File Format](#notebook-file-format)
+
+---
+
+## Screenshots
+
+| Overview | Code Execution |
+|---|---|
+| ![Overview](docs/screenshots/overview.png) | ![Execution](docs/screenshots/execution.png) |
+
+| Table Output | Graph Output |
+|---|---|
+| ![Table](docs/screenshots/table.png) | ![Graph](docs/screenshots/graph.png) |
+
+| Variables Panel | Confirm Widget |
+|---|---|
+| ![Variables](docs/screenshots/vars.png) | ![Confirm Widget](docs/screenshots/confirm-widget.png) |
+
+| Command Palette | Settings |
+|---|---|
+| ![Command Palette](docs/screenshots/command-palette.png) | ![Settings](docs/screenshots/settings.png) |
+
+| Dock Layout — Multiple Panels | Database Panel |
+|---|---|
+| ![Dock](docs/screenshots/dock.png) | ![Database](docs/screenshots/db.png) |
 
 ---
 
