@@ -4,7 +4,7 @@
 
 ![Electron](https://img.shields.io/badge/Electron-34-47848F?logo=electron&logoColor=white)
 ![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)
-![.NET](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet&logoColor=white)
+![.NET](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&logoColor=white)
 ![C%23](https://img.shields.io/badge/C%23-Roslyn_Scripting-239120?logo=csharp&logoColor=white)
 ![CodeMirror](https://img.shields.io/badge/CodeMirror-6-D30707?logo=codemirror&logoColor=white)
 ![Chart.js](https://img.shields.io/badge/Chart.js-4-FF6384?logo=chartdotjs&logoColor=white)
@@ -31,12 +31,22 @@
   - [Project Structure](#project-structure)
   - [Prerequisites](#prerequisites)
   - [Getting Started](#getting-started)
+  - [Debugging](#debugging)
+    - [Opening DevTools](#opening-devtools)
+    - [Log files and persisted data](#log-files-and-persisted-data)
+    - [Dev vs packaged differences](#dev-vs-packaged-differences)
+    - [Common issues](#common-issues)
   - [Building for Distribution](#building-for-distribution)
   - [Maintenance](#maintenance)
   - [Testing](#testing)
     - [JavaScript — Vitest](#javascript--vitest)
     - [E2E — Playwright](#e2e--playwright)
     - [C# — xUnit](#c--xunit)
+  - [Extending](#extending)
+    - [Adding a panel](#adding-a-panel)
+    - [Adding a kernel scripting API](#adding-a-kernel-scripting-api)
+    - [Adding a DB provider](#adding-a-db-provider)
+  - [Keyboard Shortcuts](#keyboard-shortcuts)
   - [Notebook File Format](#notebook-file-format)
 
 ---
@@ -122,7 +132,7 @@ The main process is a single Node.js/CJS file responsible for:
 |---|---|
 | Window management | Single `BrowserWindow`; `mainWindow.webContents` sends events to the renderer |
 | Multi-kernel map | `kernels: Map<notebookId, { process, ready, pending[] }>` — each notebook gets its own kernel subprocess |
-| IPC handlers | ~40 `ipcMain.handle` / `ipcMain.on` registrations covering file ops, kernel lifecycle, DB connections, library, config, and more |
+| IPC handlers | ~38 `ipcMain.handle` / `ipcMain.on` registrations covering file ops, kernel lifecycle, DB connections, library, config, and more (see [`preload.js`](#renderer--main-windowelectronapi) for the full surface) |
 | File operations | `fs-readdir`, `fs-rename`, `fs-delete` (via `shell.trashItem`), `fs-mkdir`, `fs-get-home` |
 | Recent files | Persisted to `<userData>/recent-files.json`; max 12 entries, duplicates moved to front |
 | Library | `resolveLibraryPath()` — path-traversal-safe resolver rooted at `~/Documents/SharpNote Notebooks/Library/` |
@@ -169,6 +179,26 @@ The UI is organized across `src/app/`, `src/components/`, `src/hooks/`, and `src
   memoryHistory,          // last 60 memory_mb readings
 }
 ```
+
+### Renderer → Main (`window.electronAPI`)
+
+`preload.js` exposes a `contextBridge`-bridged API under `window.electronAPI`. This is the **only** legal way for renderer code to reach the main process — direct `require('electron')` in renderer code is blocked by `nodeIntegration: false`.
+
+| Group | Methods |
+|---|---|
+| Kernel lifecycle | `startKernel(id)`, `stopKernel(id)`, `resetKernel(id)`, `interruptKernel(id)` |
+| Kernel messaging | `sendToKernel(id, msg)`, `onKernelMessage(cb)`, `offKernelMessage(cb)` |
+| Notebooks | `showNewNotebookDialog()`, `saveNotebook(data)`, `saveNotebookTo(path, data)`, `loadNotebook()`, `saveFile(opts)`, `openRecentFile(path)`, `renameFile(old, new)` |
+| File explorer | `fsReaddir(path)`, `fsRename(old, new)`, `fsDelete(path)`, `fsMkdir(path)`, `fsOpenPath(path)`, `fsGetHome()` |
+| Code library | `getLibraryFiles(subfolder)`, `readLibraryFile(path)`, `saveLibraryFile(path, content)`, `deleteLibraryFile(path)`, `openLibraryFolder()` |
+| Logs | `getLogFiles()`, `readLogFile(name)`, `deleteLogFile(name)`, `rendererLog(tag, msg)`, `onLogEntry(cb)`, `offLogEntry(cb)` |
+| Settings | `loadAppSettings()`, `saveAppSettings(s)`, `exportSettings(data)`, `importSettings()`, `setFontSize(n)`, `setPanelFontSize(n)`, `rebuildMenu(shortcuts)` |
+| DB connections | `loadDbConnections()`, `saveDbConnections(list)` |
+| API Browser | `loadApiSaved()`, `saveApiSaved(list)`, `apiRequest(opts)`, `fetchUrl(url)` |
+| Recent files | `getRecentFiles()`, `clearRecentFiles()` |
+| Menu / UI events | `onMenuAction(cb)`, `updateWindowTabs(tabs)`, `onFontSizeChange(cb)`, `onPanelFontSizeChange(cb)` |
+| Quit guard | `onBeforeQuit(cb)`, `confirmQuit()` |
+| App info | `getAppVersion()`, `getAppPaths()` |
 
 ### C# Kernel (`kernel/`)
 
@@ -429,7 +459,7 @@ sharpnote/
 |---|---|---|
 | Node.js | ≥ 18 | Electron host + build tooling |
 | npm | ≥ 9 | Package management |
-| .NET SDK | 8.0 | Kernel build + test |
+| .NET SDK | 10 | Kernel build + test |
 | Electron | 34 (installed via npm) | Desktop shell |
 
 ---
@@ -459,6 +489,56 @@ This bundles the renderer with esbuild, then launches Electron. The kernel subpr
 var nums = Enumerable.Range(1, 5).ToList();
 Display.Table(nums.Select(n => new { Number = n, Square = n * n }));
 ```
+
+---
+
+## Debugging
+
+### Opening DevTools
+
+Press `Ctrl+Shift+I` (Windows / Linux) or `Cmd+Option+I` (macOS) while the app window is focused to open the Chromium DevTools for the renderer process.
+
+The main process (Node.js) writes to the terminal that launched `npm start`. Kernel errors — failed parses, unexpected exits — are printed there too via `console.error`.
+
+### Log files and persisted data
+
+**Log files** are written once per session.
+
+| Platform | Path (packaged) | Path (dev) |
+|---|---|---|
+| macOS | `~/Library/Application Support/SharpNote/logs/` | `logs/` next to `main.js` |
+| Windows | `%APPDATA%\SharpNote\logs\` | `logs/` next to `main.js` |
+| Linux | `~/.config/SharpNote/logs/` | `logs/` next to `main.js` |
+
+**Persisted data** (all under Electron's `userData` = the packaged paths above, minus `logs/`):
+
+| File | Contents |
+|---|---|
+| `recent-files.json` | Last 12 opened notebook paths |
+| `db-connections.json` | Named database connection strings |
+| `app-settings.json` | Theme, font size, dock layout, custom keyboard shortcuts |
+| `api-saved.json` | Saved API Browser configurations |
+
+The **code library** lives separately at `~/Documents/SharpNote Notebooks/Library/`.
+
+### Dev vs packaged differences
+
+| Behaviour | `npm start` (dev) | Packaged app |
+|---|---|---|
+| Kernel binary | Launched via `dotnet run` from `kernel/` | Pre-compiled self-contained binary from `kernel/bin/<rid>/` |
+| Log directory | `logs/` next to `main.js` | `<userData>/logs/` |
+| DevTools | Open manually with `Ctrl+Shift+I` | Same |
+| Renderer bundle | Must run `npm run build:renderer` first (done automatically by `npm start`) | Bundled at package time |
+
+### Common issues
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| Kernel status stuck on "starting" | .NET 10 SDK not found, or `dotnet` not on PATH | Install [.NET 10 SDK](https://dotnet.microsoft.com/download) and verify with `dotnet --version` |
+| White screen on launch | Renderer bundle missing or stale | Run `npm run build:renderer`, or restart via `npm start` which rebuilds automatically |
+| NuGet restore hangs or fails | Corporate proxy / firewall blocking nuget.org | Add a local or mirror source in the Packages panel → Sources tab |
+| Kernel exits immediately | Missing NuGet packages that were saved in the notebook | Open the Packages panel and click Restore, or remove the offending `#r` directive |
+| `app-settings.json` is corrupt | Manual edit or unexpected crash during write | Delete the file — the app recreates it with defaults on next launch |
 
 ---
 
@@ -524,7 +604,7 @@ npm run test:watch       # watch mode
 npm run test:coverage    # with V8 coverage report
 ```
 
-**551 JavaScript tests across 32 files.**
+**573 JavaScript tests across 33 files.**
 
 The renderer suite (`tests/renderer/`) uses happy-dom and covers React components including CodeCell, OutputBlock, TabBar, VarsPanel, ConfigPanel, NugetPanel, DataTable, FilesPanel, QuitDialog, GraphPanel, TodoPanel, CommandPalette, and SettingsDialog, as well as utility functions. The main-process suite (`tests/main/`) uses the Node environment and covers kernel lifecycle, file operations, recent-files persistence, and library path resolution.
 
@@ -601,6 +681,172 @@ dotnet test kernel/kernel.Tests/kernel.Tests.csproj --logger console
 | `NugetDirectiveTests` | `ParseNugetDirectives` — versioned, unversioned, line preservation, case insensitivity |
 | `LintTests` | `GetLintDiagnostics` — zero errors on valid code, ≥1 on syntax errors, offset validation |
 | `KernelProtocolTests` | **Subprocess integration** — spawns the real kernel via `dotnet run`, exercises the full JSON-line protocol: execute, display, shared state, invalid code, reset, lint, autocomplete, vars_update |
+
+---
+
+## Extending
+
+### Adding a panel
+
+Each panel follows the same wiring pattern. Use an existing simple panel (e.g. `TocPanel`) as a reference.
+
+**1. Create the component**
+```
+src/components/panels/MyPanel.jsx
+```
+Export a named function `MyPanel({ isOpen, ... })`. The dock system controls visibility; the component only needs to render its own content.
+
+**2. Register it in the render switch** — `src/components/dock/renderPanelContent.jsx`
+```js
+case 'mypanel': return <MyPanel {...p} />;
+```
+Import the component at the top of the file.
+
+**3. Add state and toggle in `App.jsx`**
+```js
+// Inside the per-notebook state initialiser (search for 'graphPanelOpen: false'):
+myPanelOpen: false,
+
+// Inside the panelProps builder (search for 'graph: isNotebookId'):
+mypanel: isNotebookId(activeId) ? (activeNb?.myPanelOpen ?? false) : false,
+
+// Add a toggle handler alongside the others:
+onToggle: nbId ? () => setNb(nbId, (n) => ({ myPanelOpen: !n.myPanelOpen })) : () => {},
+```
+
+**4. Add to the Tools menu** — `src/components/toolbar/ToolsMenu.jsx`
+```js
+{ icon: <IconMyPanel />, label: 'My Panel', action: onToggleMyPanel, active: myPanelOpen },
+```
+Add `myPanelOpen` and `onToggleMyPanel` to the destructured props at the top of the function. Add a corresponding SVG icon to `src/components/toolbar/Icons.jsx`.
+
+**5. Add the keyboard shortcut** — `src/main/menu.js`
+```js
+{ label: 'My Panel', accelerator: accel('panel-mypanel', 'Ctrl+Shift+M'), click: () => send('toggle-mypanel') },
+```
+
+**6. Handle the menu action** — `src/app/App.jsx` (search for `'toggle-graph'` in the `menu-action` handler):
+```js
+case 'toggle-mypanel': if (nbId) setNb(nbId, (n) => ({ myPanelOpen: !n.myPanelOpen })); break;
+```
+
+**7. Document it** — update `src/config/docs-sections.js` and the [Features](#features) list in this file.
+
+---
+
+### Adding a kernel scripting API
+
+Use `Display.Html` as a reference for a display method, or `Config.Set` for a stateful one.
+
+**1. Add the method to `kernel/Globals.cs`** (for `Display.*`) or a new helper class
+
+```csharp
+public void MyOutput(string data)
+{
+    var msg = JsonSerializer.Serialize(new { type = "my_output", content = data });
+    lock (Program.RealStdout) { Program.RealStdout.WriteLine(msg); }
+}
+```
+
+**2. Handle it in the renderer** — `src/app/App.jsx`, in the `onKernelMessage` handler:
+```js
+case 'my_output':
+  setNbOutputs(nb.id, msg.id, (prev) => [...prev, { type: 'my_output', content: msg.content }]);
+  break;
+```
+
+**3. Render the output** — `src/components/output/OutputBlock.jsx`:
+```js
+if (block.type === 'my_output') return <div className="output-my">{block.content}</div>;
+```
+
+**4. Document it** — add a row to the IPC Protocol table (Kernel → Renderer), update `src/config/docs-sections.js`, and add an example to the scripting API reference in this file.
+
+---
+
+### Adding a DB provider
+
+Use `SqliteProvider.cs` as a reference.
+
+**1. Create `kernel/Db/MyProvider.cs`** implementing `IDbProvider`:
+
+```csharp
+public class MyProvider : IDbProvider
+{
+    public string Key         => "myprovider";
+    public string DisplayName => "My Database";
+    public IEnumerable<Assembly> RequiredAssemblies => [ typeof(MyClient.Connection).Assembly ];
+    public string GetUsingDirectives()            => "using MyClient;\n";
+    public string GetConfigureCallCode(string v)  => $"options.UseMyDb({v}.ConnectionString);";
+    public async Task<DbSchema> IntrospectAsync(string id, string cs, CancellationToken ct)
+    {
+        // return a DbSchema describing the database tables, columns, and PKs
+    }
+}
+```
+
+If the provider is non-relational (no EF Core / DbContext), override `bool IsRelational => false;` and inject the client variable directly in `HandleDbConnect` in `kernel/Handlers/DbHandler.cs`.
+
+**2. Register it** — `kernel/Db/DbProviders.cs`:
+```csharp
+["myprovider"] = new MyProvider(),
+```
+
+**3. Expose it in the UI** — `src/config/db-providers.js` (or wherever the provider list for the DB panel's "Add connection" form lives). Add an entry matching the `Key` string.
+
+**4. Document it** — add a row to the Database Integration provider table in this file.
+
+---
+
+## Keyboard Shortcuts
+
+All shortcuts are user-remappable via **Settings → Shortcuts**. The table below shows the defaults.
+
+> On macOS the panel and palette shortcuts use `Ctrl` (^), not `Cmd` (⌘). Only the zoom shortcuts use `Cmd` (they are defined with `CmdOrCtrl` in the menu template).
+
+### Notebook
+
+| Action | Default |
+|---|---|
+| New Notebook | `Ctrl+N` |
+| Open… | `Ctrl+O` |
+| Save | `Ctrl+S` |
+| Save As… | `Ctrl+Shift+S` |
+| Run All Cells | `Ctrl+Shift+Enter` |
+
+### Editor
+
+| Action | Default |
+|---|---|
+| Run cell | `Ctrl+Enter` |
+| Accept autocomplete suggestion | `Tab` |
+
+### App
+
+| Action | Default |
+|---|---|
+| Settings | `Ctrl+,` |
+| Command Palette | `Ctrl+K` |
+| Documentation | `F1` |
+| Zoom in | `Ctrl+=` (`Cmd+=` on macOS) |
+| Zoom out | `Ctrl+-` (`Cmd+-` on macOS) |
+| Reset zoom | `Ctrl+0` (`Cmd+0` on macOS) |
+
+### Panels
+
+| Panel | Default |
+|---|---|
+| Config | `Ctrl+Shift+,` |
+| Packages | `Ctrl+Shift+P` |
+| Logs | `Ctrl+Shift+G` |
+| Database | `Ctrl+Shift+D` |
+| Variables | `Ctrl+Shift+V` |
+| Table of Contents | `Ctrl+Shift+T` |
+| Library | `Ctrl+Shift+L` |
+| File Explorer | `Ctrl+Shift+E` |
+| API Browser | `Ctrl+Shift+A` |
+| Graph | `Ctrl+Shift+R` |
+| To Do | `Ctrl+Shift+O` |
 
 ---
 
