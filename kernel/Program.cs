@@ -79,7 +79,9 @@ partial class Program
                 typeof(object).Assembly,
                 typeof(Enumerable).Assembly,
                 typeof(System.Net.WebUtility).Assembly,
-                typeof(DisplayHelper).Assembly
+                typeof(DisplayHelper).Assembly,
+                typeof(Microsoft.EntityFrameworkCore.DbContext).Assembly,
+                typeof(Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions).Assembly
             );
 
         // PosixSignalRegistration works for piped (non-terminal) processes,
