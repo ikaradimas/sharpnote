@@ -248,12 +248,31 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
         // ── DB management ───────────────────────────────────────────────────────
 
         case 'db_add': {
+          const duplicate = dbConnectionsRef.current.some(
+            (c) => c.name.toLowerCase() === msg.name.toLowerCase()
+          );
+          if (duplicate) {
+            if (msg.requestId) {
+              window.electronAPI?.sendToKernel(notebookId, {
+                type: 'db_add_result',
+                requestId: msg.requestId,
+                error: `A connection named "${msg.name}" already exists.`,
+              });
+            }
+            break;
+          }
           const newConn = { id: uuidv4(), name: msg.name, provider: msg.provider, connectionString: msg.connectionString };
           setDbConnections?.((cs) => [...cs, newConn]);
           // Also update the ref immediately: React's state updater is called lazily, so
           // dbConnectionsRef.current would still be stale if db_attach arrives in the
           // same IPC message batch (e.g. Db.Add and Db.Attach called in the same cell).
           dbConnectionsRef.current = [...dbConnectionsRef.current, newConn];
+          if (msg.requestId) {
+            window.electronAPI?.sendToKernel(notebookId, {
+              type: 'db_add_result',
+              requestId: msg.requestId,
+            });
+          }
           break;
         }
 
@@ -280,6 +299,7 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
             provider: conn.provider,
             connectionString: conn.connectionString,
             varName,
+            ...(msg.cellId ? { cellId: msg.cellId } : {}),
           });
           break;
         }
@@ -359,13 +379,22 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
           break;
 
         case 'db_error':
-          setNb(notebookId, (n) => ({
-            attachedDbs: n.attachedDbs.map((d) =>
+          setNb(notebookId, (n) => {
+            const attachedDbs = n.attachedDbs.map((d) =>
               d.connectionId === msg.connectionId
                 ? { ...d, status: 'error', error: msg.message }
                 : d
-            ),
-          }));
+            );
+            if (!msg.cellId) return { attachedDbs };
+            const cellOutputs = n.outputs[msg.cellId] || [];
+            return {
+              attachedDbs,
+              outputs: {
+                ...n.outputs,
+                [msg.cellId]: [...cellOutputs, { type: 'error', id: msg.cellId, message: msg.message }],
+              },
+            };
+          });
           break;
 
         case 'db_disconnected':

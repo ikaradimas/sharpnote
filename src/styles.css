@@ -3215,6 +3215,12 @@ body {
 
 .db-connstr-input { width: 100%; }
 
+.db-form-error {
+  color: #f44747;
+  font-size: 11px;
+  padding: 2px 0;
+}
+
 .db-form-actions {
   display: flex;
   gap: 6px;

@@ -291,6 +291,7 @@ var conns = await Db.ListAsync()                    // DbEntry[] with IsAttached
 | Filter | \`mydb.Orders.Where(o => o.Total > 100).ToList()\` |
 | Project | \`mydb.Products.Select(p => new { p.Name, p.Price }).ToList()\` |
 | Raw SQL | \`mydb.Database.SqlQueryRaw<T>("SELECT …").ToList()\` |
+| Add connection | \`await Db.AddAsync(name, provider, connStr)\` — throws if name already exists |
 | Async | \`await mydb.Orders.ToListAsync()\` |`),
 
     md(`### 10a · In-memory SQLite from code
@@ -304,7 +305,7 @@ variable (\`scratch\`) is available to the **next** cell, not the one that calle
     cs(`// ── Step 1: register and attach ──────────────────────────────────────────────
 // Run this cell once. The 'scratch' DbContext will be ready for the next cell.
 
-Db.Add("scratch", DbProvider.SqliteMemory, "");
+await Db.AddAsync("scratch", DbProvider.SqliteMemory, "");
 Db.Attach("scratch");   // triggers schema introspection; 'scratch' available next cell
 
 Display.Html("<p style='color:#4ec9b0'>Setup sent — run the query cell below.</p>");`),

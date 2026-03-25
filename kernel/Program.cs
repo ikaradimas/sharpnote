@@ -159,6 +159,15 @@ partial class Program
                                     : Array.Empty<DbEntry>();
                                 db.ReceiveListResponse(requestId, conns);
                             }
+                            else if (msgType == "db_add_result"
+                                && root.TryGetProperty("requestId", out var addRidProp))
+                            {
+                                var requestId = addRidProp.GetString()!;
+                                var error = root.TryGetProperty("error", out var errProp)
+                                    ? errProp.GetString()
+                                    : null;
+                                db.ReceiveAddResult(requestId, error);
+                            }
                             else
                             {
                                 await msgChannel.Writer.WriteAsync(root);
