@@ -3,7 +3,7 @@
 
 const { test, expect } = require('@playwright/test');
 const { launchApp, closeApp } = require('./helpers/electron');
-const { togglePanel } = require('./helpers/ui');
+const { togglePanel, openToolsMenu } = require('./helpers/ui');
 
 let app, window;
 
@@ -156,8 +156,7 @@ test('Table of Contents panel closes when toggled again', async () => {
 // ── Reset Kernel item ─────────────────────────────────────────────────────────
 
 test('Tools menu contains a Reset Kernel item', async () => {
-  await window.locator('button.toolbar-icon-text-btn[title="Tools"]').click();
-  await window.locator('.tools-menu-popup').waitFor({ state: 'visible' });
+  await openToolsMenu(window);
   await expect(window.locator('.tools-menu-item', { hasText: 'Reset Kernel' })).toBeVisible();
   // Close menu
   await window.locator('body').click({ position: { x: 10, y: 400 } });

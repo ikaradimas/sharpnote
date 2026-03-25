@@ -91,14 +91,29 @@ test('move-down button is present on the first code cell', async () => {
 });
 
 test('move-down reorders cells', async () => {
-  const cells  = window.locator('.cell.code-cell');
-  const before = await cells.first().locator('.cell-id-label').textContent();
-  await cells.first().locator('.cell-ctrl-btn[title="Move Down"]').click();
-  // After moving down the second cell now has the old first cell's ID
-  const after = await cells.nth(1).locator('.cell-id-label').textContent();
-  expect(after).toBe(before);
-  // Move it back so state is consistent for the rest of the tests
-  await cells.nth(1).locator('.cell-ctrl-btn[title="Move Up"]').click();
+  // Add two fresh adjacent code cells at the end to avoid dependency on the
+  // initial notebook structure (which may have markdown cells in between code cells).
+  await window.locator('button[title="Add code cell"]').click();
+  await window.locator('button[title="Add code cell"]').click();
+
+  const cells = window.locator('.cell.code-cell');
+  const total = await cells.count();
+  const idA   = await cells.nth(total - 2).locator('.cell-id-label').textContent();
+  const idB   = await cells.nth(total - 1).locator('.cell-id-label').textContent();
+
+  // Move the penultimate cell down — it is adjacent to the last, so they swap
+  await cells.nth(total - 2).locator('.cell-ctrl-btn[title="Move Down"]').click();
+
+  await expect(cells.nth(total - 2).locator('.cell-id-label')).toHaveText(idB);
+  await expect(cells.nth(total - 1).locator('.cell-id-label')).toHaveText(idA);
+
+  // Restore order and remove the two scratch cells
+  await cells.nth(total - 1).locator('.cell-ctrl-btn[title="Move Up"]').click();
+  for (let i = 0; i < 2; i++) {
+    const last = window.locator('.cell.code-cell').last();
+    await last.locator('.cell-ctrl-btn[title="Delete"]').click();
+    await last.locator('.cell-ctrl-btn.cell-ctrl-danger').click();
+  }
 });
 
 // ── Cell locking ──────────────────────────────────────────────────────────────
