@@ -7,3 +7,4 @@ export const LIB_EDITOR_ID_PREFIX = '__libed__';
 
 export const COMPLETION_TIMEOUT = 2000; // autocomplete — fast turnaround expected
 export const LINT_TIMEOUT       = 5000; // lint — Roslyn compilation can be slower
+export const SIGNATURE_TIMEOUT  = 2000; // signature help — fast turnaround expected

@@ -21,6 +21,7 @@ export function NotebookView({
   onRename,
   requestCompletions,
   requestLint,
+  requestSignature,
   lintEnabled = true,
   libraryPanelOpen,
   onToggleLibrary,
@@ -194,6 +195,7 @@ export function NotebookView({
                 onToggleLock={() => updateCellProp(cell.id, 'locked', !(cell.locked || false))}
                 requestCompletions={(code, pos) => requestCompletions(nb.id, code, pos)}
                 requestLint={(code) => requestLint(nb.id, code)}
+                requestSignature={(code, pos) => requestSignature(nb.id, code, pos)}
                 lintEnabled={lintEnabled}
               />
             )}

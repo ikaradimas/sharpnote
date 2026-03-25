@@ -162,7 +162,7 @@ export function App() {
   }, [setNb, setLibraryPanelOpen, setFilesPanelOpen, setApiPanelOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { runCell, runAll, runFrom, runTo, handleInterrupt, handleReset,
-          requestCompletions, requestLint, cancelPendingCells } =
+          requestCompletions, requestLint, requestSignature, cancelPendingCells } =
     useKernelManager({
       setNb, notebooksRef, dbConnectionsRef, setVarInspectDialog,
       onPanelVisible: setPanelVisible,
@@ -844,6 +844,7 @@ export function App() {
                     onRename={(newName) => handleRenameTab(notebook.id, newName)}
                     requestCompletions={requestCompletions}
                     requestLint={requestLint}
+                    requestSignature={requestSignature}
                     libraryPanelOpen={libraryPanelOpen}
                     onToggleLibrary={() => {
                       if (!libraryPanelOpen) handleFocusPanel('library');

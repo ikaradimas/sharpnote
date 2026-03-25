@@ -1,6 +1,6 @@
 import { useRef, useCallback, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { COMPLETION_TIMEOUT, LINT_TIMEOUT } from '../constants.js';
+import { COMPLETION_TIMEOUT, LINT_TIMEOUT, SIGNATURE_TIMEOUT } from '../constants.js';
 
 /**
  * Manages kernel communication: message routing, cell execution,
@@ -21,6 +21,7 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
   const pendingResolversRef   = useRef({});
   const pendingCompletionsRef = useRef({});
   const pendingLintRef        = useRef({});
+  const pendingSignatureRef   = useRef({});
   const prevVarsSnapRef       = useRef({});
 
   const cancelPendingCells = useCallback((cells) => {
@@ -180,6 +181,15 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
           if (resolve) {
             delete pendingLintRef.current[msg.requestId];
             resolve(msg.diagnostics || []);
+          }
+          break;
+        }
+
+        case 'signature_result': {
+          const resolve = pendingSignatureRef.current[msg.requestId];
+          if (resolve) {
+            delete pendingSignatureRef.current[msg.requestId];
+            resolve({ signatures: msg.signatures || [], activeParam: msg.activeParam || 0 });
           }
           break;
         }
@@ -529,6 +539,21 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
     });
   }, []);
 
+  const requestSignature = useCallback((notebookId, code, position) => {
+    return new Promise((resolve) => {
+      if (!window.electronAPI) return resolve(null);
+      const requestId = uuidv4();
+      pendingSignatureRef.current[requestId] = resolve;
+      window.electronAPI.sendToKernel(notebookId, { type: 'signature', requestId, code, position });
+      setTimeout(() => {
+        if (pendingSignatureRef.current[requestId]) {
+          delete pendingSignatureRef.current[requestId];
+          resolve(null);
+        }
+      }, SIGNATURE_TIMEOUT);
+    });
+  }, []);
+
   return {
     runCell,
     runAll,
@@ -538,6 +563,7 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
     handleReset,
     requestCompletions,
     requestLint,
+    requestSignature,
     cancelPendingCells,
   };
 }

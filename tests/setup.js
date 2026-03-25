@@ -60,7 +60,19 @@ vi.mock('@codemirror/view', () => ({
   lineNumbers: () => ({ lineNumbers: true }),
   highlightActiveLine: () => ({ highlightActiveLine: true }),
   highlightActiveLineGutter: () => ({ highlightActiveLineGutter: true }),
+  showTooltip: { from: (f) => ({ showTooltip: f }) },
+  tooltips: () => ({ tooltips: true }),
 }));
+
+const mockStateEffect = { define: () => { const e = (v) => ({ effect: v }); e.is = () => false; return e; } };
+const mockStateField = {
+  define: ({ create, update, provide }) => ({
+    stateField: true,
+    create,
+    update,
+    provide,
+  }),
+};
 
 vi.mock('@codemirror/state', () => ({
   EditorState: {
@@ -69,6 +81,8 @@ vi.mock('@codemirror/state', () => ({
   },
   Compartment: mockCompartment,
   Prec: { highest: (ext) => ext },
+  StateEffect: mockStateEffect,
+  StateField: mockStateField,
 }));
 
 vi.mock('@codemirror/commands', () => ({

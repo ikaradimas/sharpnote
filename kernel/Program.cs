@@ -207,6 +207,12 @@ partial class Program
                     break;
                 }
 
+                case "signature":
+                {
+                    HandleSignature(msg, realStdout);
+                    break;
+                }
+
                 case "preload_nugets":
                 {
                     await HandlePreloadNugets(msg, options, realStdout,

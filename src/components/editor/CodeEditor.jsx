@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import { EditorState, Compartment, Prec } from '@codemirror/state';
-import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter } from '@codemirror/view';
+import { EditorState, StateEffect, StateField, Compartment, Prec } from '@codemirror/state';
+import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter, showTooltip, tooltips } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
@@ -16,7 +16,7 @@ export let _setCursorPos = null;
 export function registerCursorPosSetter(fn) { _setCursorPos = fn; }
 
 export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
-                      onRequestCompletions, onRequestLint, readOnly = false,
+                      onRequestCompletions, onRequestLint, onRequestSignature, readOnly = false,
                       lintEnabled = true, cellIndex = null }) {
   const containerRef = useRef(null);
   const viewRef = useRef(null);
@@ -24,6 +24,7 @@ export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
   const onCtrlEnterRef = useRef(onCtrlEnter);
   const completionsRef = useRef(onRequestCompletions);
   const lintRef = useRef(onRequestLint);
+  const signatureRef = useRef(onRequestSignature);
   const readOnlyCompartmentRef = useRef(null);
   const lintCompartmentRef     = useRef(null);
   const lintEnabledRef         = useRef(lintEnabled);
@@ -33,6 +34,7 @@ export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
   useEffect(() => { onCtrlEnterRef.current = onCtrlEnter; }, [onCtrlEnter]);
   useEffect(() => { completionsRef.current = onRequestCompletions; }, [onRequestCompletions]);
   useEffect(() => { lintRef.current = onRequestLint; }, [onRequestLint]);
+  useEffect(() => { signatureRef.current = onRequestSignature; }, [onRequestSignature]);
   useEffect(() => { cellIndexRef.current = cellIndex; }, [cellIndex]);
   useEffect(() => { lintEnabledRef.current = lintEnabled; }, [lintEnabled]);
 
@@ -164,6 +166,103 @@ export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
       };
 
       extensions.push(lintCompartment.of(lintEnabledRef.current ? linter(lintSource, { delay: 600 }) : []));
+
+      // ── Signature help tooltip ──────────────────────────────────────────────
+      const setSigTip = StateEffect.define();
+      const sigField = StateField.define({
+        create: () => null,
+        update(val, tr) {
+          for (const e of tr.effects) if (e.is(setSigTip)) return e.value;
+          return val;
+        },
+        provide: f => showTooltip.from(f),
+      });
+
+      let sigTimer = null;
+      const sigListener = EditorView.updateListener.of((update) => {
+        if (!update.selectionSet && !update.docChanged) return;
+        clearTimeout(sigTimer);
+        sigTimer = setTimeout(() => {
+          const fn = signatureRef.current;
+          const view = update.view;
+          const state = view.state;
+          const pos = state.selection.main.head;
+          const code = state.doc.toString();
+          const textBefore = code.slice(0, pos);
+
+          // Quick check: are we inside any '(' ?
+          let depth = 0;
+          let hasParen = false;
+          for (let i = textBefore.length - 1; i >= 0; i--) {
+            if (textBefore[i] === ')') depth++;
+            else if (textBefore[i] === '(') {
+              if (depth === 0) { hasParen = true; break; }
+              depth--;
+            }
+          }
+          if (!hasParen || !fn) {
+            view.dispatch({ effects: setSigTip.of(null) });
+            return;
+          }
+
+          fn(code, pos).then(result => {
+            if (!result?.signatures?.length) {
+              view.dispatch({ effects: setSigTip.of(null) });
+              return;
+            }
+            // Find the opening paren position for tooltip anchor
+            let d = 0, anchorPos = pos;
+            for (let i = textBefore.length - 1; i >= 0; i--) {
+              if (textBefore[i] === ')') d++;
+              else if (textBefore[i] === '(') {
+                if (d === 0) { anchorPos = i + 1; break; }
+                d--;
+              }
+            }
+            view.dispatch({
+              effects: setSigTip.of({
+                pos: anchorPos,
+                above: true,
+                strictSide: true,
+                arrow: false,
+                create() {
+                  const dom = document.createElement('div');
+                  dom.className = 'cm-signature-help';
+                  result.signatures.forEach((sig) => {
+                    const line = document.createElement('div');
+                    line.className = 'cm-sig-line';
+                    const parenOpen = sig.label.indexOf('(');
+                    const parenClose = sig.label.lastIndexOf(')');
+                    if (parenOpen < 0 || !sig.parameters?.length) {
+                      line.textContent = sig.label;
+                    } else {
+                      line.appendChild(document.createTextNode(sig.label.slice(0, parenOpen + 1)));
+                      sig.parameters.forEach((p, i) => {
+                        if (i > 0) line.appendChild(document.createTextNode(', '));
+                        if (i === result.activeParam) {
+                          const em = document.createElement('strong');
+                          em.className = 'cm-sig-active';
+                          em.textContent = p.label;
+                          line.appendChild(em);
+                        } else {
+                          line.appendChild(document.createTextNode(p.label));
+                        }
+                      });
+                      line.appendChild(document.createTextNode(sig.label.slice(parenClose)));
+                    }
+                    dom.appendChild(line);
+                  });
+                  return { dom };
+                },
+              }),
+            });
+          }).catch(() => {
+            view.dispatch({ effects: setSigTip.of(null) });
+          });
+        }, 120);
+      });
+
+      extensions.push(sigField, tooltips({ position: 'absolute' }), sigListener);
     }
 
     const state = EditorState.create({ doc: value, extensions });

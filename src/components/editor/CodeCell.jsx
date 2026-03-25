@@ -67,6 +67,7 @@ export function CodeCell({
   onToggleLock,
   requestCompletions,
   requestLint,
+  requestSignature,
   lintEnabled = true,
 }) {
   const outputMode = cell.outputMode || 'auto';
@@ -178,6 +179,7 @@ export function CodeCell({
         onCtrlEnter={kernelReady && !anyRunning ? onRun : undefined}
         onRequestCompletions={requestCompletions}
         onRequestLint={requestLint}
+        onRequestSignature={requestSignature}
         lintEnabled={lintEnabled}
         readOnly={locked}
         cellIndex={cellIndex}
