@@ -68,6 +68,7 @@ vi.mock('@codemirror/state', () => ({
     readOnly: { of: (v) => ({ readOnly: v }) },
   },
   Compartment: mockCompartment,
+  Prec: { highest: (ext) => ext },
 }));
 
 vi.mock('@codemirror/commands', () => ({

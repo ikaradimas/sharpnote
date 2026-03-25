@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { EditorState, Compartment } from '@codemirror/state';
+import { EditorState, Compartment, Prec } from '@codemirror/state';
 import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 import { oneDark } from '@codemirror/theme-one-dark';
@@ -134,12 +134,14 @@ export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
       };
 
       // Accept completions on Tab only (not Enter), so Enter remains a normal newline.
-      // completionKeymap already binds Tab → acceptCompletion; it falls through when
-      // no completion is active, so indentWithTab below handles the Tab-to-indent case.
-      const customCompletionKeymap = completionKeymap.filter((b) => b.key !== 'Enter');
+      // - defaultKeymap: false prevents autocompletion from registering Enter at high priority.
+      // - Prec.highest ensures Tab → acceptCompletion beats indentWithTab (normal priority).
+      // - acceptCompletion returns false when no completion is active, so Tab falls through
+      //   to indentWithTab for normal indent behaviour.
+      const completionKeys = completionKeymap.filter((b) => b.key !== 'Enter');
       extensions.push(
-        autocompletion({ override: [keywordSource, dynamicSource], defaultKeymap: true }),
-        keymap.of(customCompletionKeymap),
+        autocompletion({ override: [keywordSource, dynamicSource], defaultKeymap: false }),
+        Prec.highest(keymap.of(completionKeys)),
       );
 
       const lintSource = async (view) => {
