@@ -117,6 +117,7 @@ function buildMenu(customShortcuts = {}) {
       { label: 'Save As…',       accelerator: accel('nb-save-as', 'Ctrl+Shift+S'), click: () => send('save-as') },
       { type: 'separator' },
       { label: 'Export as HTML…', click: () => send('export-html') },
+      { label: 'Export as PDF…',  click: () => send('export-pdf') },
       ...(process.platform !== 'darwin' ? [
         { type: 'separator' },
         { role: 'quit' },

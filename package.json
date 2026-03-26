@@ -1,6 +1,6 @@
 {
   "name": "sharpnote",
-  "version": "1.21.0",
+  "version": "1.22.2",
   "description": "SharpNote — interactive C# notebook with multi-tab MDI, NuGet, and Chart.js output",
   "main": "main.js",
   "scripts": {
@@ -20,6 +20,7 @@
     "test:kernel": "dotnet test kernel/kernel.Tests/kernel.Tests.csproj --logger console",
     "test:e2e": "npm run build:renderer && playwright test",
     "test:e2e:headed": "npm run build:renderer && playwright test --headed",
+    "screenshots": "npm run build:renderer && playwright test tests/e2e/screenshot.test.js --reporter=line",
     "clean": "rm -rf release/ kernel/bin/ kernel/obj/ kernel/kernel.Tests/bin/ kernel/kernel.Tests/obj/ node_modules/ dist/ logs/",
     "rebuild:mac": "npm run clean && npm install && npm run build:renderer && npm run build:kernel:mac",
     "rebuild:win": "npm run clean && npm install && npm run build:renderer && npm run build:kernel:win",

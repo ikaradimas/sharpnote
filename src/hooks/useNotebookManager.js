@@ -55,9 +55,11 @@ export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef }) {
       sources: nb.nugetSources,
       config: nb.config.filter((e) => e.key.trim()),
       attachedDbIds: nb.attachedDbs.filter((d) => d.status === 'ready').map((d) => d.connectionId),
-      cells: nb.cells.map(({ id, type, content, outputMode, locked }) => ({
+      autoRun: nb.autoRun || false,
+      cells: nb.cells.map(({ id, type, content, outputMode, locked, codeFolded, db }) => ({
         id, type, content,
-        ...(type === 'code' ? { outputMode: outputMode || 'auto', locked: locked || false } : {}),
+        ...(type === 'code' ? { outputMode: outputMode || 'auto', locked: locked || false, ...(codeFolded ? { codeFolded: true } : {}) } : {}),
+        ...(type === 'sql'  ? { db: db || '' } : {}),
       })),
     };
   }, []);
@@ -95,6 +97,7 @@ export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef }) {
       ...nb,
       path: result.filePath,
       color: result.data.color || null,
+      autoRun: result.data.autoRun || false,
       cells: result.data.cells || [],
       nugetPackages: (result.data.packages || []).map((p) => ({ ...p, status: 'pending' })),
       nugetSources: result.data.sources || [...DEFAULT_NUGET_SOURCES],
@@ -120,6 +123,7 @@ export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef }) {
       ...nb,
       path: result.filePath,
       color: result.data.color || null,
+      autoRun: result.data.autoRun || false,
       cells: result.data.cells || [],
       nugetPackages: (result.data.packages || []).map((p) => ({ ...p, status: 'pending' })),
       nugetSources: result.data.sources || [...DEFAULT_NUGET_SOURCES],

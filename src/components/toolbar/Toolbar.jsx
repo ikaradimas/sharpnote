@@ -13,6 +13,9 @@ export function Toolbar({
   onRunAll,
   onAddMarkdown,
   onAddCode,
+  onAddSql,
+  autoRun,
+  onToggleAutoRun,
   onSave,
   onLoad,
   onReset,
@@ -97,7 +100,15 @@ export function Toolbar({
               className="toolbar-run-all">▶▶ Run All</button>
       <button onClick={onAddMarkdown} title="Add markdown cell">+ Markdown</button>
       <button onClick={onAddCode} title="Add code cell">+ Code</button>
+      <button onClick={onAddSql} title="Add SQL cell">+ SQL</button>
       <div className="toolbar-separator" />
+      <button
+        className={`toolbar-autorun-btn${autoRun ? ' toolbar-autorun-btn--on' : ''}`}
+        onClick={onToggleAutoRun}
+        title={autoRun ? 'Auto-run on open: ON — click to disable' : 'Auto-run on open: OFF — click to enable'}
+      >
+        ⚡
+      </button>
       <button className="toolbar-icon-btn" onClick={onSave} title="Save notebook"><IconSave /></button>
       <button className="toolbar-icon-btn" onClick={onLoad} title="Open notebook"><IconOpen /></button>
       <div className="toolbar-separator" />

@@ -36,6 +36,13 @@ function DocBlock({ block, query }) {
         </tbody>
       </table>
     );
+  if (block.type === 'img')
+    return (
+      <figure className="docs-figure">
+        <img className="docs-img" src={block.src} alt={block.alt || ''} />
+        {block.caption && <figcaption className="docs-caption">{block.caption}</figcaption>}
+      </figure>
+    );
   return null;
 }
 

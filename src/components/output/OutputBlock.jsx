@@ -6,6 +6,10 @@ import { WidgetOutput } from './WidgetOutput.jsx';
 import { MarkdownOutput } from './MarkdownOutput.jsx';
 import { HorizontalOutput } from './HorizontalOutput.jsx';
 import { ConfirmWidget } from './ConfirmWidget.jsx';
+import { ImageOutput } from './ImageOutput.jsx';
+import { PromptWidget } from './PromptWidget.jsx';
+import { ProgressOutput } from './ProgressOutput.jsx';
+import { ObjectTree } from './ObjectTree.jsx';
 
 async function exportMsg(msg) {
   if (!window.electronAPI?.saveFile) return;
@@ -71,6 +75,14 @@ export function OutputBlock({ msg, index, notebookId }) {
       inner = <HorizontalOutput items={msg.content} separator={msg.separator} />;
     } else if (msg.format === 'confirm') {
       inner = <ConfirmWidget spec={msg.content} notebookId={notebookId} />;
+    } else if (msg.format === 'image') {
+      inner = <ImageOutput spec={msg.content} />;
+    } else if (msg.format === 'prompt') {
+      inner = <PromptWidget spec={msg.content} notebookId={notebookId} />;
+    } else if (msg.format === 'progress') {
+      inner = <ProgressOutput spec={msg.content} />;
+    } else if (msg.format === 'tree') {
+      inner = <ObjectTree json={msg.content} />;
     }
   } else if (msg.type === 'interrupted') {
     inner = <div className="output-interrupted">⏹ Execution interrupted</div>;

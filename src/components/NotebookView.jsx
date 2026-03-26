@@ -1,16 +1,19 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { makeCell } from '../notebook-factory.js';
 import { getSectionHeadingLevel, getCollapsedSections } from '../utils.js';
 import { Toolbar } from './toolbar/Toolbar.jsx';
 import { CodeCell } from './editor/CodeCell.jsx';
 import { MarkdownCell } from './editor/MarkdownCell.jsx';
+import { SqlCell } from './editor/SqlCell.jsx';
 import { AddBar } from './editor/AddBar.jsx';
+import { FindBar } from './FindBar.jsx';
 
 export function NotebookView({
   nb,
   onSetNb,
   onSetNbDirty,
   onRunCell,
+  onRunSqlCell,
   onRunAll,
   onSave,
   onLoad,
@@ -43,7 +46,27 @@ export function NotebookView({
   const { cells, outputs, outputHistory, cellResults, running, kernelStatus,
           config, logPanelOpen, nugetPanelOpen, configPanelOpen,
           dbPanelOpen, varsPanelOpen, tocPanelOpen, graphPanelOpen, todoPanelOpen,
-          path: notebookPath, staleCellIds } = nb;
+          path: notebookPath, staleCellIds, attachedDbs, autoRun } = nb;
+
+  const [findOpen, setFindOpen] = useState(false);
+  const [findHighlighted, setFindHighlighted] = useState(new Set());
+
+  // Ctrl+F to open find bar
+  useEffect(() => {
+    const handler = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
+        e.preventDefault();
+        setFindOpen(true);
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, []);
+
+  const closeFindBar = useCallback(() => {
+    setFindOpen(false);
+    setFindHighlighted(new Set());
+  }, []);
 
   const addCell = (type, afterIndex = null) => {
     const newCell = makeCell(type, '');
@@ -65,6 +88,8 @@ export function NotebookView({
   const updateCellProp = (id, prop, value) => {
     onSetNbDirty((n) => ({ cells: n.cells.map((c) => c.id === id ? { ...c, [prop]: value } : c) }));
   };
+
+  const toggleFold = (id) => updateCellProp(id, 'codeFolded', !(cells.find((c) => c.id === id)?.codeFolded || false));
 
   const { hidden: collapsedCellIds, counts: collapsedCounts } = useMemo(
     () => getCollapsedSections(cells),
@@ -99,6 +124,9 @@ export function NotebookView({
         onRunAll={() => onRunAll(nb.id)}
         onAddMarkdown={() => addCell('markdown')}
         onAddCode={() => addCell('code')}
+        onAddSql={() => addCell('sql')}
+        autoRun={autoRun || false}
+        onToggleAutoRun={() => onSetNbDirty((n) => ({ autoRun: !n.autoRun }))}
         onSave={() => onSave(nb.id)}
         onLoad={onLoad}
         onReset={() => onReset(nb.id)}
@@ -135,6 +163,13 @@ export function NotebookView({
         onLoadLayout={onLoadLayout}
         onDeleteLayout={onDeleteLayout}
       />
+      {findOpen && (
+        <FindBar
+          cells={cells}
+          onClose={closeFindBar}
+          onHighlight={setFindHighlighted}
+        />
+      )}
       <div className="notebook">
         {cells.length === 0 && (
           <div className="empty-notebook">
@@ -147,16 +182,18 @@ export function NotebookView({
           <AddBar
             onAddMarkdown={() => addCell('markdown', -1)}
             onAddCode={() => addCell('code', -1)}
+            onAddSql={() => addCell('sql', -1)}
           />
         )}
 
         {cells.map((cell, index) => {
           const isHidden = collapsedCellIds.has(cell.id);
           const sectionLevel = getSectionHeadingLevel(cell);
+          const isHighlighted = findHighlighted.has(cell.id);
           return (
           <div
             key={cell.id}
-            className={`cell-wrapper${isHidden ? ' cell-section-hidden' : ''}`}
+            className={`cell-wrapper${isHidden ? ' cell-section-hidden' : ''}${isHighlighted ? ' cell-find-match' : ''}`}
             data-cell-id={cell.id}
           >
             {cell.type === 'markdown' ? (
@@ -167,6 +204,23 @@ export function NotebookView({
                 onToggleCollapse={() => updateCellProp(cell.id, 'collapsed', !(cell.collapsed || false))}
                 collapsedCount={collapsedCounts.get(cell.id) ?? 0}
                 onUpdate={(val) => updateCell(cell.id, val)}
+                onDelete={() => deleteCell(cell.id)}
+                onMoveUp={() => moveCell(cell.id, -1)}
+                onMoveDown={() => moveCell(cell.id, 1)}
+              />
+            ) : cell.type === 'sql' ? (
+              <SqlCell
+                cell={cell}
+                cellIndex={index}
+                outputs={outputs[cell.id]}
+                notebookId={nb.id}
+                attachedDbs={attachedDbs}
+                isRunning={running.has(cell.id)}
+                anyRunning={running.size > 0}
+                kernelReady={kernelStatus === 'ready'}
+                onUpdate={(val) => updateCell(cell.id, val)}
+                onRun={() => onRunSqlCell(nb.id, cell)}
+                onDbChange={(connectionId) => updateCellProp(cell.id, 'db', connectionId)}
                 onDelete={() => deleteCell(cell.id)}
                 onMoveUp={() => moveCell(cell.id, -1)}
                 onMoveDown={() => moveCell(cell.id, 1)}
@@ -193,6 +247,7 @@ export function NotebookView({
                 onMoveDown={() => moveCell(cell.id, 1)}
                 onOutputModeChange={(mode) => updateCellProp(cell.id, 'outputMode', mode)}
                 onToggleLock={() => updateCellProp(cell.id, 'locked', !(cell.locked || false))}
+                onToggleFold={() => toggleFold(cell.id)}
                 requestCompletions={(code, pos) => requestCompletions(nb.id, code, pos)}
                 requestLint={(code) => requestLint(nb.id, code)}
                 requestSignature={(code, pos) => requestSignature(nb.id, code, pos)}
@@ -202,6 +257,7 @@ export function NotebookView({
             <AddBar
               onAddMarkdown={() => addCell('markdown', index)}
               onAddCode={() => addCell('code', index)}
+              onAddSql={() => addCell('sql', index)}
             />
           </div>
         ); })}

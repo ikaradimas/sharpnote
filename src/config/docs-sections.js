@@ -5,6 +5,7 @@ export const DOCS_SECTIONS = [
     id: 'overview', title: 'Overview',
     content: [
       { type: 'p', text: 'SharpNote is a desktop C# scripting environment. Notebooks are ordered sequences of code and markdown cells that share state within a dedicated .NET kernel process.' },
+      { type: 'img', src: 'docs/screenshots/overview.png', alt: 'SharpNote main window', caption: 'SharpNote — multi-tab C# notebook with dock layout' },
       { type: 'h3', text: 'Key Concepts' },
       { type: 'ul', items: [
         'Notebook — a .cnb file containing cells, packages, config, and database attachment state',
@@ -63,6 +64,15 @@ export const DOCS_SECTIONS = [
       { type: 'p', text: 'Hover over a tab and click the palette icon to assign a color. The color appears as a 2 px top border on the tab and tints the tab bar\'s bottom edge when that tab is active. Click the same icon again to clear the color.' },
       { type: 'h3', text: 'Renaming' },
       { type: 'p', text: 'Double-click the tab title or the notebook title in the toolbar to rename inline. Press Enter or click away to confirm; Escape to cancel. If the notebook has been saved, the file on disk is also renamed. Characters illegal in filenames ( / \\ : * ? " < > | ) are stripped from the saved filename.' },
+      { type: 'h3', text: 'Export as PDF' },
+      { type: 'p', text: 'File → Export as PDF… renders the active notebook\'s content to a paginated A4 PDF and prompts you to choose a save location. The export uses Electron\'s built-in printToPDF engine so it faithfully captures all rendered output — tables, graphs, images, object trees, and markdown.' },
+      { type: 'ul', items: [
+        'All rendered cell output is included: text, HTML, tables, charts, images',
+        'Cell source code editors and toolbar controls are hidden in the PDF',
+        'Background colors are preserved',
+        'The PDF is saved to the location you choose in the save dialog',
+        'Export as HTML… (File menu) produces a self-contained shareable HTML file instead',
+      ]},
     ],
   },
   {
@@ -72,9 +82,23 @@ export const DOCS_SECTIONS = [
       { type: 'ul', items: [
         'Code cell — C# executed by the kernel; all cells share one kernel session, so variables and using statements persist across cells',
         'Markdown cell — rich text: headings, lists, code spans, tables, links, and blockquotes rendered on demand',
+        'SQL cell — write and execute raw SQL directly against any attached database; SELECT results render as a data table; DDL / DML shows a rows-affected status',
       ]},
       { type: 'h3', text: 'Adding Cells' },
-      { type: 'p', text: 'Hover between any two cells (or above the first cell) to reveal the + Code and + Markdown insert buttons. The toolbar\'s Add Markdown and Add Code buttons append to the end of the notebook.' },
+      { type: 'p', text: 'Hover between any two cells (or above the first cell) to reveal the + Code and + Markdown insert buttons. The toolbar\'s Add Markdown, Add Code, and + SQL buttons append to the end of the notebook.' },
+      { type: 'h3', text: 'SQL Cells' },
+      { type: 'p', text: 'SQL cells let you run raw SQL queries against any attached database without writing C# boilerplate. Select a connection from the dropdown at the top of the cell, then write your SQL and press ▶ Run (or Ctrl+Enter):' },
+      { type: 'code', text: 'SELECT u.Name, COUNT(o.Id) AS OrderCount\nFROM Users u\nLEFT JOIN Orders o ON o.UserId = u.Id\nGROUP BY u.Name\nORDER BY OrderCount DESC' },
+      { type: 'ul', items: [
+        'SELECT queries render as an interactive data table with sortable columns and pagination',
+        'INSERT / UPDATE / DELETE / DDL statements show a "N rows affected" or "Done" status line',
+        'The dropdown lists all connections that are currently attached to the notebook',
+        'SQL cells share the same output history and cell controls as code cells',
+      ]},
+      { type: 'h3', text: 'Cell Folding' },
+      { type: 'p', text: 'Click the ▾/▸ arrow at the left of any code cell header to fold the editor down to a single-line preview. The cell remains fully executable while folded — press ▶ Run or Ctrl+Enter to run it without unfolding. Click the arrow again to expand. Fold state is saved in the .cnb file.' },
+      { type: 'h3', text: 'Output Toggle' },
+      { type: 'p', text: 'Each code cell with output shows a ▾ Output / ▸ Output toggle above the output block. Click it to collapse or expand the output. Useful for decluttering cells with long or verbose output that you want to keep but not see constantly. The toggle state is per-session and is not persisted to the file.' },
       { type: 'h3', text: 'Moving Cells' },
       { type: 'p', text: 'Hover over a cell to reveal ↑ ↓ arrows in the top-right corner. Click to move the cell one position up or down.' },
       { type: 'h3', text: 'Deleting Cells' },
@@ -90,6 +114,7 @@ export const DOCS_SECTIONS = [
   {
     id: 'execution', title: 'Running Code',
     content: [
+      { type: 'img', src: 'docs/screenshots/execution.png', alt: 'Code cell execution', caption: 'C# cell with output — variables, string interpolation, and .Display()' },
       { type: 'h3', text: 'Running a Single Cell' },
       { type: 'ul', items: [
         'Click the ▶ Run button in the cell header',
@@ -112,6 +137,16 @@ export const DOCS_SECTIONS = [
       ]},
       { type: 'h3', text: 'Autocomplete & Lint' },
       { type: 'p', text: 'The code editor requests completions from the kernel as you type (Roslyn-powered). Press Tab to accept a suggestion (Enter inserts a newline as usual). The editor also performs background linting and underlines errors with squiggles before you run.' },
+      { type: 'h3', text: 'Auto-Run on Open' },
+      { type: 'p', text: 'Click the ⚡ button in the notebook toolbar to enable auto-run mode for that notebook. When enabled, all code cells are automatically executed in order as soon as the notebook opens and the kernel becomes ready — useful for notebooks that serve as dashboards or setup scripts. The ⚡ state is saved in the .cnb file and persists between sessions.' },
+      { type: 'h3', text: 'Find in Notebook' },
+      { type: 'p', text: 'Press Ctrl+F (⌘F on macOS) to open the Find bar. Type to search across all cell contents — both code and markdown. Matched cells are highlighted with an amber border.' },
+      { type: 'ul', items: [
+        'Use ↑ / ↓ buttons (or Shift+Enter / Enter) to navigate between matches',
+        'The match counter shows the current index and total, e.g. 2 / 5',
+        'Press Escape or click the × button to close the Find bar',
+        'Matches scroll into view as you navigate',
+      ]},
       { type: 'h3', text: 'Clearing Output' },
       { type: 'p', text: 'Run → Clear All Output removes all cell output in the active notebook without resetting kernel state.' },
     ],
@@ -130,6 +165,8 @@ export const DOCS_SECTIONS = [
         'Display.Table(IEnumerable<T> rows) — renders an object collection as a formatted data table',
         'Display.Csv(string csv) — renders a CSV string as a scrollable data table',
         'Display.Graph(object spec) — renders an interactive Chart.js graph from a config object',
+        'Display.Image(source, alt?, width?, height?) — renders an image from a URL, file path, or base64 data URI',
+        'Display.Progress(label?, total?) — creates a live-updating progress bar; call .Report(n) to update, .Complete() when done',
         'list.DisplayTable() — extension method shorthand for Display.Table(list)',
       ]},
       { type: 'h3', text: 'Logging with .Log()' },
@@ -162,12 +199,22 @@ export const DOCS_SECTIONS = [
         'Util.Cache<T>(key, getValue) — memoize a computation; cached value persists until kernel reset',
         'Util.ClearCache() — clear all memoized values',
         'Util.ConfirmAsync(message, title?) — display an OK / Cancel dialog; awaits user click; returns true (OK) or false (Cancel)',
+        'Util.PromptAsync(message, title?, defaultValue?) — display a text-input dialog; awaits user input; returns the entered string or null if cancelled',
       ]},
-      { type: 'code', text: '// .Dump() — LinqPAD-compatible alias for .Display()\n"hello!".Dump();\nnew[] { new { Name="Alice", Score=95 } }.Dump("results");\n\n// Util.Time — benchmark a block and display elapsed time\nUtil.Time(() => { DoWork(); }, "label");\nvar result = Util.Time(() => Compute(), "fn");  // returns value\n\n// Util.Dif — line-by-line diff\nUtil.Dif(beforeObj, afterObj, "before", "after");\n\n// Util.HorizontalRun — side-by-side output\nUtil.HorizontalRun("16px", tableA, tableB);\n\n// Util.Metatext / Util.Highlight\nUtil.Metatext("Generated at " + DateTime.Now.ToString("g"));\nUtil.Highlight(criticalResult, "#4ec9b0");  // teal box\n\n// Util.Cache — memoize across executions (cleared on kernel reset)\nvar data = Util.Cache("key", () => LoadExpensiveData());\nUtil.ClearCache();\n\n// Util.Cmd — run a shell command\nUtil.Cmd("git", "log --oneline -5");\n\n// Util.ConfirmAsync — pause execution and ask the user\nif (await Util.ConfirmAsync("Delete all records?", "Confirm"))\n    DeleteAllRecords();\nelse\n    "Cancelled.".Dump();' },
+      { type: 'code', text: '// .Dump() — LinqPAD-compatible alias for .Display()\n"hello!".Dump();\nnew[] { new { Name="Alice", Score=95 } }.Dump("results");\n\n// Util.Time — benchmark a block and display elapsed time\nUtil.Time(() => { DoWork(); }, "label");\nvar result = Util.Time(() => Compute(), "fn");  // returns value\n\n// Util.Dif — line-by-line diff\nUtil.Dif(beforeObj, afterObj, "before", "after");\n\n// Util.HorizontalRun — side-by-side output\nUtil.HorizontalRun("16px", tableA, tableB);\n\n// Util.Metatext / Util.Highlight\nUtil.Metatext("Generated at " + DateTime.Now.ToString("g"));\nUtil.Highlight(criticalResult, "#4ec9b0");  // teal box\n\n// Util.Cache — memoize across executions (cleared on kernel reset)\nvar data = Util.Cache("key", () => LoadExpensiveData());\nUtil.ClearCache();\n\n// Util.Cmd — run a shell command\nUtil.Cmd("git", "log --oneline -5");\n\n// Util.ConfirmAsync — pause execution and ask the user\nif (await Util.ConfirmAsync("Delete all records?", "Confirm"))\n    DeleteAllRecords();\nelse\n    "Cancelled.".Dump();\n\n// Util.PromptAsync — pause execution and collect text input\nvar name = await Util.PromptAsync("Enter your name:", "Name", defaultValue: "World");\n$"Hello, {name}!".Dump();' },
+      { type: 'h3', text: 'Interactive Dialogs' },
+      { type: 'p', text: 'Util.ConfirmAsync and Util.PromptAsync pause cell execution and display a dialog in the output area. Execution resumes only after the user responds — they work like modal dialogs but embedded in the notebook.' },
+      { type: 'code', text: '// Ask for confirmation before a destructive operation\nbool confirmed = await Util.ConfirmAsync(\n    "This will delete all records. Continue?",\n    title: "Confirm Delete");\n\nif (confirmed)\n    myDb.Database.ExecuteSqlRaw("DELETE FROM Orders");\n\n// Collect a value from the user\nstring connectionString = await Util.PromptAsync(\n    "Enter connection string:",\n    title: "Connect",\n    defaultValue: "Data Source=./dev.db");\n\nDb.Add("dynamic", DbProvider.Sqlite, connectionString);\nDb.Attach("dynamic");' },
+      { type: 'ul', items: [
+        'Util.ConfirmAsync(message, title?) — shows OK / Cancel; awaits click; returns true (OK) or false (Cancel)',
+        'Util.PromptAsync(message, title?, defaultValue?) — shows a text input; awaits submission; returns the entered string or null if cancelled',
+        'Both methods are async — use await in the calling cell',
+        'Cancelling the dialog (pressing Cancel or the × button) returns false / null without throwing',
+      ]},
       { type: 'h3', text: 'Table Column Sorting' },
       { type: 'p', text: 'Every data table rendered by Display.Table(), .DisplayTable(), .Dump(), or .DumpTable() has sortable column headers. Click a column header to sort ascending, click again to sort descending, click a third time to restore the original order. Sorting is numeric-aware: a column of numbers sorts as numbers, not as strings.' },
       { type: 'h3', text: 'Complete Scripting Cheatsheet' },
-      { type: 'code', text: '// ── Text & HTML ──────────────────────────────────────────────\nConsole.WriteLine("plain text");\nDisplay.Html("<b>bold</b> and <em>italic</em>");\nDisplay.Markdown("## Title\\n\\n$E=mc^2$");\n\n// ── Data ─────────────────────────────────────────────────────\nvar items = new[] { new { Name = "Alice", Score = 95 }, new { Name = "Bob", Score = 88 } };\nDisplay.Table(items);          // or: items.DisplayTable()\nDisplay.Csv("a,b\\n1,2\\n3,4");\n\n// ── Charts ────────────────────────────────────────────────────\nDisplay.Graph(new {\n    type = "bar",\n    data = new { labels = new[] { "Q1", "Q2", "Q3" },\n                 datasets = new[] { new { label = "Revenue", data = new[] { 120, 95, 140 } } } }\n});\n\n// ── Live graph streaming ──────────────────────────────────────\nDisplay.Plot("temperature", 98.6);               // raw value\nDisplay.Plot("delta", value, PlotMode.RateOfChange); // change since last call\nDisplay.ClearGraph();                            // wipe all series\n\n// ── Interactive widgets ───────────────────────────────────────\ndouble factor = Display.Slider("Factor", 1, 10, 0.5, 3.0);\nstring mode   = Display.Dropdown("Mode", new[] { "Fast", "Slow" }, "Fast").StringValue;\n\n// ── Logging ──────────────────────────────────────────────────\n"pipeline started".Log();\nvar result = ComputeResult().Log("result");      // logs and returns value unchanged\n\n// ── Panels ────────────────────────────────────────────────────\nPanels.Open(PanelId.Graph);\nPanels.Close(PanelId.Log);\nPanels.Toggle(PanelId.Variables);\nPanels.CloseAll();\nPanels.Dock(PanelId.Graph, DockZone.Right, 0.35); // 35% of window width\nPanels.Dock(PanelId.Log, DockZone.Bottom, 200);   // 200 px tall\nPanels.Float(PanelId.Variables, x: 800, y: 120, width: 400, height: 500);\n\n// ── Database (programmatic) ──────────────────────────────────\nDb.Add("northwind", DbProvider.Sqlite, "Data Source=/data/northwind.db");\nDb.Attach("northwind");                          // injects typed DbContext\nvar conns = await Db.ListAsync();                // DbEntry[] { Name, Provider, IsAttached }\nDb.Detach("northwind");\nDb.Remove("northwind");\n\n// ── Config write-back ─────────────────────────────────────────\nConfig.Set("ApiKey", "abc123");                  // upserts; visible immediately\nConfig.Remove("ApiKey");\n\n// ── Util (LinqPAD-compatible utilities) ──────────────────────\nobj.Dump();                                      // alias for obj.Display()\nlist.DumpTable();                                // alias for list.DisplayTable()\nUtil.Cmd("ls", "-la");                           // run shell command, display output\nUtil.Time(() => DoWork(), "label");              // benchmark Action\nvar result = Util.Time(() => Compute(), "fn");   // benchmark Func<T>, return value\nUtil.Dif(a, b, "before", "after");               // line diff of two objects\nUtil.HorizontalRun("12px", tableA, tableB);      // side-by-side output\nUtil.Metatext("Generated 2025-01-01");           // gray metadata line\nUtil.Highlight(importantResult, "#ffe066");      // colored highlight box\nvar data = Util.Cache("key", () => LoadData()); // cached across executions\nUtil.ClearCache();                               // clear all cached values\nif (await Util.ConfirmAsync("Continue?", "Confirm"))  // pause and ask user\n    DoAction();' },
+      { type: 'code', text: '// ── Text & HTML ──────────────────────────────────────────────\nConsole.WriteLine("plain text");\nDisplay.Html("<b>bold</b> and <em>italic</em>");\nDisplay.Markdown("## Title\\n\\n$E=mc^2$");\n\n// ── Data ─────────────────────────────────────────────────────\nvar items = new[] { new { Name = "Alice", Score = 95 }, new { Name = "Bob", Score = 88 } };\nDisplay.Table(items);          // or: items.DisplayTable()\nDisplay.Csv("a,b\\n1,2\\n3,4");\n\n// ── Charts ────────────────────────────────────────────────────\nDisplay.Graph(new {\n    type = "bar",\n    data = new { labels = new[] { "Q1", "Q2", "Q3" },\n                 datasets = new[] { new { label = "Revenue", data = new[] { 120, 95, 140 } } } }\n});\n\n// ── Live graph streaming ──────────────────────────────────────\nDisplay.Plot("temperature", 98.6);               // raw value\nDisplay.Plot("delta", value, PlotMode.RateOfChange); // change since last call\nDisplay.ClearGraph();                            // wipe all series\n\n// ── Interactive widgets ───────────────────────────────────────\ndouble factor = Display.Slider("Factor", 1, 10, 0.5, 3.0);\nstring mode   = Display.Dropdown("Mode", new[] { "Fast", "Slow" }, "Fast").StringValue;\n\n// ── Logging ──────────────────────────────────────────────────\n"pipeline started".Log();\nvar result = ComputeResult().Log("result");      // logs and returns value unchanged\n\n// ── Panels ────────────────────────────────────────────────────\nPanels.Open(PanelId.Graph);\nPanels.Close(PanelId.Log);\nPanels.Toggle(PanelId.Variables);\nPanels.CloseAll();\nPanels.Dock(PanelId.Graph, DockZone.Right, 0.35); // 35% of window width\nPanels.Dock(PanelId.Log, DockZone.Bottom, 200);   // 200 px tall\nPanels.Float(PanelId.Variables, x: 800, y: 120, width: 400, height: 500);\n\n// ── Database (programmatic) ──────────────────────────────────\nDb.Add("northwind", DbProvider.Sqlite, "Data Source=/data/northwind.db");\nDb.Attach("northwind");                          // injects typed DbContext\nvar conns = await Db.ListAsync();                // DbEntry[] { Name, Provider, IsAttached }\nDb.Detach("northwind");\nDb.Remove("northwind");\n\n// ── Config write-back ─────────────────────────────────────────\nConfig.Set("ApiKey", "abc123");                  // upserts; visible immediately\nConfig.Remove("ApiKey");\n\n// ── Util (LinqPAD-compatible utilities) ──────────────────────\nobj.Dump();                                      // alias for obj.Display()\nlist.DumpTable();                                // alias for list.DisplayTable()\nUtil.Cmd("ls", "-la");                           // run shell command, display output\nUtil.Time(() => DoWork(), "label");              // benchmark Action\nvar result = Util.Time(() => Compute(), "fn");   // benchmark Func<T>, return value\nUtil.Dif(a, b, "before", "after");               // line diff of two objects\nUtil.HorizontalRun("12px", tableA, tableB);      // side-by-side output\nUtil.Metatext("Generated 2025-01-01");           // gray metadata line\nUtil.Highlight(importantResult, "#ffe066");      // colored highlight box\nvar data = Util.Cache("key", () => LoadData()); // cached across executions\nUtil.ClearCache();                               // clear all cached values\nif (await Util.ConfirmAsync("Continue?", "Confirm"))  // pause and ask user\n    DoAction();\nvar name = await Util.PromptAsync("Enter name:", "Input", "default");  // text input\n\n// ── Images ───────────────────────────────────────────────────\nDisplay.Image("https://example.com/chart.png", alt: "Chart", width: 600);\nDisplay.Image("data:image/png;base64,...");      // base64 data URI\n\n// ── Progress bars ────────────────────────────────────────────\nvar progress = Display.Progress("Processing", total: 100);\nfor (int i = 0; i <= 100; i++) { await Task.Delay(10); progress.Report(i); }\nprogress.Complete();' },
       { type: 'h3', text: 'Database Contexts' },
       { type: 'p', text: 'When a database is attached via the DB panel, a typed EF Core DbContext is injected into the kernel under the connection\'s variable name (e.g. myDb). Use it directly with standard LINQ:' },
       { type: 'code', text: 'var users = myDb.Users.Where(u => u.IsActive).ToList();\nDisplay.Table(users);' },
@@ -182,9 +229,38 @@ export const DOCS_SECTIONS = [
       { type: 'p', text: 'Display.Html("<b>bold</b>") renders HTML directly in the output area. Use this for custom formatting, styled results, or embedded content.' },
       { type: 'h3', text: 'Data Tables' },
       { type: 'p', text: 'Display.Table(myList) or myList.DisplayTable() renders an object collection as a scrollable table with column headers derived from property names. Display.Csv(csv) parses and renders a CSV string as a table. Set the output mode to "table".' },
+      { type: 'img', src: 'docs/screenshots/table.png', alt: 'Data table output', caption: 'DisplayTable() — sortable columns, pagination, and hover highlighting' },
       { type: 'h3', text: 'Graphs (Chart.js)' },
       { type: 'p', text: 'Display.Graph(spec) renders an interactive Chart.js chart. Set the output mode to "graph" and pass an anonymous object matching the Chart.js config schema:' },
       { type: 'code', text: 'Display.Graph(new {\n  type = "bar",\n  data = new {\n    labels = new[] { "Jan", "Feb", "Mar" },\n    datasets = new[] { new {\n      label = "Sales",\n      data  = new[] { 120, 95, 140 },\n      backgroundColor = "rgba(196,150,74,0.7)",\n    }}\n  },\n  options = new { responsive = true }\n});' },
+      { type: 'img', src: 'docs/screenshots/graph.png', alt: 'Chart.js bar graph output', caption: 'Interactive Chart.js bar chart with grouped datasets' },
+      { type: 'h3', text: 'Images' },
+      { type: 'p', text: 'Display.Image() renders an image inline in the cell output. It accepts a URL, an absolute file path, or a base64 data URI:' },
+      { type: 'code', text: '// Load from URL\nDisplay.Image("https://example.com/chart.png", alt: "Sales chart", width: 600);\n\n// Load from local file\nDisplay.Image("/Users/me/screenshots/output.png");\n\n// Base64 data URI (e.g. from a library that returns image bytes)\nbyte[] bytes = GenerateChartImage();\nstring dataUri = "data:image/png;base64," + Convert.ToBase64String(bytes);\nDisplay.Image(dataUri, alt: "Generated chart", width: 800);' },
+      { type: 'ul', items: [
+        'source — URL, absolute file path, or base64 data URI (required)',
+        'alt — accessible alt text (optional)',
+        'width — maximum render width in pixels; the image scales proportionally (optional)',
+        'height — maximum render height in pixels (optional)',
+      ]},
+      { type: 'h3', text: 'Progress Bars' },
+      { type: 'p', text: 'Display.Progress() creates a live-updating progress bar in the cell output. The bar updates in real time as you call .Report() — useful for long-running loops or batch operations:' },
+      { type: 'code', text: 'var items = GetItemsToProcess(); // e.g. 500 items\nvar progress = Display.Progress("Processing items", total: items.Count);\n\nfor (int i = 0; i < items.Count; i++) {\n    await ProcessItem(items[i]);\n    progress.Report(i + 1);          // updates fill, percentage, and label\n}\n\nprogress.Complete();                 // marks bar as done (100%, green)' },
+      { type: 'ul', items: [
+        'Display.Progress(label?, total) — creates the bar and displays it immediately',
+        '.Report(current) — updates the current value; percentage = current / total × 100',
+        '.Complete() — sets the bar to 100% and marks it as finished',
+        'All updates stream to the output in real time without waiting for the cell to finish',
+      ]},
+      { type: 'h3', text: 'Object Tree Viewer' },
+      { type: 'p', text: 'When you call .Display() or .Dump() on a complex object, SharpNote renders it as an interactive collapsible tree instead of a flat JSON block. Nested objects and arrays can be expanded or collapsed individually.' },
+      { type: 'ul', items: [
+        'Objects expand to show each property as a key: value pair',
+        'Arrays show the element count (e.g. Array [12]) and expand to show indexed elements',
+        'Strings render in quotes, numbers and booleans render in their native colour',
+        'The first two levels expand automatically; deeper levels start collapsed',
+        'Click any ▾ / ▸ toggle to expand or collapse that node',
+      ]},
       { type: 'h3', text: 'Errors' },
       { type: 'p', text: 'Compilation and runtime errors appear in red. Stack traces are shown in a dimmer colour below the main error message. An error in one cell does not prevent other cells from running.' },
       { type: 'h3', text: 'Exporting Output' },
@@ -195,6 +271,7 @@ export const DOCS_SECTIONS = [
     id: 'database', title: 'Databases',
     content: [
       { type: 'p', text: 'The DB panel lets you connect to databases, browse their schema, and query them with fully-typed EF Core DbContexts — all without leaving the notebook. Click the DB button in the toolbar to open the panel.' },
+      { type: 'img', src: 'docs/screenshots/db.png', alt: 'Database panel', caption: 'DB panel — add connections, browse schema, attach to notebooks' },
       { type: 'h3', text: 'Supported Providers' },
       { type: 'ul', items: [
         'SQLite — local file-based database',
@@ -400,6 +477,7 @@ export const DOCS_SECTIONS = [
     id: 'variables', title: 'Variables',
     content: [
       { type: 'p', text: 'Open the Variables panel with the Variables button in the toolbar. It shows a live snapshot of all global variables in the active kernel session, updated automatically after each cell execution.' },
+      { type: 'img', src: 'docs/screenshots/vars.png', alt: 'Variables panel', caption: 'Variables panel — live snapshot of all kernel-session globals' },
       { type: 'h3', text: 'Variable List' },
       { type: 'p', text: 'Each row shows the variable name, its declared .NET type, and a string representation of its current value. null values are displayed with a distinct style.' },
       { type: 'h3', text: 'Filtering' },
@@ -410,6 +488,7 @@ export const DOCS_SECTIONS = [
     id: 'toc', title: 'Table of Contents',
     content: [
       { type: 'p', text: 'Open the Table of Contents panel with the ToC button in the toolbar. It lists all headings extracted from markdown cells in the active notebook.' },
+      { type: 'img', src: 'docs/screenshots/toc.png', alt: 'Table of Contents panel', caption: 'ToC panel — click any heading to scroll the notebook to it' },
       { type: 'p', text: 'Click any entry to scroll the notebook smoothly to that heading. Heading levels (H1–H6) are reflected as indentation in the list.' },
       { type: 'p', text: 'If the notebook contains no markdown cells with headings, the panel shows "No headings found".' },
     ],
@@ -418,6 +497,7 @@ export const DOCS_SECTIONS = [
     id: 'layout', title: 'Dock Layout',
     content: [
       { type: 'p', text: 'Panels (Log, NuGet, Config, DB, Variables, ToC, Library, File Explorer) live in a flexible dock layout. Each panel can be placed in one of four zones or floated as a free window.' },
+      { type: 'img', src: 'docs/screenshots/dock.png', alt: 'Dock layout with multiple panels', caption: 'Dock layout — multiple panels visible simultaneously across left, right, and bottom zones' },
       { type: 'h3', text: 'Zones' },
       { type: 'ul', items: [
         'Left — vertical strip; default: Library',
@@ -457,6 +537,7 @@ export const DOCS_SECTIONS = [
   {
     id: 'shortcuts', title: 'Keyboard Shortcuts',
     content: [
+      { type: 'p', text: 'These are the default shortcuts. Most can be reassigned in Settings → Shortcuts.' },
       { type: 'shortcuts', rows: [
         { keys: '⌘ N', desc: 'New notebook' },
         { keys: '⌘ O', desc: 'Open notebook in a new tab' },
@@ -474,10 +555,11 @@ export const DOCS_SECTIONS = [
         { keys: '⌘ 0', desc: 'Reset font size to default' },
         { keys: 'F1', desc: 'Open this documentation' },
         { keys: 'Ctrl+↩', desc: 'Run current cell (code editor focused)' },
+        { keys: 'Ctrl+F', desc: 'Find in notebook — search across all cell contents' },
         { keys: 'Tab', desc: 'Indent selection / accept autocomplete suggestion' },
         { keys: 'Ctrl+Z  /  Ctrl+Y', desc: 'Undo / redo (in code editor)' },
         { keys: 'Enter', desc: 'Confirm rename or new library file name' },
-        { keys: 'Escape', desc: 'Cancel rename or new-file prompt' },
+        { keys: 'Escape', desc: 'Cancel rename or new-file prompt; close Find bar' },
       ]},
     ],
   },
@@ -505,6 +587,7 @@ export const DOCS_SECTIONS = [
     id: 'api-browser', title: 'API Browser',
     content: [
       { type: 'p', text: 'The API Browser panel lets you explore, invoke, and save OpenAPI/Swagger specifications. Open it from the Tools menu (⌘⇧A) or the Tools dropdown in the toolbar.' },
+      { type: 'img', src: 'docs/screenshots/api.png', alt: 'API Browser panel', caption: 'API Browser — load any OpenAPI/Swagger spec, try endpoints, save configurations' },
       { type: 'h3', text: 'Loading a Spec' },
       { type: 'p', text: 'Enter any public or local URL that returns an OpenAPI 3.x or Swagger 2.x spec and press Enter or click Load. Both JSON and YAML formats are accepted. Local dev-server URLs (http://) are fetched through the main process to bypass browser CSP restrictions.' },
       { type: 'h3', text: 'Authentication' },
@@ -543,6 +626,7 @@ export const DOCS_SECTIONS = [
     id: 'settings', title: 'Settings',
     content: [
       { type: 'p', text: 'Open the Settings dialog (⌘, on macOS, Ctrl+, on Windows/Linux, or Tools → Settings…) to configure appearance, paths, and startup behaviour.' },
+      { type: 'img', src: 'docs/screenshots/settings.png', alt: 'Settings dialog', caption: 'Settings — appearance, font sizes, themes, paths, pinned notebooks, and export/import' },
       { type: 'h3', text: 'Appearance' },
       { type: 'ul', items: [
         'Editor Font Size — drag the slider (10–28 px) to resize the notebook editor font; a live preview updates as you drag. The Reset button restores the default of 12.6 px. The keyboard shortcuts ⌘= / ⌘- / ⌘0 still work outside the dialog.',
@@ -562,6 +646,7 @@ export const DOCS_SECTIONS = [
     id: 'command-palette', title: 'Command Palette',
     content: [
       { type: 'p', text: 'The Command Palette provides a fast keyboard-driven interface to every action in SharpNote without leaving the keyboard.' },
+      { type: 'img', src: 'docs/screenshots/command-palette.png', alt: 'Command Palette', caption: 'Command Palette (⌘K) — fuzzy search across all actions' },
       { type: 'h3', text: 'Opening the Palette' },
       { type: 'ul', items: [
         '⌘K (macOS) / Ctrl+K (Windows/Linux) — toggle the palette open/closed',
@@ -646,6 +731,7 @@ export const DOCS_SECTIONS = [
     id: 'widgets', title: 'Interactive Widgets',
     content: [
       { type: 'p', text: 'Interactive widgets let you add sliders, dropdowns, and date pickers directly to cell output. Their values persist between cell executions, enabling lightweight parameter exploration without re-coding.' },
+      { type: 'img', src: 'docs/screenshots/confirm-widget.png', alt: 'Confirm widget', caption: 'Util.ConfirmAsync() — interactive OK/Cancel dialog that pauses cell execution' },
       { type: 'h3', text: 'Creating Widgets' },
       { type: 'code', text: '// Create controls — values persist between cell runs\nvar alpha  = Display.Slider("Smoothing α", min: 0, max: 1, step: 0.05, defaultValue: 0.3);\nvar method = Display.Dropdown("Method", new[] { "EMA", "SMA", "Raw" }, "EMA");\nvar since  = Display.DatePicker("Since", defaultValue: "2025-01-01");\n\n// Use the values directly — implicit conversion to double/string\nConsole.WriteLine($"Method={method.StringValue}, α={alpha:F2}, since={since.StringValue}");\n\n// Adjust controls in the output, then press Ctrl+Enter to re-run with new values' },
       { type: 'h3', text: 'Value Persistence' },

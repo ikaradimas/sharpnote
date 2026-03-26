@@ -106,6 +106,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // App info
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
 
+  // PDF export
+  exportPdf: () => ipcRenderer.invoke('export-pdf'),
+
   // URL fetch (proxied through main to bypass renderer CSP for http:// URLs)
   fetchUrl: (url) => ipcRenderer.invoke('fetch-url', url),
 

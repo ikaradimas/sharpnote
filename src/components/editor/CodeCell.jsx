@@ -65,6 +65,7 @@ export function CodeCell({
   onMoveDown,
   onOutputModeChange,
   onToggleLock,
+  onToggleFold,
   requestCompletions,
   requestLint,
   requestSignature,
@@ -72,6 +73,8 @@ export function CodeCell({
 }) {
   const outputMode = cell.outputMode || 'auto';
   const locked = cell.locked || false;
+  const codeFolded = cell.codeFolded || false;
+  const [outputCollapsed, setOutputCollapsed] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
   const [elapsed, setElapsed] = useState(0);
@@ -118,7 +121,7 @@ export function CodeCell({
     : outputs;
 
   return (
-    <div className={`cell code-cell${isRunning ? ' running' : ''}${locked ? ' cell-locked' : ''}${isStale ? ' cell-stale' : ''}`}>
+    <div className={`cell code-cell${isRunning ? ' running' : ''}${locked ? ' cell-locked' : ''}${isStale ? ' cell-stale' : ''}${codeFolded ? ' cell-folded' : ''}`}>
       {cellIndex != null && <span className="cell-index-badge">{cellIndex + 1}</span>}
       {isStale && (
         <div className="cell-stale-banner" title="Variables used in this cell may have changed — consider re-running">
@@ -126,6 +129,13 @@ export function CodeCell({
         </div>
       )}
       <div className="code-cell-header">
+        <button
+          className={`cell-fold-btn${codeFolded ? ' cell-fold-btn--folded' : ''}`}
+          onClick={onToggleFold}
+          title={codeFolded ? 'Expand cell' : 'Collapse cell'}
+        >
+          {codeFolded ? '▸' : '▾'}
+        </button>
         <span className="cell-lang-label">C#</span>
         <span className="cell-id-label" title={`Cell ID: ${cell.id}`}>{cell.id}</span>
         <div className="cell-run-group" ref={dropdownRef}>
@@ -172,19 +182,36 @@ export function CodeCell({
           <CellControls onMoveUp={onMoveUp} onMoveDown={onMoveDown} onDelete={onDelete} />
         </div>
       </div>
-      <CodeEditor
-        value={cell.content}
-        onChange={(val) => onUpdate(val)}
-        language="csharp"
-        onCtrlEnter={kernelReady && !anyRunning ? onRun : undefined}
-        onRequestCompletions={requestCompletions}
-        onRequestLint={requestLint}
-        onRequestSignature={requestSignature}
-        lintEnabled={lintEnabled}
-        readOnly={locked}
-        cellIndex={cellIndex}
-      />
-      <CellOutput messages={displayedOutputs} notebookId={notebookId} />
+      {codeFolded ? (
+        <div className="cell-fold-preview" onClick={onToggleFold} title="Click to expand">
+          {(cell.content || '').split('\n')[0] || '(empty)'}
+        </div>
+      ) : (
+        <CodeEditor
+          value={cell.content}
+          onChange={(val) => onUpdate(val)}
+          language="csharp"
+          onCtrlEnter={kernelReady && !anyRunning ? onRun : undefined}
+          onRequestCompletions={requestCompletions}
+          onRequestLint={requestLint}
+          onRequestSignature={requestSignature}
+          lintEnabled={lintEnabled}
+          readOnly={locked}
+          cellIndex={cellIndex}
+        />
+      )}
+      {displayedOutputs && displayedOutputs.length > 0 && (
+        <div className="output-toggle-row">
+          <button
+            className="output-toggle-btn"
+            onClick={() => setOutputCollapsed((v) => !v)}
+            title={outputCollapsed ? 'Show output' : 'Hide output'}
+          >
+            {outputCollapsed ? '▸ Output' : '▾ Output'}
+          </button>
+        </div>
+      )}
+      {!outputCollapsed && <CellOutput messages={displayedOutputs} notebookId={notebookId} />}
       <div className="code-cell-footer">
         {(isRunning || lastDuration !== null) && (
           <span className="cell-execution-timer">

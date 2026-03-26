@@ -7,7 +7,13 @@ function shortId() {
 }
 
 export function makeCell(type = 'code', content = '') {
-  return { id: shortId(), type, content, ...(type === 'code' ? { outputMode: 'auto', locked: false } : {}) };
+  return {
+    id: shortId(),
+    type,
+    content,
+    ...(type === 'code' ? { outputMode: 'auto', locked: false } : {}),
+    ...(type === 'sql'  ? { db: '' } : {}),
+  };
 }
 
 // ── NuGet default sources ─────────────────────────────────────────────────────
@@ -145,6 +151,62 @@ new {
   },
 }`, 'graph'),
 
+    md('### Doughnut Chart'),
+
+    cs(`// Doughnut — category share
+new {
+    type = "doughnut",
+    data = new {
+        labels = new[] { "Hardware", "Software", "Services", "Support" },
+        datasets = new[] { new {
+            data            = new[] { 42, 29, 18, 11 },
+            backgroundColor = new[] {
+                "rgba(78,201,176,0.82)",
+                "rgba(86,156,214,0.82)",
+                "rgba(244,182,71,0.82)",
+                "rgba(197,134,192,0.82)",
+            },
+            borderWidth = 0,
+        }},
+    },
+    options = new {
+        responsive = true,
+        plugins = new {
+            title  = new { display = true, text = "Revenue Share by Category (%)" },
+            legend = new { position = "right" },
+        },
+    },
+}`, 'graph'),
+
+    md('### Scatter Chart'),
+
+    cs(`// Scatter — correlation between two variables
+var rng = new Random(12);
+var points = Enumerable.Range(0, 45).Select(_ => {
+    var x = Math.Round(rng.NextDouble() * 100, 1);
+    return new { x, y = Math.Round(x * 0.55 + rng.NextDouble() * 35, 1) };
+}).ToList();
+
+new {
+    type = "scatter",
+    data = new {
+        datasets = new[] { new {
+            label           = "Samples",
+            data            = points,
+            backgroundColor = "rgba(86,156,214,0.65)",
+            pointRadius     = 5,
+        }},
+    },
+    options = new {
+        responsive = true,
+        plugins = new { title = new { display = true, text = "Scatter: X vs Y" } },
+        scales  = new {
+            x = new { title = new { display = true, text = "X" } },
+            y = new { title = new { display = true, text = "Y" } },
+        },
+    },
+}`, 'graph'),
+
     md('## 6 · CSV'),
 
     md('### Inline CSV'),
@@ -160,20 +222,13 @@ streaming results, and live charts.`),
 
     md('### Progress Bar'),
 
-    cs(`// Animated progress bar
-string Bar(int pct) => $@"<div style='font-family:sans-serif;padding:2px 0'>
-  <div style='background:#3c3c3c;border-radius:3px;height:16px'>
-    <div style='background:#0e639c;height:16px;border-radius:3px;width:{pct}%;transition:width 0.1s'></div>
-  </div>
-  <p style='color:#888;font-size:11px;margin:3px 0 0'>{pct}%</p>
-</div>";
-
-var progress = Display.NewHtml(Bar(0));
+    cs(`// Display.Progress — live-updating progress bar
+var progress = Display.Progress("Processing", total: 20);
 for (int i = 1; i <= 20; i++) {
     await Task.Delay(80);
-    progress.UpdateHtml(Bar(i * 5));
+    progress.Report(i);
 }
-progress.UpdateHtml("<span style='color:#4ec9b0;font-weight:600'>✓ Complete!</span>");`),
+progress.Complete();`),
 
     md('### Live Updating Chart'),
 
@@ -479,64 +534,6 @@ var rows = posts.EnumerateArray().Select(p => {
 });
 
 rows.DisplayTable();`),
-
-    md('## 13 · More Chart Types'),
-
-    md('### Doughnut Chart'),
-
-    cs(`// Doughnut — category share
-new {
-    type = "doughnut",
-    data = new {
-        labels = new[] { "Hardware", "Software", "Services", "Support" },
-        datasets = new[] { new {
-            data            = new[] { 42, 29, 18, 11 },
-            backgroundColor = new[] {
-                "rgba(78,201,176,0.82)",
-                "rgba(86,156,214,0.82)",
-                "rgba(244,182,71,0.82)",
-                "rgba(197,134,192,0.82)",
-            },
-            borderWidth = 0,
-        }},
-    },
-    options = new {
-        responsive = true,
-        plugins = new {
-            title  = new { display = true, text = "Revenue Share by Category (%)" },
-            legend = new { position = "right" },
-        },
-    },
-}`, 'graph'),
-
-    md('### Scatter Chart'),
-
-    cs(`// Scatter — correlation between two variables
-var rng = new Random(12);
-var points = Enumerable.Range(0, 45).Select(_ => {
-    var x = Math.Round(rng.NextDouble() * 100, 1);
-    return new { x, y = Math.Round(x * 0.55 + rng.NextDouble() * 35, 1) };
-}).ToList();
-
-new {
-    type = "scatter",
-    data = new {
-        datasets = new[] { new {
-            label           = "Samples",
-            data            = points,
-            backgroundColor = "rgba(86,156,214,0.65)",
-            pointRadius     = 5,
-        }},
-    },
-    options = new {
-        responsive = true,
-        plugins = new { title = new { display = true, text = "Scatter: X vs Y" } },
-        scales  = new {
-            x = new { title = new { display = true, text = "X" } },
-            y = new { title = new { display = true, text = "Y" } },
-        },
-    },
-}`, 'graph'),
 
     md(`## 14 · Modern C#
 
@@ -1025,5 +1022,6 @@ export function createNotebook(withExamples = false) {
     todoPanelOpen: false,
     outputHistory: {},
     staleCellIds: [],
+    autoRun: false,
   };
 }
