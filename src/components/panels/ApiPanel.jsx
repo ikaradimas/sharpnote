@@ -130,6 +130,29 @@ function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
 
+// ── HTML description rendering ────────────────────────────────────────────────
+
+function sanitizeHtml(html) {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  doc.querySelectorAll('script,iframe,object,embed,form').forEach(el => el.remove());
+  doc.querySelectorAll('*').forEach(el => {
+    [...el.attributes].forEach(attr => {
+      if (attr.name.startsWith('on') || attr.value.includes('javascript:')) {
+        el.removeAttribute(attr.name);
+      }
+    });
+  });
+  return doc.body.innerHTML;
+}
+
+const HTML_TAG_RE = /<[a-z][\s\S]*?>/i;
+
+function HtmlDesc({ text, className, tag: Tag = 'span' }) {
+  if (!text) return null;
+  if (!HTML_TAG_RE.test(text)) return <Tag className={className}>{text}</Tag>;
+  return <Tag className={className} dangerouslySetInnerHTML={{ __html: sanitizeHtml(text) }} />;
+}
+
 const DEFAULT_AUTH = { type: 'none', token: '', keyName: 'X-API-Key', keyValue: '', keyIn: 'header', username: '', password: '' };
 
 // ── C# snippet generator ──────────────────────────────────────────────────────
@@ -480,7 +503,7 @@ function ParamsTable({ spec, parameters }) {
             <td className="api-param-in">{p.in}</td>
             <td className="api-param-type">{getSchemaType(spec, p.schema || { type: p.type })}</td>
             <td>{p.required ? '✓' : ''}</td>
-            <td className="api-param-desc">{p.description || ''}</td>
+            <td className="api-param-desc"><HtmlDesc text={p.description} /></td>
           </tr>
         ))}
       </tbody>
@@ -499,7 +522,7 @@ function ResponsesTable({ spec, responses }) {
         return (
           <div key={code} className="api-response-row">
             <span className={`api-status-badge api-status-${code[0]}xx`}>{code}</span>
-            <span className="api-response-desc">{resp.description || ''}</span>
+            <HtmlDesc text={resp.description} className="api-response-desc" />
             {typeLabel && <span className="api-response-type">{typeLabel}</span>}
           </div>
         );
@@ -525,7 +548,7 @@ function Operation({ spec, method, path, op, expanded, onToggle, tryItOpen, onTo
       </button>
       {expanded && (
         <div className="api-op-detail">
-          {op.description && <p className="api-op-desc">{op.description}</p>}
+          {op.description && <HtmlDesc text={op.description} className="api-op-desc" tag="p" />}
           {displayParams.length > 0 && (
             <>
               <div className="api-section-label">Parameters</div>
@@ -770,7 +793,7 @@ export function ApiPanel({ onToggle, onInsert }) {
               {totalOps > 0 && <span className="api-info-ops">{totalOps} operations</span>}
             </div>
             {spec.info?.description && (
-              <div className="api-info-desc">{spec.info.description}</div>
+              <HtmlDesc text={spec.info.description} className="api-info-desc" tag="div" />
             )}
             {baseUrl && <div className="api-base-url">{baseUrl}</div>}
           </div>

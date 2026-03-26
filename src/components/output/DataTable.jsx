@@ -1,11 +1,13 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useContext } from 'react';
+import { TablePageSizeContext } from '../../config/table-page-size-context.js';
 
 export function DataTable({ rows }) {
   if (!Array.isArray(rows) || rows.length === 0) {
     return <div className="output-stdout">(empty table)</div>;
   }
+  const defaultPageSize = useContext(TablePageSizeContext);
   const [page, setPage]         = useState(0);
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(defaultPageSize);
   const [sortCol, setSortCol]   = useState(null);
   const [sortDir, setSortDir]   = useState('asc');
 
@@ -69,7 +71,7 @@ export function DataTable({ rows }) {
           ))}
         </tbody>
       </table>
-      {total > 20 && (
+      {pageCount > 1 && (
         <div className="table-pager">
           <span className="table-pager-info">
             {start + 1}–{end} of <strong>{total}</strong> rows
@@ -82,6 +84,7 @@ export function DataTable({ rows }) {
             <button className="table-pager-btn" onClick={() => setPage(pageCount-1)} disabled={page >= pageCount - 1}>»</button>
           </div>
           <select className="table-pager-size" value={pageSize} onChange={onPageSize}>
+            <option value={10}>10 / page</option>
             <option value={20}>20 / page</option>
             <option value={50}>50 / page</option>
             <option value={100}>100 / page</option>

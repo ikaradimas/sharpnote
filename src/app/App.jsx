@@ -10,6 +10,7 @@ import {
   makeLibEditorId, isLibEditorId, isNotebookId, getNotebookDisplayName,
 } from '../utils.js';
 import { DEFAULT_DOCK_LAYOUT, DEFAULT_FLOAT_W, DEFAULT_FLOAT_H } from '../config/dock-layout.jsx';
+import { TablePageSizeContext } from '../config/table-page-size-context.js';
 import { useNotebookManager } from '../hooks/useNotebookManager.js';
 import { useKernelManager } from '../hooks/useKernelManager.js';
 import { useDockLayout } from '../hooks/useDockLayout.js';
@@ -42,6 +43,10 @@ export function App() {
   const [lintEnabled, setLintEnabled] = useState(true);
   const lintEnabledRef = useRef(true);
   useEffect(() => { lintEnabledRef.current = lintEnabled; }, [lintEnabled]);
+
+  const [tablePageSize, setTablePageSize] = useState(10);
+  const tablePageSizeRef = useRef(10);
+  useEffect(() => { tablePageSizeRef.current = tablePageSize; }, [tablePageSize]);
 
   const [customShortcuts, setCustomShortcuts] = useState({});
   const customShortcutsRef = useRef({});
@@ -180,6 +185,7 @@ export function App() {
       theme: themeRef.current,
       lineAltEnabled: lineAltEnabledRef.current,
       lintEnabled: lintEnabledRef.current,
+      tablePageSize: tablePageSizeRef.current,
       customShortcuts: customShortcutsRef.current,
       pinnedTabs: [...pinnedPathsRef.current],
       dockLayout: dockLayoutRef.current,
@@ -204,6 +210,7 @@ export function App() {
       if (s?.theme) setTheme(s.theme);
       if (typeof s?.lineAltEnabled === 'boolean') setLineAltEnabled(s.lineAltEnabled);
       if (typeof s?.lintEnabled === 'boolean') setLintEnabled(s.lintEnabled);
+      if (typeof s?.tablePageSize === 'number') setTablePageSize(s.tablePageSize);
       if (s?.customShortcuts && typeof s.customShortcuts === 'object') {
         setCustomShortcuts(s.customShortcuts);
         window.electronAPI?.rebuildMenu(s.customShortcuts);
@@ -238,6 +245,10 @@ export function App() {
   useEffect(() => {
     saveSettingsRef.current();
   }, [lintEnabled]);
+
+  useEffect(() => {
+    saveSettingsRef.current();
+  }, [tablePageSize]);
 
   const handleShortcutsChange = useCallback((id, combo) => {
     setCustomShortcuts((prev) => {
@@ -800,6 +811,7 @@ export function App() {
   };
 
   return (
+    <TablePageSizeContext.Provider value={tablePageSize}>
     <div id="app">
       <TabBar
         notebooks={notebooks}
@@ -935,6 +947,8 @@ export function App() {
           onLineAltChange={setLineAltEnabled}
           lintEnabled={lintEnabled}
           onLintEnabledChange={setLintEnabled}
+          tablePageSize={tablePageSize}
+          onTablePageSizeChange={setTablePageSize}
           customShortcuts={customShortcuts}
           onShortcutsChange={handleShortcutsChange}
           pinnedPaths={pinnedPaths}
@@ -972,5 +986,6 @@ export function App() {
         />
       )}
     </div>
+    </TablePageSizeContext.Provider>
   );
 }
