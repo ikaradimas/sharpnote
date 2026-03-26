@@ -5,6 +5,7 @@ import {
   resolveRef,
   getSchemaType,
   getSwagger2BodyInfo,
+  schemaSkeleton,
 } from '../../src/components/panels/ApiPanel.jsx';
 
 // ── getBaseUrl ────────────────────────────────────────────────────────────────
@@ -246,5 +247,88 @@ describe('getSwagger2BodyInfo', () => {
     };
     const result = getSwagger2BodyInfo(spec, op);
     expect(result.schema).toBeNull();
+  });
+});
+
+// ── schemaSkeleton ────────────────────────────────────────────────────────────
+
+describe('schemaSkeleton', () => {
+  it('returns null for null or undefined schema', () => {
+    expect(schemaSkeleton({}, null)).toBeNull();
+    expect(schemaSkeleton({}, undefined)).toBeNull();
+  });
+
+  it('generates flat object from properties', () => {
+    const schema = {
+      type: 'object',
+      properties: {
+        name:   { type: 'string' },
+        age:    { type: 'integer' },
+        score:  { type: 'number' },
+        active: { type: 'boolean' },
+      },
+    };
+    expect(schemaSkeleton({}, schema)).toEqual({ name: '', age: 0, score: 0, active: false });
+  });
+
+  it('generates array with one skeleton item', () => {
+    const schema = { type: 'array', items: { type: 'string' } };
+    expect(schemaSkeleton({}, schema)).toEqual(['']);
+  });
+
+  it('generates array of objects', () => {
+    const schema = {
+      type: 'array',
+      items: { type: 'object', properties: { id: { type: 'integer' } } },
+    };
+    expect(schemaSkeleton({}, schema)).toEqual([{ id: 0 }]);
+  });
+
+  it('resolves $ref from components/schemas', () => {
+    const spec = {
+      components: {
+        schemas: {
+          User: {
+            type: 'object',
+            properties: { id: { type: 'integer' }, name: { type: 'string' } },
+          },
+        },
+      },
+    };
+    expect(schemaSkeleton(spec, { $ref: '#/components/schemas/User' })).toEqual({ id: 0, name: '' });
+  });
+
+  it('resolves $ref from Swagger 2 definitions', () => {
+    const spec = {
+      definitions: {
+        Pet: {
+          type: 'object',
+          properties: { kind: { type: 'string' } },
+        },
+      },
+    };
+    expect(schemaSkeleton(spec, { $ref: '#/definitions/Pet' })).toEqual({ kind: '' });
+  });
+
+  it('handles nested objects', () => {
+    const schema = {
+      type: 'object',
+      properties: {
+        address: {
+          type: 'object',
+          properties: { city: { type: 'string' }, zip: { type: 'string' } },
+        },
+      },
+    };
+    expect(schemaSkeleton({}, schema)).toEqual({ address: { city: '', zip: '' } });
+  });
+
+  it('returns null for unknown type with no properties', () => {
+    expect(schemaSkeleton({}, { type: 'unknown' })).toBeNull();
+  });
+
+  it('treats schema with only properties (no explicit type) as object', () => {
+    const schema = { properties: { x: { type: 'string' } } };
+    expect(schemaSkeleton({}, schema)).toEqual({ x: '' });
   });
 });

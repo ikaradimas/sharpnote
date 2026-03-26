@@ -98,6 +98,7 @@
 
 - **Rich output** — `Display.Html()`, `Display.Table()`, `Display.Graph()` (Chart.js), `Display.Csv()`, `Display.Image()` (URL / file path / base64 data URI), and `Console.Write` captured as `stdout`
 - **Object tree viewer** — complex objects displayed via `.Display()` / `.Dump()` render as an interactive collapsible tree instead of a flat JSON block; nested objects and arrays can be expanded or collapsed individually
+- **Display.Layout** — `Display.Layout(columns, items...)` arranges multiple outputs side-by-side in a CSS grid; wrap items with `Display.Cell(title, content)` for labeled cells; works with any output type (tables, charts, images, HTML, trees)
 - **Progress bars** — `Display.Progress(label, total)` creates a live-updating progress bar; call `.Report(n)` to update the fill and percentage, `.Complete()` to mark it done; updates stream to the output in real time
 - **PDF export** — File → Export as PDF… exports the active notebook's output to a paginated A4 PDF using Electron's `printToPDF()`
 - **Display.Markdown** — `Display.Markdown(text)` renders markdown from C# code with Mermaid diagram and KaTeX math support, enabling dynamic reports and documentation generation

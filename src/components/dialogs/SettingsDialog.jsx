@@ -11,7 +11,7 @@ const PANEL_FONT_SIZE_DEFAULT = 11.5;
 
 // ── Appearance section ────────────────────────────────────────────────────────
 
-function AppearanceSection({ theme, fontSize, onThemeChange, onFontSizeChange, panelFontSize, onPanelFontSizeChange, lineAltEnabled, onLineAltChange, lintEnabled, onLintEnabledChange }) {
+function AppearanceSection({ theme, fontSize, onThemeChange, onFontSizeChange, panelFontSize, onPanelFontSizeChange, lineAltEnabled, onLineAltChange, lintEnabled, onLintEnabledChange, tablePageSize = 10, onTablePageSizeChange }) {
   return (
     <div className="settings-section">
       <div className="settings-group">
@@ -81,6 +81,23 @@ function AppearanceSection({ theme, fontSize, onThemeChange, onFontSizeChange, p
           />
           <span>Code linter (shows diagnostics while typing)</span>
         </label>
+      </div>
+
+      <div className="settings-group">
+        <div className="settings-group-label">Tables</div>
+        <div className="settings-font-row">
+          <span className="settings-path-label">Default page size</span>
+          <select
+            className="api-auth-type"
+            value={tablePageSize}
+            onChange={(e) => onTablePageSizeChange?.(Number(e.target.value))}
+          >
+            <option value={10}>10 rows</option>
+            <option value={20}>20 rows</option>
+            <option value={50}>50 rows</option>
+            <option value={100}>100 rows</option>
+          </select>
+        </div>
       </div>
 
       <div className="settings-group">
@@ -374,6 +391,8 @@ export function SettingsDialog({
   onLineAltChange,
   lintEnabled,
   onLintEnabledChange,
+  tablePageSize = 10,
+  onTablePageSizeChange,
   customShortcuts,
   onShortcutsChange,
   pinnedPaths,
@@ -461,6 +480,8 @@ export function SettingsDialog({
                 onLineAltChange={onLineAltChange}
                 lintEnabled={lintEnabled}
                 onLintEnabledChange={onLintEnabledChange}
+                tablePageSize={tablePageSize}
+                onTablePageSizeChange={onTablePageSizeChange}
               />
             )}
             {activeSection === 'shortcuts' && (

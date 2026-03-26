@@ -52,7 +52,17 @@ partial class Program
             ["TimeSpan"] = typeof(TimeSpan),
             ["Regex"] = typeof(Regex),
             ["JsonSerializer"] = typeof(JsonSerializer),
+        };
+
+    // Global script instances — reflected as instance members (not static)
+    private static readonly Dictionary<string, Type> WellKnownInstances =
+        new(StringComparer.Ordinal)
+        {
             ["Display"] = typeof(DisplayHelper),
+            ["Util"]    = typeof(UtilHelper),
+            ["Panels"]  = typeof(PanelsHelper),
+            ["Db"]      = typeof(DbHelper),
+            ["Config"]  = typeof(ConfigHelper),
         };
 
     // ── Autocomplete handler ──────────────────────────────────────────────────
@@ -71,7 +81,33 @@ partial class Program
     {
         var textBefore = position <= code.Length ? code[..position] : code;
 
-        // Member access: "expr." or "expr.partial" — always return member list (may be empty)
+        // Two-level chain "parent.member." — resolve parent's type, find member's return type.
+        // Checked first (more specific) so "db.Users." resolves via db's type rather than treating
+        // "Users" as an unknown identifier.
+        var chainMatch = Regex.Match(textBefore, @"\b(\w+)\.(\w+)\.(\w*)$");
+        if (chainMatch.Success)
+        {
+            var parentName = chainMatch.Groups[1].Value;
+            var memberName = chainMatch.Groups[2].Value;
+            var parentType = GetTypeForName(parentName, state);
+            if (parentType != null)
+            {
+                var member = parentType
+                    .GetMember(memberName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static)
+                    .FirstOrDefault(m => m is PropertyInfo or MethodInfo or FieldInfo);
+                var memberType = member switch
+                {
+                    PropertyInfo pi => pi.PropertyType,
+                    MethodInfo mi when mi.ReturnType != typeof(void) => mi.ReturnType,
+                    FieldInfo fi => fi.FieldType,
+                    _ => null,
+                };
+                if (memberType != null)
+                    return ReflectMembers(memberType, isStatic: false);
+            }
+        }
+
+        // Single-identifier member access: "expr." or "expr.partial"
         var memberMatch = Regex.Match(textBefore, @"\b(\w+)\.(\w*)$");
         if (memberMatch.Success)
         {
@@ -96,6 +132,13 @@ partial class Program
                 if (seen.Add(v.Name))
                     items.Add(new { label = v.Name, type = "variable", detail = v.Type?.Name });
             }
+        }
+
+        // Well-known global instances
+        foreach (var name in WellKnownInstances.Keys)
+        {
+            if (seen.Add(name))
+                items.Add(new { label = name, type = "variable", detail = WellKnownInstances[name].Name });
         }
 
         // Well-known type names (Console, Math, DateTime, …)
@@ -124,6 +167,18 @@ partial class Program
         return items;
     }
 
+    private static Type? GetTypeForName(string name, ScriptState<object?>? state)
+    {
+        if (state != null)
+        {
+            var v = state.Variables.FirstOrDefault(x => string.Equals(x.Name, name, StringComparison.Ordinal));
+            if (v != null) return v.Value?.GetType() ?? v.Type;
+        }
+        if (WellKnownInstances.TryGetValue(name, out var instanceType)) return instanceType;
+        if (WellKnownTypes.TryGetValue(name, out var staticType)) return staticType;
+        return null;
+    }
+
     internal static List<object> GetMembersForExpr(string name, ScriptState<object?>? state)
     {
         // Try live variable — use runtime type if value is available, declared type otherwise
@@ -138,6 +193,10 @@ partial class Program
                     return ReflectMembers(type, isStatic: false);
             }
         }
+
+        // Try well-known global instance
+        if (WellKnownInstances.TryGetValue(name, out var instanceType))
+            return ReflectMembers(instanceType, isStatic: false);
 
         // Try well-known static type
         if (WellKnownTypes.TryGetValue(name, out var wellKnown))

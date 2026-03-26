@@ -5420,10 +5420,46 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
   transition: color 0.15s, border-color 0.15s;
 }
 .toolbar-autorun-btn:hover { color: var(--text-primary); }
-.toolbar-autorun-btn--on {
-  color: #e5c07b; border-color: rgba(229,192,123,0.4);
-  background: rgba(229,192,123,0.1);
+/* Must match .toolbar button specificity (element + class) to override base toolbar styles */
+.toolbar button.toolbar-autorun-btn--on {
+  color: #e5c07b;
+  border-color: rgba(229,192,123,0.5);
+  background: rgba(229,192,123,0.12);
 }
+
+/* ── Display.Layout ─────────────────────────────────────────────────────── */
+
+.layout-output {
+  display: grid;
+  gap: 10px;
+  margin: 4px 0;
+  align-items: start;
+}
+
+.layout-cell {
+  background: var(--bg-mid);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  padding: 10px;
+  overflow: hidden;
+  min-width: 0; /* prevent grid blowout */
+}
+
+.layout-cell-title {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 8px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+/* tables inside layout cells should not get an extra outer margin */
+.layout-cell .data-table-wrap { margin: 0; }
+.layout-cell .output-html { margin: 0; }
+.layout-cell .chart-output { margin: 0; }
 
 /* ── Print / PDF export ──────────────────────────────────────────────────── */
 @media print {

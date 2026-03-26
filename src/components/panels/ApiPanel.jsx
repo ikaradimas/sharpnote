@@ -51,6 +51,29 @@ export function resolveRef(spec, ref) {
   return node ?? null;
 }
 
+// Generates a skeleton JSON value from a schema for prefilling the request body editor.
+export function schemaSkeleton(spec, schema, depth = 0) {
+  if (!schema || depth > 4) return null;
+  const s = schema.$ref ? resolveRef(spec, schema.$ref) ?? schema : schema;
+  if (s.$ref) return null; // unresolvable circular ref
+  if (s.type === 'object' || s.properties) {
+    const obj = {};
+    for (const [key, prop] of Object.entries(s.properties ?? {})) {
+      const val = schemaSkeleton(spec, prop, depth + 1);
+      obj[key] = val !== null ? val : null;
+    }
+    return obj;
+  }
+  if (s.type === 'array') {
+    const item = schemaSkeleton(spec, s.items, depth + 1);
+    return [item !== null ? item : {}];
+  }
+  if (s.type === 'string') return '';
+  if (s.type === 'integer' || s.type === 'number') return 0;
+  if (s.type === 'boolean') return false;
+  return null;
+}
+
 export function getSchemaType(spec, schema) {
   if (!schema) return '';
   if (schema.$ref) {
@@ -105,6 +128,29 @@ export function buildRequestUrl(baseUrl, pathTemplate, pathParams, queryParams) 
 
 function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+// ── HTML description rendering ────────────────────────────────────────────────
+
+function sanitizeHtml(html) {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  doc.querySelectorAll('script,iframe,object,embed,form').forEach(el => el.remove());
+  doc.querySelectorAll('*').forEach(el => {
+    [...el.attributes].forEach(attr => {
+      if (attr.name.startsWith('on') || attr.value.includes('javascript:')) {
+        el.removeAttribute(attr.name);
+      }
+    });
+  });
+  return doc.body.innerHTML;
+}
+
+const HTML_TAG_RE = /<[a-z][\s\S]*?>/i;
+
+function HtmlDesc({ text, className, tag: Tag = 'span' }) {
+  if (!text) return null;
+  if (!HTML_TAG_RE.test(text)) return <Tag className={className}>{text}</Tag>;
+  return <Tag className={className} dangerouslySetInnerHTML={{ __html: sanitizeHtml(text) }} />;
 }
 
 const DEFAULT_AUTH = { type: 'none', token: '', keyName: 'X-API-Key', keyValue: '', keyIn: 'header', username: '', password: '' };
@@ -294,7 +340,15 @@ function TryItForm({ spec, method, pathTemplate, op, auth, baseUrl }) {
 
   const [pathParams,  setPathParams]  = useState(() => Object.fromEntries(pathParamDefs.map(p  => [p.name, ''])));
   const [queryParams, setQueryParams] = useState(() => Object.fromEntries(queryParamDefs.map(p => [p.name, ''])));
-  const [body,        setBody]        = useState('');
+  const [body,        setBody]        = useState(() => {
+    if (!hasBody) return '';
+    const bodySchema = op.requestBody
+      ? (op.requestBody.content?.['application/json']?.schema ?? null)
+      : (op.parameters?.find(p => p.in === 'body')?.schema ?? null);
+    if (!bodySchema) return '';
+    const skel = schemaSkeleton(spec, bodySchema);
+    return skel !== null ? JSON.stringify(skel, null, 2) : '';
+  });
   const [response,    setResponse]    = useState(null);
   const [loading,     setLoading]     = useState(false);
   const [showHeaders, setShowHeaders] = useState(false);
@@ -378,8 +432,8 @@ function TryItForm({ spec, method, pathTemplate, op, auth, baseUrl }) {
         <button
           className="api-tryit-execute"
           onClick={execute}
-          disabled={loading || !baseUrl}
-          title={!baseUrl ? 'No base URL — check spec servers/host field' : undefined}
+          disabled={loading}
+          title={!baseUrl ? 'No base URL in spec — request may fail' : undefined}
         >
           {loading ? '…' : 'Execute'}
         </button>
@@ -449,7 +503,7 @@ function ParamsTable({ spec, parameters }) {
             <td className="api-param-in">{p.in}</td>
             <td className="api-param-type">{getSchemaType(spec, p.schema || { type: p.type })}</td>
             <td>{p.required ? '✓' : ''}</td>
-            <td className="api-param-desc">{p.description || ''}</td>
+            <td className="api-param-desc"><HtmlDesc text={p.description} /></td>
           </tr>
         ))}
       </tbody>
@@ -468,7 +522,7 @@ function ResponsesTable({ spec, responses }) {
         return (
           <div key={code} className="api-response-row">
             <span className={`api-status-badge api-status-${code[0]}xx`}>{code}</span>
-            <span className="api-response-desc">{resp.description || ''}</span>
+            <HtmlDesc text={resp.description} className="api-response-desc" />
             {typeLabel && <span className="api-response-type">{typeLabel}</span>}
           </div>
         );
@@ -494,7 +548,7 @@ function Operation({ spec, method, path, op, expanded, onToggle, tryItOpen, onTo
       </button>
       {expanded && (
         <div className="api-op-detail">
-          {op.description && <p className="api-op-desc">{op.description}</p>}
+          {op.description && <HtmlDesc text={op.description} className="api-op-desc" tag="p" />}
           {displayParams.length > 0 && (
             <>
               <div className="api-section-label">Parameters</div>
@@ -687,7 +741,11 @@ export function ApiPanel({ onToggle, onInsert }) {
   }
 
   const groups  = spec ? groupOperations(spec) : {};
-  const baseUrl = spec ? getBaseUrl(spec) : '';
+  const specBaseUrl = spec ? getBaseUrl(spec) : '';
+  let baseUrl = specBaseUrl;
+  if (!baseUrl && url.trim()) {
+    try { baseUrl = new URL(url.trim()).origin; } catch { /* keep empty */ }
+  }
   const totalOps = Object.values(groups).reduce((n, ops) => n + ops.length, 0);
 
   return (
@@ -735,7 +793,7 @@ export function ApiPanel({ onToggle, onInsert }) {
               {totalOps > 0 && <span className="api-info-ops">{totalOps} operations</span>}
             </div>
             {spec.info?.description && (
-              <div className="api-info-desc">{spec.info.description}</div>
+              <HtmlDesc text={spec.info.description} className="api-info-desc" tag="div" />
             )}
             {baseUrl && <div className="api-base-url">{baseUrl}</div>}
           </div>

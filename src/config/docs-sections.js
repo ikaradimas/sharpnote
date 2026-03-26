@@ -728,6 +728,29 @@ export const DOCS_SECTIONS = [
     ],
   },
   {
+    id: 'display-layout', title: 'Display.Layout',
+    content: [
+      { type: 'p', text: 'Display.Layout() arranges multiple outputs side-by-side in a CSS grid. Any type that works with .Display() works inside a layout cell — tables, charts, images, HTML, markdown, and object trees.' },
+      { type: 'h3', text: 'Basic Usage' },
+      { type: 'code', text: '// Two-column layout — tables auto-detected, cast to (object) to avoid params unpacking\nDisplay.Layout(2,\n    Display.Cell("Sales",   (object)salesList),\n    Display.Cell("Summary", new { Total = 42, Best = "Alice" })\n);\n\n// Three charts side by side — specify "graph" because chart configs look like plain objects\nDisplay.Layout(3,\n    Display.Cell("Revenue", revenueChart, "graph"),\n    Display.Cell("Costs",   costsChart,   "graph"),\n    Display.Cell("Profit",  profitChart,  "graph")\n);\n\n// Mixed types — auto-detected where possible\nDisplay.Layout(2,\n    Display.Cell("Image",    "https://example.com/chart.png", "image"),\n    Display.Cell("Markdown", "## Hello\\n\\nSome **rich** text",  "markdown")\n);' },
+      { type: 'h3', text: 'API' },
+      { type: 'ul', items: [
+        'Display.Layout(int columns, params object[] items) — emit a grid with the given number of columns',
+        'Display.Cell(title, content, format?) — wrap an item with a label and optional format override',
+        'columns — number of equal-width columns; rows wrap automatically when there are more items than columns',
+      ]},
+      { type: 'h3', text: 'What renders inside a cell' },
+      { type: 'ul', items: [
+        'IEnumerable<T> → data table — cast to (object) to prevent C# params unpacking: Display.Layout(2, (object)myList, ...)',
+        'string → preformatted text block',
+        'Any other object → collapsible object tree',
+      ]},
+      { type: 'p', text: 'Chart configs and other anonymous objects are indistinguishable from plain objects at runtime, so pass an explicit format as the third argument to Display.Cell(): Display.Cell("Title", chartConfig, "graph"). Supported format values: "graph", "html", "markdown", "image", "table".' },
+      { type: 'h3', text: 'Dashboard Example' },
+      { type: 'code', text: 'var sales = new[] {\n    new { Region = "North", Q1 = 42, Q2 = 58, Q3 = 51, Q4 = 74 },\n    new { Region = "South", Q1 = 35, Q2 = 47, Q3 = 62, Q4 = 88 },\n};\n\nvar summary = new {\n    BestRegion = sales.OrderByDescending(s => s.Q1+s.Q2+s.Q3+s.Q4).First().Region,\n    BestQ4     = sales.Max(s => s.Q4),\n};\n\nDisplay.Layout(2,\n    Display.Cell("Sales by Region", sales),\n    Display.Cell("Summary",         summary)\n);' },
+    ],
+  },
+  {
     id: 'widgets', title: 'Interactive Widgets',
     content: [
       { type: 'p', text: 'Interactive widgets let you add sliders, dropdowns, and date pickers directly to cell output. Their values persist between cell executions, enabling lightweight parameter exploration without re-coding.' },

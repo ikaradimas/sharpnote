@@ -49,6 +49,11 @@ public class WidgetHandle
     public override string ToString() => _stringValue;
 }
 
+// ── LayoutCell ────────────────────────────────────────────────────────────────
+
+/// <summary>A titled cell for use with <see cref="DisplayHelper.Layout"/>.</summary>
+public record LayoutCell(string? Title, object? Content, string? Format = null);
+
 // ── ProgressHandle ────────────────────────────────────────────────────────────
 
 public class ProgressHandle
@@ -311,7 +316,59 @@ public class DisplayHelper
     /// </summary>
     public void ClearGraph() => Send(new { type = "graph_clear" });
 
+    // ── Layout ────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Creates a titled cell for use with <see cref="Layout"/>.
+    /// Specify <paramref name="format"/> to override auto-detection — useful for chart configs
+    /// which cannot be distinguished from plain objects: use <c>"graph"</c>, <c>"html"</c>,
+    /// <c>"markdown"</c>, <c>"image"</c>, or <c>"table"</c>.
+    /// </summary>
+    public LayoutCell Cell(string? title, object? content, string? format = null) => new(title, content, format);
+
+    /// <summary>
+    /// Arranges multiple objects side-by-side in a grid with the given number of columns.
+    /// Each item is serialized using the same auto-display logic as <c>.Display()</c>.
+    /// Wrap items with <see cref="Cell"/> to add per-cell titles.
+    /// </summary>
+    public void Layout(int columns, params object?[] items)
+    {
+        var cells = items.Select(item =>
+        {
+            string? title = null;
+            object? content = item;
+            string? format = null;
+            if (item is LayoutCell lc) { title = lc.Title; content = lc.Content; format = lc.Format; }
+
+            object? cellContent;
+            if (format != null)
+            {
+                // Explicit format — serialize content directly without AutoDisplay type-dispatch.
+                // Needed for chart configs and other objects that are indistinguishable from plain objects.
+                try { cellContent = JsonSerializer.SerializeToElement(new { type = "display", id = (string?)null, format, content, title = (string?)null }); }
+                catch { cellContent = null; }
+            }
+            else
+            {
+                var sw = new StringWriter();
+                SharpNoteExtensions.AutoDisplay(new DisplayHelper(sw), content);
+                cellContent = TryParseJson(sw.ToString().Trim());
+            }
+
+            return (object)new { title, content = cellContent };
+        }).ToArray();
+
+        Send(new { type = "display", id = _currentId, format = "layout", columns, cells });
+    }
+
     // ── Internal helpers ──────────────────────────────────────────────────────
+
+    private static JsonElement? TryParseJson(string json)
+    {
+        if (string.IsNullOrEmpty(json)) return null;
+        try { return JsonSerializer.Deserialize<JsonElement>(json); }
+        catch { return null; }
+    }
 
     internal static List<Dictionary<string, object?>> ToRowDicts(List<object?> items)
     {
