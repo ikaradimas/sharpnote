@@ -157,11 +157,11 @@ const DEFAULT_AUTH = { type: 'none', token: '', keyName: 'X-API-Key', keyValue: 
 
 // ── C# snippet generator ──────────────────────────────────────────────────────
 
-export function buildHttpClientSnippet(method, pathTemplate, op, baseUrl, auth) {
+export function buildHttpClientSnippet(method, pathTemplate, op, baseUrl, auth, spec = {}) {
   const m = method.toLowerCase();
   const lines = [];
 
-  lines.push('using var client = new HttpClient();');
+  lines.push('var client = new HttpClient();');
 
   // Auth header setup
   if (auth.type === 'bearer') {
@@ -205,11 +205,13 @@ export function buildHttpClientSnippet(method, pathTemplate, op, baseUrl, auth) 
   const hasBody = !!op.requestBody || sw2Body;
   const needsContent = hasBody && ['post', 'put', 'patch'].includes(m);
   if (needsContent) {
+    const bodySchema = op.requestBody
+      ? (op.requestBody.content?.['application/json']?.schema ?? null)
+      : (op.parameters?.find(p => p.in === 'body')?.schema ?? null);
+    const skel = bodySchema ? schemaSkeleton(spec, bodySchema) : null;
+    const payloadJson = skel !== null ? JSON.stringify(skel, null, 2) : '{\n    // TODO: fill in request body\n}';
     lines.push('');
-    lines.push('var payload = new');
-    lines.push('{');
-    lines.push('    // TODO: fill in request body');
-    lines.push('};');
+    lines.push(`var payload = ${payloadJson};`);
     lines.push('var content = new System.Net.Http.StringContent(');
     lines.push('    System.Text.Json.JsonSerializer.Serialize(payload),');
     lines.push('    System.Text.Encoding.UTF8, "application/json");');
@@ -590,7 +592,7 @@ function Operation({ spec, method, path, op, expanded, onToggle, tryItOpen, onTo
             {onInject && (
               <button
                 className="api-inject-btn"
-                onClick={() => onInject(buildHttpClientSnippet(method, path, op, baseUrl, auth))}
+                onClick={() => onInject(buildHttpClientSnippet(method, path, op, baseUrl, auth, spec))}
                 title="Inject C# HttpClient call into the active cell or a new cell"
               >
                 {'{ }'} Inject
