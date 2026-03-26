@@ -52,7 +52,17 @@ partial class Program
             ["TimeSpan"] = typeof(TimeSpan),
             ["Regex"] = typeof(Regex),
             ["JsonSerializer"] = typeof(JsonSerializer),
+        };
+
+    // Global script instances — reflected as instance members (not static)
+    private static readonly Dictionary<string, Type> WellKnownInstances =
+        new(StringComparer.Ordinal)
+        {
             ["Display"] = typeof(DisplayHelper),
+            ["Util"]    = typeof(UtilHelper),
+            ["Panels"]  = typeof(PanelsHelper),
+            ["Db"]      = typeof(DbHelper),
+            ["Config"]  = typeof(ConfigHelper),
         };
 
     // ── Autocomplete handler ──────────────────────────────────────────────────
@@ -98,6 +108,13 @@ partial class Program
             }
         }
 
+        // Well-known global instances (Display, Util, Panels, Db, Config)
+        foreach (var name in WellKnownInstances.Keys)
+        {
+            if (seen.Add(name))
+                items.Add(new { label = name, type = "variable", detail = WellKnownInstances[name].Name });
+        }
+
         // Well-known type names (Console, Math, DateTime, …)
         foreach (var typeName in WellKnownTypes.Keys)
         {
@@ -138,6 +155,10 @@ partial class Program
                     return ReflectMembers(type, isStatic: false);
             }
         }
+
+        // Try well-known global instance (Display, Util, Panels, Db, Config)
+        if (WellKnownInstances.TryGetValue(name, out var instanceType))
+            return ReflectMembers(instanceType, isStatic: false);
 
         // Try well-known static type
         if (WellKnownTypes.TryGetValue(name, out var wellKnown))

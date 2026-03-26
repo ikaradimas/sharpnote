@@ -5420,9 +5420,11 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
   transition: color 0.15s, border-color 0.15s;
 }
 .toolbar-autorun-btn:hover { color: var(--text-primary); }
-.toolbar-autorun-btn--on {
-  color: #e5c07b; border-color: rgba(229,192,123,0.4);
-  background: rgba(229,192,123,0.1);
+/* Must match .toolbar button specificity (element + class) to override base toolbar styles */
+.toolbar button.toolbar-autorun-btn--on {
+  color: #e5c07b;
+  border-color: rgba(229,192,123,0.5);
+  background: rgba(229,192,123,0.12);
 }
 
 /* ── Display.Layout ─────────────────────────────────────────────────────── */
