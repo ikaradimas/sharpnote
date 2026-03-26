@@ -49,6 +49,11 @@ public class WidgetHandle
     public override string ToString() => _stringValue;
 }
 
+// ── LayoutCell ────────────────────────────────────────────────────────────────
+
+/// <summary>A titled cell for use with <see cref="DisplayHelper.Layout"/>.</summary>
+public record LayoutCell(string? Title, object? Content);
+
 // ── ProgressHandle ────────────────────────────────────────────────────────────
 
 public class ProgressHandle
@@ -310,6 +315,42 @@ public class DisplayHelper
     /// Clears all data from the Graph panel immediately.
     /// </summary>
     public void ClearGraph() => Send(new { type = "graph_clear" });
+
+    // ── Layout ────────────────────────────────────────────────────────────────
+
+    /// <summary>Creates a titled cell for use with <see cref="Layout"/>.</summary>
+    public LayoutCell Cell(string title, object? content) => new(title, content);
+
+    /// <summary>
+    /// Arranges multiple objects side-by-side in a grid with the given number of columns.
+    /// Each item is serialized using the same auto-display logic as <c>.Display()</c>.
+    /// Wrap items with <see cref="Cell"/> to add per-cell titles.
+    /// </summary>
+    public void Layout(int columns, params object?[] items)
+    {
+        var cells = items.Select(item =>
+        {
+            string? title = null;
+            object? content = item;
+            if (item is LayoutCell lc) { title = lc.Title; content = lc.Content; }
+
+            var sw = new StringWriter();
+            var captureHelper = new DisplayHelper(sw);
+            SharpNoteExtensions.AutoDisplay(captureHelper, content);
+
+            var json = sw.ToString().Trim();
+            object? cellContent = null;
+            if (!string.IsNullOrEmpty(json))
+            {
+                try { cellContent = JsonSerializer.Deserialize<JsonElement>(json); }
+                catch { /* leave null */ }
+            }
+
+            return (object)new { title, content = cellContent };
+        }).ToArray();
+
+        Send(new { type = "display", id = _currentId, format = "layout", columns, cells });
+    }
 
     // ── Internal helpers ──────────────────────────────────────────────────────
 

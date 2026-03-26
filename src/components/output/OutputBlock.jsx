@@ -10,6 +10,7 @@ import { ImageOutput } from './ImageOutput.jsx';
 import { PromptWidget } from './PromptWidget.jsx';
 import { ProgressOutput } from './ProgressOutput.jsx';
 import { ObjectTree } from './ObjectTree.jsx';
+import { LayoutOutput } from './LayoutOutput.jsx';
 
 async function exportMsg(msg) {
   if (!window.electronAPI?.saveFile) return;
@@ -83,6 +84,8 @@ export function OutputBlock({ msg, index, notebookId }) {
       inner = <ProgressOutput spec={msg.content} />;
     } else if (msg.format === 'tree') {
       inner = <ObjectTree json={msg.content} />;
+    } else if (msg.format === 'layout') {
+      inner = <LayoutOutput columns={msg.columns} cells={msg.cells} />;
     }
   } else if (msg.type === 'interrupted') {
     inner = <div className="output-interrupted">⏹ Execution interrupted</div>;

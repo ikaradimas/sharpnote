@@ -988,6 +988,58 @@ else
 {
     "✕ Cancelled by user.".Display();
 }`),
+
+    md(`## 22 · Display.Layout — Dashboard Grid
+
+\`Display.Layout(columns, items...)\` arranges multiple outputs side-by-side in a grid.
+Wrap items with \`Display.Cell(title, content)\` to add per-cell titles.
+Any object that works with \`.Display()\` works inside a layout cell.`),
+
+    md('### Two-Column Dashboard'),
+
+    cs(`// Two-column dashboard — tables and summary stats side by side
+var sales = new[] {
+    new { Region = "North", Q1 = 42, Q2 = 58, Q3 = 51, Q4 = 74 },
+    new { Region = "South", Q1 = 35, Q2 = 47, Q3 = 62, Q4 = 88 },
+    new { Region = "East",  Q1 = 29, Q2 = 41, Q3 = 55, Q4 = 63 },
+    new { Region = "West",  Q1 = 51, Q2 = 60, Q3 = 70, Q4 = 95 },
+};
+
+var summary = new {
+    TotalRegions = sales.Length,
+    BestRegion   = sales.OrderByDescending(s => s.Q1 + s.Q2 + s.Q3 + s.Q4).First().Region,
+    BestQ4       = sales.Max(s => s.Q4),
+    AverageQ1    = sales.Average(s => s.Q1),
+};
+
+Display.Layout(2,
+    Display.Cell("Sales by Region", (object)sales),
+    Display.Cell("Summary", summary)
+);`),
+
+    md('### Three-Column Chart Grid'),
+
+    cs(`// Three charts side by side — great for comparing distributions
+var labels = new[] { "Jan", "Feb", "Mar", "Apr", "May", "Jun" };
+
+object MakeChart(string label, int[] data, string color) => new {
+    type = "bar",
+    data = new {
+        labels,
+        datasets = new[] { new {
+            label,
+            data,
+            backgroundColor = color,
+        }},
+    },
+    options = new { responsive = true, plugins = new { legend = new { display = false } } },
+};
+
+Display.Layout(3,
+    Display.Cell("Revenue",  MakeChart("Revenue",  new[] { 42, 58, 51, 74, 83, 91 }, "rgba(78,201,176,0.8)")),
+    Display.Cell("Costs",    MakeChart("Costs",    new[] { 31, 35, 38, 40, 45, 48 }, "rgba(244,71,71,0.8)")),
+    Display.Cell("Profit",   MakeChart("Profit",   new[] { 11, 23, 13, 34, 38, 43 }, "rgba(196,150,74,0.8)"))
+);`, 'graph'),
   ];
 }
 

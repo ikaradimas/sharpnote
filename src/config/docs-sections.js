@@ -728,6 +728,30 @@ export const DOCS_SECTIONS = [
     ],
   },
   {
+    id: 'display-layout', title: 'Display.Layout',
+    content: [
+      { type: 'p', text: 'Display.Layout() arranges multiple outputs side-by-side in a CSS grid. Any type that works with .Display() works inside a layout cell — tables, charts, images, HTML, markdown, and object trees.' },
+      { type: 'h3', text: 'Basic Usage' },
+      { type: 'code', text: '// Two-column layout with titled cells\nDisplay.Layout(2,\n    Display.Cell("Revenue", revenueTable),\n    Display.Cell("Costs",   costsTable)\n);\n\n// Three columns, no titles\nDisplay.Layout(3, chartA, chartB, chartC);\n\n// Mixed types — each item is auto-rendered by type\nDisplay.Layout(2,\n    Display.Cell("Data",    myList),          // → table\n    Display.Cell("Summary", new { Total=42 }) // → object tree\n);' },
+      { type: 'h3', text: 'API' },
+      { type: 'ul', items: [
+        'Display.Layout(int columns, params object[] items) — emit a grid with the given number of columns',
+        'Display.Cell(string title, object content) — wrap an item with a label; mix freely with plain objects',
+        'columns — number of equal-width columns; rows wrap automatically when there are more items than columns',
+      ]},
+      { type: 'h3', text: 'What renders inside a cell' },
+      { type: 'ul', items: [
+        'IEnumerable<T> → data table (same as .DisplayTable()) — cast to (object) to prevent C# params unpacking: Display.Layout(2, (object)myList, ...)',
+        'string → preformatted text block',
+        'Chart.js config object → bar, line, scatter, doughnut, etc.',
+        'Any other object → collapsible object tree (same as .Display())',
+      ]},
+      { type: 'p', text: 'Note: C# coerces arrays and lists into the params argument automatically. To pass a collection as a single cell, cast it to object: Display.Layout(2, (object)myList, (object)otherList).' },
+      { type: 'h3', text: 'Dashboard Example' },
+      { type: 'code', text: 'var sales = new[] {\n    new { Region = "North", Q1 = 42, Q2 = 58, Q3 = 51, Q4 = 74 },\n    new { Region = "South", Q1 = 35, Q2 = 47, Q3 = 62, Q4 = 88 },\n};\n\nvar summary = new {\n    BestRegion = sales.OrderByDescending(s => s.Q1+s.Q2+s.Q3+s.Q4).First().Region,\n    BestQ4     = sales.Max(s => s.Q4),\n};\n\nDisplay.Layout(2,\n    Display.Cell("Sales by Region", sales),\n    Display.Cell("Summary",         summary)\n);' },
+    ],
+  },
+  {
     id: 'widgets', title: 'Interactive Widgets',
     content: [
       { type: 'p', text: 'Interactive widgets let you add sliders, dropdowns, and date pickers directly to cell output. Their values persist between cell executions, enabling lightweight parameter exploration without re-coding.' },
