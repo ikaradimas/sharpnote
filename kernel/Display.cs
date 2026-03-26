@@ -52,7 +52,7 @@ public class WidgetHandle
 // ── LayoutCell ────────────────────────────────────────────────────────────────
 
 /// <summary>A titled cell for use with <see cref="DisplayHelper.Layout"/>.</summary>
-public record LayoutCell(string? Title, object? Content);
+public record LayoutCell(string? Title, object? Content, string? Format = null);
 
 // ── ProgressHandle ────────────────────────────────────────────────────────────
 
@@ -318,8 +318,13 @@ public class DisplayHelper
 
     // ── Layout ────────────────────────────────────────────────────────────────
 
-    /// <summary>Creates a titled cell for use with <see cref="Layout"/>.</summary>
-    public LayoutCell Cell(string title, object? content) => new(title, content);
+    /// <summary>
+    /// Creates a titled cell for use with <see cref="Layout"/>.
+    /// Specify <paramref name="format"/> to override auto-detection — useful for chart configs
+    /// which cannot be distinguished from plain objects: use <c>"graph"</c>, <c>"html"</c>,
+    /// <c>"markdown"</c>, <c>"image"</c>, or <c>"table"</c>.
+    /// </summary>
+    public LayoutCell Cell(string? title, object? content, string? format = null) => new(title, content, format);
 
     /// <summary>
     /// Arranges multiple objects side-by-side in a grid with the given number of columns.
@@ -332,18 +337,30 @@ public class DisplayHelper
         {
             string? title = null;
             object? content = item;
-            if (item is LayoutCell lc) { title = lc.Title; content = lc.Content; }
+            string? format = null;
+            if (item is LayoutCell lc) { title = lc.Title; content = lc.Content; format = lc.Format; }
 
-            var sw = new StringWriter();
-            var captureHelper = new DisplayHelper(sw);
-            SharpNoteExtensions.AutoDisplay(captureHelper, content);
-
-            var json = sw.ToString().Trim();
-            object? cellContent = null;
-            if (!string.IsNullOrEmpty(json))
+            object? cellContent;
+            if (format != null)
             {
-                try { cellContent = JsonSerializer.Deserialize<JsonElement>(json); }
-                catch { /* leave null */ }
+                // Explicit format — serialize content directly without AutoDisplay type-dispatch.
+                // Needed for chart configs and other objects that are indistinguishable from plain objects.
+                var directJson = JsonSerializer.Serialize(
+                    new { type = "display", id = (string?)null, format, content, title = (string?)null });
+                try { cellContent = JsonSerializer.Deserialize<JsonElement>(directJson); }
+                catch { cellContent = null; }
+            }
+            else
+            {
+                var sw = new StringWriter();
+                SharpNoteExtensions.AutoDisplay(new DisplayHelper(sw), content);
+                var json = sw.ToString().Trim();
+                cellContent = null;
+                if (!string.IsNullOrEmpty(json))
+                {
+                    try { cellContent = JsonSerializer.Deserialize<JsonElement>(json); }
+                    catch { /* leave null */ }
+                }
             }
 
             return (object)new { title, content = cellContent };
