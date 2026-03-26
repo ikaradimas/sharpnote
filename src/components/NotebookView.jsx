@@ -79,6 +79,12 @@ export function NotebookView({
       next.splice(idx, 0, newCell);
       return { cells: next };
     });
+    setTimeout(() => {
+      const wrapper = document.querySelector(
+        `.notebook-pane[data-nb="${nb.id}"] .cell-wrapper[data-cell-id="${newCell.id}"]`
+      );
+      wrapper?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }, 50);
   };
 
   const updateCell = (id, content) => {

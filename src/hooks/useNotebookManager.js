@@ -264,6 +264,24 @@ export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef }) {
     scrollAndFlash(wrapper, 'center');
   }, []);
 
+  // ── Track last focused code cell ──────────────────────────────────────────
+
+  const lastFocusedCodeCellRef = useRef(null); // { nbId, cellId }
+
+  useEffect(() => {
+    const onFocusIn = (e) => {
+      const editor = e.target.closest?.('.cm-editor');
+      if (!editor) return;
+      const wrapper = editor.closest('.cell-wrapper[data-cell-id]');
+      if (!wrapper) return;
+      const pane = editor.closest('.notebook-pane[data-nb]');
+      if (!pane) return;
+      lastFocusedCodeCellRef.current = { nbId: pane.dataset.nb, cellId: wrapper.dataset.cellId };
+    };
+    document.addEventListener('focusin', onFocusIn);
+    return () => document.removeEventListener('focusin', onFocusIn);
+  }, []);
+
   // ── Library / API injection ────────────────────────────────────────────────
 
   const handleInsertLibraryFile = useCallback((content) => {
@@ -300,18 +318,19 @@ export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef }) {
   const handleInjectApiCall = useCallback((content) => {
     const nbId = activeIdRef.current;
     if (!isNotebookId(nbId)) return;
-    const focusedEditor = document.querySelector(`.notebook-pane[data-nb="${nbId}"] .cm-focused`);
-    const cellWrapper   = focusedEditor?.closest('.cell-wrapper[data-cell-id]');
-    const focusedCellId = cellWrapper?.dataset?.cellId;
-    if (focusedCellId) {
+    const last = lastFocusedCodeCellRef.current;
+    if (last?.nbId === nbId && last?.cellId) {
+      const cellWrapper = document.querySelector(
+        `.notebook-pane[data-nb="${nbId}"] .cell-wrapper[data-cell-id="${last.cellId}"]`
+      );
       setNbDirty(nbId, (n) => ({
-        cells: n.cells.map((c) => c.id === focusedCellId ? { ...c, content } : c),
+        cells: n.cells.map((c) => c.id === last.cellId ? { ...c, content } : c),
       }));
-      setTimeout(() => scrollAndFlash(cellWrapper), 50);
+      if (cellWrapper) setTimeout(() => scrollAndFlash(cellWrapper), 50);
     } else {
       handleInsertLibraryFile(content);
     }
-  }, [setNbDirty, handleInsertLibraryFile]);
+  }, [setNbDirty, handleInsertLibraryFile]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── HTML export ────────────────────────────────────────────────────────────
 
