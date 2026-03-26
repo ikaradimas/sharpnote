@@ -51,6 +51,29 @@ export function resolveRef(spec, ref) {
   return node ?? null;
 }
 
+// Generates a skeleton JSON value from a schema for prefilling the request body editor.
+export function schemaSkeleton(spec, schema, depth = 0) {
+  if (!schema || depth > 4) return null;
+  const s = schema.$ref ? resolveRef(spec, schema.$ref) ?? schema : schema;
+  if (s.$ref) return null; // unresolvable circular ref
+  if (s.type === 'object' || s.properties) {
+    const obj = {};
+    for (const [key, prop] of Object.entries(s.properties ?? {})) {
+      const val = schemaSkeleton(spec, prop, depth + 1);
+      obj[key] = val !== null ? val : null;
+    }
+    return obj;
+  }
+  if (s.type === 'array') {
+    const item = schemaSkeleton(spec, s.items, depth + 1);
+    return [item !== null ? item : {}];
+  }
+  if (s.type === 'string') return '';
+  if (s.type === 'integer' || s.type === 'number') return 0;
+  if (s.type === 'boolean') return false;
+  return null;
+}
+
 export function getSchemaType(spec, schema) {
   if (!schema) return '';
   if (schema.$ref) {
@@ -294,7 +317,15 @@ function TryItForm({ spec, method, pathTemplate, op, auth, baseUrl }) {
 
   const [pathParams,  setPathParams]  = useState(() => Object.fromEntries(pathParamDefs.map(p  => [p.name, ''])));
   const [queryParams, setQueryParams] = useState(() => Object.fromEntries(queryParamDefs.map(p => [p.name, ''])));
-  const [body,        setBody]        = useState('');
+  const [body,        setBody]        = useState(() => {
+    if (!hasBody) return '';
+    const bodySchema = op.requestBody
+      ? (op.requestBody.content?.['application/json']?.schema ?? null)
+      : (op.parameters?.find(p => p.in === 'body')?.schema ?? null);
+    if (!bodySchema) return '';
+    const skel = schemaSkeleton(spec, bodySchema);
+    return skel !== null ? JSON.stringify(skel, null, 2) : '';
+  });
   const [response,    setResponse]    = useState(null);
   const [loading,     setLoading]     = useState(false);
   const [showHeaders, setShowHeaders] = useState(false);
@@ -378,8 +409,8 @@ function TryItForm({ spec, method, pathTemplate, op, auth, baseUrl }) {
         <button
           className="api-tryit-execute"
           onClick={execute}
-          disabled={loading || !baseUrl}
-          title={!baseUrl ? 'No base URL — check spec servers/host field' : undefined}
+          disabled={loading}
+          title={!baseUrl ? 'No base URL in spec — request may fail' : undefined}
         >
           {loading ? '…' : 'Execute'}
         </button>
@@ -687,7 +718,11 @@ export function ApiPanel({ onToggle, onInsert }) {
   }
 
   const groups  = spec ? groupOperations(spec) : {};
-  const baseUrl = spec ? getBaseUrl(spec) : '';
+  const specBaseUrl = spec ? getBaseUrl(spec) : '';
+  let baseUrl = specBaseUrl;
+  if (!baseUrl && url.trim()) {
+    try { baseUrl = new URL(url.trim()).origin; } catch { /* keep empty */ }
+  }
   const totalOps = Object.values(groups).reduce((n, ops) => n + ops.length, 0);
 
   return (

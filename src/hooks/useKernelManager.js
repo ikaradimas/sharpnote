@@ -477,7 +477,8 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
   const runSqlCell = useCallback((notebookId, cell) => {
     if (!window.electronAPI || cell.type !== 'sql') return Promise.resolve();
     const nb = notebooksRef.current.find((n) => n.id === notebookId);
-    const attached = nb?.attachedDbs?.find((d) => d.connectionId === (cell.db || '') && d.status === 'ready');
+    const effectiveDb = cell.db || nb?.attachedDbs?.find((d) => d.status === 'ready')?.connectionId || '';
+    const attached = nb?.attachedDbs?.find((d) => d.connectionId === effectiveDb && d.status === 'ready');
     if (!attached) return Promise.resolve();
 
     return new Promise((resolve) => {

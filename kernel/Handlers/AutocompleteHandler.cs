@@ -81,7 +81,33 @@ partial class Program
     {
         var textBefore = position <= code.Length ? code[..position] : code;
 
-        // Member access: "expr." or "expr.partial" — always return member list (may be empty)
+        // Two-level chain "parent.member." — resolve parent's type, find member's return type.
+        // Checked first (more specific) so "db.Users." resolves via db's type rather than treating
+        // "Users" as an unknown identifier.
+        var chainMatch = Regex.Match(textBefore, @"\b(\w+)\.(\w+)\.(\w*)$");
+        if (chainMatch.Success)
+        {
+            var parentName = chainMatch.Groups[1].Value;
+            var memberName = chainMatch.Groups[2].Value;
+            var parentType = GetTypeForName(parentName, state);
+            if (parentType != null)
+            {
+                var member = parentType
+                    .GetMember(memberName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static)
+                    .FirstOrDefault(m => m is PropertyInfo or MethodInfo or FieldInfo);
+                var memberType = member switch
+                {
+                    PropertyInfo pi => pi.PropertyType,
+                    MethodInfo mi when mi.ReturnType != typeof(void) => mi.ReturnType,
+                    FieldInfo fi => fi.FieldType,
+                    _ => null,
+                };
+                if (memberType != null)
+                    return ReflectMembers(memberType, isStatic: false);
+            }
+        }
+
+        // Single-identifier member access: "expr." or "expr.partial"
         var memberMatch = Regex.Match(textBefore, @"\b(\w+)\.(\w*)$");
         if (memberMatch.Success)
         {
@@ -139,6 +165,18 @@ partial class Program
         }
 
         return items;
+    }
+
+    private static Type? GetTypeForName(string name, ScriptState<object?>? state)
+    {
+        if (state != null)
+        {
+            var v = state.Variables.FirstOrDefault(x => string.Equals(x.Name, name, StringComparison.Ordinal));
+            if (v != null) return v.Value?.GetType() ?? v.Type;
+        }
+        if (WellKnownInstances.TryGetValue(name, out var instanceType)) return instanceType;
+        if (WellKnownTypes.TryGetValue(name, out var staticType)) return staticType;
+        return null;
     }
 
     internal static List<object> GetMembersForExpr(string name, ScriptState<object?>? state)
