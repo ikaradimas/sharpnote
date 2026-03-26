@@ -108,7 +108,7 @@ partial class Program
             }
         }
 
-        // Well-known global instances (Display, Util, Panels, Db, Config)
+        // Well-known global instances
         foreach (var name in WellKnownInstances.Keys)
         {
             if (seen.Add(name))
@@ -156,7 +156,7 @@ partial class Program
             }
         }
 
-        // Try well-known global instance (Display, Util, Panels, Db, Config)
+        // Try well-known global instance
         if (WellKnownInstances.TryGetValue(name, out var instanceType))
             return ReflectMembers(instanceType, isStatic: false);
 

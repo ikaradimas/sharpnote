@@ -345,22 +345,14 @@ public class DisplayHelper
             {
                 // Explicit format — serialize content directly without AutoDisplay type-dispatch.
                 // Needed for chart configs and other objects that are indistinguishable from plain objects.
-                var directJson = JsonSerializer.Serialize(
-                    new { type = "display", id = (string?)null, format, content, title = (string?)null });
-                try { cellContent = JsonSerializer.Deserialize<JsonElement>(directJson); }
+                try { cellContent = JsonSerializer.SerializeToElement(new { type = "display", id = (string?)null, format, content, title = (string?)null }); }
                 catch { cellContent = null; }
             }
             else
             {
                 var sw = new StringWriter();
                 SharpNoteExtensions.AutoDisplay(new DisplayHelper(sw), content);
-                var json = sw.ToString().Trim();
-                cellContent = null;
-                if (!string.IsNullOrEmpty(json))
-                {
-                    try { cellContent = JsonSerializer.Deserialize<JsonElement>(json); }
-                    catch { /* leave null */ }
-                }
+                cellContent = TryParseJson(sw.ToString().Trim());
             }
 
             return (object)new { title, content = cellContent };
@@ -370,6 +362,13 @@ public class DisplayHelper
     }
 
     // ── Internal helpers ──────────────────────────────────────────────────────
+
+    private static JsonElement? TryParseJson(string json)
+    {
+        if (string.IsNullOrEmpty(json)) return null;
+        try { return JsonSerializer.Deserialize<JsonElement>(json); }
+        catch { return null; }
+    }
 
     internal static List<Dictionary<string, object?>> ToRowDicts(List<object?> items)
     {
