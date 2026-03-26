@@ -396,6 +396,8 @@ describe('buildHttpClientSnippet', () => {
   it('generates a GET call with the correct URL', () => {
     const op = { parameters: [], responses: {} };
     const snippet = buildHttpClientSnippet('get', '/items', op, 'https://api.example.com', NO_AUTH);
+    expect(snippet).toContain('var client = new HttpClient()');
+    expect(snippet).not.toContain('using var client');
     expect(snippet).toContain('client.GetAsync("https://api.example.com/items")');
     expect(snippet).toContain('EnsureSuccessStatusCode');
     expect(snippet).toContain('body.Display()');
@@ -444,12 +446,26 @@ describe('buildHttpClientSnippet', () => {
     expect(snippet).toContain('AuthenticationHeaderValue("Basic"');
   });
 
-  it('generates a POST call with request body template', () => {
+  it('generates a POST call with TODO fallback when no schema', () => {
     const op = { requestBody: { required: true, content: { 'application/json': {} } }, parameters: [], responses: {} };
     const snippet = buildHttpClientSnippet('post', '/items', op, 'https://api.example.com', NO_AUTH);
     expect(snippet).toContain('client.PostAsync(');
     expect(snippet).toContain('StringContent(');
     expect(snippet).toContain('// TODO: fill in request body');
+  });
+
+  it('prefills payload from schema skeleton when schema is present', () => {
+    const spec = {
+      components: { schemas: { Item: { type: 'object', properties: { name: { type: 'string' }, qty: { type: 'integer' } } } } },
+    };
+    const op = {
+      requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/Item' } } } },
+      parameters: [], responses: {},
+    };
+    const snippet = buildHttpClientSnippet('post', '/items', op, 'https://api.example.com', NO_AUTH, spec);
+    expect(snippet).toContain('"name"');
+    expect(snippet).toContain('"qty"');
+    expect(snippet).not.toContain('// TODO');
   });
 
   it('uses SendAsync for non-standard methods', () => {
