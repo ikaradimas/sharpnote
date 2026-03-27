@@ -33,18 +33,16 @@ Why named pipe over TCP: no port conflicts, no firewall prompts, automatically c
 **Goal:** Prove that `CompletionService` and semantic diagnostics work in script-mode with injected globals before writing any production code.
 
 **Tasks:**
-- [ ] Add `Microsoft.CodeAnalysis.CSharp.Workspaces` to `kernel/kernel.csproj`
-- [ ] Write `kernel/WorkspaceManager.cs` (throwaway spike class):
-  - Create an `AdhocWorkspace` + `Project` with `LanguageNames.CSharp`
-  - Set `ParseOptions = CSharpParseOptions(SourceCodeKind.Script)`
-  - Add the same `MetadataReferences` the script uses (mscorlib, System.Linq, etc.)
-  - Add a fake `globals.cs` document that declares `ScriptGlobals` so the document "sees" Display, Db, etc.
-  - Add a `script.cs` document with `SourceCodeKind.Script`
-  - Call `CompletionService.GetService(document).GetCompletionsAsync(document, position)`
-  - Log results to a test output
-- [ ] Verify completions return member items for `Display.`, `Db.`, `Console.`, and LINQ chains
-- [ ] Verify `Compilation.GetDiagnosticsAsync()` returns semantic errors (e.g. undefined variable)
-- [ ] Commit spike
+- [x] Add `Microsoft.CodeAnalysis.CSharp.Workspaces` + `Microsoft.CodeAnalysis.CSharp.Features` to `kernel/kernel.csproj`
+- [x] Write `kernel/WorkspaceManager.cs` (spike class):
+  - `AdhocWorkspace` with `MefHostServices.DefaultAssemblies` (wires completion providers)
+  - `SourceCodeKind.Script` parse options; `TRUSTED_PLATFORM_ASSEMBLIES` + kernel assembly + EF Core as refs
+  - Globals preamble prepended to script document so workspace sees Display, Db, Panels, Config, Util
+  - `GetCompletionsAsync(code, position)` — position offset past preamble automatically
+  - `GetDiagnosticsAsync(code)` — filters preamble-range entries, adjusts spans to user-code-relative
+- [x] Verify completions return member items for `Display.`, `Db.`, `Console.`, and LINQ chains (9/9 xUnit tests pass)
+- [x] Verify semantic diagnostics catch type mismatch and undefined variable errors
+- [x] Commit spike
 
 **Memory checkpoint:** save step 1 status before starting.
 
