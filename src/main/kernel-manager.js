@@ -3,6 +3,7 @@
 const path        = require('path');
 const { spawn }   = require('child_process');
 const readline    = require('readline');
+const net         = require('net');
 
 // Multi-kernel map: notebookId -> { process, ready, pending[] }
 const kernels = new Map();
@@ -53,7 +54,7 @@ function getKernelSpawnArgs() {
 function startKernelForId(notebookId) {
   _writeLog('KERNEL', 'Starting kernel');
 
-  const entry = { process: null, ready: false, pending: [] };
+  const entry = { process: null, ready: false, pending: [], lspSocket: null };
   kernels.set(notebookId, entry);
 
   const { cmd, args, cwd } = getKernelSpawnArgs();
@@ -89,6 +90,17 @@ function startKernelForId(notebookId) {
           kernelProcess.stdin.write(pending + '\n');
         }
         entry.pending = [];
+
+        if (msg.lspPipe) {
+          const socket = net.connect({ path: msg.lspPipe });
+          entry.lspSocket = socket;
+          socket.on('data', (data) => {
+            if (_mainWindow && !_mainWindow.isDestroyed()) {
+              _mainWindow.webContents.send('lsp-receive', { notebookId, data: data.toString('utf8') });
+            }
+          });
+          socket.on('error', () => {}); // transient — kernel may restart
+        }
       }
 
       if (msg.type === 'log') {
@@ -164,6 +176,10 @@ function startKernelForId(notebookId) {
 function killKernelForId(notebookId) {
   const entry = kernels.get(notebookId);
   if (!entry || !entry.process) return;
+  if (entry.lspSocket) {
+    try { entry.lspSocket.destroy(); } catch (_) {}
+    entry.lspSocket = null;
+  }
   if (entry.process.stdin.writable) {
     try {
       entry.process.stdin.write(JSON.stringify({ type: 'exit' }) + '\n');
@@ -241,6 +257,13 @@ function register(ipcMain, { mainWindow, app, writeLog } = {}) {
       try { entry.process.kill(); } catch (_) {}
     }
     startKernelForId(notebookId);
+  });
+
+  on('lsp-send', (_event, { notebookId, data }) => {
+    const entry = kernels.get(notebookId);
+    if (entry?.lspSocket && !entry.lspSocket.destroyed) {
+      try { entry.lspSocket.write(data); } catch (_) {}
+    }
   });
 
   on('kernel-interrupt', (_event, notebookId) => {
