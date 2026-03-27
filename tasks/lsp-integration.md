@@ -165,12 +165,12 @@ Why named pipe over TCP: no port conflicts, no firewall prompts, automatically c
 ## Step 8 — Cleanup and docs
 
 **Tasks:**
-- [ ] Remove `CSHARP_KEYWORDS` config constant if no longer used elsewhere
-- [ ] Update `src/config/docs-sections.js`: update Code Diagnostics description to reflect semantic errors
-- [ ] Update `README.md`: note that C# editor uses Roslyn LSP for completions and diagnostics
-- [ ] Run full test suite: `npm test && npm run test:kernel`
-- [ ] Bump version (minor — new feature)
-- [ ] Commit
+- [x] Remove `CSHARP_KEYWORDS` config constant if no longer used elsewhere
+- [x] Update `src/config/docs-sections.js`: update Code Diagnostics description to reflect semantic errors
+- [x] Update `README.md`: note that C# editor uses Roslyn LSP for completions and diagnostics
+- [x] Run full test suite: `npm test && npm run test:kernel`
+- [x] Bump version (patch — docs/cleanup only)
+- [x] Commit
 
 ---
 
