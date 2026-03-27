@@ -53,15 +53,15 @@ Why named pipe over TCP: no port conflicts, no firewall prompts, automatically c
 **Goal:** A reusable, production-quality class that keeps the AdhocWorkspace in sync with the kernel's script state.
 
 **Tasks:**
-- [ ] Create `kernel/WorkspaceManager.cs`:
+- [x] Create `kernel/WorkspaceManager.cs`:
   - `UpdateDocument(string code)` — replaces the script document text
   - `UpdateReferences(IEnumerable<MetadataReference> refs)` — called after NuGet loads
   - `GetCompletionsAsync(int position)` → `IEnumerable<CompletionItemData>`
   - `GetDiagnosticsAsync()` → `IEnumerable<DiagnosticData>`
   - `GetSignatureHelpAsync(int position)` → `SignatureHelpData`
-- [ ] Globals document is generated from `ScriptGlobals` fields via reflection at startup, so it stays in sync with actual globals
-- [ ] WorkspaceManager is instantiated once per kernel process and shared across handlers
-- [ ] Remove spike code
+- [x] Globals document is generated from `ScriptGlobals` fields via reflection at startup, so it stays in sync with actual globals
+- [x] WorkspaceManager is instantiated once per kernel process and shared across handlers
+- [x] Remove spike code
 
 **Memory checkpoint:** save step 2 status before starting.
 

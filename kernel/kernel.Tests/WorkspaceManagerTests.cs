@@ -1,15 +1,12 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Microsoft.CodeAnalysis;
 using Xunit;
 using SharpNoteKernel;
 
 namespace kernel.Tests;
 
-/// <summary>
-/// Spike tests that validate Roslyn's CompletionService and semantic diagnostics
-/// work correctly for C# script-mode documents with injected globals.
-/// </summary>
 public class WorkspaceManagerTests
 {
     // ── Completions ───────────────────────────────────────────────────────────
@@ -19,12 +16,13 @@ public class WorkspaceManagerTests
     {
         using var wm = new WorkspaceManager();
         var code = "Display.";
-        var items = await wm.GetCompletionsAsync(code, code.Length);
-        var labels = items.Select(i => i.DisplayText).ToList();
+        wm.UpdateDocument(code);
+        var items = await wm.GetCompletionsAsync(code.Length);
 
-        labels.Should().NotBeEmpty();
+        items.Should().NotBeEmpty();
         // DisplayHelper exposes Layout, Cell, Markdown, Html, etc.
-        labels.Should().Contain(l => l.StartsWith("L") || l.StartsWith("C") || l.StartsWith("M"));
+        items.Select(i => i.Label).Should()
+            .Contain(l => l.StartsWith("L") || l.StartsWith("C") || l.StartsWith("M"));
     }
 
     [Fact]
@@ -32,8 +30,9 @@ public class WorkspaceManagerTests
     {
         using var wm = new WorkspaceManager();
         var code = "Console.";
-        var items = await wm.GetCompletionsAsync(code, code.Length);
-        var labels = items.Select(i => i.DisplayText).ToList();
+        wm.UpdateDocument(code);
+        var items = await wm.GetCompletionsAsync(code.Length);
+        var labels = items.Select(i => i.Label).ToList();
 
         labels.Should().Contain("WriteLine");
         labels.Should().Contain("ReadLine");
@@ -44,10 +43,10 @@ public class WorkspaceManagerTests
     public async Task GetCompletions_LocalVariable_ReturnsMemberItems()
     {
         using var wm = new WorkspaceManager();
-        // Declare a list, then trigger completions on it
         var code = "var nums = new System.Collections.Generic.List<int>();\nnums.";
-        var items = await wm.GetCompletionsAsync(code, code.Length);
-        var labels = items.Select(i => i.DisplayText).ToList();
+        wm.UpdateDocument(code);
+        var items = await wm.GetCompletionsAsync(code.Length);
+        var labels = items.Select(i => i.Label).ToList();
 
         labels.Should().Contain("Add");
         labels.Should().Contain("Count");
@@ -60,32 +59,43 @@ public class WorkspaceManagerTests
     {
         using var wm = new WorkspaceManager();
         var code = "Db.";
-        var items = await wm.GetCompletionsAsync(code, code.Length);
-        var labels = items.Select(i => i.DisplayText).ToList();
+        wm.UpdateDocument(code);
+        var items = await wm.GetCompletionsAsync(code.Length);
 
-        labels.Should().NotBeEmpty();
+        items.Should().NotBeEmpty();
     }
 
     [Fact]
     public async Task GetCompletions_EmptyContext_ReturnsKeywords()
     {
         using var wm = new WorkspaceManager();
-        var items = await wm.GetCompletionsAsync("", 0);
-        var labels = items.Select(i => i.DisplayText).ToList();
+        wm.UpdateDocument("");
+        var items = await wm.GetCompletionsAsync(0);
+        var labels = items.Select(i => i.Label).ToList();
 
-        // Should surface C# keywords and the script globals
         labels.Should().Contain("var");
         labels.Should().Contain("int");
+    }
+
+    [Fact]
+    public async Task GetCompletions_ItemsHaveKind()
+    {
+        using var wm = new WorkspaceManager();
+        var code = "Console.";
+        wm.UpdateDocument(code);
+        var items = await wm.GetCompletionsAsync(code.Length);
+
+        items.Should().AllSatisfy(i => i.Kind.Should().NotBeNullOrEmpty());
     }
 
     // ── Diagnostics ───────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task GetDiagnostics_TypeMismatch_ReturnSemanticError()
+    public async Task GetDiagnostics_TypeMismatch_ReturnsSemanticError()
     {
         using var wm = new WorkspaceManager();
-        // Assigning a string literal to an int — semantic (type) error, not a parse error
-        var diags = await wm.GetDiagnosticsAsync("int x = \"hello\";");
+        wm.UpdateDocument("int x = \"hello\";");
+        var diags = await wm.GetDiagnosticsAsync();
 
         diags.Should().NotBeEmpty();
         diags.Should().Contain(d => d.Severity == "error");
@@ -95,7 +105,8 @@ public class WorkspaceManagerTests
     public async Task GetDiagnostics_ValidCode_ReturnsEmpty()
     {
         using var wm = new WorkspaceManager();
-        var diags = await wm.GetDiagnosticsAsync("int x = 42;");
+        wm.UpdateDocument("int x = 42;");
+        var diags = await wm.GetDiagnosticsAsync();
 
         diags.Should().BeEmpty();
     }
@@ -104,7 +115,8 @@ public class WorkspaceManagerTests
     public async Task GetDiagnostics_UndefinedVariable_ReturnsSemanticError()
     {
         using var wm = new WorkspaceManager();
-        var diags = await wm.GetDiagnosticsAsync("var x = undeclaredVar + 1;");
+        wm.UpdateDocument("var x = undeclaredVar + 1;");
+        var diags = await wm.GetDiagnosticsAsync();
 
         diags.Should().NotBeEmpty();
         diags.Should().Contain(d => d.Severity == "error");
@@ -114,11 +126,71 @@ public class WorkspaceManagerTests
     public async Task GetDiagnostics_SpansAreRelativeToUserCode_NotPreamble()
     {
         using var wm = new WorkspaceManager();
-        // The error is at position 0 of user code ("int x = ...")
-        var diags = await wm.GetDiagnosticsAsync("int x = \"hello\";");
+        wm.UpdateDocument("int x = \"hello\";");
+        var diags = await wm.GetDiagnosticsAsync();
 
         diags.Should().Contain(d => d.From >= 0);
-        // Positions must not be in negative range (which would mean preamble bleed-through)
         diags.Should().AllSatisfy(d => d.From.Should().BeGreaterThanOrEqualTo(0));
+    }
+
+    // ── References ────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void UpdateReferences_DoesNotThrow()
+    {
+        using var wm = new WorkspaceManager();
+        // Re-adding an already-present assembly should be a no-op
+        var refs = new[] { MetadataReference.CreateFromFile(typeof(System.Console).Assembly.Location) };
+        var act = () => wm.UpdateReferences(refs);
+        act.Should().NotThrow();
+    }
+
+    // ── Signature help ────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task GetSignatureHelp_ConsoleWriteLine_ReturnsOverloads()
+    {
+        using var wm = new WorkspaceManager();
+        var code = "Console.WriteLine(";
+        wm.UpdateDocument(code);
+        var help = await wm.GetSignatureHelpAsync(code.Length);
+
+        help.Signatures.Should().NotBeEmpty();
+        help.Signatures.Should().Contain(s => s.Label.Contains("WriteLine"));
+    }
+
+    [Fact]
+    public async Task GetSignatureHelp_ConsoleWriteLine_SignaturesHaveParameters()
+    {
+        using var wm = new WorkspaceManager();
+        var code = "Console.WriteLine(";
+        wm.UpdateDocument(code);
+        var help = await wm.GetSignatureHelpAsync(code.Length);
+
+        // At least one overload should have parameters
+        help.Signatures.Should().Contain(s => s.Parameters.Count > 0);
+    }
+
+    [Fact]
+    public async Task GetSignatureHelp_WithActiveParam_ReturnsCorrectIndex()
+    {
+        using var wm = new WorkspaceManager();
+        // Cursor is after first comma → active parameter = 1
+        var code = "Console.Write(\"{0}\", ";
+        wm.UpdateDocument(code);
+        var help = await wm.GetSignatureHelpAsync(code.Length);
+
+        help.ActiveParameter.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task GetSignatureHelp_OutsideMethodCall_ReturnsEmpty()
+    {
+        using var wm = new WorkspaceManager();
+        var code = "int x = 42;";
+        wm.UpdateDocument(code);
+        var help = await wm.GetSignatureHelpAsync(code.Length);
+
+        help.Signatures.Should().BeEmpty();
     }
 }
