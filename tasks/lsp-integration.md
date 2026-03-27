@@ -142,21 +142,21 @@ Why named pipe over TCP: no port conflicts, no firewall prompts, automatically c
 **Goal:** Replace the custom completion/lint CodeMirror extensions with a standard LSP client.
 
 **Tasks:**
-- [ ] `npm install codemirror-languageserver`
-- [ ] Create `src/components/editor/lspTransport.js`:
+- [x] `npm install codemirror-languageserver`
+- [x] Create `src/components/editor/lspTransport.js`:
   - Implements the `Transport` interface expected by `codemirror-languageserver`
   - Sends/receives via `window.electronAPI.lspSend` / `onLspReceive`
-- [ ] Modify `src/components/editor/CodeEditor.jsx`:
+- [x] Modify `src/components/editor/CodeEditor.jsx`:
   - Remove `lintSource`, `lintCompartment`, and the manual `linter()` extension
   - Remove `keywordSource`, `dynamicSource`, and the manual `autocompletion()` extension
   - Remove `signatureField` StateField and tooltip logic
   - Add `languageServerWithTransport({ transport, documentUri, ... })` extension
   - Keep `acceptCompletion` Tab/Enter keybinding (LSP client uses CodeMirror's built-in completion UI)
-- [ ] Update `CodeCell.jsx` / `NotebookView.jsx` to pass `notebookId` down for transport creation
-- [ ] Remove `onRequestCompletions`, `onRequestLint`, `onRequestSignature` props (no longer needed)
-- [ ] Remove corresponding `requestLint` / `requestAutocomplete` / `requestSignature` calls from `useKernelManager.js`
-- [ ] Run Vitest tests: `npm test`
-- [ ] Commit
+- [x] Update `CodeCell.jsx` / `NotebookView.jsx` to pass `notebookId` down for transport creation
+- [x] Remove `onRequestCompletions`, `onRequestLint`, `onRequestSignature` props (no longer needed)
+- [x] Remove corresponding `requestLint` / `requestAutocomplete` / `requestSignature` calls from `useKernelManager.js`
+- [x] Run Vitest tests: `npm test`
+- [x] Commit
 
 **Memory checkpoint:** save step 7 status before starting.
 
