@@ -18,6 +18,16 @@ Why named pipe over TCP: no port conflicts, no firewall prompts, automatically c
 
 ---
 
+## Step protocol (repeat before every step)
+
+1. Update memory checkpoint with current step status
+2. Run `/compact` to flush context
+3. Resume from memory — read `tasks/lsp-integration.md` and `memory/project_lsp_integration.md`
+4. Execute the step
+5. Commit completed work
+
+---
+
 ## Step 1 — Roslyn Workspace spike (kernel-side validation)
 
 **Goal:** Prove that `CompletionService` and semantic diagnostics work in script-mode with injected globals before writing any production code.
