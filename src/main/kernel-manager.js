@@ -54,7 +54,7 @@ function getKernelSpawnArgs() {
 function startKernelForId(notebookId) {
   _writeLog('KERNEL', 'Starting kernel');
 
-  const entry = { process: null, ready: false, pending: [], lspSocket: null };
+  const entry = { process: null, ready: false, pending: [], lspSocket: null, lspPending: [] };
   kernels.set(notebookId, entry);
 
   const { cmd, args, cwd } = getKernelSpawnArgs();
@@ -94,6 +94,12 @@ function startKernelForId(notebookId) {
         if (msg.lspPipe) {
           const socket = net.connect({ path: msg.lspPipe });
           entry.lspSocket = socket;
+          socket.once('connect', () => {
+            for (const queued of entry.lspPending) {
+              try { socket.write(queued); } catch (_) {}
+            }
+            entry.lspPending = [];
+          });
           socket.on('data', (data) => {
             if (_mainWindow && !_mainWindow.isDestroyed()) {
               _mainWindow.webContents.send('lsp-receive', { notebookId, data: data.toString('utf8') });
@@ -180,6 +186,7 @@ function killKernelForId(notebookId) {
     try { entry.lspSocket.destroy(); } catch (_) {}
     entry.lspSocket = null;
   }
+  entry.lspPending = [];
   if (entry.process.stdin.writable) {
     try {
       entry.process.stdin.write(JSON.stringify({ type: 'exit' }) + '\n');
@@ -261,8 +268,11 @@ function register(ipcMain, { mainWindow, app, writeLog } = {}) {
 
   on('lsp-send', (_event, { notebookId, data }) => {
     const entry = kernels.get(notebookId);
-    if (entry?.lspSocket && !entry.lspSocket.destroyed) {
+    if (!entry) return;
+    if (entry.lspSocket && !entry.lspSocket.destroyed) {
       try { entry.lspSocket.write(data); } catch (_) {}
+    } else {
+      entry.lspPending.push(data);
     }
   });
 
