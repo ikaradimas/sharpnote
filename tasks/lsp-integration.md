@@ -125,15 +125,13 @@ Why named pipe over TCP: no port conflicts, no firewall prompts, automatically c
 **Goal:** The renderer (sandboxed) cannot open named pipes directly; the main process proxies it.
 
 **Tasks:**
-- [ ] Modify `src/main/kernel-manager.js`:
+- [x] Modify `src/main/kernel-manager.js`:
   - Parse `lspPipe` from the `ready` message
   - Open the named pipe as a Node.js `net.Socket`
-  - Expose two IPC channels per notebook:
-    - `lsp-send-{notebookId}` (renderer → main → pipe)
-    - `lsp-receive-{notebookId}` (pipe → main → renderer)
-  - Clean up socket on kernel kill
-- [ ] Modify `src/main/main.js`: register the two IPC handlers
-- [ ] Expose `window.electronAPI.lspSend(notebookId, data)` and `onLspReceive(notebookId, cb)` in preload
+  - Single `lsp-send` IPC handler (dispatches by notebookId)
+  - Socket `data` → emit `lsp-receive` with `{ notebookId, data }` to renderer
+  - Destroy socket on kill
+- [x] Expose `window.electronAPI.lspSend`, `onLspReceive`, `offLspReceive` in preload
 
 **Memory checkpoint:** save step 6 status before starting.
 
