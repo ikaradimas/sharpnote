@@ -140,16 +140,14 @@ export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
         } catch { return null; }
       };
 
-      // Accept completions on Tab only (not Enter), so Enter remains a normal newline.
+      // Accept completions on Tab or Enter when a popup is active.
       // - defaultKeymap: false prevents autocompletion from registering Enter at high priority.
-      // - Prec.highest ensures Tab → acceptCompletion beats indentWithTab (normal priority).
-      // - acceptCompletion returns false when no completion is active, so Tab falls through
-      //   to indentWithTab for normal indent behaviour.
-      // completionKeymap has no Tab binding — add it explicitly.
-      // acceptCompletion returns false when no completion is active, so Tab
-      // falls through to indentWithTab for normal indent behaviour.
+      // - Prec.highest ensures Tab/Enter → acceptCompletion beats indentWithTab (normal priority).
+      // - acceptCompletion returns false when no completion is active, so both keys fall through
+      //   to their normal behaviour (indent for Tab, newline for Enter).
       const completionKeys = [
         { key: 'Tab', run: acceptCompletion },
+        { key: 'Enter', run: acceptCompletion },
         ...completionKeymap.filter((b) => b.key !== 'Enter'),
       ];
       extensions.push(
