@@ -106,20 +106,15 @@ Why named pipe over TCP: no port conflicts, no firewall prompts, automatically c
 **Goal:** Expose the workspace over a proper LSP named pipe so CodeMirror can use a standard LSP client.
 
 **Tasks:**
-- [ ] Add `StreamJsonRpc` NuGet package to `kernel/kernel.csproj`
-- [ ] Create `kernel/LspServer.cs`:
-  - Creates a named pipe server (`\\.\pipe\sharpnote-lsp-{pid}` on Windows, `/tmp/sharpnote-lsp-{pid}` on Unix)
-  - Implements LSP handlers using StreamJsonRpc:
-    - `initialize` / `initialized`
-    - `textDocument/didOpen`, `textDocument/didChange` → calls `WorkspaceManager.UpdateDocument()`
-    - `textDocument/completion` → calls `WorkspaceManager.GetCompletionsAsync()`
-    - `textDocument/signatureHelp` → calls `WorkspaceManager.GetSignatureHelpAsync()`
-    - `textDocument/publishDiagnostics` → push notification, fired after every `didChange`
-  - Runs on a background thread; does not touch stdin/stdout
-- [ ] Modify `kernel/Program.cs`:
+- [x] Add `StreamJsonRpc` NuGet package to `kernel/kernel.csproj`
+- [x] Create `kernel/LspServer.cs`:
+  - Creates a named pipe server (`\\.\pipe\sharpnote-lsp-{pid}` on Windows, `/tmp/CoreFxPipe_sharpnote-lsp-{pid}` on Unix)
+  - Implements LSP handlers using StreamJsonRpc + HeaderDelimitedMessageHandler
+  - Reconnects automatically after client disconnect
+- [x] Modify `kernel/Program.cs`:
   - Start `LspServer` during init
-  - Include `lspPipe` field in the `ready` message: `{ type: "ready", lspPipe: "/tmp/sharpnote-lsp-12345" }`
-- [ ] Commit
+  - `ready` message now includes `lspPipe` field
+- [x] Commit
 
 **Memory checkpoint:** save step 5 status before starting.
 
