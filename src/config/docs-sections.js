@@ -631,7 +631,7 @@ export const DOCS_SECTIONS = [
       { type: 'ul', items: [
         'Editor Font Size — drag the slider (10–28 px) to resize the notebook editor font; a live preview updates as you drag. The Reset button restores the default of 12.6 px. The keyboard shortcuts ⌘= / ⌘- / ⌘0 still work outside the dialog.',
         'Panel Font Size — drag the slider (8–18 px) to scale all panel content (Logs, Variables, DB, etc.) uniformly. The Reset button restores the default of 11.5 px.',
-        'Code Editor — Alternating row colors: toggle alternating background shading on editor lines. Code linter: when enabled, the editor shows C# diagnostic squiggles while typing; disable to suppress linting.',
+        'Code Editor — Alternating row colors: toggle alternating background shading on editor lines. Code diagnostics: when enabled, the editor shows C# errors and warnings as squiggles while typing; disable to suppress diagnostics.',
         'Theme — click any theme tile to switch the colour scheme immediately. Eight built-in themes are available: kl1nt, Nord, Dracula, Tokyo Night, Monokai, Catppuccin, Solarized Dark, and GitHub Light.',
       ]},
       { type: 'h3', text: 'Paths' },

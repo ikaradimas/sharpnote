@@ -79,7 +79,7 @@ function AppearanceSection({ theme, fontSize, onThemeChange, onFontSizeChange, p
             checked={!!lintEnabled}
             onChange={(e) => onLintEnabledChange(e.target.checked)}
           />
-          <span>Code linter (shows diagnostics while typing)</span>
+          <span>Code diagnostics (shows errors and warnings while typing)</span>
         </label>
       </div>
 
