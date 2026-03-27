@@ -220,7 +220,7 @@ partial class Program
 
                 case "lint":
                 {
-                    HandleLint(msg, realStdout);
+                    await HandleLint(msg, realStdout);
                     break;
                 }
 

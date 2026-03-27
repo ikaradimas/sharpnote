@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Threading.Tasks;
 using FluentAssertions;
 using SharpNoteKernel;
 using Xunit;
@@ -7,58 +8,71 @@ namespace kernel.Tests;
 
 public class LintTests
 {
-    // GetLintDiagnostics is internal static on class Program
-    private static System.Collections.Generic.List<object> Lint(string code)
-        => Program.GetLintDiagnostics(code);
-
     [Fact]
-    public void ValidExpression_ZeroDiagnostics()
+    public async Task ValidCode_ZeroDiagnostics()
     {
-        var result = Lint("1 + 1");
+        using var wm = new WorkspaceManager();
+        wm.UpdateDocument("int x = 1 + 1;");
+        var result = await wm.GetDiagnosticsAsync();
+
         result.Should().BeEmpty();
     }
 
     [Fact]
-    public void SyntaxError_ReturnsAtLeastOneDiagnostic()
+    public async Task SyntaxError_ReturnsAtLeastOneDiagnostic()
     {
-        var result = Lint("var x = ;");
+        using var wm = new WorkspaceManager();
+        wm.UpdateDocument("var x = ;");
+        var result = await wm.GetDiagnosticsAsync();
+
         result.Should().NotBeEmpty();
     }
 
     [Fact]
-    public void DiagnosticHasPositiveOffsets()
+    public async Task SemanticError_TypeMismatch_ReturnsDiagnostic()
     {
-        var result = Lint("var x = ;");
-        result.Should().NotBeEmpty();
+        using var wm = new WorkspaceManager();
+        wm.UpdateDocument("int x = \"hello\";");
+        var result = await wm.GetDiagnosticsAsync();
 
-        // Each diagnostic is an anonymous object with from/to/severity/message
-        // Use reflection to read properties
-        foreach (var diag in result)
+        result.Should().NotBeEmpty();
+        result.Should().Contain(d => d.Severity == "error");
+    }
+
+    [Fact]
+    public async Task DiagnosticHasPositiveOffsets()
+    {
+        using var wm = new WorkspaceManager();
+        wm.UpdateDocument("var x = ;");
+        var result = await wm.GetDiagnosticsAsync();
+
+        result.Should().NotBeEmpty();
+        result.Should().AllSatisfy(d =>
         {
-            var type = diag.GetType();
-            var from = (int)type.GetProperty("from")!.GetValue(diag)!;
-            var to   = (int)type.GetProperty("to")!.GetValue(diag)!;
-            from.Should().BeGreaterThanOrEqualTo(0);
-            to.Should().BeGreaterThanOrEqualTo(from);
-        }
+            d.From.Should().BeGreaterThanOrEqualTo(0);
+            d.To.Should().BeGreaterThanOrEqualTo(d.From);
+        });
     }
 
     [Fact]
-    public void SyntaxError_DiagnosticSeverityIsError()
+    public async Task SyntaxError_SeverityIsError()
     {
-        var result = Lint("var x = ;");
+        using var wm = new WorkspaceManager();
+        wm.UpdateDocument("var x = ;");
+        var result = await wm.GetDiagnosticsAsync();
+
         result.Should().NotBeEmpty();
-        var first = result[0];
-        var severity = (string)first.GetType().GetProperty("severity")!.GetValue(first)!;
-        severity.Should().Be("error");
+        result[0].Severity.Should().Be("error");
     }
 
     [Fact]
-    public void DiagnosticHasNonEmptyMessage()
+    public async Task DiagnosticHasNonEmptyMessage()
     {
-        var result = Lint("var x = ;");
+        using var wm = new WorkspaceManager();
+        wm.UpdateDocument("var x = ;");
+        var result = await wm.GetDiagnosticsAsync();
+
         result.Should().NotBeEmpty();
-        var message = (string)result[0].GetType().GetProperty("message")!.GetValue(result[0])!;
-        message.Should().NotBeNullOrWhiteSpace();
+        result[0].Message.Should().NotBeNullOrWhiteSpace();
     }
 }
