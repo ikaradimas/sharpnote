@@ -4440,6 +4440,7 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 .api-info-meta { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 4px; }
 .api-info-version, .api-info-spec, .api-info-ops { font-size: 10px; padding: 1px 6px; border-radius: 10px; background: var(--bg-mid); color: var(--text-muted); border: 1px solid var(--border-subtle); }
 .api-info-desc { font-size: 11px; color: var(--text-dim); margin-top: 4px; line-height: 1.4; }
+.api-info-desc *, .api-op-desc *, .api-param-desc *, .api-response-desc * { background: transparent !important; color: inherit !important; }
 .api-base-url { font-family: var(--font-code); font-size: 10px; color: var(--accent-secondary); margin-top: 4px; opacity: 0.8; }
 
 .api-ops-list { flex: 1; overflow-y: auto; }

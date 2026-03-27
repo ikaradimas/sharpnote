@@ -141,6 +141,12 @@ function sanitizeHtml(html) {
         el.removeAttribute(attr.name);
       }
     });
+    // Strip background and color from inline styles so the theme can take over
+    if (el.style) {
+      el.style.removeProperty('background');
+      el.style.removeProperty('background-color');
+      el.style.removeProperty('color');
+    }
   });
   return doc.body.innerHTML;
 }
