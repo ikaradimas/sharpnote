@@ -36,6 +36,9 @@ partial class Program
     // Cancellation token source for the current execution (set/cleared per execute)
     private static CancellationTokenSource? _execCts;
 
+    // Roslyn workspace — shared across all handlers for completions, diagnostics, and signature help
+    private static readonly WorkspaceManager _workspaceManager = new();
+
     // ID of the cell currently being executed — set by HandleExecute, read by DbHelper
     internal static string? CurrentCellId;
     private static readonly Dictionary<string, JsonElement> _widgetValues = new();
@@ -223,7 +226,7 @@ partial class Program
 
                 case "autocomplete":
                 {
-                    HandleAutocomplete(msg, realStdout);
+                    await HandleAutocomplete(msg, realStdout);
                     break;
                 }
 

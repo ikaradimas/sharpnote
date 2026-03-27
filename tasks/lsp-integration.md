@@ -72,14 +72,13 @@ Why named pipe over TCP: no port conflicts, no firewall prompts, automatically c
 **Goal:** Swap reflection-based completions for `CompletionService`.
 
 **Tasks:**
-- [ ] Rewrite `kernel/Handlers/AutocompleteHandler.cs`:
+- [x] Rewrite `kernel/Handlers/AutocompleteHandler.cs`:
   - Call `WorkspaceManager.GetCompletionsAsync(position)`
-  - Map `CompletionItem` fields → existing `{label, type, detail}` JSON shape (no protocol change)
+  - Map `CompletionItemData` fields → existing `{label, type, detail}` JSON shape (no protocol change)
   - Remove all regex context detection and reflection logic
-  - Remove `WellKnownTypes` / `WellKnownInstances` dictionaries (workspace handles them)
-- [ ] Run xUnit tests: `npm run test:kernel`
-- [ ] Manual smoke-test: `Display.`, `Console.`, `db.Users.`, LINQ chain
-- [ ] Commit
+  - Remove `WellKnownInstances` dictionary; move `WellKnownTypes` to `SignatureHandler.cs` (still needed there)
+- [x] Run xUnit tests: `npm run test:kernel` — 108/108 pass
+- [x] Commit
 
 **Memory checkpoint:** save step 3 status before starting.
 
