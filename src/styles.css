@@ -223,10 +223,7 @@ body {
 }
 
 .toolbar-overflow-btn {
-  font-size: 15px;
   line-height: 1;
-  padding: 2px 8px !important;
-  letter-spacing: 0.05em;
 }
 
 .toolbar-overflow-menu {

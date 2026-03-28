@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  IconReset, IconConfig, IconPackages, IconLogs, IconDB,
+  IconTools, IconReset, IconConfig, IconPackages, IconLogs, IconDB,
   IconVars, IconToC, IconLibrary, IconFiles, IconApi,
   IconGraph, IconTodo, IconRegex,
 } from './Icons.jsx';
@@ -82,11 +82,7 @@ export function ToolsMenu({
         title="Tools"
         className={`toolbar-icon-text-btn${open || anyPanelActive ? ' panel-active' : ''}`}
       >
-        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" style={{ display: 'block', flexShrink: 0 }}>
-          <rect x="1.5" y="2.5" width="10" height="1.1" rx="0.5" fill="currentColor"/>
-          <rect x="1.5" y="5.95" width="10" height="1.1" rx="0.5" fill="currentColor"/>
-          <rect x="1.5" y="9.4" width="10" height="1.1" rx="0.5" fill="currentColor"/>
-        </svg>
+        <IconTools />
         <span>Tools</span>
       </button>
       {open && createPortal(

@@ -137,6 +137,16 @@ export function IconTodo() {
     </svg>
   );
 }
+export function IconTools() {
+  return (
+    <svg {..._ic} stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" fill="none">
+      {/* Jaw: two parallel prongs with curved back */}
+      <path d="M 5.5 3.5 L 1.5 3.5 Q 0.3 6 1.5 8.5 L 5.5 8.5"/>
+      {/* Handle: diagonal to bottom-right */}
+      <line x1="5.5" y1="5.5" x2="11.5" y2="11.5" strokeWidth="1.8"/>
+    </svg>
+  );
+}
 export function IconRegex() {
   return (
     <svg {..._ic} stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round">
