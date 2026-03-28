@@ -866,6 +866,7 @@ export function App() {
         kafkaTabOpen={kafkaTabOpen}
         onActivateKafka={handleOpenKafkaTab}
         onCloseKafka={handleCloseKafkaTab}
+        onKafkaReturnToPanel={() => { handleCloseKafkaTab(); setKafkaPanelOpen(true); }}
         libEditors={libEditors}
         onCloseLibEditor={handleCloseLibEditor}
         pinnedPaths={pinnedPaths}

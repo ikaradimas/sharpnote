@@ -421,20 +421,14 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
     <div className="kafka-panel">
       <div className="kafka-panel-header">
         <span className="kafka-panel-title">Kafka Browser</span>
-        {asTab
-          ? <button
-              className="kafka-btn kafka-panel-tab-btn"
-              onClick={onReturnToPanel}
-              disabled={isListening}
-              title={isListening ? 'Stop all streams before moving' : 'Move to panel'}
-            >↙ Panel</button>
-          : <button
-              className="kafka-btn kafka-panel-tab-btn"
-              onClick={onOpenAsTab}
-              disabled={isListening}
-              title={isListening ? 'Stop all streams before opening as tab' : 'Open as tab'}
-            >↗ Tab</button>
-        }
+        {!asTab && (
+          <button
+            className="kafka-btn kafka-panel-tab-btn"
+            onClick={onOpenAsTab}
+            disabled={isListening}
+            title={isListening ? 'Stop all streams before opening as tab' : 'Open as tab'}
+          >↗ Tab</button>
+        )}
         {!asTab && <button className="log-close-btn kafka-panel-close-btn" onClick={onToggle} title="Close">×</button>}
       </div>
 

@@ -2303,6 +2303,28 @@ body {
   color: var(--status-error);
 }
 
+.tab-action {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  width: 16px;
+  height: 16px;
+  border-radius: 2px;
+  cursor: pointer;
+  font-size: 11px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s, background 0.15s;
+}
+.tab:hover .tab-action,
+.tab.tab-active .tab-action { opacity: 1; }
+.tab-action:hover { background: var(--bg-elevated); color: var(--text-primary); }
+
 .tab-color-btn {
   background: transparent;
   border: none;
