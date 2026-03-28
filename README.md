@@ -127,6 +127,7 @@
 - **SQL cells** — add a SQL cell (+ SQL button) to write and execute raw SQL queries directly against any attached database; SELECT results render as a data table; DDL / DML shows a "N rows affected" status; the database is selected from a dropdown showing all attached connections
 - **Code Library** — file-based snippet library stored in `~/Documents/SharpNote Notebooks/Library/`; subfolder navigation, syntax-highlighted preview, insert-as-cell with animation
 - **API Browser** — enter any OpenAPI 3.x or Swagger 2.0 spec URL (JSON or YAML) to explore endpoints grouped by tag; expandable detail shows parameters, request body, and response schema types; **Try it** form sends live requests with path/query/body inputs; supports Bearer, API Key, and Basic auth applied to every request; save and recall multiple APIs with their auth config; all requests proxied through the main process for http:// local dev servers
+- **Kafka Browser** — save named broker connections (with SSL and SASL-PLAIN/SCRAM support); click → to list all topics via the admin API; click ▶ per topic to start a live consumer feed (multiple topics simultaneously); configurable max-messages cap; click C# to copy a ready-to-run `Confluent.Kafka` consumer snippet to the clipboard (Ctrl+Shift+K)
 
 ### Developer Experience
 
@@ -230,6 +231,7 @@ The UI is organized across `src/app/`, `src/components/`, `src/hooks/`, and `src
 | Settings | `loadAppSettings()`, `saveAppSettings(s)`, `exportSettings(data)`, `importSettings()`, `setFontSize(n)`, `setPanelFontSize(n)`, `rebuildMenu(shortcuts)` |
 | DB connections | `loadDbConnections()`, `saveDbConnections(list)` |
 | API Browser | `loadApiSaved()`, `saveApiSaved(list)`, `apiRequest(opts)`, `fetchUrl(url)` |
+| Kafka Browser | `loadKafkaSaved()`, `saveKafkaSaved(list)`, `kafkaListTopics(conn)`, `kafkaConsumeStart(opts)`, `kafkaConsumeStop(id)`, `onKafkaMessage(cb)`, `offKafkaMessage(cb)` |
 | Recent files | `getRecentFiles()`, `clearRecentFiles()` |
 | Menu / UI events | `onMenuAction(cb)`, `updateWindowTabs(tabs)`, `onFontSizeChange(cb)`, `onPanelFontSizeChange(cb)` |
 | Quit guard | `onBeforeQuit(cb)`, `confirmQuit()` |
@@ -569,6 +571,7 @@ The main process (Node.js) writes to the terminal that launched `npm start`. Ker
 | `db-connections.json` | Named database connection strings |
 | `app-settings.json` | Theme, font size, dock layout, custom keyboard shortcuts |
 | `api-saved.json` | Saved API Browser configurations |
+| `kafka-saved.json` | Saved Kafka broker connections |
 
 The **code library** lives separately at `~/Documents/SharpNote Notebooks/Library/`.
 
@@ -896,6 +899,7 @@ All shortcuts are user-remappable via **Settings → Shortcuts**. The table belo
 | Library | `Ctrl+Shift+L` |
 | File Explorer | `Ctrl+Shift+E` |
 | API Browser | `Ctrl+Shift+A` |
+| Kafka Browser | `Ctrl+Shift+K` |
 | Graph | `Ctrl+Shift+R` |
 | To Do | `Ctrl+Shift+O` |
 
