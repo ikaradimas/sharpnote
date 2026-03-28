@@ -71,6 +71,7 @@ export function App() {
   const [libraryPanelOpen, setLibraryPanelOpen] = useState(false);
   const [filesPanelOpen, setFilesPanelOpen]     = useState(false);
   const [apiPanelOpen, setApiPanelOpen]         = useState(false);
+  const [kafkaPanelOpen, setKafkaPanelOpen]     = useState(false);
   const [filesCurrentDir, setFilesCurrentDir]   = useState(null);
   const [libEditors, setLibEditors] = useState([]);
   const libEditorsRef = useRef([]);
@@ -110,7 +111,7 @@ export function App() {
 
   const setPanelVisible = useCallback((panelId, open) => {
     // open: true = open, false = close, null = toggle
-    const globalSetters = { library: setLibraryPanelOpen, files: setFilesPanelOpen, api: setApiPanelOpen };
+    const globalSetters = { library: setLibraryPanelOpen, files: setFilesPanelOpen, api: setApiPanelOpen, kafka: setKafkaPanelOpen };
     const nbFlagMap = {
       log: 'logPanelOpen', nuget: 'nugetPanelOpen', config: 'configPanelOpen',
       db: 'dbPanelOpen', vars: 'varsPanelOpen', toc: 'tocPanelOpen',
@@ -157,6 +158,7 @@ export function App() {
     setLibraryPanelOpen(false);
     setFilesPanelOpen(false);
     setApiPanelOpen(false);
+    setKafkaPanelOpen(false);
     const nbId = activeIdRef.current;
     if (isNotebookId(nbId))
       setNb(nbId, () => ({
@@ -164,7 +166,7 @@ export function App() {
         dbPanelOpen: false, varsPanelOpen: false, tocPanelOpen: false,
         graphPanelOpen: false, todoPanelOpen: false, regexPanelOpen: false,
       }));
-  }, [setNb, setLibraryPanelOpen, setFilesPanelOpen, setApiPanelOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [setNb, setLibraryPanelOpen, setFilesPanelOpen, setApiPanelOpen, setKafkaPanelOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { runCell, runSqlCell, runAll, runFrom, runTo, handleInterrupt, handleReset,
           cancelPendingCells } =
@@ -620,6 +622,7 @@ export function App() {
     'toggle-toc':      () => setPanelVisible('toc',     null),
     'toggle-files':    () => setPanelVisible('files',   null),
     'toggle-api':      () => setPanelVisible('api',     null),
+    'toggle-kafka':    () => setPanelVisible('kafka',   null),
     'toggle-graph':    () => setPanelVisible('graph',   null),
     'toggle-todo':     () => setPanelVisible('todo',    null),
     'toggle-regex':    () => setPanelVisible('regex',   null),
@@ -714,10 +717,11 @@ export function App() {
     toc:     isNotebookId(activeId) ? (activeNb?.tocPanelOpen    ?? false) : false,
     files:   filesPanelOpen,
     api:     apiPanelOpen,
+    kafka:   kafkaPanelOpen,
     graph:   isNotebookId(activeId) ? (activeNb?.graphPanelOpen  ?? false) : false,
     todo:    isNotebookId(activeId) ? (activeNb?.todoPanelOpen   ?? false) : false,
     regex:   isNotebookId(activeId) ? (activeNb?.regexPanelOpen  ?? false) : false,
-  }), [activeId, activeNb, libraryPanelOpen, filesPanelOpen, apiPanelOpen]);
+  }), [activeId, activeNb, libraryPanelOpen, filesPanelOpen, apiPanelOpen, kafkaPanelOpen]);
 
   const panelPropsMap = useMemo(() => {
     const nbId = activeNb?.id ?? null;
@@ -807,6 +811,9 @@ export function App() {
       api: {
         onToggle: () => setApiPanelOpen((v) => !v),
       },
+      kafka: {
+        onToggle: () => setKafkaPanelOpen((v) => !v),
+      },
       graph: {
         onToggle: nbId ? () => setNb(nbId, (n) => ({ graphPanelOpen: !n.graphPanelOpen })) : () => {},
         varHistory: activeNb?.varHistory ?? {},
@@ -820,7 +827,7 @@ export function App() {
       regex: {},
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeNb, dbConnections, filesPanelOpen, filesCurrentDir, apiPanelOpen]);
+  }, [activeNb, dbConnections, filesPanelOpen, filesCurrentDir, apiPanelOpen, kafkaPanelOpen]);
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -898,6 +905,11 @@ export function App() {
                     onToggleApi={() => {
                       if (!apiPanelOpen) handleFocusPanel('api');
                       setApiPanelOpen((v) => !v);
+                    }}
+                    kafkaPanelOpen={kafkaPanelOpen}
+                    onToggleKafka={() => {
+                      if (!kafkaPanelOpen) handleFocusPanel('kafka');
+                      setKafkaPanelOpen((v) => !v);
                     }}
                     onFocusPanel={handleFocusPanel}
                     theme={theme}

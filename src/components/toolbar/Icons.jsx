@@ -148,6 +148,17 @@ export function IconRegex() {
     </svg>
   );
 }
+export function IconKafka() {
+  return (
+    <svg {..._ic} stroke="currentColor" strokeWidth="1.1" strokeLinecap="round">
+      <circle cx="3" cy="6.5" r="1.5" />
+      <circle cx="10" cy="2.5" r="1.5" />
+      <circle cx="10" cy="10.5" r="1.5" />
+      <line x1="4.4" y1="5.8" x2="8.6" y2="3.2" />
+      <line x1="4.4" y1="7.2" x2="8.6" y2="9.8" />
+    </svg>
+  );
+}
 export function IconFileSvg({ isNotebook }) {
   return (
     <svg width="12" height="13" viewBox="0 0 12 13" fill="none" stroke="currentColor" strokeWidth="1.2" style={{ opacity: isNotebook ? 0.9 : 0.5 }}>

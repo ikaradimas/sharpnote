@@ -30,6 +30,8 @@ export function NotebookView({
   onToggleFiles,
   apiPanelOpen,
   onToggleApi,
+  kafkaPanelOpen,
+  onToggleKafka,
   onFocusPanel,
   theme,
   onThemeChange,
@@ -154,6 +156,8 @@ export function NotebookView({
       onToggleFiles={onToggleFiles}
       apiPanelOpen={apiPanelOpen}
       onToggleApi={onToggleApi}
+      kafkaPanelOpen={kafkaPanelOpen}
+      onToggleKafka={onToggleKafka}
       graphPanelOpen={graphPanelOpen}
       onToggleGraph={() => { if (!graphPanelOpen) onFocusPanel?.('graph'); onSetNb((n) => ({ graphPanelOpen: !n.graphPanelOpen })); }}
       todoPanelOpen={todoPanelOpen}
