@@ -57,12 +57,12 @@ async function listTopics(connection) {
   }
 }
 
-async function consumeStart({ consumerId, connection, topics, maxMessages, fromBeginning }) {
+async function consumeStart({ consumerId, connection, topics, maxMessages, fromBeginning, groupId }) {
   await consumeStop(consumerId);
 
   const kafka  = makeKafkaClient(connection);
   const consumer = kafka.consumer({
-    groupId: `sharpnote-browse-${consumerId}`,
+    groupId: groupId || `sharpnote-browse-${consumerId}`,
     sessionTimeout: 10000,
     heartbeatInterval: 3000,
   });

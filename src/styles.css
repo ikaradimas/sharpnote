@@ -6022,7 +6022,7 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 .kafka-chips-overflow-tooltip .kafka-listener-chip { max-width: 100%; }
 
 /* Stop all button */
-.kafka-stop-all-btn { margin-left: auto; flex-shrink: 0; }
+.kafka-feed-btns { margin-left: auto; display: flex; gap: 4px; flex-shrink: 0; }
 
 /* Message rows */
 .kafka-feed-messages { overflow-y: auto; overflow-anchor: none; flex: 1; min-height: 0; }

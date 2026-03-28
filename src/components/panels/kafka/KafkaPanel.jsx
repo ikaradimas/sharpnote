@@ -258,6 +258,8 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
   // topic -> consumerId (tracks active listeners)
   const [listeners,   setListeners]   = useState({});
   const consumerIds   = useRef({});
+  // topic -> stable groupId (reused by Next to continue from committed offset)
+  const groupIds      = useRef({});
 
   // unified chronological message feed — stored in a plain ref, never in state
   const allMsgsRef = useRef([]);
@@ -408,6 +410,9 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
     const conn = savedConns.find((c) => c.id === selectedId);
     if (!conn) return;
     const consumerId = uuidv4();
+    // Generate a fresh stable groupId for this topic session
+    const groupId = `sharpnote-browse-${uuidv4()}`;
+    groupIds.current[topic] = groupId;
     consumerIds.current[topic] = consumerId;
     setListeners((prev) => ({ ...prev, [topic]: consumerId }));
     try {
@@ -417,9 +422,11 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
         topics: [topic],
         maxMessages,
         fromBeginning,
+        groupId,
       });
     } catch {
       delete consumerIds.current[topic];
+      delete groupIds.current[topic];
       setListeners((prev) => { const n = { ...prev }; delete n[topic]; return n; });
     }
   };
@@ -435,6 +442,56 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
 
   const handleStopAll = async () => {
     await Promise.all(Object.keys(listeners).map(handleStopListen));
+  };
+
+  const clearFeed = () => {
+    allMsgsRef.current = [];
+    pendingRef.current = [];
+    clearTimeout(flushTimer.current);
+    flushTimer.current = null;
+    pageRef.current = 1;
+    feedRef.current?.replaceChildren();
+    setPager({ total: 0, page: 1, totalPages: 1 });
+  };
+
+  const handleClear = async () => {
+    await Promise.all(Object.keys(listeners).map(handleStopListen));
+    groupIds.current = {};
+    clearFeed();
+  };
+
+  const handleNext = async () => {
+    const activeTopics = Object.keys(listeners);
+    if (!activeTopics.length) return;
+    const conn = savedConns.find((c) => c.id === selectedId);
+    if (!conn) return;
+
+    // Stop current consumers (clears consumerIds.current entries)
+    await Promise.all(activeTopics.map(handleStopListen));
+    clearFeed();
+
+    // Restart with the same groupIds so Kafka continues from committed offset
+    const newListeners = {};
+    await Promise.all(activeTopics.map(async (topic) => {
+      const consumerId = uuidv4();
+      const groupId = groupIds.current[topic];
+      consumerIds.current[topic] = consumerId;
+      newListeners[topic] = consumerId;
+      try {
+        await window.electronAPI.kafkaConsumeStart({
+          consumerId,
+          connection: { brokers: conn.brokers, ssl: conn.ssl, sasl: conn.sasl },
+          topics: [topic],
+          maxMessages,
+          fromBeginning: false,
+          groupId,
+        });
+      } catch {
+        delete consumerIds.current[topic];
+        delete newListeners[topic];
+      }
+    }));
+    setListeners(newListeners);
   };
 
   const handleCopyCode = (topic) => {
@@ -602,7 +659,7 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
 
               {/* Unified message feed */}
               <div className="kafka-feed-section">
-                {listenedTopics.length > 0 && (
+                {(isListening || pager.total > 0) && (
                   <div className="kafka-listener-chips">
                     {visibleChips.map((topic) => (
                       <span key={topic} className="kafka-listener-chip">
@@ -613,11 +670,22 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
                     {hiddenChips.length > 0 && (
                       <ChipOverflow topics={hiddenChips} onStop={handleStopListen} />
                     )}
-                    <button
-                      className="kafka-btn kafka-btn-stop kafka-stop-all-btn"
-                      onClick={handleStopAll}
-                      title="Stop all streams"
-                    >■ All</button>
+                    <div className="kafka-feed-btns">
+                      {isListening && (
+                        <button className="kafka-btn kafka-btn-stop" onClick={handleStopAll} title="Stop all streams">■ All</button>
+                      )}
+                      <button
+                        className="kafka-btn"
+                        onClick={handleNext}
+                        disabled={!isListening}
+                        title={`Fetch next ${maxMessages} messages from committed offset`}
+                      >Next</button>
+                      <button
+                        className="kafka-btn kafka-btn-danger"
+                        onClick={handleClear}
+                        title="Stop all streams and clear messages"
+                      >Clear</button>
+                    </div>
                   </div>
                 )}
                 {pager.total === 0 && (
