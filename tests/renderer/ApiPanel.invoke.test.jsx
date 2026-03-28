@@ -476,47 +476,49 @@ describe('buildHttpClientSnippet', () => {
   });
 });
 
-// ── Inject button ─────────────────────────────────────────────────────────────
+// ── Copy as C# button ─────────────────────────────────────────────────────────
 
-describe('Inject button', () => {
-  it('shows Inject button when onInsert is provided and operation is expanded', async () => {
-    const onInsert = vi.fn();
-    render(<ApiPanel onToggle={() => {}} onInsert={onInsert} />);
-    await loadSpec();
-    await expandOp('List items');
-    expect(screen.getByRole('button', { name: /Inject/i })).toBeInTheDocument();
+describe('Copy as C# button', () => {
+  let writeText;
+
+  beforeEach(() => {
+    writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText },
+      writable: true,
+      configurable: true,
+    });
   });
 
-  it('does not show Inject button when onInsert is not provided', async () => {
+  it('shows Copy as C# button when operation is expanded', async () => {
     render(<ApiPanel onToggle={() => {}} />);
     await loadSpec();
     await expandOp('List items');
-    expect(screen.queryByRole('button', { name: /Inject/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Copy as C#/i })).toBeInTheDocument();
   });
 
-  it('calls onInsert with a C# snippet when clicked', async () => {
-    const onInsert = vi.fn();
-    render(<ApiPanel onToggle={() => {}} onInsert={onInsert} />);
+  it('copies a C# HttpClient snippet to clipboard when clicked', async () => {
+    render(<ApiPanel onToggle={() => {}} />);
     await loadSpec();
     await expandOp('List items');
-    fireEvent.click(screen.getByRole('button', { name: /Inject/i }));
-    expect(onInsert).toHaveBeenCalledOnce();
-    const snippet = onInsert.mock.calls[0][0];
+    fireEvent.click(screen.getByRole('button', { name: /Copy as C#/i }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledOnce());
+    const snippet = writeText.mock.calls[0][0];
     expect(snippet).toContain('HttpClient');
     expect(snippet).toContain('/items');
   });
 
-  it('includes auth in the injected snippet', async () => {
-    const onInsert = vi.fn();
-    render(<ApiPanel onToggle={() => {}} onInsert={onInsert} />);
+  it('includes auth in the copied snippet', async () => {
+    render(<ApiPanel onToggle={() => {}} />);
     await loadSpec();
 
     fireEvent.change(screen.getByDisplayValue('None'), { target: { value: 'bearer' } });
     fireEvent.change(screen.getByPlaceholderText('Token'), { target: { value: 'tok123' } });
 
     await expandOp('List items');
-    fireEvent.click(screen.getByRole('button', { name: /Inject/i }));
-    const snippet = onInsert.mock.calls[0][0];
+    fireEvent.click(screen.getByRole('button', { name: /Copy as C#/i }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledOnce());
+    const snippet = writeText.mock.calls[0][0];
     expect(snippet).toContain('tok123');
   });
 });

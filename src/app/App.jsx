@@ -94,7 +94,7 @@ export function App() {
     handleNew, handleLoad, handleImportPolyglot, handleOpenRecent, handleCloseTab, handleReorder,
     handleRenameTab, handleSetTabColor, handleSave, handleSaveAs, handleExportHtml,
     handleOpenDocs, handleCloseDocs, handleTogglePin, handleNavigateToCell,
-    handleInsertLibraryFile, handleInjectApiCall, openPinnedNotebooks,
+    handleInsertLibraryFile, openPinnedNotebooks,
   } = useNotebookManager({ cancelPendingCellsRef, saveSettingsRef });
 
   const {
@@ -781,7 +781,6 @@ export function App() {
       },
       api: {
         onToggle: () => setApiPanelOpen((v) => !v),
-        onInsert: handleInjectApiCall,
       },
       graph: {
         onToggle: nbId ? () => setNb(nbId, (n) => ({ graphPanelOpen: !n.graphPanelOpen })) : () => {},

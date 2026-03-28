@@ -539,11 +539,20 @@ function ResponsesTable({ spec, responses }) {
   );
 }
 
-function Operation({ spec, method, path, op, expanded, onToggle, tryItOpen, onToggleTryIt, onInject, auth, baseUrl }) {
+function Operation({ spec, method, path, op, expanded, onToggle, tryItOpen, onToggleTryIt, auth, baseUrl }) {
   const sw2Body      = !op.requestBody && spec.swagger ? getSwagger2BodyInfo(spec, op) : null;
   const displayParams = sw2Body
     ? (op.parameters ?? []).filter(p => p.in !== 'body')
     : op.parameters ?? [];
+  const [copied, setCopied] = useState(false);
+
+  function copyAsCs() {
+    const snippet = buildHttpClientSnippet(method, path, op, baseUrl, auth, spec);
+    navigator.clipboard.writeText(snippet).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  }
 
   return (
     <div className={`api-op${expanded ? ' api-op-expanded' : ''}`}>
@@ -595,15 +604,13 @@ function Operation({ spec, method, path, op, expanded, onToggle, tryItOpen, onTo
             >
               {tryItOpen ? '▾ Try it' : '▸ Try it'}
             </button>
-            {onInject && (
-              <button
-                className="api-inject-btn"
-                onClick={() => onInject(buildHttpClientSnippet(method, path, op, baseUrl, auth, spec))}
-                title="Inject C# HttpClient call into the active cell or a new cell"
-              >
-                {'{ }'} Inject
-              </button>
-            )}
+            <button
+              className="api-inject-btn"
+              onClick={copyAsCs}
+              title="Copy C# HttpClient snippet to clipboard"
+            >
+              {copied ? '✓ Copied!' : '{ } Copy as C#'}
+            </button>
           </div>
           {tryItOpen && (
             <TryItForm
@@ -621,7 +628,7 @@ function Operation({ spec, method, path, op, expanded, onToggle, tryItOpen, onTo
   );
 }
 
-function TagGroup({ spec, tag, operations, expanded, onToggleTag, expandedOps, onToggleOp, expandedTryIt, onToggleTryIt, onInject, auth, baseUrl }) {
+function TagGroup({ spec, tag, operations, expanded, onToggleTag, expandedOps, onToggleOp, expandedTryIt, onToggleTryIt, auth, baseUrl }) {
   return (
     <div className="api-tag">
       <button className="api-tag-header" onClick={() => onToggleTag(tag)}>
@@ -642,7 +649,6 @@ function TagGroup({ spec, tag, operations, expanded, onToggleTag, expandedOps, o
             onToggle={() => onToggleOp(opKey)}
             tryItOpen={expandedTryIt.has(opKey)}
             onToggleTryIt={() => onToggleTryIt(opKey)}
-            onInject={onInject}
             auth={auth}
             baseUrl={baseUrl}
           />
@@ -654,7 +660,7 @@ function TagGroup({ spec, tag, operations, expanded, onToggleTag, expandedOps, o
 
 // ── ApiPanel ──────────────────────────────────────────────────────────────────
 
-export function ApiPanel({ onToggle, onInsert }) {
+export function ApiPanel({ onToggle }) {
   const [url,          setUrl]          = useState('');
   const [spec,         setSpec]         = useState(null);
   const [error,        setError]        = useState(null);
@@ -819,7 +825,6 @@ export function ApiPanel({ onToggle, onInsert }) {
                 onToggleOp={toggleOp}
                 expandedTryIt={expandedTryIt}
                 onToggleTryIt={toggleTryIt}
-                onInject={onInsert}
                 auth={auth}
                 baseUrl={baseUrl}
               />

@@ -315,23 +315,6 @@ export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef }) {
     }, 50);
   }, [setNbDirty]);
 
-  const handleInjectApiCall = useCallback((content) => {
-    const nbId = activeIdRef.current;
-    if (!isNotebookId(nbId)) return;
-    const last = lastFocusedCodeCellRef.current;
-    if (last?.nbId === nbId && last?.cellId) {
-      const cellWrapper = document.querySelector(
-        `.notebook-pane[data-nb="${nbId}"] .cell-wrapper[data-cell-id="${last.cellId}"]`
-      );
-      setNbDirty(nbId, (n) => ({
-        cells: n.cells.map((c) => c.id === last.cellId ? { ...c, content } : c),
-      }));
-      if (cellWrapper) setTimeout(() => scrollAndFlash(cellWrapper), 50);
-    } else {
-      handleInsertLibraryFile(content);
-    }
-  }, [setNbDirty, handleInsertLibraryFile]); // eslint-disable-line react-hooks/exhaustive-deps
-
   // ── HTML export ────────────────────────────────────────────────────────────
 
   const handleExportHtml = useCallback(async () => {
@@ -483,7 +466,6 @@ ${cellsHtml}
     handleTogglePin,
     handleNavigateToCell,
     handleInsertLibraryFile,
-    handleInjectApiCall,
     openPinnedNotebooks,
   };
 }
