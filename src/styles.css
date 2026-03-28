@@ -2325,8 +2325,6 @@ body {
 .tab:hover .tab-action,
 .tab.tab-active .tab-action { opacity: 1; }
 .tab-action:hover { background: var(--bg-elevated); color: var(--text-primary); }
-/* In non-tab contexts (panel header) the button is always visible */
-.kafka-panel-tab-btn { opacity: 1; }
 
 .tab-color-btn {
   background: transparent;
@@ -3877,6 +3875,22 @@ body {
   align-items: center;
 }
 .dock-zone-tab-close:hover { opacity: 1; color: var(--status-error); }
+
+.dock-zone-tab-action {
+  opacity: 0.35;
+  font-size: 9px;
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--text-muted);
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.dock-zone-tab-action:hover { opacity: 1; color: var(--text-primary); background: var(--bg-elevated); }
 
 /* Scroll-shadow indicators — appear at the edges when the tab bar overflows */
 .dock-zone-tabbar.scroll-shadow-left  { box-shadow: inset 18px 0 10px -10px rgba(0,0,0,0.4); }

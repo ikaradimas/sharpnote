@@ -404,9 +404,6 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
     <div className="kafka-panel">
       <div className="kafka-panel-header">
         <span className="kafka-panel-title">Kafka Browser</span>
-        {!asTab && (
-          <button className="tab-action kafka-panel-tab-btn" onClick={onOpenAsTab} title="Open as tab">↗</button>
-        )}
         {!asTab && <button className="log-close-btn kafka-panel-close-btn" onClick={onToggle} title="Close">×</button>}
       </div>
 

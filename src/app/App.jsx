@@ -818,6 +818,9 @@ export function App() {
       kafka: {
         onToggle: () => setKafkaPanelOpen((v) => !v),
         onOpenAsTab: () => { setKafkaPanelOpen(false); handleOpenKafkaTab(); },
+        onTabAction: () => { setKafkaPanelOpen(false); handleOpenKafkaTab(); },
+        onTabActionIcon: '↗',
+        onTabActionTitle: 'Open as tab',
       },
       graph: {
         onToggle: nbId ? () => setNb(nbId, (n) => ({ graphPanelOpen: !n.graphPanelOpen })) : () => {},
