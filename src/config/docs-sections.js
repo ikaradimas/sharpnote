@@ -136,7 +136,7 @@ export const DOCS_SECTIONS = [
         'graph — interactive Chart.js graph rendered from a config object',
       ]},
       { type: 'h3', text: 'Autocomplete & Lint' },
-      { type: 'p', text: 'The code editor requests completions from the kernel as you type (Roslyn-powered). Press Tab to accept a suggestion (Enter inserts a newline as usual). The editor also performs background linting and underlines errors with squiggles before you run.' },
+      { type: 'p', text: 'The C# editor connects to a Roslyn LSP server running inside the kernel via a named pipe. Completions, hover documentation, and real-time semantic diagnostics (type errors, undefined variables, and more) are all powered by Roslyn Workspace APIs. Press Tab to accept a suggestion (Enter inserts a newline as usual). Squiggles appear as you type whenever the kernel is running.' },
       { type: 'h3', text: 'Auto-Run on Open' },
       { type: 'p', text: 'Click the ⚡ button in the notebook toolbar to enable auto-run mode for that notebook. When enabled, all code cells are automatically executed in order as soon as the notebook opens and the kernel becomes ready — useful for notebooks that serve as dashboards or setup scripts. The ⚡ state is saved in the .cnb file and persists between sessions.' },
       { type: 'h3', text: 'Find in Notebook' },
@@ -631,7 +631,7 @@ export const DOCS_SECTIONS = [
       { type: 'ul', items: [
         'Editor Font Size — drag the slider (10–28 px) to resize the notebook editor font; a live preview updates as you drag. The Reset button restores the default of 12.6 px. The keyboard shortcuts ⌘= / ⌘- / ⌘0 still work outside the dialog.',
         'Panel Font Size — drag the slider (8–18 px) to scale all panel content (Logs, Variables, DB, etc.) uniformly. The Reset button restores the default of 11.5 px.',
-        'Code Editor — Alternating row colors: toggle alternating background shading on editor lines. Code diagnostics: when enabled, the editor shows C# errors and warnings as squiggles while typing; disable to suppress diagnostics.',
+        'Code Editor — Alternating row colors: toggle alternating background shading on editor lines. Code diagnostics: when enabled, the editor shows C# semantic errors and warnings as squiggles while typing (powered by Roslyn LSP); disable to suppress diagnostics.',
         'Theme — click any theme tile to switch the colour scheme immediately. Eight built-in themes are available: kl1nt, Nord, Dracula, Tokyo Night, Monokai, Catppuccin, Solarized Dark, and GitHub Light.',
       ]},
       { type: 'h3', text: 'Paths' },

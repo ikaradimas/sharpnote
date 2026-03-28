@@ -36,6 +36,12 @@ partial class Program
     // Cancellation token source for the current execution (set/cleared per execute)
     private static CancellationTokenSource? _execCts;
 
+    // Roslyn workspace — shared across all handlers for completions, diagnostics, and signature help
+    private static readonly WorkspaceManager _workspaceManager = new();
+
+    // LSP server — exposes workspace over a named pipe; started during init
+    private static readonly LspServer _lspServer = new(_workspaceManager);
+
     // ID of the cell currently being executed — set by HandleExecute, read by DbHelper
     internal static string? CurrentCellId;
     private static readonly Dictionary<string, JsonElement> _widgetValues = new();
@@ -95,7 +101,8 @@ partial class Program
             _execCts?.Cancel();
         });
 
-        realStdout.WriteLine(JsonSerializer.Serialize(new { type = "ready" }));
+        _lspServer.Start();
+        realStdout.WriteLine(JsonSerializer.Serialize(new { type = "ready", lspPipe = _lspServer.ConnectPath }));
 
         // ── Background memory reporter ────────────────────────────────────────
         var memCts = new CancellationTokenSource();
@@ -217,13 +224,13 @@ partial class Program
 
                 case "lint":
                 {
-                    HandleLint(msg, realStdout);
+                    await HandleLint(msg, realStdout);
                     break;
                 }
 
                 case "autocomplete":
                 {
-                    HandleAutocomplete(msg, realStdout);
+                    await HandleAutocomplete(msg, realStdout);
                     break;
                 }
 

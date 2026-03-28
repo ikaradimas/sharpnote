@@ -325,20 +325,20 @@ describe('Shortcuts section', () => {
 describe('Appearance — lintEnabled toggle', () => {
   it('renders the linter toggle checkbox', () => {
     render(<SettingsDialog {...makeProps({ lintEnabled: true, onLintEnabledChange: vi.fn() })} />);
-    expect(screen.getByText(/Code linter/)).toBeInTheDocument();
+    expect(screen.getByText(/Code diagnostics/)).toBeInTheDocument();
   });
 
   it('checkbox is checked when lintEnabled=true', () => {
     render(<SettingsDialog {...makeProps({ lintEnabled: true, onLintEnabledChange: vi.fn() })} />);
     const checkboxes = document.querySelectorAll('.settings-toggle-row input[type="checkbox"]');
-    const lintBox = [...checkboxes].find((cb) => cb.closest('.settings-toggle-row')?.textContent?.includes('Code linter'));
+    const lintBox = [...checkboxes].find((cb) => cb.closest('.settings-toggle-row')?.textContent?.includes('Code diagnostics'));
     expect(lintBox?.checked).toBe(true);
   });
 
   it('checkbox is unchecked when lintEnabled=false', () => {
     render(<SettingsDialog {...makeProps({ lintEnabled: false, onLintEnabledChange: vi.fn() })} />);
     const checkboxes = document.querySelectorAll('.settings-toggle-row input[type="checkbox"]');
-    const lintBox = [...checkboxes].find((cb) => cb.closest('.settings-toggle-row')?.textContent?.includes('Code linter'));
+    const lintBox = [...checkboxes].find((cb) => cb.closest('.settings-toggle-row')?.textContent?.includes('Code diagnostics'));
     expect(lintBox?.checked).toBe(false);
   });
 
@@ -346,7 +346,7 @@ describe('Appearance — lintEnabled toggle', () => {
     const onLintChange = vi.fn();
     render(<SettingsDialog {...makeProps({ lintEnabled: true, onLintEnabledChange: onLintChange })} />);
     const checkboxes = document.querySelectorAll('.settings-toggle-row input[type="checkbox"]');
-    const lintBox = [...checkboxes].find((cb) => cb.closest('.settings-toggle-row')?.textContent?.includes('Code linter'));
+    const lintBox = [...checkboxes].find((cb) => cb.closest('.settings-toggle-row')?.textContent?.includes('Code diagnostics'));
     fireEvent.click(lintBox);
     expect(onLintChange).toHaveBeenCalledWith(false);
   });
@@ -355,7 +355,7 @@ describe('Appearance — lintEnabled toggle', () => {
     const onLintChange = vi.fn();
     render(<SettingsDialog {...makeProps({ lintEnabled: false, onLintEnabledChange: onLintChange })} />);
     const checkboxes = document.querySelectorAll('.settings-toggle-row input[type="checkbox"]');
-    const lintBox = [...checkboxes].find((cb) => cb.closest('.settings-toggle-row')?.textContent?.includes('Code linter'));
+    const lintBox = [...checkboxes].find((cb) => cb.closest('.settings-toggle-row')?.textContent?.includes('Code diagnostics'));
     fireEvent.click(lintBox);
     expect(onLintChange).toHaveBeenCalledWith(true);
   });

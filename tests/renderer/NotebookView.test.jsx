@@ -39,8 +39,6 @@ const defaultProps = (overrides = {}) => ({
   onRunFrom: vi.fn(),
   onRunTo: vi.fn(),
   onRename: vi.fn(),
-  requestCompletions: vi.fn(),
-  requestLint: vi.fn(),
   libraryPanelOpen: false,
   onToggleLibrary: vi.fn(),
   filesPanelOpen: false,

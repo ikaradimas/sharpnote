@@ -1,6 +1,5 @@
 import { useRef, useCallback, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { COMPLETION_TIMEOUT, LINT_TIMEOUT, SIGNATURE_TIMEOUT } from '../constants.js';
 
 /**
  * Manages kernel communication: message routing, cell execution,
@@ -18,10 +17,7 @@ import { COMPLETION_TIMEOUT, LINT_TIMEOUT, SIGNATURE_TIMEOUT } from '../constant
  * @param {function} opts.setDbConnections    - DB connections state setter
  */
 export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVarInspectDialog, onPanelVisible, onPanelDock, onPanelFloat, onPanelCloseAll, setDbConnections }) {
-  const pendingResolversRef   = useRef({});
-  const pendingCompletionsRef = useRef({});
-  const pendingLintRef        = useRef({});
-  const pendingSignatureRef   = useRef({});
+  const pendingResolversRef = useRef({});
   const prevVarsSnapRef       = useRef({});
   const runAllRef             = useRef(null);
 
@@ -170,33 +166,6 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
 
             return { running: next, cellResults: { ...(n.cellResults || {}), [msg.id]: result }, staleCellIds, ...extra };
           });
-          break;
-        }
-
-        case 'autocomplete_result': {
-          const resolve = pendingCompletionsRef.current[msg.requestId];
-          if (resolve) {
-            delete pendingCompletionsRef.current[msg.requestId];
-            resolve(msg.items || []);
-          }
-          break;
-        }
-
-        case 'lint_result': {
-          const resolve = pendingLintRef.current[msg.requestId];
-          if (resolve) {
-            delete pendingLintRef.current[msg.requestId];
-            resolve(msg.diagnostics || []);
-          }
-          break;
-        }
-
-        case 'signature_result': {
-          const resolve = pendingSignatureRef.current[msg.requestId];
-          if (resolve) {
-            delete pendingSignatureRef.current[msg.requestId];
-            resolve({ signatures: msg.signatures || [], activeParam: msg.activeParam || 0 });
-          }
           break;
         }
 
@@ -547,53 +516,6 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
     window.electronAPI.resetKernel(notebookId);
   }, [setNb, cancelPendingCells]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Completions & lint ─────────────────────────────────────────────────────
-
-  const requestCompletions = useCallback((notebookId, code, position) => {
-    return new Promise((resolve) => {
-      if (!window.electronAPI) return resolve([]);
-      const requestId = uuidv4();
-      pendingCompletionsRef.current[requestId] = resolve;
-      window.electronAPI.sendToKernel(notebookId, { type: 'autocomplete', requestId, code, position });
-      setTimeout(() => {
-        if (pendingCompletionsRef.current[requestId]) {
-          delete pendingCompletionsRef.current[requestId];
-          resolve([]);
-        }
-      }, COMPLETION_TIMEOUT);
-    });
-  }, []);
-
-  const requestLint = useCallback((notebookId, code) => {
-    return new Promise((resolve) => {
-      if (!window.electronAPI) return resolve([]);
-      const requestId = uuidv4();
-      pendingLintRef.current[requestId] = resolve;
-      window.electronAPI.sendToKernel(notebookId, { type: 'lint', requestId, code });
-      setTimeout(() => {
-        if (pendingLintRef.current[requestId]) {
-          delete pendingLintRef.current[requestId];
-          resolve([]);
-        }
-      }, LINT_TIMEOUT);
-    });
-  }, []);
-
-  const requestSignature = useCallback((notebookId, code, position) => {
-    return new Promise((resolve) => {
-      if (!window.electronAPI) return resolve(null);
-      const requestId = uuidv4();
-      pendingSignatureRef.current[requestId] = resolve;
-      window.electronAPI.sendToKernel(notebookId, { type: 'signature', requestId, code, position });
-      setTimeout(() => {
-        if (pendingSignatureRef.current[requestId]) {
-          delete pendingSignatureRef.current[requestId];
-          resolve(null);
-        }
-      }, SIGNATURE_TIMEOUT);
-    });
-  }, []);
-
   return {
     runCell,
     runSqlCell,
@@ -602,9 +524,6 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
     runTo,
     handleInterrupt,
     handleReset,
-    requestCompletions,
-    requestLint,
-    requestSignature,
     cancelPendingCells,
   };
 }

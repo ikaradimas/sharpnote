@@ -84,8 +84,7 @@
 - **C# REPL** — each cell is evaluated using Roslyn scripting; state is shared across cells within a notebook, with `using`/`#r` directives supported
 - **Per-notebook kernel** — every open notebook gets its own isolated .NET process; kernels start on demand and can be reset independently
 - **Cell execution control** — Run, Stop (interrupt via cancellation token injection), Run From Here, Run To Here
-- **Autocomplete** — Roslyn `ResolveCompletion` backed; falls back to a C# keyword list while the kernel is starting; Tab accepts a completion (Enter remains a normal newline); a toggle in Settings → Appearance enables or disables the live linter
-- **Lint** — real-time Roslyn diagnostics; squiggles rendered via the CodeMirror lint extension
+- **Autocomplete & Lint** — Roslyn LSP server runs inside each kernel process; the editor connects via a named pipe using `codemirror-languageserver`; completions, hover docs, and full semantic diagnostics (type errors, undefined variables, etc.) stream in real time; Tab accepts a completion (Enter remains a normal newline); a toggle in Settings → Appearance enables or disables diagnostics
 - **Reactive Cell Dependencies** — after a successful execution, downstream cells that reference any variable whose value changed are flagged with a "↺ upstream variables changed" banner, clearing automatically when those cells are run
 - **Cell Output History** — re-running a cell preserves the previous outputs; a ‹ › navigator in the cell footer lets you browse the last 5 runs to compare results across executions
 - **`Util` helper** — LinqPAD-compatible utilities available as a global: `.Dump()` / `.DumpTable()` aliases, `Util.Cmd()` shell command execution, `Util.Time()` benchmarking, `Util.Dif()` LCS line diff, `Util.HorizontalRun()` side-by-side layout, `Util.Metatext()` / `Util.Highlight()` styled output, `Util.Cache<T>()` cross-execution memoization cleared on kernel reset, `Util.ConfirmAsync()` interactive OK/Cancel dialogs that pause execution, `Util.PromptAsync()` text-input dialogs
@@ -184,7 +183,7 @@ The UI is organized across `src/app/`, `src/components/`, `src/hooks/`, and `src
 |---|---|
 | `App` | Root state owner — notebooks array, dock layout, DB connections, saved layouts, drag state |
 | `NotebookView` | Toolbar + scrollable cells list for one notebook |
-| `CodeCell` | CodeMirror 6 editor + run/stop/chevron controls; lint integration |
+| `CodeCell` | CodeMirror 6 editor + run/stop/chevron controls; LSP client via named pipe |
 | `OutputBlock` | Renders every kernel output type: stdout, error, html, markdown, table (DataTable), csv, graph (Chart.js), image, interrupted |
 | `TabBar` / `Tab` | Multi-notebook tabs; color picker rendered via `createPortal` to avoid z-index clipping |
 | `FilesPanel` | File explorer with breadcrumb navigation, inline rename, drag-free delete |
@@ -242,7 +241,7 @@ The kernel is a self-contained .NET 10 console application that communicates wit
 
 | File | Responsibility |
 |---|---|
-| `Program.cs` | Protocol loop, Roslyn script execution, autocomplete, lint, NuGet directive parsing, cancellation token injection, variable snapshot, display system |
+| `Program.cs` | Protocol loop, Roslyn script execution, NuGet directive parsing, cancellation token injection, variable snapshot, display system; starts the LSP server on a named pipe |
 | `DbProvider.cs` | `IDbProvider` interface + SQLite / SQL Server / PostgreSQL implementations; schema introspection via `IntrospectAsync` |
 | `DbCodeGen.cs` | POCO class + `DbContext` code generation from a `DbSchema`; Roslyn in-memory compilation and injection |
 
@@ -319,7 +318,12 @@ if (await Util.ConfirmAsync("Delete all?", "Confirm"))  // interactive OK/Cancel
 
 ### IPC Protocol
 
-Messages are newline-delimited JSON objects. The renderer sends to the kernel; the kernel sends back.
+The kernel communicates over two channels:
+
+1. **JSON lines (stdin/stdout)** — execution, NuGet, DB, and lifecycle messages (below).
+2. **LSP JSON-RPC 2.0 (named pipe)** — completions, hover, and diagnostics via `StreamJsonRpc`. The pipe path is reported in the `ready` message as `lspPipe`; the Electron main process proxies it to the renderer via `lsp-send` / `lsp-receive` IPC.
+
+**Renderer → Kernel (JSON lines):**
 
 **Renderer → Kernel:**
 
@@ -328,25 +332,21 @@ Messages are newline-delimited JSON objects. The renderer sends to the kernel; t
 | `execute` | `{ id, code }` |
 | `interrupt` | `{}` |
 | `reset` | `{}` |
-| `lint` | `{ requestId, code }` |
-| `autocomplete` | `{ requestId, code, position }` |
 | `db_connect` | `{ connectionId, provider, connectionString }` |
 | `db_disconnect` | `{ connectionId }` |
 | `db_list_response` | `{ requestId, connections: [{name, provider, isAttached}] }` |
 | `widget_change` | `{ widgetKey, value }` |
 | `exit` | `{}` |
 
-**Kernel → Renderer:**
+**Kernel → Renderer (JSON lines):**
 
 | `type` | Payload |
 |---|---|
-| `ready` | — |
+| `ready` | `{ lspPipe }` — named pipe path for the LSP server |
 | `stdout` | `{ id, content }` |
 | `display` | `{ id, format, content, title? }` |
 | `error` | `{ id, message, stackTrace }` |
 | `complete` | `{ id, success, cancelled }` |
-| `lint_result` | `{ diagnostics[] }` |
-| `autocomplete_result` | `{ items[] }` |
 | `vars_update` | `{ vars[] }` |
 | `var_point` | `{ name, value }` — from `Display.Plot`; consumed by the Graph panel |
 | `graph_clear` | — — from `Display.ClearGraph`; clears all Graph panel series |
@@ -730,8 +730,8 @@ dotnet test kernel/kernel.Tests/kernel.Tests.csproj --logger console
 | `DbProviderTests` | Real SQLite temp DB — `IntrospectAsync`, column type mapping, PK detection |
 | `CancellationInjectorTests` | Roslyn rewriter injects `ThrowIfCancellationRequested` into `while`/`for`/`foreach`/`do-while` |
 | `NugetDirectiveTests` | `ParseNugetDirectives` — versioned, unversioned, line preservation, case insensitivity |
-| `LintTests` | `GetLintDiagnostics` — zero errors on valid code, ≥1 on syntax errors, offset validation |
-| `KernelProtocolTests` | **Subprocess integration** — spawns the real kernel via `dotnet run`, exercises the full JSON-line protocol: execute, display, shared state, invalid code, reset, lint, autocomplete, vars_update |
+| `LintTests` | `GetDiagnosticsAsync` (Roslyn Workspace) — zero errors on valid code, ≥1 on semantic type errors, offset validation |
+| `KernelProtocolTests` | **Subprocess integration** — spawns the real kernel via `dotnet run`, exercises the full JSON-line protocol: execute, display, shared state, invalid code, reset, vars_update |
 
 ---
 

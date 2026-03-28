@@ -3,6 +3,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 // WeakMaps to track wrapper functions so removeListener works correctly
 const kernelMessageWrappers = new WeakMap();
 const logEntryWrappers = new WeakMap();
+const lspReceiveWrappers = new WeakMap();
 
 contextBridge.exposeInMainWorld('electronAPI', {
   // Dialogs
@@ -118,6 +119,23 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // API Browser — request execution (proxied through main for CSP + auth header freedom)
   apiRequest: (opts) => ipcRenderer.invoke('api-request', opts),
+
+  // LSP proxy — send/receive raw LSP wire messages over the kernel named pipe
+  lspSend: (notebookId, data) => ipcRenderer.send('lsp-send', { notebookId, data }),
+  onLspReceive: (notebookId, callback) => {
+    const wrapper = (_event, payload) => {
+      if (payload.notebookId === notebookId) callback(payload.data);
+    };
+    lspReceiveWrappers.set(callback, wrapper);
+    ipcRenderer.on('lsp-receive', wrapper);
+  },
+  offLspReceive: (callback) => {
+    const wrapper = lspReceiveWrappers.get(callback);
+    if (wrapper) {
+      ipcRenderer.removeListener('lsp-receive', wrapper);
+      lspReceiveWrappers.delete(callback);
+    }
+  },
 
   // Renderer-side logging (appears in Logs panel)
   rendererLog: (tag, message) => ipcRenderer.send('renderer-log', { tag, message }),

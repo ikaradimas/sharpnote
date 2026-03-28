@@ -26,8 +26,6 @@ const defaultProps = (overrides = {}) => ({
   onMoveDown: vi.fn(),
   onOutputModeChange: vi.fn(),
   onToggleLock: vi.fn(),
-  requestCompletions: vi.fn(),
-  requestLint: vi.fn(),
   ...overrides,
 });
 
@@ -222,19 +220,3 @@ describe('CodeCell – execution timer', () => {
   });
 });
 
-// ── lintEnabled prop ───────────────────────────────────────────────────────────
-
-describe('CodeCell – lintEnabled prop', () => {
-  it('renders without error when lintEnabled=true', () => {
-    expect(() => render(<CodeCell {...defaultProps({ lintEnabled: true })} />)).not.toThrow();
-  });
-
-  it('renders without error when lintEnabled=false', () => {
-    expect(() => render(<CodeCell {...defaultProps({ lintEnabled: false })} />)).not.toThrow();
-  });
-
-  it('lintEnabled defaults to true (renders without the prop)', () => {
-    // Omit lintEnabled — component should render using default value
-    expect(() => render(<CodeCell {...defaultProps()} />)).not.toThrow();
-  });
-});

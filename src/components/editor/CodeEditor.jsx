@@ -1,42 +1,228 @@
 import React, { useEffect, useRef } from 'react';
-import { EditorState, StateEffect, StateField, Compartment, Prec } from '@codemirror/state';
-import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter, showTooltip } from '@codemirror/view';
+import { EditorState, StateEffect, StateField, Prec, Compartment } from '@codemirror/state';
+import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter, hoverTooltip, showTooltip } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { StreamLanguage } from '@codemirror/language';
 import { csharp } from '@codemirror/legacy-modes/mode/clike';
-import { autocompletion, completionKeymap, acceptCompletion } from '@codemirror/autocomplete';
-import { linter } from '@codemirror/lint';
-import { CSHARP_KEYWORDS } from '../../config/csharp-keywords.js';
+import { acceptCompletion, autocompletion } from '@codemirror/autocomplete';
+import { LanguageServerClient, languageServerPlugin, jumpToDefinitionKeymap, jumpToDefinitionPos } from 'codemirror-languageserver';
+import { ElectronLspTransport } from './lspTransport.js';
 
 // ── Cursor position broadcast ─────────────────────────────────────────────────
 // Any focused CodeEditor writes here; StatusBar subscribes via register fn.
 export let _setCursorPos = null;
 export function registerCursorPosSetter(fn) { _setCursorPos = fn; }
 
+// ── LSP helpers ───────────────────────────────────────────────────────────────
+
+const CompletionTriggerKind = { Invoked: 1, TriggerCharacter: 2 };
+
+function offsetToPos(doc, offset) {
+  const line = doc.lineAt(offset);
+  return { line: line.number - 1, character: offset - line.from };
+}
+
+// ── Signature help ────────────────────────────────────────────────────────────
+
+const sigHelpEffect = StateEffect.define();
+
+const sigHelpField = StateField.define({
+  create: () => null,
+  update(value, tr) {
+    for (const e of tr.effects) {
+      if (e.is(sigHelpEffect)) return e.value;
+    }
+    if (!value) return null;
+    if (!tr.docChanged) {
+      // Cursor moved (arrow keys, click) — dismiss if before the ( anchor.
+      if (tr.selection && tr.newSelection.main.head < value.pos) return null;
+      return value;
+    }
+    // Map the ( anchor through the document changes.
+    const mapped = tr.changes.mapPos(value.pos, -1);
+    // If mapped moved backwards, content at/before ( was deleted — dismiss.
+    // If cursor is now before the anchor — dismiss.
+    if (mapped < value.pos || tr.newSelection.main.head < mapped) return null;
+    return { ...value, pos: mapped };
+  },
+  provide: f => showTooltip.from(f, info => {
+    if (!info) return null;
+    const sig = info.signatures?.[info.activeSignature ?? 0];
+    if (!sig) return null;
+    const activeParam = info.activeParameter ?? sig.activeParameter ?? 0;
+    const param = sig.parameters?.[activeParam];
+    return {
+      pos: info.pos,
+      above: true,
+      create() {
+        const dom = document.createElement('div');
+        dom.className = 'cm-signature-help';
+        if (param?.label != null && Array.isArray(param.label)) {
+          const [start, end] = param.label;
+          dom.append(
+            document.createTextNode(sig.label.slice(0, start)),
+            Object.assign(document.createElement('span'), {
+              className: 'cm-sig-active',
+              textContent: sig.label.slice(start, end),
+            }),
+            document.createTextNode(sig.label.slice(end)),
+          );
+        } else {
+          dom.textContent = sig.label;
+        }
+        return { dom };
+      },
+    };
+  }),
+});
+
+function buildSigHelpListener(documentUri) {
+  return EditorView.updateListener.of(async (update) => {
+    if (!update.docChanged) return;
+    const { view, state } = update;
+
+    // Only act on single-character insertions (normal typing).
+    let lastChar = null;
+    update.changes.iterChanges((fromA, toA, _fromB, _toB, inserted) => {
+      if (fromA === toA && inserted.length === 1) lastChar = inserted.sliceString(0, 1);
+    });
+
+    if (lastChar === ')') {
+      view.dispatch({ effects: sigHelpEffect.of(null) });
+      return;
+    }
+    if (lastChar !== '(' && lastChar !== ',') return;
+
+    const plugin = view.plugin(languageServerPlugin);
+    if (!plugin?.client?.ready) return;
+
+    const pos = state.selection.main.head;
+    try {
+      const result = await plugin.client.request(
+        'textDocument/signatureHelp',
+        {
+          textDocument: { uri: documentUri },
+          position: offsetToPos(state.doc, pos),
+          context: { triggerKind: 2, triggerCharacter: lastChar, isRetrigger: lastChar === ',' },
+        },
+        5000,
+      );
+      view.dispatch({
+        effects: sigHelpEffect.of(result?.signatures?.length ? { pos, ...result } : null),
+      });
+    } catch {
+      view.dispatch({ effects: sigHelpEffect.of(null) });
+    }
+  });
+}
+
+// ── LSP extension builder ─────────────────────────────────────────────────────
+//
+// Builds the full set of LSP extensions manually instead of using
+// languageServerWithTransport, for two reasons:
+//
+//   1. Completions: the built-in autocompletion() returns `filter: false`, which
+//      sets the default validFor to /^$/ and causes the popup to close on the
+//      very next keystroke.  We wrap requestCompletion to return
+//      `filter: true, validFor: /^\w*$/` so CodeMirror keeps the popup open
+//      and filters the existing list as the user types.
+//
+//   2. Signature help: codemirror-languageserver declares the signatureHelp
+//      capability but never requests it.  We add a document-update listener
+//      that fires textDocument/signatureHelp on ( and , and shows the result
+//      in a CodeMirror tooltip.
+
+function buildLspExtensions(notebookId) {
+  const documentUri = `file:///script-${notebookId}.csx`;
+  const client = new LanguageServerClient({
+    transport: new ElectronLspTransport(notebookId),
+    rootUri: null,
+    workspaceFolders: null,
+    autoClose: true,
+  });
+
+  return [
+    languageServerPlugin.of({ client, documentUri, languageId: 'csharp' }),
+
+    // Hover documentation tooltip
+    hoverTooltip((view, pos) => {
+      const plugin = view.plugin(languageServerPlugin);
+      return plugin?.requestHoverTooltip(view, offsetToPos(view.state.doc, pos)) ?? null;
+    }),
+
+    // Completions — wraps the plugin's requestCompletion so the popup stays open
+    // as the user types (filter: true + validFor) instead of closing immediately.
+    autocompletion({
+      override: [
+        async (context) => {
+          const { state, pos, explicit, view } = context;
+          const plugin = view.plugin(languageServerPlugin);
+          if (!plugin) return null;
+
+          const line = state.doc.lineAt(pos);
+          let trigKind = CompletionTriggerKind.Invoked;
+          let trigChar;
+          const trigChars = plugin.client?.capabilities?.completionProvider?.triggerCharacters;
+          if (!explicit && trigChars?.includes(line.text[pos - line.from - 1])) {
+            trigKind = CompletionTriggerKind.TriggerCharacter;
+            trigChar = line.text[pos - line.from - 1];
+          }
+          if (trigKind === CompletionTriggerKind.Invoked && !context.matchBefore(/\w+$/)) return null;
+
+          const result = await plugin.requestCompletion(
+            context,
+            offsetToPos(state.doc, pos),
+            { triggerCharacter: trigChar, triggerKind: trigKind },
+          );
+          if (!result) return null;
+          return { ...result, filter: true, validFor: /^\w*$/ };
+        },
+      ],
+    }),
+
+    // Jump-to-definition (keyboard + Ctrl/Cmd+Click)
+    keymap.of([
+      ...jumpToDefinitionKeymap,
+      {
+        key: 'Escape',
+        run(view) {
+          if (!view.state.field(sigHelpField, false)) return false;
+          view.dispatch({ effects: sigHelpEffect.of(null) });
+          return true;
+        },
+      },
+    ]),
+    EditorView.domEventHandlers({
+      mousedown(event, view) {
+        if (!event.ctrlKey && !event.metaKey) return;
+        const p = view.posAtCoords({ x: event.clientX, y: event.clientY });
+        if (p == null) return;
+        if (jumpToDefinitionPos(p)(view)) event.preventDefault();
+      },
+    }),
+
+    // Signature help
+    sigHelpField,
+    buildSigHelpListener(documentUri),
+  ];
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
+
 export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
-                      onRequestCompletions, onRequestLint, onRequestSignature, readOnly = false,
-                      lintEnabled = true, cellIndex = null }) {
+                      notebookId, readOnly = false, cellIndex = null }) {
   const containerRef = useRef(null);
   const viewRef = useRef(null);
   const onChangeRef = useRef(onChange);
   const onCtrlEnterRef = useRef(onCtrlEnter);
-  const completionsRef = useRef(onRequestCompletions);
-  const lintRef = useRef(onRequestLint);
-  const signatureRef = useRef(onRequestSignature);
   const readOnlyCompartmentRef = useRef(null);
-  const lintCompartmentRef     = useRef(null);
-  const lintEnabledRef         = useRef(lintEnabled);
   const cellIndexRef = useRef(cellIndex);
 
   useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
   useEffect(() => { onCtrlEnterRef.current = onCtrlEnter; }, [onCtrlEnter]);
-  useEffect(() => { completionsRef.current = onRequestCompletions; }, [onRequestCompletions]);
-  useEffect(() => { lintRef.current = onRequestLint; }, [onRequestLint]);
-  useEffect(() => { signatureRef.current = onRequestSignature; }, [onRequestSignature]);
   useEffect(() => { cellIndexRef.current = cellIndex; }, [cellIndex]);
-  useEffect(() => { lintEnabledRef.current = lintEnabled; }, [lintEnabled]);
 
   // Toggle read-only without recreating the editor
   useEffect(() => {
@@ -75,8 +261,6 @@ export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
 
     const readOnlyCompartment = new Compartment();
     readOnlyCompartmentRef.current = readOnlyCompartment;
-    const lintCompartment = new Compartment();
-    lintCompartmentRef.current = lintCompartment;
 
     const extensions = [
       history(),
@@ -93,179 +277,16 @@ export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
       readOnlyCompartment.of(EditorState.readOnly.of(readOnly)),
     ];
 
-    if (language === 'csharp') {
-      const keywordSource = (ctx) => {
-        // Suppress keyword list in member-access context — the async dynamicSource
-        // will return the correct member list and we don't want keyword noise.
-        const textBefore = ctx.state.doc.sliceString(0, ctx.pos);
-        if (/\w\.\w*$/.test(textBefore)) return null;
-
-        const word = ctx.matchBefore(/\w*/);
-        if (!word || (word.from === word.to && !ctx.explicit)) return null;
-        return {
-          from: word.from,
-          options: CSHARP_KEYWORDS.map((kw) => ({ label: kw, type: 'keyword' })),
-          validFor: /^\w*$/,
-        };
-      };
-
-      const dynamicSource = async (ctx) => {
-        const fn = completionsRef.current;
-        if (!fn) return null;
-        const code = ctx.state.doc.toString();
-        const pos  = ctx.pos;
-        const textBefore = code.slice(0, pos);
-        const isMemberAccess = /\w\.$/.test(textBefore) || /\w\.\w+$/.test(textBefore);
-        const word = ctx.matchBefore(/\w*/);
-        if (!isMemberAccess && !ctx.explicit && (!word || word.text.length < 2)) return null;
-        try {
-          const items = await fn(code, pos);
-          if (items?.length) {
-            return {
-              from: word?.from ?? pos,
-              options: items.map((i) => ({ label: i.label, type: i.type || 'text', detail: i.detail })),
-              validFor: /^\w*$/,
-            };
-          }
-          // In member-access context, keep the dropdown open with a "no results" indicator
-          // instead of hiding it. Use from:pos so the filter text is always empty and the
-          // sentinel is never filtered out by CodeMirror's client-side matching.
-          if (isMemberAccess) {
-            return {
-              from: pos,
-              options: [{ label: '(no members found)', type: 'text', apply: () => {} }],
-            };
-          }
-          return null;
-        } catch { return null; }
-      };
-
-      // Accept completions on Tab or Enter when a popup is active.
-      // - defaultKeymap: false prevents autocompletion from registering Enter at high priority.
-      // - Prec.highest ensures Tab/Enter → acceptCompletion beats indentWithTab (normal priority).
-      // - acceptCompletion returns false when no completion is active, so both keys fall through
-      //   to their normal behaviour (indent for Tab, newline for Enter).
-      const completionKeys = [
-        { key: 'Tab', run: acceptCompletion },
-        { key: 'Enter', run: acceptCompletion },
-        ...completionKeymap.filter((b) => b.key !== 'Enter'),
-      ];
+    if (language === 'csharp' && notebookId) {
       extensions.push(
-        autocompletion({ override: [keywordSource, dynamicSource], defaultKeymap: false }),
-        Prec.highest(keymap.of(completionKeys)),
+        ...buildLspExtensions(notebookId),
+        // Tab/Enter accept the active completion item; acceptCompletion returns
+        // false when no popup is open so both keys fall through normally.
+        Prec.highest(keymap.of([
+          { key: 'Tab',   run: acceptCompletion },
+          { key: 'Enter', run: acceptCompletion },
+        ])),
       );
-
-      const lintSource = async (view) => {
-        const fn = lintRef.current;
-        if (!fn) return [];
-        try {
-          const diags = await fn(view.state.doc.toString());
-          return (diags || []).map((d) => ({
-            from: d.from, to: d.to,
-            severity: d.severity,
-            message: d.message,
-          }));
-        } catch { return []; }
-      };
-
-      extensions.push(lintCompartment.of(lintEnabledRef.current ? linter(lintSource, { delay: 600 }) : []));
-
-      // ── Signature help tooltip ──────────────────────────────────────────────
-      const setSigTip = StateEffect.define();
-      const sigField = StateField.define({
-        create: () => null,
-        update(val, tr) {
-          for (const e of tr.effects) if (e.is(setSigTip)) return e.value;
-          return val;
-        },
-        provide: f => showTooltip.from(f),
-      });
-
-      let sigTimer = null;
-      const sigListener = EditorView.updateListener.of((update) => {
-        if (!update.selectionSet && !update.docChanged) return;
-        clearTimeout(sigTimer);
-        sigTimer = setTimeout(() => {
-          const fn = signatureRef.current;
-          const view = update.view;
-          const state = view.state;
-          const pos = state.selection.main.head;
-          const code = state.doc.toString();
-          const textBefore = code.slice(0, pos);
-
-          // Quick check: are we inside any '(' ?
-          let depth = 0;
-          let hasParen = false;
-          for (let i = textBefore.length - 1; i >= 0; i--) {
-            if (textBefore[i] === ')') depth++;
-            else if (textBefore[i] === '(') {
-              if (depth === 0) { hasParen = true; break; }
-              depth--;
-            }
-          }
-          if (!hasParen || !fn) {
-            view.dispatch({ effects: setSigTip.of(null) });
-            return;
-          }
-
-          fn(code, pos).then(result => {
-            if (!result?.signatures?.length) {
-              view.dispatch({ effects: setSigTip.of(null) });
-              return;
-            }
-            // Find the opening paren position for tooltip anchor
-            let d = 0, anchorPos = pos;
-            for (let i = textBefore.length - 1; i >= 0; i--) {
-              if (textBefore[i] === ')') d++;
-              else if (textBefore[i] === '(') {
-                if (d === 0) { anchorPos = i + 1; break; }
-                d--;
-              }
-            }
-            view.dispatch({
-              effects: setSigTip.of({
-                pos: anchorPos,
-                above: true,
-                strictSide: true,
-                arrow: false,
-                create() {
-                  const dom = document.createElement('div');
-                  dom.className = 'cm-signature-help';
-                  result.signatures.forEach((sig) => {
-                    const line = document.createElement('div');
-                    line.className = 'cm-sig-line';
-                    const parenOpen = sig.label.indexOf('(');
-                    const parenClose = sig.label.lastIndexOf(')');
-                    if (parenOpen < 0 || !sig.parameters?.length) {
-                      line.textContent = sig.label;
-                    } else {
-                      line.appendChild(document.createTextNode(sig.label.slice(0, parenOpen + 1)));
-                      sig.parameters.forEach((p, i) => {
-                        if (i > 0) line.appendChild(document.createTextNode(', '));
-                        if (i === result.activeParam) {
-                          const em = document.createElement('strong');
-                          em.className = 'cm-sig-active';
-                          em.textContent = p.label;
-                          line.appendChild(em);
-                        } else {
-                          line.appendChild(document.createTextNode(p.label));
-                        }
-                      });
-                      line.appendChild(document.createTextNode(sig.label.slice(parenClose)));
-                    }
-                    dom.appendChild(line);
-                  });
-                  return { dom };
-                },
-              }),
-            });
-          }).catch(() => {
-            view.dispatch({ effects: setSigTip.of(null) });
-          });
-        }, 120);
-      });
-
-      extensions.push(sigField, sigListener);
     }
 
     const state = EditorState.create({ doc: value, extensions });
@@ -277,23 +298,7 @@ export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
       viewRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [language]);
-
-  // Hot-swap linter when lintEnabled changes
-  useEffect(() => {
-    const view = viewRef.current;
-    const compartment = lintCompartmentRef.current;
-    if (!view || !compartment) return;
-    const lintSource = async (v) => {
-      const fn = lintRef.current;
-      if (!fn) return [];
-      try {
-        const diags = await fn(v.state.doc.toString());
-        return (diags || []).map((d) => ({ from: d.from, to: d.to, severity: d.severity, message: d.message }));
-      } catch { return []; }
-    };
-    view.dispatch({ effects: compartment.reconfigure(lintEnabled ? linter(lintSource, { delay: 600 }) : []) });
-  }, [lintEnabled]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [language, notebookId]);
 
   // Sync external value changes (e.g., load notebook)
   useEffect(() => {

@@ -4,6 +4,10 @@ const shared = {
   globals: true,
   setupFiles: ['tests/setup.js'],
   mockReset: false,
+  pool: 'forks',
+  poolOptions: {
+    forks: { maxForks: 2 },
+  },
 };
 
 const esbuildJsx = {

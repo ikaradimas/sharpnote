@@ -12,6 +12,29 @@ namespace SharpNoteKernel;
 
 partial class Program
 {
+    // Well-known static types for member completion (used by signature help)
+    private static readonly Dictionary<string, Type> WellKnownTypes =
+        new(StringComparer.Ordinal)
+        {
+            ["Console"] = typeof(Console),
+            ["Math"] = typeof(Math),
+            ["Convert"] = typeof(Convert),
+            ["String"] = typeof(string),
+            ["string"] = typeof(string),
+            ["int"] = typeof(int),
+            ["double"] = typeof(double),
+            ["Array"] = typeof(Array),
+            ["Enumerable"] = typeof(Enumerable),
+            ["File"] = typeof(System.IO.File),
+            ["Directory"] = typeof(System.IO.Directory),
+            ["Path"] = typeof(System.IO.Path),
+            ["Environment"] = typeof(Environment),
+            ["DateTime"] = typeof(DateTime),
+            ["TimeSpan"] = typeof(TimeSpan),
+            ["Regex"] = typeof(Regex),
+            ["JsonSerializer"] = typeof(System.Text.Json.JsonSerializer),
+        };
+
     internal static void HandleSignature(JsonElement msg, TextWriter realStdout)
     {
         var requestId = msg.GetProperty("requestId").GetString()!;

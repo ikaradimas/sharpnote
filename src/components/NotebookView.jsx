@@ -22,10 +22,6 @@ export function NotebookView({
   onRunFrom,
   onRunTo,
   onRename,
-  requestCompletions,
-  requestLint,
-  requestSignature,
-  lintEnabled = true,
   libraryPanelOpen,
   onToggleLibrary,
   filesPanelOpen,
@@ -254,10 +250,6 @@ export function NotebookView({
                 onOutputModeChange={(mode) => updateCellProp(cell.id, 'outputMode', mode)}
                 onToggleLock={() => updateCellProp(cell.id, 'locked', !(cell.locked || false))}
                 onToggleFold={() => toggleFold(cell.id)}
-                requestCompletions={(code, pos) => requestCompletions(nb.id, code, pos)}
-                requestLint={(code) => requestLint(nb.id, code)}
-                requestSignature={(code, pos) => requestSignature(nb.id, code, pos)}
-                lintEnabled={lintEnabled}
               />
             )}
             <AddBar

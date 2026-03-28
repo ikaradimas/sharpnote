@@ -66,10 +66,6 @@ export function CodeCell({
   onOutputModeChange,
   onToggleLock,
   onToggleFold,
-  requestCompletions,
-  requestLint,
-  requestSignature,
-  lintEnabled = true,
 }) {
   const outputMode = cell.outputMode || 'auto';
   const locked = cell.locked || false;
@@ -191,11 +187,8 @@ export function CodeCell({
           value={cell.content}
           onChange={(val) => onUpdate(val)}
           language="csharp"
+          notebookId={notebookId}
           onCtrlEnter={kernelReady && !anyRunning ? onRun : undefined}
-          onRequestCompletions={requestCompletions}
-          onRequestLint={requestLint}
-          onRequestSignature={requestSignature}
-          lintEnabled={lintEnabled}
           readOnly={locked}
           cellIndex={cellIndex}
         />
