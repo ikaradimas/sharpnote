@@ -76,6 +76,12 @@ body {
   min-height: 0;
 }
 
+/* ── Toolbar portal root (sits above dock-workspace, spans full window width) */
+
+#toolbar-portal-root {
+  flex-shrink: 0;
+}
+
 /* ── Toolbar ─────────────────────────────────────────────────────────────── */
 
 .toolbar {
@@ -209,6 +215,61 @@ body {
   height: 20px;
   background: var(--border-default);
   margin: 0 4px;
+}
+
+.toolbar-overflow-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.toolbar-overflow-btn {
+  font-size: 15px;
+  line-height: 1;
+  padding: 2px 8px !important;
+  letter-spacing: 0.05em;
+}
+
+.toolbar-overflow-menu {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  z-index: 200;
+  min-width: 148px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: 4px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.45);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+}
+
+.toolbar-overflow-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none !important;
+  border: none !important;
+  border-radius: 3px !important;
+  color: var(--text-secondary) !important;
+  font-size: 11px;
+  padding: 5px 10px !important;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+  box-shadow: none !important;
+}
+.toolbar-overflow-item:hover:not(:disabled) {
+  background: var(--border-default) !important;
+  color: var(--text-primary) !important;
+}
+.toolbar-overflow-item:disabled { opacity: 0.4; cursor: default; }
+.toolbar-overflow-item.toolbar-run-all { color: var(--accent-primary) !important; }
+.toolbar-overflow-item--on { color: #e5c07b !important; }
+
+.toolbar-overflow-sep {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: 4px 6px;
 }
 
 .kernel-status {

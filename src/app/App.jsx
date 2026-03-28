@@ -833,6 +833,7 @@ export function App() {
         pinnedPaths={pinnedPaths}
         onTogglePin={handleTogglePin}
       />
+      <div id="toolbar-portal-root" />
       <div className="dock-workspace" key={layoutKey}>
         <DockZone zone="left" {...dockZoneProps} />
         <div className="dock-center-col">
@@ -847,6 +848,7 @@ export function App() {
                 >
                   <NotebookView
                     nb={notebook}
+                    isActive={notebook.id === activeId}
                     onSetNb={(updater) => setNb(notebook.id, updater)}
                     onSetNbDirty={(updater) => setNbDirty(notebook.id, updater)}
                     onRunCell={runCell}

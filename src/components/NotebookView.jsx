@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { makeCell } from '../notebook-factory.js';
 import { getSectionHeadingLevel, getCollapsedSections } from '../utils.js';
 import { Toolbar } from './toolbar/Toolbar.jsx';
@@ -10,6 +11,7 @@ import { FindBar } from './FindBar.jsx';
 
 export function NotebookView({
   nb,
+  isActive,
   onSetNb,
   onSetNbDirty,
   onRunCell,
@@ -116,57 +118,62 @@ export function NotebookView({
     });
   };
 
+  const toolbarPortalRoot = document.getElementById('toolbar-portal-root');
+  const toolbar = (
+    <Toolbar
+      kernelStatus={kernelStatus}
+      notebookPath={notebookPath}
+      notebookTitle={nb.title}
+      onRename={onRename}
+      onRunAll={() => onRunAll(nb.id)}
+      onAddMarkdown={() => addCell('markdown')}
+      onAddCode={() => addCell('code')}
+      onAddSql={() => addCell('sql')}
+      autoRun={autoRun || false}
+      onToggleAutoRun={() => onSetNbDirty((n) => ({ autoRun: !n.autoRun }))}
+      onSave={() => onSave(nb.id)}
+      onLoad={onLoad}
+      onReset={() => onReset(nb.id)}
+      logPanelOpen={logPanelOpen}
+      onToggleLogs={() => { if (!logPanelOpen) onFocusPanel?.('log'); onSetNb((n) => ({ logPanelOpen: !n.logPanelOpen })); }}
+      nugetPanelOpen={nugetPanelOpen}
+      onToggleNuget={() => { if (!nugetPanelOpen) onFocusPanel?.('nuget'); onSetNb((n) => ({ nugetPanelOpen: !n.nugetPanelOpen })); }}
+      configPanelOpen={configPanelOpen}
+      onToggleConfig={() => { if (!configPanelOpen) onFocusPanel?.('config'); onSetNb((n) => ({ configPanelOpen: !n.configPanelOpen })); }}
+      configCount={config.length}
+      dbPanelOpen={dbPanelOpen}
+      onToggleDb={() => { if (!dbPanelOpen) onFocusPanel?.('db'); onSetNb((n) => ({ dbPanelOpen: !n.dbPanelOpen })); }}
+      varsPanelOpen={varsPanelOpen}
+      onToggleVars={() => { if (!varsPanelOpen) onFocusPanel?.('vars'); onSetNb((n) => ({ varsPanelOpen: !n.varsPanelOpen })); }}
+      tocPanelOpen={tocPanelOpen}
+      onToggleToC={() => { if (!tocPanelOpen) onFocusPanel?.('toc'); onSetNb((n) => ({ tocPanelOpen: !n.tocPanelOpen })); }}
+      libraryPanelOpen={libraryPanelOpen}
+      onToggleLibrary={onToggleLibrary}
+      filesPanelOpen={filesPanelOpen}
+      onToggleFiles={onToggleFiles}
+      apiPanelOpen={apiPanelOpen}
+      onToggleApi={onToggleApi}
+      graphPanelOpen={graphPanelOpen}
+      onToggleGraph={() => { if (!graphPanelOpen) onFocusPanel?.('graph'); onSetNb((n) => ({ graphPanelOpen: !n.graphPanelOpen })); }}
+      todoPanelOpen={todoPanelOpen}
+      onToggleTodo={() => { if (!todoPanelOpen) onFocusPanel?.('todo'); onSetNb((n) => ({ todoPanelOpen: !n.todoPanelOpen })); }}
+      regexPanelOpen={regexPanelOpen}
+      onToggleRegex={() => { if (!regexPanelOpen) onFocusPanel?.('regex'); onSetNb((n) => ({ regexPanelOpen: !n.regexPanelOpen })); }}
+      theme={theme}
+      onThemeChange={onThemeChange}
+      lineAltEnabled={lineAltEnabled}
+      onLineAltChange={onLineAltChange}
+      dockLayout={dockLayout}
+      savedLayouts={savedLayouts}
+      onSaveLayout={onSaveLayout}
+      onLoadLayout={onLoadLayout}
+      onDeleteLayout={onDeleteLayout}
+    />
+  );
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
-      <Toolbar
-        kernelStatus={kernelStatus}
-        notebookPath={notebookPath}
-        notebookTitle={nb.title}
-        onRename={onRename}
-        onRunAll={() => onRunAll(nb.id)}
-        onAddMarkdown={() => addCell('markdown')}
-        onAddCode={() => addCell('code')}
-        onAddSql={() => addCell('sql')}
-        autoRun={autoRun || false}
-        onToggleAutoRun={() => onSetNbDirty((n) => ({ autoRun: !n.autoRun }))}
-        onSave={() => onSave(nb.id)}
-        onLoad={onLoad}
-        onReset={() => onReset(nb.id)}
-        logPanelOpen={logPanelOpen}
-        onToggleLogs={() => { if (!logPanelOpen) onFocusPanel?.('log'); onSetNb((n) => ({ logPanelOpen: !n.logPanelOpen })); }}
-        nugetPanelOpen={nugetPanelOpen}
-        onToggleNuget={() => { if (!nugetPanelOpen) onFocusPanel?.('nuget'); onSetNb((n) => ({ nugetPanelOpen: !n.nugetPanelOpen })); }}
-        configPanelOpen={configPanelOpen}
-        onToggleConfig={() => { if (!configPanelOpen) onFocusPanel?.('config'); onSetNb((n) => ({ configPanelOpen: !n.configPanelOpen })); }}
-        configCount={config.length}
-        dbPanelOpen={dbPanelOpen}
-        onToggleDb={() => { if (!dbPanelOpen) onFocusPanel?.('db'); onSetNb((n) => ({ dbPanelOpen: !n.dbPanelOpen })); }}
-        varsPanelOpen={varsPanelOpen}
-        onToggleVars={() => { if (!varsPanelOpen) onFocusPanel?.('vars'); onSetNb((n) => ({ varsPanelOpen: !n.varsPanelOpen })); }}
-        tocPanelOpen={tocPanelOpen}
-        onToggleToC={() => { if (!tocPanelOpen) onFocusPanel?.('toc'); onSetNb((n) => ({ tocPanelOpen: !n.tocPanelOpen })); }}
-        libraryPanelOpen={libraryPanelOpen}
-        onToggleLibrary={onToggleLibrary}
-        filesPanelOpen={filesPanelOpen}
-        onToggleFiles={onToggleFiles}
-        apiPanelOpen={apiPanelOpen}
-        onToggleApi={onToggleApi}
-        graphPanelOpen={graphPanelOpen}
-        onToggleGraph={() => { if (!graphPanelOpen) onFocusPanel?.('graph'); onSetNb((n) => ({ graphPanelOpen: !n.graphPanelOpen })); }}
-        todoPanelOpen={todoPanelOpen}
-        onToggleTodo={() => { if (!todoPanelOpen) onFocusPanel?.('todo'); onSetNb((n) => ({ todoPanelOpen: !n.todoPanelOpen })); }}
-        regexPanelOpen={regexPanelOpen}
-        onToggleRegex={() => { if (!regexPanelOpen) onFocusPanel?.('regex'); onSetNb((n) => ({ regexPanelOpen: !n.regexPanelOpen })); }}
-        theme={theme}
-        onThemeChange={onThemeChange}
-        lineAltEnabled={lineAltEnabled}
-        onLineAltChange={onLineAltChange}
-        dockLayout={dockLayout}
-        savedLayouts={savedLayouts}
-        onSaveLayout={onSaveLayout}
-        onLoadLayout={onLoadLayout}
-        onDeleteLayout={onDeleteLayout}
-      />
+      {isActive && (toolbarPortalRoot ? createPortal(toolbar, toolbarPortalRoot) : toolbar)}
       {findOpen && (
         <FindBar
           cells={cells}

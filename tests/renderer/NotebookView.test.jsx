@@ -28,6 +28,7 @@ const makeNb = (overrides = {}) => ({
 
 const defaultProps = (overrides = {}) => ({
   nb: makeNb(),
+  isActive: true,
   onSetNb: vi.fn(),
   onSetNbDirty: vi.fn(),
   onRunCell: vi.fn(),
