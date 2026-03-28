@@ -369,7 +369,6 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
       delete consumerIds.current[topic];
     }
     setListeners((prev) => { const n = { ...prev }; delete n[topic]; return n; });
-    setAllMessages((prev) => prev.filter((m) => m.topic !== topic));
   };
 
   const handleStopAll = async () => {
@@ -411,23 +410,21 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
     <div className="kafka-panel">
       <div className="kafka-panel-header">
         <span className="kafka-panel-title">Kafka Browser</span>
-        <div className="kafka-panel-header-actions">
-          {asTab
-            ? <button
-                className="kafka-btn"
-                onClick={onReturnToPanel}
-                disabled={isListening}
-                title={isListening ? 'Stop all streams before moving' : 'Move to panel'}
-              >↙ Panel</button>
-            : <button
-                className="kafka-btn"
-                onClick={onOpenAsTab}
-                disabled={isListening}
-                title={isListening ? 'Stop all streams before opening as tab' : 'Open as tab'}
-              >↗ Tab</button>
-          }
-          <button className="log-close-btn" onClick={onToggle} title="Close">×</button>
-        </div>
+        {asTab
+          ? <button
+              className="kafka-btn kafka-panel-tab-btn"
+              onClick={onReturnToPanel}
+              disabled={isListening}
+              title={isListening ? 'Stop all streams before moving' : 'Move to panel'}
+            >↙ Panel</button>
+          : <button
+              className="kafka-btn kafka-panel-tab-btn"
+              onClick={onOpenAsTab}
+              disabled={isListening}
+              title={isListening ? 'Stop all streams before opening as tab' : 'Open as tab'}
+            >↗ Tab</button>
+        }
+        <button className="log-close-btn" onClick={onToggle} title="Close">×</button>
       </div>
 
       <div className="kafka-panel-body">
