@@ -794,6 +794,7 @@ export function App() {
         cells: activeNb?.cells ?? [],
         onNavigateToCell: nbId ? (cellId) => handleNavigateToCell(nbId, cellId) : () => {},
       },
+      regex: {},
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeNb, dbConnections, filesPanelOpen, filesCurrentDir, apiPanelOpen]);
