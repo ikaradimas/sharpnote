@@ -241,6 +241,8 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
   // unified chronological message feed
   const [allMessages, setAllMessages] = useState([]);
   const msgIdRef = useRef(0);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 50;
 
   const [copiedTopic, setCopiedTopic] = useState(null);
 
@@ -392,6 +394,10 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
   const visibleChips   = listenedTopics.slice(0, CHIP_LIMIT);
   const hiddenChips    = listenedTopics.slice(CHIP_LIMIT);
 
+  const totalPages  = Math.max(1, Math.ceil(allMessages.length / PAGE_SIZE));
+  const clampedPage = Math.min(page, totalPages);
+  const pagedMessages = allMessages.slice((clampedPage - 1) * PAGE_SIZE, clampedPage * PAGE_SIZE);
+
   // ── Render ────────────────────────────────────────────────────────────────────
 
   return (
@@ -399,12 +405,7 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
       <div className="kafka-panel-header">
         <span className="kafka-panel-title">Kafka Browser</span>
         {!asTab && (
-          <button
-            className="kafka-btn kafka-panel-tab-btn"
-            onClick={onOpenAsTab}
-            disabled={isListening}
-            title={isListening ? 'Stop all streams before opening as tab' : 'Open as tab'}
-          >↗ Tab</button>
+          <button className="tab-action kafka-panel-tab-btn" onClick={onOpenAsTab} title="Open as tab">↗</button>
         )}
         {!asTab && <button className="log-close-btn kafka-panel-close-btn" onClick={onToggle} title="Close">×</button>}
       </div>
@@ -555,10 +556,22 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
                       {listenedTopics.length === 0 ? 'Press ▶ on a topic to start a live feed' : 'Waiting for messages…'}
                     </div>
                   )}
-                  {allMessages.map((m) => (
+                  {pagedMessages.map((m) => (
                     <MessageRow key={m._id} msg={m} />
                   ))}
                 </div>
+                {allMessages.length > 0 && (
+                  <div className="kafka-feed-pager">
+                    <button className="kafka-btn" onClick={() => setPage(1)} disabled={clampedPage === 1} title="First">«</button>
+                    <button className="kafka-btn" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={clampedPage === 1} title="Previous">‹</button>
+                    <span className="kafka-pager-info">
+                      {clampedPage} / {totalPages}
+                      <span className="kafka-pager-count"> ({allMessages.length})</span>
+                    </span>
+                    <button className="kafka-btn" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={clampedPage === totalPages} title="Next">›</button>
+                    <button className="kafka-btn" onClick={() => setPage(totalPages)} disabled={clampedPage === totalPages} title="Last">»</button>
+                  </div>
+                )}
               </div>
             </>
           )}

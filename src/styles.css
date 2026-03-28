@@ -2307,11 +2307,12 @@ body {
   background: transparent;
   border: none;
   color: var(--text-muted);
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   border-radius: 2px;
   cursor: pointer;
-  font-size: 11px;
+  font-size: 9px;
+  font-weight: 700;
   line-height: 1;
   display: flex;
   align-items: center;
@@ -2324,6 +2325,8 @@ body {
 .tab:hover .tab-action,
 .tab.tab-active .tab-action { opacity: 1; }
 .tab-action:hover { background: var(--bg-elevated); color: var(--text-primary); }
+/* In non-tab contexts (panel header) the button is always visible */
+.kafka-panel-tab-btn { opacity: 1; }
 
 .tab-color-btn {
   background: transparent;
@@ -6002,7 +6005,12 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 .kafka-stop-all-btn { margin-left: auto; flex-shrink: 0; }
 
 /* Message rows */
-.kafka-feed-messages { overflow-y: auto; flex: 1; overflow-anchor: none; }
+.kafka-feed-messages { overflow: hidden; flex: 1; }
+/* Pager */
+.kafka-feed-pager { display: flex; align-items: center; gap: 4px; padding: 4px 8px; border-top: 1px solid var(--border-default); background: var(--bg-deep); flex-shrink: 0; }
+.kafka-pager-info { font-size: 10px; color: var(--text-secondary); flex: 1; text-align: center; }
+.kafka-pager-count { color: var(--text-muted); }
+.kafka-btn:disabled { opacity: 0.3; cursor: default; }
 .kafka-feed-empty { font-size: 10px; color: var(--text-muted); padding: 8px 10px; }
 .kafka-feed-message { border-bottom: 1px solid var(--border-subtle); font-size: 10px; font-family: var(--font-code); }
 .kafka-feed-message:hover { background: var(--bg-mid); }
