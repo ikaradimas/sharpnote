@@ -549,41 +549,39 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
 
               {/* Unified message feed */}
               <div className="kafka-feed-section">
-                {listenedTopics.length === 0 ? (
-                  <div className="kafka-right-empty">Press ▶ on a topic to start a live feed</div>
-                ) : (
-                  <>
-                    <div className="kafka-listener-chips">
-                      {visibleChips.map((topic) => (
-                        <span key={topic} className="kafka-listener-chip">
-                          <span>{topic}</span>
-                          <button className="kafka-chip-stop" onClick={() => handleStopListen(topic)} title="Stop">■</button>
-                        </span>
-                      ))}
-                      {hiddenChips.length > 0 && (
-                        <ChipOverflow topics={hiddenChips} onStop={handleStopListen} />
-                      )}
-                      <button
-                        className="kafka-btn kafka-btn-stop kafka-stop-all-btn"
-                        onClick={handleStopAll}
-                        title="Stop all streams"
-                      >■ All</button>
-                    </div>
-                    <div className="kafka-feed-messages">
-                      {allMessages.length === 0 && (
-                        <div className="kafka-feed-empty">Waiting for messages…</div>
-                      )}
-                      {allMessages.map((m) => (
-                        <MessageRow
-                          key={m._id}
-                          msg={m}
-                          expanded={expandedMsgs.has(m._id)}
-                          onToggle={() => toggleExpand(m._id)}
-                        />
-                      ))}
-                    </div>
-                  </>
+                {listenedTopics.length > 0 && (
+                  <div className="kafka-listener-chips">
+                    {visibleChips.map((topic) => (
+                      <span key={topic} className="kafka-listener-chip">
+                        <span>{topic}</span>
+                        <button className="kafka-chip-stop" onClick={() => handleStopListen(topic)} title="Stop">■</button>
+                      </span>
+                    ))}
+                    {hiddenChips.length > 0 && (
+                      <ChipOverflow topics={hiddenChips} onStop={handleStopListen} />
+                    )}
+                    <button
+                      className="kafka-btn kafka-btn-stop kafka-stop-all-btn"
+                      onClick={handleStopAll}
+                      title="Stop all streams"
+                    >■ All</button>
+                  </div>
                 )}
+                <div className="kafka-feed-messages">
+                  {allMessages.length === 0 && (
+                    <div className="kafka-feed-empty">
+                      {listenedTopics.length === 0 ? 'Press ▶ on a topic to start a live feed' : 'Waiting for messages…'}
+                    </div>
+                  )}
+                  {allMessages.map((m) => (
+                    <MessageRow
+                      key={m._id}
+                      msg={m}
+                      expanded={expandedMsgs.has(m._id)}
+                      onToggle={() => toggleExpand(m._id)}
+                    />
+                  ))}
+                </div>
               </div>
             </>
           )}
