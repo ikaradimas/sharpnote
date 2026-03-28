@@ -217,6 +217,28 @@ body {
   margin: 0 4px;
 }
 
+/* ── Toolbar custom tooltips (250 ms — half native browser delay) ────────── */
+.toolbar [data-title] { position: relative; }
+.toolbar [data-title]::after {
+  content: attr(data-title);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  color: var(--text-primary);
+  padding: 3px 8px;
+  border-radius: 3px;
+  font-size: 11px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0;
+  transition: opacity 0.1s 250ms;
+}
+.toolbar [data-title]:hover::after { opacity: 1; }
+
 .toolbar-overflow-wrap {
   position: relative;
   flex-shrink: 0;
@@ -1305,8 +1327,8 @@ body {
   background: transparent;
   border: none;
   color: var(--text-faint);
-  width: 22px;
-  height: 22px;
+  width: 27px;
+  height: 27px;
   border-radius: 3px;
   cursor: pointer;
   font-size: 18px;
@@ -1467,8 +1489,8 @@ body {
   background: transparent;
   border: none;
   color: var(--text-faint);
-  width: 22px;
-  height: 22px;
+  width: 27px;
+  height: 27px;
   border-radius: 3px;
   cursor: pointer;
   font-size: 18px;
@@ -2006,8 +2028,8 @@ body {
   background: transparent;
   border: none;
   color: var(--text-faint);
-  width: 22px;
-  height: 22px;
+  width: 27px;
+  height: 27px;
   border-radius: 3px;
   cursor: pointer;
   font-size: 18px;
@@ -3819,12 +3841,12 @@ body {
 
 .dock-zone-tab-close {
   opacity: 0.35;
-  font-size: 11px;
+  font-size: 14px;
   cursor: pointer;
   background: none;
   border: none;
   color: inherit;
-  padding: 0 1px;
+  padding: 1px 3px;
   line-height: 1;
   display: inline-flex;
   align-items: center;

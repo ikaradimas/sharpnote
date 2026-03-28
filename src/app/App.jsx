@@ -233,6 +233,29 @@ export function App() {
   useEffect(() => { document.documentElement.dataset.theme = theme; }, [theme]);
   useEffect(() => { document.documentElement.classList.toggle('line-alt-enabled', lineAltEnabled); }, [lineAltEnabled]);
 
+  // Faster toolbar tooltips: swap title→data-title on enter so the native ~500ms
+  // browser tooltip is suppressed; CSS pseudo-element shows at 250ms instead.
+  useEffect(() => {
+    const onEnter = (e) => {
+      const el = e.target.closest('.toolbar [title]');
+      if (!el) return;
+      el.dataset.title = el.title;
+      el.removeAttribute('title');
+    };
+    const onLeave = (e) => {
+      const el = e.target.closest('.toolbar [data-title]');
+      if (!el || !el.dataset.title) return;
+      el.title = el.dataset.title;
+      delete el.dataset.title;
+    };
+    document.addEventListener('mouseenter', onEnter, true);
+    document.addEventListener('mouseleave', onLeave, true);
+    return () => {
+      document.removeEventListener('mouseenter', onEnter, true);
+      document.removeEventListener('mouseleave', onLeave, true);
+    };
+  }, []);
+
   useEffect(() => {
     if (isFirstThemeRender.current) { isFirstThemeRender.current = false; return; }
     saveSettingsRef.current();
