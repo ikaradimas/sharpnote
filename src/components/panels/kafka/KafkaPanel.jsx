@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useResize } from '../../../hooks/useResize.js';
 
@@ -244,7 +244,9 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
   // unified chronological message feed
   const [allMessages,   setAllMessages]   = useState([]);
   const [expandedMsgs,  setExpandedMsgs]  = useState(new Set());
-  const msgIdRef = useRef(0);
+  const msgIdRef       = useRef(0);
+  const feedRef        = useRef(null);   // scroll container
+  const savedScrollRef = useRef(null);   // set before expand/collapse, cleared after
 
   const [copiedTopic, setCopiedTopic] = useState(null);
 
@@ -385,12 +387,21 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
   };
 
   const toggleExpand = useCallback((id) => {
+    if (feedRef.current) savedScrollRef.current = feedRef.current.scrollTop;
     setExpandedMsgs((prev) => {
       const next = new Set(prev);
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
   }, []);
+
+  // Restore scroll position after expand/collapse re-render (before paint)
+  useLayoutEffect(() => {
+    if (savedScrollRef.current !== null && feedRef.current) {
+      feedRef.current.scrollTop = savedScrollRef.current;
+      savedScrollRef.current = null;
+    }
+  });
 
   // ── Derived ───────────────────────────────────────────────────────────────────
 
@@ -567,7 +578,7 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
                     >■ All</button>
                   </div>
                 )}
-                <div className="kafka-feed-messages">
+                <div className="kafka-feed-messages" ref={feedRef}>
                   {allMessages.length === 0 && (
                     <div className="kafka-feed-empty">
                       {listenedTopics.length === 0 ? 'Press ▶ on a topic to start a live feed' : 'Waiting for messages…'}
