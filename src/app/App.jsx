@@ -5,7 +5,7 @@ import React, {
   useCallback,
   useMemo,
 } from 'react';
-import { DOCS_TAB_ID } from '../constants.js';
+import { DOCS_TAB_ID, KAFKA_TAB_ID } from '../constants.js';
 import {
   makeLibEditorId, isLibEditorId, isNotebookId, getNotebookDisplayName,
 } from '../utils.js';
@@ -18,6 +18,7 @@ import { TabBar } from '../components/toolbar/TabBar.jsx';
 import { NotebookView } from '../components/NotebookView.jsx';
 import { LibraryEditorPane } from '../components/panels/library/LibraryEditorPane.jsx';
 import { DocsPanel } from '../components/panels/docs/DocsPanel.jsx';
+import { KafkaPanel } from '../components/panels/kafka/KafkaPanel.jsx';
 import { DockZone } from '../components/dock/DockZone.jsx';
 import { FloatPanel } from '../components/dock/FloatPanel.jsx';
 import { DockDropOverlay } from '../components/dock/DockDropOverlay.jsx';
@@ -94,7 +95,9 @@ export function App() {
     setNb, setNbDirty, buildNotebookData,
     handleNew, handleLoad, handleImportPolyglot, handleOpenRecent, handleCloseTab, handleReorder,
     handleRenameTab, handleSetTabColor, handleSave, handleSaveAs, handleExportHtml,
-    handleOpenDocs, handleCloseDocs, handleTogglePin, handleNavigateToCell,
+    handleOpenDocs, handleCloseDocs,
+    kafkaTabOpen, handleOpenKafkaTab, handleCloseKafkaTab,
+    handleTogglePin, handleNavigateToCell,
     handleInsertLibraryFile, openPinnedNotebooks,
   } = useNotebookManager({ cancelPendingCellsRef, saveSettingsRef });
 
@@ -646,9 +649,10 @@ export function App() {
       ...libEditors.map((e) => ({
         id: e.id, label: e.filename, isDirty: e.isDirty, isActive: e.id === activeId,
       })),
-      ...(docsOpen ? [{ id: DOCS_TAB_ID, label: 'Documentation', isDirty: false, isActive: activeId === DOCS_TAB_ID }] : []),
+      ...(docsOpen     ? [{ id: DOCS_TAB_ID,  label: 'Documentation', isDirty: false, isActive: activeId === DOCS_TAB_ID  }] : []),
+      ...(kafkaTabOpen ? [{ id: KAFKA_TAB_ID, label: 'Kafka',         isDirty: false, isActive: activeId === KAFKA_TAB_ID }] : []),
     ]);
-  }, [notebooks, libEditors, docsOpen, activeId]);
+  }, [notebooks, libEditors, docsOpen, kafkaTabOpen, activeId]);
 
   // ── Menu action handler ────────────────────────────────────────────────────
   useEffect(() => {
@@ -813,6 +817,7 @@ export function App() {
       },
       kafka: {
         onToggle: () => setKafkaPanelOpen((v) => !v),
+        onOpenAsTab: () => { setKafkaPanelOpen(false); handleOpenKafkaTab(); },
       },
       graph: {
         onToggle: nbId ? () => setNb(nbId, (n) => ({ graphPanelOpen: !n.graphPanelOpen })) : () => {},
@@ -858,6 +863,9 @@ export function App() {
         docsOpen={docsOpen}
         onActivateDocs={handleOpenDocs}
         onCloseDocs={handleCloseDocs}
+        kafkaTabOpen={kafkaTabOpen}
+        onActivateKafka={handleOpenKafkaTab}
+        onCloseKafka={handleCloseKafkaTab}
         libEditors={libEditors}
         onCloseLibEditor={handleCloseLibEditor}
         pinnedPaths={pinnedPaths}
@@ -945,6 +953,21 @@ export function App() {
                   style={activeId === DOCS_TAB_ID ? undefined : { display: 'none' }}
                 >
                   <DocsPanel />
+                </div>
+              )}
+              {kafkaTabOpen && (
+                <div
+                  className="notebook-pane"
+                  style={activeId === KAFKA_TAB_ID ? undefined : { display: 'none' }}
+                >
+                  <KafkaPanel
+                    asTab
+                    onToggle={handleCloseKafkaTab}
+                    onReturnToPanel={() => {
+                      handleCloseKafkaTab();
+                      setKafkaPanelOpen(true);
+                    }}
+                  />
                 </div>
               )}
             </div>

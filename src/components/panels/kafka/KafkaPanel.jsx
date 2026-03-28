@@ -117,7 +117,7 @@ function KafkaConnectionForm({ connection, existingNames, onSave, onCancel }) {
 
 // ── Main panel ────────────────────────────────────────────────────────────────
 
-export function KafkaPanel({ onToggle }) {
+export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPanel }) {
   const [savedConns,    setSavedConns]    = useState([]);
   const [selectedId,    setSelectedId]    = useState(null);
   const [formConn,      setFormConn]      = useState(null);
@@ -290,6 +290,10 @@ export function KafkaPanel({ onToggle }) {
     <div className="kafka-panel">
       <div className="kafka-panel-header">
         <span className="kafka-panel-title">Kafka Browser</span>
+        {asTab
+          ? <button className="kafka-btn" onClick={onReturnToPanel} title="Move to panel">↙ Panel</button>
+          : <button className="kafka-btn" onClick={onOpenAsTab} title="Open as tab">↗ Tab</button>
+        }
         <button className="log-close-btn" onClick={onToggle} title="Close">×</button>
       </div>
 
