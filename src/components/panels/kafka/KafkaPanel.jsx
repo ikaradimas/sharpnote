@@ -48,6 +48,84 @@ function generateCSharpConsumer(connection, topic) {
   return lines.join('\n');
 }
 
+// ── JSON syntax highlighter ───────────────────────────────────────────────────
+
+function highlightJson(str) {
+  const segs = [];
+  // match: string-then-colon (key), bare string (value), keyword, number, punctuation
+  const re = /("(?:[^"\\]|\\.)*")(\s*:)?|(\b(?:true|false|null)\b)|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)|([{}\[\],:])/g;
+  let last = 0;
+  let m;
+  while ((m = re.exec(str)) !== null) {
+    if (m.index > last) segs.push({ text: str.slice(last, m.index), cls: null });
+    if (m[1] !== undefined) {
+      segs.push({ text: m[1], cls: m[2] ? 'kafka-json-key' : 'kafka-json-str' });
+      if (m[2]) segs.push({ text: m[2], cls: 'kafka-json-punct' });
+    } else if (m[3] !== undefined) {
+      segs.push({ text: m[3], cls: 'kafka-json-kw' });
+    } else if (m[4] !== undefined) {
+      segs.push({ text: m[4], cls: 'kafka-json-num' });
+    } else if (m[5] !== undefined) {
+      segs.push({ text: m[5], cls: 'kafka-json-punct' });
+    }
+    last = re.lastIndex;
+  }
+  if (last < str.length) segs.push({ text: str.slice(last), cls: null });
+  return segs;
+}
+
+function JsonHighlight({ str }) {
+  return highlightJson(str).map((s, i) =>
+    s.cls
+      ? <span key={i} className={s.cls}>{s.text}</span>
+      : <React.Fragment key={i}>{s.text}</React.Fragment>
+  );
+}
+
+// ── Collapsible message row ───────────────────────────────────────────────────
+
+function MessageRow({ msg, expanded, onToggle }) {
+  const rawVal = msg.value ?? '';
+  let isJson = false;
+  let pretty  = '';
+  let preview = '';
+
+  try {
+    const parsed = JSON.parse(rawVal);
+    if (parsed !== null && typeof parsed === 'object') {
+      isJson  = true;
+      pretty  = JSON.stringify(parsed, null, 2);
+    }
+  } catch {}
+
+  if (isJson) {
+    preview = rawVal.length > 120 ? rawVal.slice(0, 120) + '…' : rawVal;
+  } else {
+    const nl = rawVal.indexOf('\n');
+    preview = nl >= 0 ? rawVal.slice(0, nl) : rawVal.slice(0, 200);
+  }
+
+  return (
+    <div
+      className={`kafka-feed-message${expanded ? ' kafka-feed-message--expanded' : ''}`}
+      onClick={onToggle}
+      title={expanded ? 'Click to collapse' : 'Click to expand'}
+    >
+      <span className="kafka-msg-stream">{msg.topic}</span>
+      <span className="kafka-msg-meta">p{msg.partition}·{msg.offset}</span>
+      {msg.key && <span className="kafka-msg-key">{msg.key}</span>}
+      {expanded
+        ? <span className="kafka-msg-value kafka-msg-value--expanded">
+            {isJson ? <JsonHighlight str={pretty} /> : rawVal || '(null)'}
+          </span>
+        : <span className="kafka-msg-value kafka-msg-value--collapsed">
+            {preview || '(null)'}
+          </span>
+      }
+    </div>
+  );
+}
+
 // ── Connection form ───────────────────────────────────────────────────────────
 
 const SASL_MECHANISMS = [
@@ -115,6 +193,38 @@ function KafkaConnectionForm({ connection, existingNames, onSave, onCancel }) {
   );
 }
 
+// ── Overflow chips tooltip ────────────────────────────────────────────────────
+
+const CHIP_LIMIT = 10;
+
+function ChipOverflow({ topics, onStop }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div
+      className="kafka-chips-overflow"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+      onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
+    >
+      <span className="kafka-chips-overflow-btn">+{topics.length}</span>
+      {open && (
+        <div className="kafka-chips-overflow-tooltip">
+          {topics.map((t) => (
+            <span key={t} className="kafka-listener-chip">
+              <span>{t}</span>
+              <button
+                className="kafka-chip-stop"
+                onClick={(e) => { e.stopPropagation(); onStop(t); }}
+                title="Stop"
+              >■</button>
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main panel ────────────────────────────────────────────────────────────────
 
 export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPanel }) {
@@ -129,18 +239,18 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
 
   // topic -> consumerId (tracks active listeners)
   const [listeners,   setListeners]   = useState({});
-  const consumerIds   = useRef({});          // same data as listeners but sync ref for handler
+  const consumerIds   = useRef({});
 
   // unified chronological message feed
-  const [allMessages, setAllMessages] = useState([]);
-  const endRef = useRef(null);
+  const [allMessages,   setAllMessages]   = useState([]);
+  const [expandedMsgs,  setExpandedMsgs]  = useState(new Set());
+  const msgIdRef = useRef(0);
 
   const [copiedTopic, setCopiedTopic] = useState(null);
 
   // ── Resizable panes ──────────────────────────────────────────────────────────
   const [leftW, leftDragDown] = useResize(200, 'right');
 
-  // Topics section height (vertical drag between topics list and message feed)
   const [topicsH,    setTopicsH]    = useState(220);
   const topicsHRef   = useRef(220);
   const topicsDragDown = useCallback((e) => {
@@ -176,16 +286,12 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
     const handler = (payload) => {
       const { consumerId, ...msg } = payload;
       if (!Object.values(consumerIds.current).includes(consumerId)) return;
-      setAllMessages((prev) => [...prev, msg].slice(-maxMessages));
+      const id = ++msgIdRef.current;
+      setAllMessages((prev) => [...prev, { ...msg, _id: id }].slice(-maxMessages));
     };
     window.electronAPI.onKafkaMessage(handler);
     return () => window.electronAPI.offKafkaMessage(handler);
   }, [maxMessages]);
-
-  // Auto-scroll feed to bottom on new messages
-  useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }, [allMessages.length]);
 
   // Stop all listeners on unmount
   useEffect(() => {
@@ -266,6 +372,10 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
     setAllMessages((prev) => prev.filter((m) => m.topic !== topic));
   };
 
+  const handleStopAll = async () => {
+    await Promise.all(Object.keys(listeners).map(handleStopListen));
+  };
+
   const handleCopyCode = (topic) => {
     const conn = savedConns.find((c) => c.id === selectedId);
     if (!conn) return;
@@ -275,6 +385,14 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
     });
   };
 
+  const toggleExpand = useCallback((id) => {
+    setExpandedMsgs((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }, []);
+
   // ── Derived ───────────────────────────────────────────────────────────────────
 
   const selectedConn   = savedConns.find((c) => c.id === selectedId) ?? null;
@@ -283,6 +401,9 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
     !topicFilter || t.toLowerCase().includes(topicFilter.toLowerCase())
   );
   const listenedTopics = Object.keys(listeners);
+  const isListening    = listenedTopics.length > 0;
+  const visibleChips   = listenedTopics.slice(0, CHIP_LIMIT);
+  const hiddenChips    = listenedTopics.slice(CHIP_LIMIT);
 
   // ── Render ────────────────────────────────────────────────────────────────────
 
@@ -290,11 +411,23 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
     <div className="kafka-panel">
       <div className="kafka-panel-header">
         <span className="kafka-panel-title">Kafka Browser</span>
-        {asTab
-          ? <button className="kafka-btn" onClick={onReturnToPanel} title="Move to panel">↙ Panel</button>
-          : <button className="kafka-btn" onClick={onOpenAsTab} title="Open as tab">↗ Tab</button>
-        }
-        <button className="log-close-btn" onClick={onToggle} title="Close">×</button>
+        <div className="kafka-panel-header-actions">
+          {asTab
+            ? <button
+                className="kafka-btn"
+                onClick={onReturnToPanel}
+                disabled={isListening}
+                title={isListening ? 'Stop all streams before moving' : 'Move to panel'}
+              >↙ Panel</button>
+            : <button
+                className="kafka-btn"
+                onClick={onOpenAsTab}
+                disabled={isListening}
+                title={isListening ? 'Stop all streams before opening as tab' : 'Open as tab'}
+              >↗ Tab</button>
+          }
+          <button className="log-close-btn" onClick={onToggle} title="Close">×</button>
+        </div>
       </div>
 
       <div className="kafka-panel-body">
@@ -385,13 +518,13 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
                 {!loadingTopics && !topicError && (
                   <div className="kafka-topic-list">
                     {filteredTopics.map((topic) => {
-                      const isListening = !!listeners[topic];
+                      const isTopicListening = !!listeners[topic];
                       const copied = copiedTopic === topic;
                       return (
-                        <div key={topic} className={`kafka-topic-row${isListening ? ' kafka-topic-row--listening' : ''}`}>
+                        <div key={topic} className={`kafka-topic-row${isTopicListening ? ' kafka-topic-row--listening' : ''}`}>
                           <span className="kafka-topic-name" title={topic}>{topic}</span>
                           <div className="kafka-topic-actions">
-                            {isListening
+                            {isTopicListening
                               ? <button className="kafka-btn kafka-btn-stop" onClick={() => handleStopListen(topic)} title="Stop listening">■</button>
                               : <button className="kafka-btn kafka-btn-listen" onClick={() => handleListen(topic)} title="Listen">▶</button>
                             }
@@ -424,26 +557,33 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
                 ) : (
                   <>
                     <div className="kafka-listener-chips">
-                      {listenedTopics.map((topic) => (
+                      {visibleChips.map((topic) => (
                         <span key={topic} className="kafka-listener-chip">
-                          {topic}
+                          <span>{topic}</span>
                           <button className="kafka-chip-stop" onClick={() => handleStopListen(topic)} title="Stop">■</button>
                         </span>
                       ))}
+                      {hiddenChips.length > 0 && (
+                        <ChipOverflow topics={hiddenChips} onStop={handleStopListen} />
+                      )}
+                      <button
+                        className="kafka-btn kafka-btn-stop kafka-stop-all-btn"
+                        onClick={handleStopAll}
+                        title="Stop all streams"
+                      >■ All</button>
                     </div>
                     <div className="kafka-feed-messages">
                       {allMessages.length === 0 && (
                         <div className="kafka-feed-empty">Waiting for messages…</div>
                       )}
-                      {allMessages.map((m, i) => (
-                        <div key={i} className="kafka-feed-message">
-                          <span className="kafka-msg-stream">{m.topic}</span>
-                          <span className="kafka-msg-meta">p{m.partition}·{m.offset}</span>
-                          {m.key && <span className="kafka-msg-key">{m.key}</span>}
-                          <span className="kafka-msg-value">{m.value ?? '(null)'}</span>
-                        </div>
+                      {allMessages.map((m) => (
+                        <MessageRow
+                          key={m._id}
+                          msg={m}
+                          expanded={expandedMsgs.has(m._id)}
+                          onToggle={() => toggleExpand(m._id)}
+                        />
                       ))}
-                      <div ref={endRef} />
                     </div>
                   </>
                 )}
