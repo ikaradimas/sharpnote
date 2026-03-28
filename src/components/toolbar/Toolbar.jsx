@@ -53,6 +53,7 @@ export function Toolbar({
   onSaveLayout,
   onLoadLayout,
   onDeleteLayout,
+  onCloseAllPanels,
 }) {
   const [editing,      setEditing]      = useState(false);
   const [draft,        setDraft]        = useState('');
@@ -118,6 +119,7 @@ export function Toolbar({
     graphPanelOpen, onToggleGraph,
     todoPanelOpen, onToggleTodo,
     regexPanelOpen, onToggleRegex,
+    onCloseAllPanels,
   };
 
   return (

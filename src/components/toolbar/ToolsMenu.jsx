@@ -21,6 +21,7 @@ export function ToolsMenu({
   graphPanelOpen, onToggleGraph,
   todoPanelOpen, onToggleTodo,
   regexPanelOpen, onToggleRegex,
+  onCloseAllPanels,
 }) {
   const [open, setOpen] = useState(false);
   const btnRef = useRef(null);
@@ -104,6 +105,12 @@ export function ToolsMenu({
               {active && <span className="tools-menu-active-dot" />}
             </button>
           ))}
+          {anyPanelActive && onCloseAllPanels && <>
+            <div className="tools-menu-separator" />
+            <button className="tools-menu-item" onClick={() => { onCloseAllPanels(); close(); }}>
+              <span className="tools-menu-label" style={{ paddingLeft: 2 }}>Close all panels</span>
+            </button>
+          </>}
         </div>,
         document.body
       )}

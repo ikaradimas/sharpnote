@@ -40,6 +40,7 @@ export function NotebookView({
   onSaveLayout,
   onLoadLayout,
   onDeleteLayout,
+  onCloseAllPanels,
 }) {
   const { cells, outputs, outputHistory, cellResults, running, kernelStatus,
           config, logPanelOpen, nugetPanelOpen, configPanelOpen,
@@ -159,6 +160,7 @@ export function NotebookView({
       onToggleTodo={() => { if (!todoPanelOpen) onFocusPanel?.('todo'); onSetNb((n) => ({ todoPanelOpen: !n.todoPanelOpen })); }}
       regexPanelOpen={regexPanelOpen}
       onToggleRegex={() => { if (!regexPanelOpen) onFocusPanel?.('regex'); onSetNb((n) => ({ regexPanelOpen: !n.regexPanelOpen })); }}
+      onCloseAllPanels={onCloseAllPanels}
       theme={theme}
       onThemeChange={onThemeChange}
       lineAltEnabled={lineAltEnabled}

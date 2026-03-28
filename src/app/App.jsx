@@ -910,6 +910,7 @@ export function App() {
                     onSaveLayout={handleSaveLayout}
                     onLoadLayout={handleLoadLayout}
                     onDeleteLayout={handleDeleteLayout}
+                    onCloseAllPanels={setPanelCloseAll}
                   />
                 </div>
               ))}
