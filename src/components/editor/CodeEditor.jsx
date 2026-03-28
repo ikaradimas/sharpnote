@@ -34,7 +34,18 @@ const sigHelpField = StateField.define({
     for (const e of tr.effects) {
       if (e.is(sigHelpEffect)) return e.value;
     }
-    return value;
+    if (!value) return null;
+    if (!tr.docChanged) {
+      // Cursor moved (arrow keys, click) — dismiss if before the ( anchor.
+      if (tr.selection && tr.newSelection.main.head < value.pos) return null;
+      return value;
+    }
+    // Map the ( anchor through the document changes.
+    const mapped = tr.changes.mapPos(value.pos, -1);
+    // If mapped moved backwards, content at/before ( was deleted — dismiss.
+    // If cursor is now before the anchor — dismiss.
+    if (mapped < value.pos || tr.newSelection.main.head < mapped) return null;
+    return { ...value, pos: mapped };
   },
   provide: f => showTooltip.from(f, info => {
     if (!info) return null;
