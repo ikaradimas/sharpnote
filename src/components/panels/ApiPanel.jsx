@@ -74,6 +74,96 @@ export function schemaSkeleton(spec, schema, depth = 0) {
   return null;
 }
 
+// ── C# class generator ────────────────────────────────────────────────────────
+
+function csScalarType(s) {
+  if (s.type === 'integer') return s.format === 'int64' ? 'long' : 'int';
+  if (s.type === 'number')  return s.format === 'float'  ? 'float' : 'double';
+  if (s.type === 'boolean') return 'bool';
+  if (s.type === 'string') {
+    if (s.format === 'date-time' || s.format === 'date') return 'DateTime';
+    if (s.format === 'uuid') return 'Guid';
+    return 'string';
+  }
+  return 'object';
+}
+
+function toPascalCase(str) {
+  return str
+    .replace(/(^|[_\-\s])(\w)/g, (_, __, c) => c.toUpperCase())
+    .replace(/^(.)/, c => c.toUpperCase());
+}
+
+// Returns true when the schema (or its array items) resolves to an object with properties.
+export function schemaHasClass(spec, schema) {
+  if (!schema) return false;
+  const s = schema.$ref ? resolveRef(spec, schema.$ref) ?? schema : schema;
+  if (s.type === 'object' || s.properties) return true;
+  if (s.type === 'array') return schemaHasClass(spec, s.items);
+  return false;
+}
+
+// Generates C# class declaration(s) from a schema, supporting Newtonsoft and STJ attributes.
+// style: 'stj' | 'newtonsoft'
+export function schemaToCSharpClass(spec, rootSchema, rootName, style) {
+  const classes = []; // [{name, props}] — ordered for output
+  const seen    = new Set();
+
+  const attrLine = style === 'newtonsoft'
+    ? (n) => `    [JsonProperty("${n}")]`
+    : (n) => `    [JsonPropertyName("${n}")]`;
+
+  function refClassName(ref) {
+    return ref?.split('/').pop() ?? 'Model';
+  }
+
+  function collectType(schema, fallbackName) {
+    if (!schema) return 'object';
+    if (schema.$ref) {
+      const name     = refClassName(schema.$ref);
+      const resolved = resolveRef(spec, schema.$ref);
+      if (resolved) collectClass(resolved, name);
+      return name;
+    }
+    if (schema.type === 'array') {
+      const itemType = collectType(schema.items, fallbackName + 'Item');
+      return `List<${itemType}>`;
+    }
+    if (schema.type === 'object' || schema.properties) {
+      collectClass(schema, fallbackName);
+      return fallbackName;
+    }
+    return csScalarType(schema);
+  }
+
+  function collectClass(schema, name) {
+    if (seen.has(name)) return;
+    seen.add(name);
+    const props = [];
+    for (const [jsonName, propSchema] of Object.entries(schema.properties ?? {})) {
+      const csName        = toPascalCase(jsonName);
+      const nestedFallback = name + csName;
+      props.push({ jsonName, csName, type: collectType(propSchema, nestedFallback) });
+    }
+    classes.push({ name, props });
+  }
+
+  const resolved   = rootSchema.$ref ? resolveRef(spec, rootSchema.$ref) : rootSchema;
+  const actualName = rootSchema.$ref ? refClassName(rootSchema.$ref) : rootName;
+  if (resolved) collectClass(resolved, actualName);
+
+  return classes.map(({ name, props }) => {
+    const lines = [`public class ${name}`, '{'];
+    for (const { jsonName, csName, type } of props) {
+      lines.push(attrLine(jsonName));
+      lines.push(`    public ${type} ${csName} { get; set; }`);
+      lines.push('');
+    }
+    lines.push('}');
+    return lines.join('\n');
+  }).join('\n\n');
+}
+
 export function getSchemaType(spec, schema) {
   if (!schema) return '';
   if (schema.$ref) {
@@ -527,15 +617,60 @@ function ResponsesTable({ spec, responses }) {
         const contentTypes = resp.content ? Object.keys(resp.content).join(', ') : null;
         const schemaType   = resp.schema  ? getSchemaType(spec, resp.schema)  : null;
         const typeLabel    = contentTypes || schemaType;
+        const respSchema   = resp.content?.['application/json']?.schema
+          ?? (resp.content && Object.values(resp.content)[0]?.schema)
+          ?? resp.schema
+          ?? null;
+        const respName     = respSchema?.$ref
+          ? respSchema.$ref.split('/').pop()
+          : `Response${code.replace(/\*/g, 'x')}`;
         return (
           <div key={code} className="api-response-row">
             <span className={`api-status-badge api-status-${code[0]}xx`}>{code}</span>
             <HtmlDesc text={resp.description} className="api-response-desc" />
             {typeLabel && <span className="api-response-type">{typeLabel}</span>}
+            {respSchema && <CopyClassButton spec={spec} schema={respSchema} name={respName} />}
           </div>
         );
       })}
     </div>
+  );
+}
+
+function CopyClassButton({ spec, schema, name }) {
+  const [open,   setOpen]   = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  if (!schemaHasClass(spec, schema)) return null;
+
+  function copy(style) {
+    const code = schemaToCSharpClass(spec, schema, name, style);
+    navigator.clipboard.writeText(code).then(() => {
+      setOpen(false);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  }
+
+  return (
+    <span
+      className="api-copy-class-wrap"
+      onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setOpen(false); }}
+    >
+      <button
+        className={`api-inject-btn${copied ? ' api-inject-btn-ok' : ''}`}
+        onClick={() => { if (!copied) setOpen(o => !o); }}
+        title="Copy C# class declaration to clipboard"
+      >
+        {copied ? '✓ Copied!' : '{ } C# class ▾'}
+      </button>
+      {open && (
+        <div className="api-copy-class-menu">
+          <button onClick={() => copy('stj')}>System.Text.Json</button>
+          <button onClick={() => copy('newtonsoft')}>Newtonsoft.Json</button>
+        </div>
+      )}
+    </span>
   );
 }
 
@@ -572,25 +707,41 @@ function Operation({ spec, method, path, op, expanded, onToggle, tryItOpen, onTo
               <ParamsTable spec={spec} parameters={displayParams} />
             </>
           )}
-          {op.requestBody && (
-            <>
-              <div className="api-section-label">Request Body</div>
-              <div className="api-request-body">
-                {Object.keys(op.requestBody.content || {}).join(', ') || 'body'}
-                {op.requestBody.required ? ' (required)' : ' (optional)'}
-              </div>
-            </>
-          )}
-          {sw2Body && (
-            <>
-              <div className="api-section-label">Request Body</div>
-              <div className="api-request-body">
-                {sw2Body.consumes.length ? sw2Body.consumes.join(', ') : 'body'}
-                {sw2Body.required ? ' (required)' : ' (optional)'}
-                {sw2Body.schema && <> — {getSchemaType(spec, sw2Body.schema)}</>}
-              </div>
-            </>
-          )}
+          {op.requestBody && (() => {
+            const rbSchema = op.requestBody.content?.['application/json']?.schema ?? null;
+            const rbName   = rbSchema?.$ref
+              ? rbSchema.$ref.split('/').pop()
+              : (op.operationId ? toPascalCase(op.operationId) + 'Body' : 'RequestBody');
+            return (
+              <>
+                <div className="api-section-label">Request Body</div>
+                <div className="api-request-body-row">
+                  <div className="api-request-body">
+                    {Object.keys(op.requestBody.content || {}).join(', ') || 'body'}
+                    {op.requestBody.required ? ' (required)' : ' (optional)'}
+                  </div>
+                  {rbSchema && <CopyClassButton spec={spec} schema={rbSchema} name={rbName} />}
+                </div>
+              </>
+            );
+          })()}
+          {sw2Body && (() => {
+            const sw2Schema = sw2Body.schema ?? null;
+            const sw2Name   = sw2Schema?.$ref ? sw2Schema.$ref.split('/').pop() : 'RequestBody';
+            return (
+              <>
+                <div className="api-section-label">Request Body</div>
+                <div className="api-request-body-row">
+                  <div className="api-request-body">
+                    {sw2Body.consumes.length ? sw2Body.consumes.join(', ') : 'body'}
+                    {sw2Body.required ? ' (required)' : ' (optional)'}
+                    {sw2Schema && <> — {getSchemaType(spec, sw2Schema)}</>}
+                  </div>
+                  {sw2Schema && <CopyClassButton spec={spec} schema={sw2Schema} name={sw2Name} />}
+                </div>
+              </>
+            );
+          })()}
           {op.responses && (
             <>
               <div className="api-section-label">Responses</div>

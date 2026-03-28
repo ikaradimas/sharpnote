@@ -4,6 +4,51 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import '@testing-library/jest-dom';
 import { ApiPanel, applyAuth, buildRequestUrl, buildHttpClientSnippet } from '../../src/components/panels/ApiPanel.jsx';
 
+const SPEC_WITH_SCHEMAS = {
+  openapi: '3.0.3',
+  info: { title: 'Schema API', version: '1.0.0' },
+  servers: [{ url: 'https://api.example.com' }],
+  paths: {
+    '/users': {
+      post: {
+        tags: ['users'],
+        summary: 'Create user',
+        operationId: 'createUser',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  name:  { type: 'string' },
+                  email: { type: 'string' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '201': {
+            description: 'Created',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    id:   { type: 'integer' },
+                    name: { type: 'string' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+};
+
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
 const SPEC = {
@@ -520,5 +565,85 @@ describe('Copy as C# button', () => {
     await waitFor(() => expect(writeText).toHaveBeenCalledOnce());
     const snippet = writeText.mock.calls[0][0];
     expect(snippet).toContain('tok123');
+  });
+});
+
+// ── C# class dropdown ─────────────────────────────────────────────────────────
+
+describe('Copy C# class button', () => {
+  let writeText;
+
+  beforeEach(() => {
+    writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText },
+      writable: true,
+      configurable: true,
+    });
+    window.electronAPI = {
+      fetchUrl:     vi.fn().mockResolvedValue(JSON.stringify(SPEC_WITH_SCHEMAS)),
+      loadApiSaved: vi.fn().mockResolvedValue([]),
+      saveApiSaved: vi.fn().mockResolvedValue(undefined),
+      apiRequest:   vi.fn(),
+    };
+  });
+
+  async function loadSchemaSpec() {
+    fireEvent.change(screen.getByPlaceholderText(/openapi/i), {
+      target: { value: 'https://api.example.com/openapi.json' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Load' }));
+    await waitFor(() => screen.getByText('Schema API'));
+  }
+
+  it('shows C# class button in request body section when schema has object type', async () => {
+    render(<ApiPanel onToggle={() => {}} />);
+    await loadSchemaSpec();
+    fireEvent.click(screen.getByText('Create user'));
+    const btns = screen.getAllByRole('button', { name: /C# class/i });
+    expect(btns.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('shows a dropdown with STJ and Newtonsoft options on click', async () => {
+    render(<ApiPanel onToggle={() => {}} />);
+    await loadSchemaSpec();
+    fireEvent.click(screen.getByText('Create user'));
+    // Click the first C# class button (request body)
+    fireEvent.click(screen.getAllByRole('button', { name: /C# class/i })[0]);
+    expect(screen.getByText('System.Text.Json')).toBeInTheDocument();
+    expect(screen.getByText('Newtonsoft.Json')).toBeInTheDocument();
+  });
+
+  it('copies STJ-attributed class to clipboard on selecting System.Text.Json', async () => {
+    render(<ApiPanel onToggle={() => {}} />);
+    await loadSchemaSpec();
+    fireEvent.click(screen.getByText('Create user'));
+    fireEvent.click(screen.getAllByRole('button', { name: /C# class/i })[0]);
+    fireEvent.click(screen.getByText('System.Text.Json'));
+    await waitFor(() => expect(writeText).toHaveBeenCalledOnce());
+    const code = writeText.mock.calls[0][0];
+    expect(code).toContain('public class');
+    expect(code).toContain('[JsonPropertyName(');
+    expect(code).toContain('public string Name { get; set; }');
+  });
+
+  it('copies Newtonsoft-attributed class on selecting Newtonsoft.Json', async () => {
+    render(<ApiPanel onToggle={() => {}} />);
+    await loadSchemaSpec();
+    fireEvent.click(screen.getByText('Create user'));
+    fireEvent.click(screen.getAllByRole('button', { name: /C# class/i })[0]);
+    fireEvent.click(screen.getByText('Newtonsoft.Json'));
+    await waitFor(() => expect(writeText).toHaveBeenCalledOnce());
+    const code = writeText.mock.calls[0][0];
+    expect(code).toContain('[JsonProperty(');
+  });
+
+  it('shows C# class button in responses section when response has schema', async () => {
+    render(<ApiPanel onToggle={() => {}} />);
+    await loadSchemaSpec();
+    fireEvent.click(screen.getByText('Create user'));
+    // There should be two C# class buttons: one for request body, one for the 201 response
+    const btns = screen.getAllByRole('button', { name: /C# class/i });
+    expect(btns.length).toBeGreaterThanOrEqual(2);
   });
 });
