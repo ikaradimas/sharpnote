@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { marked } from 'marked';
-import { DOCS_TAB_ID } from '../constants.js';
+import { DOCS_TAB_ID, KAFKA_TAB_ID } from '../constants.js';
 import { makeLibEditorId, isNotebookId, getNotebookDisplayName, scrollAndFlash } from '../utils.js';
 import { createNotebook, makeCell, DEFAULT_NUGET_SOURCES } from '../notebook-factory.js';
 
@@ -18,7 +18,8 @@ export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef }) {
 
   const [notebooks, setNotebooks] = useState([initialNb.current]);
   const [activeId, setActiveId]   = useState(initialNb.current.id);
-  const [docsOpen, setDocsOpen]   = useState(false);
+  const [docsOpen,      setDocsOpen]      = useState(false);
+  const [kafkaTabOpen,  setKafkaTabOpen]  = useState(false);
   const [pinnedPaths, setPinnedPaths] = useState(() => new Set());
 
   const notebooksRef   = useRef(notebooks);
@@ -254,6 +255,18 @@ export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef }) {
     if (target) setActiveId(target);
   }, []);
 
+  const handleOpenKafkaTab = useCallback(() => {
+    if (activeIdRef.current !== KAFKA_TAB_ID) prevNbIdRef.current = activeIdRef.current;
+    setKafkaTabOpen(true);
+    setActiveId(KAFKA_TAB_ID);
+  }, []);
+
+  const handleCloseKafkaTab = useCallback(() => {
+    setKafkaTabOpen(false);
+    const target = prevNbIdRef.current ?? notebooksRef.current[0]?.id;
+    if (target) setActiveId(target);
+  }, []);
+
   // ── Cell navigation ────────────────────────────────────────────────────────
 
   const handleNavigateToCell = useCallback((notebookId, cellId) => {
@@ -439,6 +452,8 @@ ${cellsHtml}
     setActiveId,
     docsOpen,
     setDocsOpen,
+    kafkaTabOpen,
+    setKafkaTabOpen,
     pinnedPaths,
     setPinnedPaths,
     // Refs
@@ -463,6 +478,8 @@ ${cellsHtml}
     handleExportHtml,
     handleOpenDocs,
     handleCloseDocs,
+    handleOpenKafkaTab,
+    handleCloseKafkaTab,
     handleTogglePin,
     handleNavigateToCell,
     handleInsertLibraryFile,

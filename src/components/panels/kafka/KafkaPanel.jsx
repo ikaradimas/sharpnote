@@ -88,7 +88,9 @@ function buildMessageEl(msg) {
   const rawVal = msg.value ?? '';
   let isJson = false, pretty = '', preview = '';
   try {
-    const parsed = JSON.parse(rawVal);
+    // Some producers append a trailing "#<digits>" sequence number — strip it before parsing
+    const jsonCandidate = rawVal.replace(/\s*#\d+\s*$/, '');
+    const parsed = JSON.parse(jsonCandidate);
     if (parsed !== null && typeof parsed === 'object') {
       isJson = true;
       pretty = JSON.stringify(parsed, null, 2);
