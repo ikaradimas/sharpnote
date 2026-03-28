@@ -38,6 +38,7 @@ function generateCSharpConsumer(connection, topic, fromBeginning) {
   lines.push('        var result = consumer.Consume(TimeSpan.FromSeconds(5));');
   lines.push('        if (result == null) continue;');
   lines.push(`        Console.WriteLine($"[{result.TopicPartitionOffset}] {result.Message.Value}");`);
+  lines.push('        await Task.Delay(20);');
   lines.push('    }');
   lines.push('}');
   lines.push('finally');
