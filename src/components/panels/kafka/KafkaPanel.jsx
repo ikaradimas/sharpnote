@@ -83,6 +83,8 @@ function JsonHighlight({ str }) {
   );
 }
 
+const COPY_ICON = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+
 // ── Imperative message DOM builder (no React render) ─────────────────────────
 
 function buildMessageEl(msg) {
@@ -109,6 +111,19 @@ function buildMessageEl(msg) {
 
   const span = (cls, text) => { const el = document.createElement('span'); el.className = cls; el.textContent = text; return el; };
 
+  const copyBtn = document.createElement('button');
+  copyBtn.className = 'kafka-msg-copy';
+  copyBtn.title = 'Copy value';
+  copyBtn.innerHTML = COPY_ICON;
+  copyBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    navigator.clipboard.writeText(rawVal).then(() => {
+      copyBtn.textContent = '✓';
+      setTimeout(() => { copyBtn.innerHTML = COPY_ICON; }, 1500);
+    });
+  });
+
   const summary = document.createElement('summary');
   summary.className = 'kafka-msg-summary';
   summary.append(
@@ -116,6 +131,7 @@ function buildMessageEl(msg) {
     span('kafka-msg-meta', `p${msg.partition}·${msg.offset}`),
     ...(msg.key ? [span('kafka-msg-key', msg.key)] : []),
     span('kafka-msg-value kafka-msg-value--collapsed', preview || '(null)'),
+    copyBtn,
   );
 
   const expanded = document.createElement('span');

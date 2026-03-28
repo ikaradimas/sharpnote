@@ -6035,7 +6035,10 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 .kafka-feed-message { border-bottom: 1px solid var(--border-subtle); font-size: 10px; font-family: var(--font-code); }
 .kafka-feed-message:hover { background: var(--bg-mid); }
 .kafka-feed-message[open] { background: var(--bg-mid); }
-.kafka-msg-summary { display: flex; gap: 6px; padding: 3px 8px; align-items: baseline; cursor: pointer; list-style: none; }
+.kafka-msg-summary { display: flex; gap: 6px; padding: 3px 8px; align-items: center; cursor: pointer; list-style: none; }
+.kafka-msg-copy { display: none; flex-shrink: 0; background: none; border: none; padding: 2px 3px; color: var(--text-muted); cursor: pointer; border-radius: 3px; line-height: 1; align-items: center; }
+.kafka-feed-message:hover .kafka-msg-copy { display: inline-flex; }
+.kafka-msg-copy:hover { color: var(--text-primary); background: var(--bg-elevated); }
 .kafka-msg-summary::-webkit-details-marker { display: none; }
 .kafka-msg-stream { color: var(--accent-secondary); flex-shrink: 0; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9px; opacity: 0.8; }
 .kafka-msg-meta { color: var(--text-faint); flex-shrink: 0; min-width: 46px; }
