@@ -82,22 +82,18 @@ function JsonHighlight({ str }) {
   );
 }
 
-// ── Collapsible message row ───────────────────────────────────────────────────
+// ── Imperative message DOM builder (no React render) ─────────────────────────
 
-function MessageRow({ msg }) {
+function buildMessageEl(msg) {
   const rawVal = msg.value ?? '';
-  let isJson = false;
-  let pretty  = '';
-  let preview = '';
-
+  let isJson = false, pretty = '', preview = '';
   try {
     const parsed = JSON.parse(rawVal);
     if (parsed !== null && typeof parsed === 'object') {
-      isJson  = true;
-      pretty  = JSON.stringify(parsed, null, 2);
+      isJson = true;
+      pretty = JSON.stringify(parsed, null, 2);
     }
   } catch {}
-
   if (isJson) {
     preview = rawVal.length > 120 ? rawVal.slice(0, 120) + '…' : rawVal;
   } else {
@@ -105,22 +101,35 @@ function MessageRow({ msg }) {
     preview = nl >= 0 ? rawVal.slice(0, nl) : rawVal.slice(0, 200);
   }
 
-  return (
-    <details className="kafka-feed-message">
-      <summary className="kafka-msg-summary">
-        <span className="kafka-msg-stream">{msg.topic}</span>
-        <span className="kafka-msg-meta">p{msg.partition}·{msg.offset}</span>
-        {msg.key && <span className="kafka-msg-key">{msg.key}</span>}
-        <span className="kafka-msg-value kafka-msg-value--collapsed">{preview || '(null)'}</span>
-      </summary>
-      <div className="kafka-msg-body">
-        {isJson
-          ? <span className="kafka-msg-value kafka-msg-value--expanded"><JsonHighlight str={pretty} /></span>
-          : <span className="kafka-msg-value kafka-msg-value--expanded">{rawVal || '(null)'}</span>
-        }
-      </div>
-    </details>
+  const span = (cls, text) => { const el = document.createElement('span'); el.className = cls; el.textContent = text; return el; };
+
+  const summary = document.createElement('summary');
+  summary.className = 'kafka-msg-summary';
+  summary.append(
+    span('kafka-msg-stream', msg.topic),
+    span('kafka-msg-meta', `p${msg.partition}·${msg.offset}`),
+    ...(msg.key ? [span('kafka-msg-key', msg.key)] : []),
+    span('kafka-msg-value kafka-msg-value--collapsed', preview || '(null)'),
   );
+
+  const expanded = document.createElement('span');
+  expanded.className = 'kafka-msg-value kafka-msg-value--expanded';
+  if (isJson) {
+    highlightJson(pretty).forEach(({ text, cls }) => {
+      if (cls) { const s = document.createElement('span'); s.className = cls; s.textContent = text; expanded.appendChild(s); }
+      else expanded.appendChild(document.createTextNode(text));
+    });
+  } else {
+    expanded.textContent = rawVal || '(null)';
+  }
+  const body = document.createElement('div');
+  body.className = 'kafka-msg-body';
+  body.appendChild(expanded);
+
+  const details = document.createElement('details');
+  details.className = 'kafka-feed-message';
+  details.append(summary, body);
+  return details;
 }
 
 // ── Connection form ───────────────────────────────────────────────────────────
@@ -238,12 +247,13 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
   const [listeners,   setListeners]   = useState({});
   const consumerIds   = useRef({});
 
-  // unified chronological message feed
-  const [allMessages, setAllMessages] = useState([]);
-  const msgIdRef      = useRef(0);
-  const pendingRef    = useRef([]);   // messages waiting to be flushed
-  const flushTimer    = useRef(null); // batching timer
-  const [page, setPage] = useState(1);
+  // unified chronological message feed — stored in a plain ref, never in state
+  const allMsgsRef = useRef([]);
+  const feedRef    = useRef(null);   // DOM container for messages
+  const pageRef    = useRef(1);
+  const pendingRef = useRef([]);
+  const flushTimer = useRef(null);
+  const [pager, setPager] = useState({ total: 0, page: 1, totalPages: 1 });
   const PAGE_SIZE = 50;
 
   const [copiedTopic, setCopiedTopic] = useState(null);
@@ -282,16 +292,46 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
 
   // ── Message streaming ─────────────────────────────────────────────────────────
 
+  // Render one page directly into the DOM — zero React involvement
+  const renderPage = useCallback((pageNum) => {
+    const container = feedRef.current;
+    if (!container) return;
+    const frag = document.createDocumentFragment();
+    allMsgsRef.current
+      .slice((pageNum - 1) * PAGE_SIZE, pageNum * PAGE_SIZE)
+      .forEach((m) => frag.appendChild(buildMessageEl(m)));
+    container.replaceChildren(frag);
+  }, []);
+
+  const handlePageChange = useCallback((newPage) => {
+    pageRef.current = newPage;
+    renderPage(newPage);
+    setPager((prev) => ({ ...prev, page: newPage }));
+  }, [renderPage]);
+
+  // maxMessages in a ref so the handler closure never goes stale
+  const maxMessagesRef = useRef(maxMessages);
+  useEffect(() => { maxMessagesRef.current = maxMessages; }, [maxMessages]);
+
   useEffect(() => {
+    let idCounter = 0;
     const handler = (payload) => {
       const { consumerId, ...msg } = payload;
       if (!Object.values(consumerIds.current).includes(consumerId)) return;
-      pendingRef.current.push({ ...msg, _id: ++msgIdRef.current });
+      pendingRef.current.push({ ...msg, _id: ++idCounter });
       if (flushTimer.current) return;
       flushTimer.current = setTimeout(() => {
         flushTimer.current = null;
         const batch = pendingRef.current.splice(0);
-        setAllMessages((prev) => [...prev, ...batch].slice(-maxMessages));
+        const all = allMsgsRef.current;
+        all.push(...batch);
+        if (all.length > maxMessagesRef.current) all.splice(0, all.length - maxMessagesRef.current);
+        const total = all.length;
+        const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+        const curPage = Math.min(pageRef.current, totalPages);
+        // Only re-paint DOM if the user is watching the last page
+        if (curPage === totalPages) renderPage(curPage);
+        setPager({ total, page: curPage, totalPages });
       }, 100);
     };
     window.electronAPI.onKafkaMessage(handler);
@@ -300,7 +340,7 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
       clearTimeout(flushTimer.current);
       flushTimer.current = null;
     };
-  }, [maxMessages]);
+  }, [renderPage]);
 
   // Stop all listeners on unmount
   useEffect(() => {
@@ -404,10 +444,6 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
   const isListening    = listenedTopics.length > 0;
   const visibleChips   = listenedTopics.slice(0, CHIP_LIMIT);
   const hiddenChips    = listenedTopics.slice(CHIP_LIMIT);
-
-  const totalPages  = Math.max(1, Math.ceil(allMessages.length / PAGE_SIZE));
-  const clampedPage = Math.min(page, totalPages);
-  const pagedMessages = allMessages.slice((clampedPage - 1) * PAGE_SIZE, clampedPage * PAGE_SIZE);
 
   // ── Render ────────────────────────────────────────────────────────────────────
 
@@ -558,26 +594,22 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
                     >■ All</button>
                   </div>
                 )}
-                <div className="kafka-feed-messages">
-                  {allMessages.length === 0 && (
-                    <div className="kafka-feed-empty">
-                      {listenedTopics.length === 0 ? 'Press ▶ on a topic to start a live feed' : 'Waiting for messages…'}
-                    </div>
-                  )}
-                  {pagedMessages.map((m) => (
-                    <MessageRow key={m._id} msg={m} />
-                  ))}
-                </div>
-                {allMessages.length > 0 && (
+                {pager.total === 0 && (
+                  <div className="kafka-feed-empty">
+                    {listenedTopics.length === 0 ? 'Press ▶ on a topic to start a live feed' : 'Waiting for messages…'}
+                  </div>
+                )}
+                <div className="kafka-feed-messages" ref={feedRef} />
+                {pager.total > 0 && (
                   <div className="kafka-feed-pager">
-                    <button className="kafka-btn" onClick={() => setPage(1)} disabled={clampedPage === 1} title="First">«</button>
-                    <button className="kafka-btn" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={clampedPage === 1} title="Previous">‹</button>
+                    <button className="kafka-btn" onClick={() => handlePageChange(1)} disabled={pager.page === 1} title="First">«</button>
+                    <button className="kafka-btn" onClick={() => handlePageChange(pager.page - 1)} disabled={pager.page === 1} title="Previous">‹</button>
                     <span className="kafka-pager-info">
-                      {clampedPage} / {totalPages}
-                      <span className="kafka-pager-count"> ({allMessages.length})</span>
+                      {pager.page} / {pager.totalPages}
+                      <span className="kafka-pager-count"> ({pager.total})</span>
                     </span>
-                    <button className="kafka-btn" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={clampedPage === totalPages} title="Next">›</button>
-                    <button className="kafka-btn" onClick={() => setPage(totalPages)} disabled={clampedPage === totalPages} title="Last">»</button>
+                    <button className="kafka-btn" onClick={() => handlePageChange(pager.page + 1)} disabled={pager.page === pager.totalPages} title="Next">›</button>
+                    <button className="kafka-btn" onClick={() => handlePageChange(pager.totalPages)} disabled={pager.page === pager.totalPages} title="Last">»</button>
                   </div>
                 )}
               </div>
