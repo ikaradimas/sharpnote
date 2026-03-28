@@ -87,6 +87,10 @@ async function consumeStart({ consumerId, connection, topics, maxMessages, fromB
       const topicCount = (counts[topic] || 0);
       if (topicCount >= max) return;
       counts[topic] = topicCount + 1;
+      // Stop once every subscribed topic has reached the limit
+      if (topicList.every((t) => (counts[t] || 0) >= max)) {
+        consumeStop(consumerId).catch(() => {});
+      }
 
       const payload = {
         consumerId,
