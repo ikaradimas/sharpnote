@@ -4,6 +4,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 const kernelMessageWrappers = new WeakMap();
 const logEntryWrappers = new WeakMap();
 const lspReceiveWrappers = new WeakMap();
+const kafkaMessageWrappers = new WeakMap();
 
 contextBridge.exposeInMainWorld('electronAPI', {
   // Dialogs
@@ -154,4 +155,24 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveLibraryFile: (filePath, content) => ipcRenderer.invoke('save-library-file', { filePath, content }),
   deleteLibraryFile: (filePath) => ipcRenderer.invoke('delete-library-file', filePath),
   openLibraryFolder: () => ipcRenderer.invoke('open-library-folder'),
+
+  // Kafka Browser — saved connections
+  loadKafkaSaved:  ()          => ipcRenderer.invoke('kafka-saved-load'),
+  saveKafkaSaved: (list)       => ipcRenderer.invoke('kafka-saved-save', list),
+  // Kafka Browser — topic listing and consuming
+  kafkaListTopics:     (conn)  => ipcRenderer.invoke('kafka-topics-list', conn),
+  kafkaConsumeStart:   (opts)  => ipcRenderer.invoke('kafka-consume-start', opts),
+  kafkaConsumeStop:    (id)    => ipcRenderer.invoke('kafka-consume-stop', id),
+  onKafkaMessage: (callback) => {
+    const wrapper = (_event, payload) => callback(payload);
+    kafkaMessageWrappers.set(callback, wrapper);
+    ipcRenderer.on('kafka-message', wrapper);
+  },
+  offKafkaMessage: (callback) => {
+    const wrapper = kafkaMessageWrappers.get(callback);
+    if (wrapper) {
+      ipcRenderer.removeListener('kafka-message', wrapper);
+      kafkaMessageWrappers.delete(callback);
+    }
+  },
 });

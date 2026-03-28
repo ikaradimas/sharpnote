@@ -17,6 +17,7 @@ const notebookIo    = require('./src/main/notebook-io');
 const logOps        = require('./src/main/log-ops');
 const settings      = require('./src/main/settings');
 const apiSaved      = require('./src/main/api-saved');
+const kafka         = require('./src/main/kafka');
 const menuBuilder   = require('./src/main/menu');
 
 // ── Process-level state ───────────────────────────────────────────────────────
@@ -85,6 +86,7 @@ function createWindow() {
   mainWindow.on('closed', () => {
     mainWindow = null;
     kernelManager.killAllKernels();
+    kafka.stopAll().catch(() => {});
   });
 
   // Propagate new window reference to all sub-modules.
@@ -93,6 +95,7 @@ function createWindow() {
   kernelManager.setMainWindow(mainWindow);
   notebookIo.setMainWindow(mainWindow);
   settings.setMainWindow(mainWindow);
+  kafka.setMainWindow(mainWindow);
 }
 
 // ── Register all IPC handlers ─────────────────────────────────────────────────
@@ -121,6 +124,8 @@ function registerAllHandlers() {
   settings.register(ipcMain, { app, shell, mainWindow });
 
   apiSaved.register(ipcMain, { app });
+
+  kafka.register(ipcMain, { app });
 
   // Settings export / import
   ipcMain.handle('settings-export', async (_event, data) => {
