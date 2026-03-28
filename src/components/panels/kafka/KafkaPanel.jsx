@@ -314,11 +314,17 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
   const renderPage = useCallback((pageNum) => {
     const container = feedRef.current;
     if (!container) return;
+    // Snapshot which messages are expanded so we can restore them after replaceChildren
+    const openIndices = new Set();
+    container.querySelectorAll('details').forEach((el, i) => { if (el.open) openIndices.add(i); });
     const frag = document.createDocumentFragment();
     allMsgsRef.current
       .slice((pageNum - 1) * PAGE_SIZE, pageNum * PAGE_SIZE)
       .forEach((m) => frag.appendChild(buildMessageEl(m)));
     container.replaceChildren(frag);
+    if (openIndices.size > 0) {
+      container.querySelectorAll('details').forEach((el, i) => { if (openIndices.has(i)) el.open = true; });
+    }
   }, []);
 
   const handlePageChange = useCallback((newPage) => {
