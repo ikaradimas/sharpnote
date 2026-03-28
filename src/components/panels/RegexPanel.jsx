@@ -222,14 +222,18 @@ export function RegexPanel() {
       {/* ── Pattern input + flags ─────────────────────────────────────────── */}
       <div className="regex-panel-header">
         <div className="rx-pattern-row">
-          <input
-            className={`rx-pattern-input${error ? ' rx-input-error' : ''}`}
-            value={pattern}
-            onChange={e => setPattern(e.target.value)}
-            placeholder="Pattern…"
-            spellCheck={false}
-            aria-label="Regex pattern"
-          />
+          <div className={`rx-pattern-wrap${error ? ' rx-input-error' : ''}`}>
+            <span className="rx-slash" aria-hidden="true">/</span>
+            <input
+              className="rx-pattern-input"
+              value={pattern}
+              onChange={e => setPattern(e.target.value)}
+              placeholder="pattern"
+              spellCheck={false}
+              aria-label="Regex pattern"
+            />
+            <span className="rx-slash" aria-hidden="true">/</span>
+          </div>
           <div className="rx-flags" role="group" aria-label="Regex flags">
             {FLAGS.map(f => (
               <button

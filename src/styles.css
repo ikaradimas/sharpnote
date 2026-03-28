@@ -5509,21 +5509,39 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
   margin-bottom: 5px;
 }
 
-.rx-pattern-input {
+.rx-pattern-wrap {
   flex: 1;
   min-width: 0;
+  display: flex;
+  align-items: center;
   background: var(--bg-mid);
   border: 1px solid var(--border-default);
   border-radius: 3px;
+  transition: border-color 0.15s;
+}
+.rx-pattern-wrap:focus-within   { border-color: var(--accent-secondary); }
+.rx-pattern-wrap.rx-input-error { border-color: #c0575f; }
+
+.rx-slash {
+  font-family: var(--font-code);
+  font-size: 13px;
+  color: var(--text-dim);
+  padding: 0 4px;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.rx-pattern-input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
   color: var(--text-primary);
   font-family: var(--font-code);
   font-size: 12px;
-  padding: 4px 7px;
+  padding: 4px 0;
   outline: none;
-  transition: border-color 0.15s;
 }
-.rx-pattern-input:focus       { border-color: var(--accent-secondary); }
-.rx-pattern-input.rx-input-error { border-color: #c0575f; }
 
 .rx-flags {
   display: flex;
