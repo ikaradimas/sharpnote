@@ -42,6 +42,8 @@ export function Toolbar({
   onToggleGraph,
   todoPanelOpen,
   onToggleTodo,
+  regexPanelOpen,
+  onToggleRegex,
   theme,
   onThemeChange,
   lineAltEnabled,
@@ -137,6 +139,8 @@ export function Toolbar({
         onToggleGraph={onToggleGraph}
         todoPanelOpen={todoPanelOpen}
         onToggleTodo={onToggleTodo}
+        regexPanelOpen={regexPanelOpen}
+        onToggleRegex={onToggleRegex}
       />
       {dockLayout && (
         <LayoutManager

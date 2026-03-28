@@ -41,7 +41,7 @@ export function NotebookView({
 }) {
   const { cells, outputs, outputHistory, cellResults, running, kernelStatus,
           config, logPanelOpen, nugetPanelOpen, configPanelOpen,
-          dbPanelOpen, varsPanelOpen, tocPanelOpen, graphPanelOpen, todoPanelOpen,
+          dbPanelOpen, varsPanelOpen, tocPanelOpen, graphPanelOpen, todoPanelOpen, regexPanelOpen,
           path: notebookPath, staleCellIds, attachedDbs, autoRun } = nb;
 
   const [findOpen, setFindOpen] = useState(false);
@@ -155,6 +155,8 @@ export function NotebookView({
         onToggleGraph={() => { if (!graphPanelOpen) onFocusPanel?.('graph'); onSetNb((n) => ({ graphPanelOpen: !n.graphPanelOpen })); }}
         todoPanelOpen={todoPanelOpen}
         onToggleTodo={() => { if (!todoPanelOpen) onFocusPanel?.('todo'); onSetNb((n) => ({ todoPanelOpen: !n.todoPanelOpen })); }}
+        regexPanelOpen={regexPanelOpen}
+        onToggleRegex={() => { if (!regexPanelOpen) onFocusPanel?.('regex'); onSetNb((n) => ({ regexPanelOpen: !n.regexPanelOpen })); }}
         theme={theme}
         onThemeChange={onThemeChange}
         lineAltEnabled={lineAltEnabled}

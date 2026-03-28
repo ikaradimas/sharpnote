@@ -114,7 +114,7 @@ export function App() {
     const nbFlagMap = {
       log: 'logPanelOpen', nuget: 'nugetPanelOpen', config: 'configPanelOpen',
       db: 'dbPanelOpen', vars: 'varsPanelOpen', toc: 'tocPanelOpen',
-      graph: 'graphPanelOpen', todo: 'todoPanelOpen',
+      graph: 'graphPanelOpen', todo: 'todoPanelOpen', regex: 'regexPanelOpen',
     };
     if (globalSetters[panelId]) {
       globalSetters[panelId](open === null ? (v) => !v : open);
@@ -162,7 +162,7 @@ export function App() {
       setNb(nbId, () => ({
         logPanelOpen: false, nugetPanelOpen: false, configPanelOpen: false,
         dbPanelOpen: false, varsPanelOpen: false, tocPanelOpen: false,
-        graphPanelOpen: false, todoPanelOpen: false,
+        graphPanelOpen: false, todoPanelOpen: false, regexPanelOpen: false,
       }));
   }, [setNb, setLibraryPanelOpen, setFilesPanelOpen, setApiPanelOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -693,6 +693,7 @@ export function App() {
     api:     apiPanelOpen,
     graph:   isNotebookId(activeId) ? (activeNb?.graphPanelOpen  ?? false) : false,
     todo:    isNotebookId(activeId) ? (activeNb?.todoPanelOpen   ?? false) : false,
+    regex:   isNotebookId(activeId) ? (activeNb?.regexPanelOpen  ?? false) : false,
   }), [activeId, activeNb, libraryPanelOpen, filesPanelOpen, apiPanelOpen]);
 
   const panelPropsMap = useMemo(() => {

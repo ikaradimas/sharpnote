@@ -137,6 +137,17 @@ export function IconTodo() {
     </svg>
   );
 }
+export function IconRegex() {
+  return (
+    <svg {..._ic} stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="4" y1="11" x2="2.5" y2="2" />
+      <line x1="9" y1="11" x2="10.5" y2="2" />
+      <circle cx="5.5" cy="6.5" r="0.9" fill="currentColor" stroke="none" />
+      <circle cx="7.5" cy="6.5" r="0.9" fill="currentColor" stroke="none" />
+      <path d="M5 4 L6.5 2.5 L8 4" />
+    </svg>
+  );
+}
 export function IconFileSvg({ isNotebook }) {
   return (
     <svg width="12" height="13" viewBox="0 0 12 13" fill="none" stroke="currentColor" strokeWidth="1.2" style={{ opacity: isNotebook ? 0.9 : 0.5 }}>
