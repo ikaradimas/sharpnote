@@ -138,21 +138,12 @@ export function IconTodo() {
   );
 }
 export function IconTools() {
-  // Two tools crossed (hammer + wrench), matching the 🛠️ shape.
-  // Each is drawn in natural horizontal orientation then rotated into place:
-  //   Hammer +45°  → head NW, handle SE
-  //   Wrench +135° → jaw  NE, handle SW
-  // Both handles pass through the centre (6.5, 6.5), forming an X.
+  // Ring spanner: hex head (upper-left) + diagonal handle (lower-right)
   return (
-    <svg {..._ic} strokeLinecap="round" strokeLinejoin="round">
-      <g transform="rotate(45, 6.5, 6.5)">
-        <rect x="1.8" y="5.3" width="2.8" height="2.4" rx="0.4" fill="currentColor" stroke="none"/>
-        <line x1="4.6" y1="6.5" x2="12" y2="6.5" stroke="currentColor" strokeWidth="1.4"/>
-      </g>
-      <g transform="rotate(135, 6.5, 6.5)">
-        <path d="M 4.5 5 L 1.5 5 Q 0.3 6.5 1.5 8 L 4.5 8" stroke="currentColor" strokeWidth="1.1" fill="none"/>
-        <line x1="4.5" y1="6.5" x2="12" y2="6.5" stroke="currentColor" strokeWidth="1.4"/>
-      </g>
+    <svg {..._ic} stroke="currentColor" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.1">
+      <polygon points="7,3.1 7,5.9 4.5,7.3 2,5.9 2,3.1 4.5,1.7"/>
+      <circle cx="4.5" cy="4.5" r="1.2"/>
+      <line x1="7" y1="4.5" x2="12" y2="11" strokeWidth="1.8"/>
     </svg>
   );
 }
