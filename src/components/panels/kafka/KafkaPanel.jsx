@@ -240,7 +240,9 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
 
   // unified chronological message feed
   const [allMessages, setAllMessages] = useState([]);
-  const msgIdRef = useRef(0);
+  const msgIdRef      = useRef(0);
+  const pendingRef    = useRef([]);   // messages waiting to be flushed
+  const flushTimer    = useRef(null); // batching timer
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 50;
 
@@ -284,11 +286,20 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
     const handler = (payload) => {
       const { consumerId, ...msg } = payload;
       if (!Object.values(consumerIds.current).includes(consumerId)) return;
-      const id = ++msgIdRef.current;
-      setAllMessages((prev) => [...prev, { ...msg, _id: id }].slice(-maxMessages));
+      pendingRef.current.push({ ...msg, _id: ++msgIdRef.current });
+      if (flushTimer.current) return;
+      flushTimer.current = setTimeout(() => {
+        flushTimer.current = null;
+        const batch = pendingRef.current.splice(0);
+        setAllMessages((prev) => [...prev, ...batch].slice(-maxMessages));
+      }, 100);
     };
     window.electronAPI.onKafkaMessage(handler);
-    return () => window.electronAPI.offKafkaMessage(handler);
+    return () => {
+      window.electronAPI.offKafkaMessage(handler);
+      clearTimeout(flushTimer.current);
+      flushTimer.current = null;
+    };
   }, [maxMessages]);
 
   // Stop all listeners on unmount
