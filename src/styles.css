@@ -2306,13 +2306,13 @@ body {
 .tab-action {
   background: transparent;
   border: none;
-  color: var(--text-muted);
-  width: 14px;
-  height: 14px;
+  color: var(--text-primary);
+  width: 12px;
+  height: 12px;
   border-radius: 2px;
   cursor: pointer;
-  font-size: 9px;
-  font-weight: 700;
+  font-size: 8px;
+  font-weight: 900;
   line-height: 1;
   display: flex;
   align-items: center;
@@ -2323,8 +2323,8 @@ body {
   transition: opacity 0.15s, color 0.15s, background 0.15s;
 }
 .tab:hover .tab-action,
-.tab.tab-active .tab-action { opacity: 1; }
-.tab-action:hover { background: var(--bg-elevated); color: var(--text-primary); }
+.tab.tab-active .tab-action { opacity: 0.8; }
+.tab-action:hover { opacity: 1; background: var(--bg-elevated); }
 
 .tab-color-btn {
   background: transparent;
