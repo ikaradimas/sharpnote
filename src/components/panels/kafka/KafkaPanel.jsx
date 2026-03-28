@@ -4,7 +4,7 @@ import { useResize } from '../../../hooks/useResize.js';
 
 // ── C# consumer code generator ────────────────────────────────────────────────
 
-function generateCSharpConsumer(connection, topic) {
+function generateCSharpConsumer(connection, topic, fromBeginning) {
   const brokers = (connection.brokers || []).join(',');
   const hasSasl  = !!connection.sasl;
   const lines = [];
@@ -16,7 +16,7 @@ function generateCSharpConsumer(connection, topic) {
   lines.push('{');
   lines.push(`    BootstrapServers = "${brokers}",`);
   lines.push(`    GroupId           = "my-consumer-group",`);
-  lines.push('    AutoOffsetReset   = AutoOffsetReset.Latest,');
+  lines.push(`    AutoOffsetReset   = AutoOffsetReset.${fromBeginning ? 'Earliest' : 'Latest'},`);
   if (hasSasl) {
     const mech = connection.sasl.mechanism?.toUpperCase().replace(/-/g, '_') ?? 'PLAIN';
     lines.push(`    SecurityProtocol  = SecurityProtocol.SaslSsl,`);
@@ -253,6 +253,7 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
   const [loadingTopics, setLoadingTopics] = useState(false);
   const [topicError,    setTopicError]    = useState('');
   const [maxMessages,   setMaxMessages]   = useState(1000);
+  const [fromBeginning, setFromBeginning] = useState(false);
 
   // topic -> consumerId (tracks active listeners)
   const [listeners,   setListeners]   = useState({});
@@ -415,6 +416,7 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
         connection: { brokers: conn.brokers, ssl: conn.ssl, sasl: conn.sasl },
         topics: [topic],
         maxMessages,
+        fromBeginning,
       });
     } catch {
       delete consumerIds.current[topic];
@@ -438,7 +440,7 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
   const handleCopyCode = (topic) => {
     const conn = savedConns.find((c) => c.id === selectedId);
     if (!conn) return;
-    navigator.clipboard.writeText(generateCSharpConsumer(conn, topic)).then(() => {
+    navigator.clipboard.writeText(generateCSharpConsumer(conn, topic, fromBeginning)).then(() => {
       setCopiedTopic(topic);
       setTimeout(() => setCopiedTopic(null), 2000);
     });
@@ -514,6 +516,19 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
               value={maxMessages}
               onChange={(e) => setMaxMessages(Math.max(1, parseInt(e.target.value) || 100))}
             />
+          </div>
+          <div className="kafka-offset-row">
+            <span className="kafka-section-label">Start from</span>
+            <div className="kafka-offset-toggle" title={fromBeginning ? 'Reading from the earliest available message' : 'Reading only new messages from now'}>
+              <button
+                className={`kafka-offset-btn${!fromBeginning ? ' active' : ''}`}
+                onClick={() => setFromBeginning(false)}
+              >End</button>
+              <button
+                className={`kafka-offset-btn${fromBeginning ? ' active' : ''}`}
+                onClick={() => setFromBeginning(true)}
+              >Beginning</button>
+            </div>
           </div>
         </div>
 

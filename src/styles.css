@@ -5974,6 +5974,12 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 
 /* Max messages config row */
 .kafka-max-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 8px; margin-top: auto; border-top: 1px solid var(--border-subtle); flex-shrink: 0; }
+.kafka-offset-row { display: flex; align-items: center; justify-content: space-between; padding: 5px 8px; border-top: 1px solid var(--border-subtle); flex-shrink: 0; }
+.kafka-offset-toggle { display: flex; border: 1px solid var(--border-default); border-radius: 3px; overflow: hidden; }
+.kafka-offset-btn { background: none; border: none; border-right: 1px solid var(--border-default); padding: 2px 7px; font-size: 10px; color: var(--text-muted); cursor: pointer; }
+.kafka-offset-btn:last-child { border-right: none; }
+.kafka-offset-btn:hover { color: var(--text-primary); }
+.kafka-offset-btn.active { background: var(--accent); color: #fff; }
 .kafka-max-input { width: 60px; background: var(--bg-mid); border: 1px solid var(--border-default); color: var(--text-primary); font-size: 11px; padding: 2px 5px; border-radius: 3px; outline: none; text-align: right; }
 .kafka-max-input:focus { border-color: var(--accent-primary-dim); }
 

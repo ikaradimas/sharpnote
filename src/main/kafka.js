@@ -57,7 +57,7 @@ async function listTopics(connection) {
   }
 }
 
-async function consumeStart({ consumerId, connection, topics, maxMessages }) {
+async function consumeStart({ consumerId, connection, topics, maxMessages, fromBeginning }) {
   await consumeStop(consumerId);
 
   const kafka  = makeKafkaClient(connection);
@@ -71,7 +71,7 @@ async function consumeStart({ consumerId, connection, topics, maxMessages }) {
 
   const topicList = Array.isArray(topics) ? topics : [topics];
   for (const topic of topicList) {
-    await consumer.subscribe({ topic, fromBeginning: false });
+    await consumer.subscribe({ topic, fromBeginning: !!fromBeginning });
   }
 
   const max = maxMessages || 100;
