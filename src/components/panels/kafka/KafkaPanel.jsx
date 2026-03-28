@@ -88,8 +88,11 @@ function buildMessageEl(msg) {
   const rawVal = msg.value ?? '';
   let isJson = false, pretty = '', preview = '';
   try {
-    // Some producers append a trailing "#<digits>" sequence number — strip it before parsing
-    const jsonCandidate = rawVal.replace(/\s*#\d+\s*$/, '');
+    // Strip leading BOM / null bytes (Windows producers, Confluent Schema Registry wire format)
+    // and trailing "#<digits>" sequence numbers (Java producers) before attempting JSON parse
+    const jsonCandidate = rawVal
+      .replace(/^[\uFEFF\x00]+/, '')
+      .replace(/\s*#\d+\s*$/, '');
     const parsed = JSON.parse(jsonCandidate);
     if (parsed !== null && typeof parsed === 'object') {
       isJson = true;
