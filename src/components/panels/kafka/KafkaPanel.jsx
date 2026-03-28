@@ -424,7 +424,7 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
               title={isListening ? 'Stop all streams before opening as tab' : 'Open as tab'}
             >↗ Tab</button>
         }
-        <button className="log-close-btn" onClick={onToggle} title="Close">×</button>
+        {!asTab && <button className="log-close-btn kafka-panel-close-btn" onClick={onToggle} title="Close">×</button>}
       </div>
 
       <div className="kafka-panel-body">
