@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { Wrench } from 'lucide-react';
 import {
-  IconTools, IconReset, IconConfig, IconPackages, IconLogs, IconDB,
+  IconReset, IconConfig, IconPackages, IconLogs, IconDB,
   IconVars, IconToC, IconLibrary, IconFiles, IconApi,
   IconGraph, IconTodo, IconRegex,
 } from './Icons.jsx';
@@ -82,7 +83,7 @@ export function ToolsMenu({
         title="Tools"
         className={`toolbar-icon-text-btn${open || anyPanelActive ? ' panel-active' : ''}`}
       >
-        <IconTools />
+        <Wrench size={13} />
         <span>Tools</span>
       </button>
       {open && createPortal(

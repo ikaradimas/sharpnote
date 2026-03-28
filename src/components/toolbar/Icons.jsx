@@ -137,16 +137,6 @@ export function IconTodo() {
     </svg>
   );
 }
-export function IconTools() {
-  // Ring spanner: hex head (upper-left) + diagonal handle (lower-right)
-  return (
-    <svg {..._ic} stroke="currentColor" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.1">
-      <polygon points="7,3.1 7,5.9 4.5,7.3 2,5.9 2,3.1 4.5,1.7"/>
-      <circle cx="4.5" cy="4.5" r="1.2"/>
-      <line x1="7" y1="4.5" x2="12" y2="11" strokeWidth="1.8"/>
-    </svg>
-  );
-}
 export function IconRegex() {
   return (
     <svg {..._ic} stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round">
