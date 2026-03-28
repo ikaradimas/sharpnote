@@ -282,11 +282,13 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
   const groupIds      = useRef({});
 
   // unified chronological message feed — stored in a plain ref, never in state
-  const allMsgsRef = useRef([]);
-  const feedRef    = useRef(null);   // DOM container for messages
-  const pageRef    = useRef(1);
-  const pendingRef = useRef([]);
-  const flushTimer = useRef(null);
+  const allMsgsRef    = useRef([]);
+  const feedRef       = useRef(null);   // DOM container for messages
+  const pageRef       = useRef(1);
+  const renderedPageRef = useRef(1);    // page currently in the DOM (updated after replaceChildren)
+  const expandedRef   = useRef({});     // pageNum -> Set<index> of open <details>
+  const pendingRef    = useRef([]);
+  const flushTimer    = useRef(null);
   const [pager, setPager] = useState({ total: 0, page: 1, totalPages: 1 });
   const PAGE_SIZE = 50;
 
@@ -330,16 +332,21 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
   const renderPage = useCallback((pageNum) => {
     const container = feedRef.current;
     if (!container) return;
-    // Snapshot which messages are expanded so we can restore them after replaceChildren
+    // Save expanded state for the page currently in the DOM before replacing it
+    const leaving = renderedPageRef.current;
     const openIndices = new Set();
     container.querySelectorAll('details').forEach((el, i) => { if (el.open) openIndices.add(i); });
+    expandedRef.current[leaving] = openIndices;
     const frag = document.createDocumentFragment();
     allMsgsRef.current
       .slice((pageNum - 1) * PAGE_SIZE, pageNum * PAGE_SIZE)
       .forEach((m) => frag.appendChild(buildMessageEl(m)));
     container.replaceChildren(frag);
-    if (openIndices.size > 0) {
-      container.querySelectorAll('details').forEach((el, i) => { if (openIndices.has(i)) el.open = true; });
+    renderedPageRef.current = pageNum;
+    // Restore expanded state for the page now being shown
+    const toRestore = expandedRef.current[pageNum];
+    if (toRestore && toRestore.size > 0) {
+      container.querySelectorAll('details').forEach((el, i) => { if (toRestore.has(i)) el.open = true; });
     }
   }, []);
 
@@ -476,6 +483,8 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
     clearTimeout(flushTimer.current);
     flushTimer.current = null;
     pageRef.current = 1;
+    renderedPageRef.current = 1;
+    expandedRef.current = {};
     feedRef.current?.replaceChildren();
     setPager({ total: 0, page: 1, totalPages: 1 });
   };
