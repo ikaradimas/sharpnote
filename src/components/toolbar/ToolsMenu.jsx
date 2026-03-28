@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { Wrench } from 'lucide-react';
 import {
   IconReset, IconConfig, IconPackages, IconLogs, IconDB,
   IconVars, IconToC, IconLibrary, IconFiles, IconApi,
@@ -20,6 +21,7 @@ export function ToolsMenu({
   graphPanelOpen, onToggleGraph,
   todoPanelOpen, onToggleTodo,
   regexPanelOpen, onToggleRegex,
+  onCloseAllPanels,
 }) {
   const [open, setOpen] = useState(false);
   const btnRef = useRef(null);
@@ -82,11 +84,7 @@ export function ToolsMenu({
         title="Tools"
         className={`toolbar-icon-text-btn${open || anyPanelActive ? ' panel-active' : ''}`}
       >
-        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" style={{ display: 'block', flexShrink: 0 }}>
-          <rect x="1.5" y="2.5" width="10" height="1.1" rx="0.5" fill="currentColor"/>
-          <rect x="1.5" y="5.95" width="10" height="1.1" rx="0.5" fill="currentColor"/>
-          <rect x="1.5" y="9.4" width="10" height="1.1" rx="0.5" fill="currentColor"/>
-        </svg>
+        <Wrench size={13} />
         <span>Tools</span>
       </button>
       {open && createPortal(
@@ -107,6 +105,12 @@ export function ToolsMenu({
               {active && <span className="tools-menu-active-dot" />}
             </button>
           ))}
+          {anyPanelActive && onCloseAllPanels && <>
+            <div className="tools-menu-separator" />
+            <button className="tools-menu-item" onClick={() => { onCloseAllPanels(); close(); }}>
+              <span className="tools-menu-label" style={{ paddingLeft: 2 }}>Close all panels</span>
+            </button>
+          </>}
         </div>,
         document.body
       )}
