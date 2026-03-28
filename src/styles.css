@@ -6019,7 +6019,7 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 .kafka-stop-all-btn { margin-left: auto; flex-shrink: 0; }
 
 /* Message rows */
-.kafka-feed-messages { overflow: hidden; flex: 1; }
+.kafka-feed-messages { overflow-y: auto; overflow-anchor: none; flex: 1; min-height: 0; }
 /* Pager */
 .kafka-feed-pager { display: flex; align-items: center; gap: 4px; padding: 4px 8px; border-top: 1px solid var(--border-default); background: var(--bg-deep); flex-shrink: 0; }
 .kafka-pager-info { font-size: 10px; color: var(--text-secondary); flex: 1; text-align: center; }
@@ -6037,7 +6037,7 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 .kafka-msg-value { color: var(--text-primary); flex: 1; min-width: 0; }
 .kafka-msg-value--collapsed { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .kafka-msg-body { padding: 2px 8px 5px 8px; }
-.kafka-msg-value--expanded { white-space: pre; overflow-x: auto; display: block; word-break: normal; line-height: 1.5; }
+.kafka-msg-value--expanded { white-space: pre-wrap; overflow-wrap: break-word; display: block; line-height: 1.5; }
 
 /* JSON syntax highlight */
 .kafka-json-key   { color: var(--accent-secondary); }
