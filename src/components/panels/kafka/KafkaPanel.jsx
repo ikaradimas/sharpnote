@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
+import { useResize } from '../../../hooks/useResize.js';
 
 // ── C# consumer code generator ────────────────────────────────────────────────
 
@@ -68,7 +69,7 @@ function KafkaConnectionForm({ connection, existingNames, onSave, onCancel }) {
   const handleSave = () => {
     const n = name.trim();
     const b = brokers.split(',').map((s) => s.trim()).filter(Boolean);
-    if (!n)       { setError('Name is required.'); return; }
+    if (!n)        { setError('Name is required.'); return; }
     if (!b.length) { setError('At least one broker is required.'); return; }
     const isDup = existingNames
       .filter((en) => en !== connection?.name)
@@ -86,20 +87,8 @@ function KafkaConnectionForm({ connection, existingNames, onSave, onCancel }) {
 
   return (
     <div className="kafka-conn-form">
-      <input
-        className="nuget-input"
-        placeholder="Connection name"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        spellCheck={false}
-      />
-      <input
-        className="nuget-input"
-        placeholder="Brokers (comma-separated, e.g. host:9092)"
-        value={brokers}
-        onChange={(e) => setBrokers(e.target.value)}
-        spellCheck={false}
-      />
+      <input className="nuget-input" placeholder="Connection name" value={name} onChange={(e) => setName(e.target.value)} spellCheck={false} />
+      <input className="nuget-input" placeholder="Brokers (comma-separated, e.g. host:9092)" value={brokers} onChange={(e) => setBrokers(e.target.value)} spellCheck={false} />
       <label className="kafka-checkbox-row">
         <input type="checkbox" checked={ssl} onChange={(e) => setSsl(e.target.checked)} />
         <span>SSL</span>
@@ -126,90 +115,88 @@ function KafkaConnectionForm({ connection, existingNames, onSave, onCancel }) {
   );
 }
 
-// ── Message feed ──────────────────────────────────────────────────────────────
-
-function MessageFeed({ topic, messages, onStop }) {
-  const endRef = useRef(null);
-  useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }, [messages.length]);
-
-  return (
-    <div className="kafka-feed">
-      <div className="kafka-feed-header">
-        <span className="kafka-feed-topic">{topic}</span>
-        <span className="kafka-feed-count">{messages.length} msg{messages.length !== 1 ? 's' : ''}</span>
-        <button className="kafka-btn kafka-btn-stop" onClick={onStop} title="Stop listening">■ Stop</button>
-      </div>
-      <div className="kafka-feed-messages">
-        {messages.length === 0 && <div className="kafka-feed-empty">Waiting for messages…</div>}
-        {messages.map((m, i) => (
-          <div key={i} className="kafka-feed-message">
-            <span className="kafka-msg-meta">p{m.partition}·{m.offset}</span>
-            {m.key && <span className="kafka-msg-key">{m.key}</span>}
-            <span className="kafka-msg-value">{m.value ?? '(null)'}</span>
-          </div>
-        ))}
-        <div ref={endRef} />
-      </div>
-    </div>
-  );
-}
-
 // ── Main panel ────────────────────────────────────────────────────────────────
 
 export function KafkaPanel({ onToggle }) {
   const [savedConns,    setSavedConns]    = useState([]);
   const [selectedId,    setSelectedId]    = useState(null);
-  const [formConn,      setFormConn]      = useState(null); // null=hidden, {}=add, {id,...}=edit
+  const [formConn,      setFormConn]      = useState(null);
   const [topics,        setTopics]        = useState([]);
   const [topicFilter,   setTopicFilter]   = useState('');
   const [loadingTopics, setLoadingTopics] = useState(false);
   const [topicError,    setTopicError]    = useState('');
   const [maxMessages,   setMaxMessages]   = useState(100);
-  // Map of topic -> { consumerId, messages[] }
-  const [listeners, setListeners] = useState({});
-  const listenerConsumerIds = useRef({});
+
+  // topic -> consumerId (tracks active listeners)
+  const [listeners,   setListeners]   = useState({});
+  const consumerIds   = useRef({});          // same data as listeners but sync ref for handler
+
+  // unified chronological message feed
+  const [allMessages, setAllMessages] = useState([]);
+  const endRef = useRef(null);
+
   const [copiedTopic, setCopiedTopic] = useState(null);
 
-  // Load saved connections on mount
-  useEffect(() => {
-    window.electronAPI.loadKafkaSaved().then((list) => {
-      setSavedConns(list || []);
-    });
+  // ── Resizable panes ──────────────────────────────────────────────────────────
+  const [leftW, leftDragDown] = useResize(200, 'right');
+
+  // Topics section height (vertical drag between topics list and message feed)
+  const [topicsH,    setTopicsH]    = useState(220);
+  const topicsHRef   = useRef(220);
+  const topicsDragDown = useCallback((e) => {
+    e.preventDefault();
+    const startY = e.clientY;
+    const startH = topicsHRef.current;
+    const onMove = (ev) => {
+      const h = Math.max(60, Math.min(600, startH + (ev.clientY - startY)));
+      topicsHRef.current = h;
+      setTopicsH(h);
+    };
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+    };
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'row-resize';
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
   }, []);
 
-  // Listen for incoming Kafka messages
+  // ── Data loading ──────────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    window.electronAPI.loadKafkaSaved().then((list) => setSavedConns(list || []));
+  }, []);
+
+  // ── Message streaming ─────────────────────────────────────────────────────────
+
   useEffect(() => {
     const handler = (payload) => {
-      const { consumerId, topic, ...msg } = payload;
-      setListeners((prev) => {
-        const entry = Object.values(prev).find((e) => e.consumerId === consumerId);
-        if (!entry) return prev;
-        const key = topic;
-        const existing = prev[key];
-        if (!existing) return prev;
-        return {
-          ...prev,
-          [key]: {
-            ...existing,
-            messages: [...existing.messages, msg].slice(-maxMessages),
-          },
-        };
-      });
+      const { consumerId, ...msg } = payload;
+      if (!Object.values(consumerIds.current).includes(consumerId)) return;
+      setAllMessages((prev) => [...prev, msg].slice(-maxMessages));
     };
     window.electronAPI.onKafkaMessage(handler);
     return () => window.electronAPI.offKafkaMessage(handler);
   }, [maxMessages]);
 
-  // Stop all listeners when panel unmounts
+  // Auto-scroll feed to bottom on new messages
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, [allMessages.length]);
+
+  // Stop all listeners on unmount
   useEffect(() => {
     return () => {
-      Object.values(listenerConsumerIds.current).forEach((id) => {
+      Object.values(consumerIds.current).forEach((id) => {
         window.electronAPI.kafkaConsumeStop(id).catch(() => {});
       });
     };
   }, []);
+
+  // ── Connection management ─────────────────────────────────────────────────────
 
   const persist = useCallback((list) => {
     setSavedConns(list);
@@ -218,19 +205,14 @@ export function KafkaPanel({ onToggle }) {
 
   const handleSaveConn = (conn) => {
     const existing = savedConns.find((c) => c.id === conn.id);
-    const updated  = existing
+    persist(existing
       ? savedConns.map((c) => c.id === conn.id ? conn : c)
-      : [...savedConns, conn];
-    persist(updated);
+      : [...savedConns, conn]);
     setFormConn(null);
   };
 
   const handleDeleteConn = (id) => {
-    if (selectedId === id) {
-      setSelectedId(null);
-      setTopics([]);
-      setTopicError('');
-    }
+    if (selectedId === id) { setSelectedId(null); setTopics([]); setTopicError(''); }
     persist(savedConns.filter((c) => c.id !== id));
   };
 
@@ -242,9 +224,7 @@ export function KafkaPanel({ onToggle }) {
     setLoadingTopics(true);
     try {
       const result = await window.electronAPI.kafkaListTopics({
-        brokers: conn.brokers,
-        ssl: conn.ssl,
-        sasl: conn.sasl,
+        brokers: conn.brokers, ssl: conn.ssl, sasl: conn.sasl,
       });
       setTopics(result.topics || []);
     } catch (err) {
@@ -254,13 +234,15 @@ export function KafkaPanel({ onToggle }) {
     }
   };
 
+  // ── Topic listening ───────────────────────────────────────────────────────────
+
   const handleListen = async (topic) => {
-    if (listeners[topic]) return; // already listening
+    if (listeners[topic]) return;
     const conn = savedConns.find((c) => c.id === selectedId);
     if (!conn) return;
     const consumerId = uuidv4();
-    listenerConsumerIds.current[topic] = consumerId;
-    setListeners((prev) => ({ ...prev, [topic]: { consumerId, messages: [] } }));
+    consumerIds.current[topic] = consumerId;
+    setListeners((prev) => ({ ...prev, [topic]: consumerId }));
     try {
       await window.electronAPI.kafkaConsumeStart({
         consumerId,
@@ -268,58 +250,53 @@ export function KafkaPanel({ onToggle }) {
         topics: [topic],
         maxMessages,
       });
-    } catch (err) {
-      setListeners((prev) => {
-        const next = { ...prev };
-        delete next[topic];
-        return next;
-      });
-      delete listenerConsumerIds.current[topic];
+    } catch {
+      delete consumerIds.current[topic];
+      setListeners((prev) => { const n = { ...prev }; delete n[topic]; return n; });
     }
   };
 
   const handleStopListen = async (topic) => {
-    const consumerId = listenerConsumerIds.current[topic];
+    const consumerId = consumerIds.current[topic];
     if (consumerId) {
       await window.electronAPI.kafkaConsumeStop(consumerId).catch(() => {});
-      delete listenerConsumerIds.current[topic];
+      delete consumerIds.current[topic];
     }
-    setListeners((prev) => {
-      const next = { ...prev };
-      delete next[topic];
-      return next;
-    });
+    setListeners((prev) => { const n = { ...prev }; delete n[topic]; return n; });
+    setAllMessages((prev) => prev.filter((m) => m.topic !== topic));
   };
 
   const handleCopyCode = (topic) => {
     const conn = savedConns.find((c) => c.id === selectedId);
     if (!conn) return;
-    const code = generateCSharpConsumer(conn, topic);
-    navigator.clipboard.writeText(code).then(() => {
+    navigator.clipboard.writeText(generateCSharpConsumer(conn, topic)).then(() => {
       setCopiedTopic(topic);
       setTimeout(() => setCopiedTopic(null), 2000);
     });
   };
 
-  const selectedConn  = savedConns.find((c) => c.id === selectedId) ?? null;
-  const existingNames = savedConns.map((c) => c.name);
+  // ── Derived ───────────────────────────────────────────────────────────────────
+
+  const selectedConn   = savedConns.find((c) => c.id === selectedId) ?? null;
+  const existingNames  = savedConns.map((c) => c.name);
   const filteredTopics = topics.filter((t) =>
     !topicFilter || t.toLowerCase().includes(topicFilter.toLowerCase())
   );
-
   const listenedTopics = Object.keys(listeners);
+
+  // ── Render ────────────────────────────────────────────────────────────────────
 
   return (
     <div className="kafka-panel">
-      {/* ── Header ── */}
       <div className="kafka-panel-header">
         <span className="kafka-panel-title">Kafka Browser</span>
         <button className="log-close-btn" onClick={onToggle} title="Close">×</button>
       </div>
 
       <div className="kafka-panel-body">
+
         {/* ── Left: connection list ── */}
-        <div className="kafka-conn-list">
+        <div className="kafka-conn-list" style={{ width: leftW }}>
           <div className="kafka-conn-list-header">
             <span className="kafka-section-label">Brokers</span>
             {!formConn && (
@@ -350,49 +327,35 @@ export function KafkaPanel({ onToggle }) {
                 <span className="kafka-conn-brokers">{conn.brokers.join(', ')}</span>
               </div>
               <div className="kafka-conn-actions">
-                <button
-                  className="kafka-btn kafka-btn-connect"
-                  onClick={() => handleConnect(conn)}
-                  title="Connect and list topics"
-                >→</button>
-                <button
-                  className="kafka-btn"
-                  onClick={() => setFormConn(conn)}
-                  title="Edit"
-                >✎</button>
-                <button
-                  className="kafka-btn kafka-btn-danger"
-                  onClick={() => handleDeleteConn(conn.id)}
-                  title="Delete"
-                >✕</button>
+                <button className="kafka-btn kafka-btn-connect" onClick={() => handleConnect(conn)} title="Connect">→</button>
+                <button className="kafka-btn" onClick={() => setFormConn(conn)} title="Edit">✎</button>
+                <button className="kafka-btn kafka-btn-danger" onClick={() => handleDeleteConn(conn.id)} title="Delete">✕</button>
               </div>
             </div>
           ))}
 
-          {/* max messages config */}
           <div className="kafka-max-row">
             <span className="kafka-section-label">Max messages</span>
             <input
               className="kafka-max-input"
-              type="number"
-              min={1}
-              max={10000}
+              type="number" min={1} max={10000}
               value={maxMessages}
               onChange={(e) => setMaxMessages(Math.max(1, parseInt(e.target.value) || 100))}
             />
           </div>
         </div>
 
-        {/* ── Right: topics + feeds ── */}
-        <div className="kafka-right">
-          {!selectedConn && (
-            <div className="kafka-right-empty">Select a broker to browse topics</div>
-          )}
+        {/* ── Horizontal resize handle ── */}
+        <div className="kafka-resize-h" onMouseDown={leftDragDown} />
 
-          {selectedConn && (
+        {/* ── Right: topics + unified feed ── */}
+        <div className="kafka-right">
+          {!selectedConn ? (
+            <div className="kafka-right-empty">Select a broker to browse topics</div>
+          ) : (
             <>
-              {/* Topic list */}
-              <div className="kafka-topics-section">
+              {/* Topics section */}
+              <div className="kafka-topics-section" style={{ height: topicsH }}>
                 <div className="kafka-topics-header">
                   <span className="kafka-section-label">
                     {loadingTopics ? 'Connecting…' : `Topics (${filteredTopics.length}${topicFilter ? ' filtered' : ''})`}
@@ -417,11 +380,10 @@ export function KafkaPanel({ onToggle }) {
                         <div key={topic} className={`kafka-topic-row${isListening ? ' kafka-topic-row--listening' : ''}`}>
                           <span className="kafka-topic-name" title={topic}>{topic}</span>
                           <div className="kafka-topic-actions">
-                            {isListening ? (
-                              <button className="kafka-btn kafka-btn-stop" onClick={() => handleStopListen(topic)} title="Stop listening">■</button>
-                            ) : (
-                              <button className="kafka-btn kafka-btn-listen" onClick={() => handleListen(topic)} title="Listen">▶</button>
-                            )}
+                            {isListening
+                              ? <button className="kafka-btn kafka-btn-stop" onClick={() => handleStopListen(topic)} title="Stop listening">■</button>
+                              : <button className="kafka-btn kafka-btn-listen" onClick={() => handleListen(topic)} title="Listen">▶</button>
+                            }
                             <button
                               className={`kafka-btn${copied ? ' kafka-btn-copied' : ''}`}
                               onClick={() => handleCopyCode(topic)}
@@ -441,23 +403,44 @@ export function KafkaPanel({ onToggle }) {
                 )}
               </div>
 
-              {/* Active message feeds */}
-              {listenedTopics.length > 0 && (
-                <div className="kafka-feeds-section">
-                  <div className="kafka-section-label kafka-feeds-label">Live feeds</div>
-                  {listenedTopics.map((topic) => (
-                    <MessageFeed
-                      key={topic}
-                      topic={topic}
-                      messages={listeners[topic]?.messages ?? []}
-                      onStop={() => handleStopListen(topic)}
-                    />
-                  ))}
-                </div>
-              )}
+              {/* Vertical resize handle */}
+              <div className="kafka-resize-v" onMouseDown={topicsDragDown} />
+
+              {/* Unified message feed */}
+              <div className="kafka-feed-section">
+                {listenedTopics.length === 0 ? (
+                  <div className="kafka-right-empty">Press ▶ on a topic to start a live feed</div>
+                ) : (
+                  <>
+                    <div className="kafka-listener-chips">
+                      {listenedTopics.map((topic) => (
+                        <span key={topic} className="kafka-listener-chip">
+                          {topic}
+                          <button className="kafka-chip-stop" onClick={() => handleStopListen(topic)} title="Stop">■</button>
+                        </span>
+                      ))}
+                    </div>
+                    <div className="kafka-feed-messages">
+                      {allMessages.length === 0 && (
+                        <div className="kafka-feed-empty">Waiting for messages…</div>
+                      )}
+                      {allMessages.map((m, i) => (
+                        <div key={i} className="kafka-feed-message">
+                          <span className="kafka-msg-stream">{m.topic}</span>
+                          <span className="kafka-msg-meta">p{m.partition}·{m.offset}</span>
+                          {m.key && <span className="kafka-msg-key">{m.key}</span>}
+                          <span className="kafka-msg-value">{m.value ?? '(null)'}</span>
+                        </div>
+                      ))}
+                      <div ref={endRef} />
+                    </div>
+                  </>
+                )}
+              </div>
             </>
           )}
         </div>
+
       </div>
     </div>
   );
