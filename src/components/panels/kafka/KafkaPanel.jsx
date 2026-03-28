@@ -207,14 +207,23 @@ const CHIP_LIMIT = 10;
 
 function ChipOverflow({ topics, onStop }) {
   const [open, setOpen] = useState(false);
+  const wrapRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onOutside = (e) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', onOutside);
+    return () => document.removeEventListener('mousedown', onOutside);
+  }, [open]);
+
   return (
-    <div
-      className="kafka-chips-overflow"
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
-      onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
-    >
-      <span className="kafka-chips-overflow-btn">+{topics.length}</span>
+    <div ref={wrapRef} className="kafka-chips-overflow">
+      <span
+        className={`kafka-chips-overflow-btn${open ? ' active' : ''}`}
+        onClick={() => setOpen((v) => !v)}
+      >+{topics.length}</span>
       {open && (
         <div className="kafka-chips-overflow-tooltip">
           {topics.map((t) => (
