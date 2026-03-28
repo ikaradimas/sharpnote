@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useResize } from '../../../hooks/useResize.js';
+import { useOutsideClick } from '../../../hooks/useOutsideClick.js';
 
 // ── C# consumer code generator ────────────────────────────────────────────────
 
@@ -228,15 +229,7 @@ const CHIP_LIMIT = 10;
 function ChipOverflow({ topics, onStop }) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onOutside = (e) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
-    };
-    document.addEventListener('mousedown', onOutside);
-    return () => document.removeEventListener('mousedown', onOutside);
-  }, [open]);
+  useOutsideClick(wrapRef, () => setOpen(false), open);
 
   return (
     <div ref={wrapRef} className="kafka-chips-overflow">
@@ -335,7 +328,7 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
     // Save expanded state for the page currently in the DOM before replacing it
     const leaving = renderedPageRef.current;
     const openIndices = new Set();
-    container.querySelectorAll('details').forEach((el, i) => { if (el.open) openIndices.add(i); });
+    Array.from(container.children).forEach((el, i) => { if (el.open) openIndices.add(i); });
     expandedRef.current[leaving] = openIndices;
     const frag = document.createDocumentFragment();
     allMsgsRef.current
@@ -343,10 +336,9 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
       .forEach((m) => frag.appendChild(buildMessageEl(m)));
     container.replaceChildren(frag);
     renderedPageRef.current = pageNum;
-    // Restore expanded state for the page now being shown
     const toRestore = expandedRef.current[pageNum];
     if (toRestore && toRestore.size > 0) {
-      container.querySelectorAll('details').forEach((el, i) => { if (toRestore.has(i)) el.open = true; });
+      Array.from(container.children).forEach((el, i) => { if (toRestore.has(i)) el.open = true; });
     }
   }, []);
 

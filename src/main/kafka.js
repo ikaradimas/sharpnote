@@ -75,20 +75,19 @@ async function consumeStart({ consumerId, connection, topics, maxMessages, fromB
   }
 
   const max = maxMessages || 100;
-  // Per-topic count so each topic gets up to maxMessages
   const counts = {};
+  let stopped = false;
 
   _activeConsumers.set(consumerId, { consumer });
 
-  // Run the consumer loop (non-blocking — kafkajs manages its own loop internally)
   consumer.run({
     eachMessage: async ({ topic, partition, message }) => {
       if (!_activeConsumers.has(consumerId)) return;
       const topicCount = (counts[topic] || 0);
       if (topicCount >= max) return;
       counts[topic] = topicCount + 1;
-      // Stop once every subscribed topic has reached the limit
-      if (topicList.every((t) => (counts[t] || 0) >= max)) {
+      if (!stopped && topicList.every((t) => (counts[t] || 0) >= max)) {
+        stopped = true;
         consumeStop(consumerId).catch(() => {});
       }
 

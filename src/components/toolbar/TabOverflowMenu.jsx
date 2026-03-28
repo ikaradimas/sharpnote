@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import React, { useState, useLayoutEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { useOutsideClick } from '../../hooks/useOutsideClick.js';
 
 export function TabOverflowMenu({ items, activeId, onSelect }) {
   const [open, setOpen] = useState(false);
@@ -10,15 +11,7 @@ export function TabOverflowMenu({ items, activeId, onSelect }) {
 
   const hasActive = items.some(it => it.id === activeId);
 
-  useEffect(() => {
-    if (!open) return;
-    const h = (e) => {
-      if (!popupRef.current?.contains(e.target) && !btnRef.current?.contains(e.target))
-        setOpen(false);
-    };
-    document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
-  }, [open]);
+  useOutsideClick([popupRef, btnRef], () => setOpen(false), open);
 
   useLayoutEffect(() => {
     if (!open || !btnRef.current) return;
