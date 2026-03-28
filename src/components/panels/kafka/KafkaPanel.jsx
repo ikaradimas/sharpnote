@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useResize } from '../../../hooks/useResize.js';
 
@@ -84,7 +84,7 @@ function JsonHighlight({ str }) {
 
 // ── Collapsible message row ───────────────────────────────────────────────────
 
-function MessageRow({ msg, expanded, onToggle }) {
+function MessageRow({ msg }) {
   const rawVal = msg.value ?? '';
   let isJson = false;
   let pretty  = '';
@@ -106,23 +106,20 @@ function MessageRow({ msg, expanded, onToggle }) {
   }
 
   return (
-    <div
-      className={`kafka-feed-message${expanded ? ' kafka-feed-message--expanded' : ''}`}
-      onClick={onToggle}
-      title={expanded ? 'Click to collapse' : 'Click to expand'}
-    >
-      <span className="kafka-msg-stream">{msg.topic}</span>
-      <span className="kafka-msg-meta">p{msg.partition}·{msg.offset}</span>
-      {msg.key && <span className="kafka-msg-key">{msg.key}</span>}
-      {expanded
-        ? <span className="kafka-msg-value kafka-msg-value--expanded">
-            {isJson ? <JsonHighlight str={pretty} /> : rawVal || '(null)'}
-          </span>
-        : <span className="kafka-msg-value kafka-msg-value--collapsed">
-            {preview || '(null)'}
-          </span>
-      }
-    </div>
+    <details className="kafka-feed-message">
+      <summary className="kafka-msg-summary">
+        <span className="kafka-msg-stream">{msg.topic}</span>
+        <span className="kafka-msg-meta">p{msg.partition}·{msg.offset}</span>
+        {msg.key && <span className="kafka-msg-key">{msg.key}</span>}
+        <span className="kafka-msg-value kafka-msg-value--collapsed">{preview || '(null)'}</span>
+      </summary>
+      <div className="kafka-msg-body">
+        {isJson
+          ? <span className="kafka-msg-value kafka-msg-value--expanded"><JsonHighlight str={pretty} /></span>
+          : <span className="kafka-msg-value kafka-msg-value--expanded">{rawVal || '(null)'}</span>
+        }
+      </div>
+    </details>
   );
 }
 
@@ -242,11 +239,8 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
   const consumerIds   = useRef({});
 
   // unified chronological message feed
-  const [allMessages,   setAllMessages]   = useState([]);
-  const [expandedMsgs,  setExpandedMsgs]  = useState(new Set());
-  const msgIdRef       = useRef(0);
-  const feedRef        = useRef(null);   // scroll container
-  const savedScrollRef = useRef(null);   // set before expand/collapse, cleared after
+  const [allMessages, setAllMessages] = useState([]);
+  const msgIdRef = useRef(0);
 
   const [copiedTopic, setCopiedTopic] = useState(null);
 
@@ -385,23 +379,6 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
       setTimeout(() => setCopiedTopic(null), 2000);
     });
   };
-
-  const toggleExpand = useCallback((id) => {
-    if (feedRef.current) savedScrollRef.current = feedRef.current.scrollTop;
-    setExpandedMsgs((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  }, []);
-
-  // Restore scroll position after expand/collapse re-render (before paint)
-  useLayoutEffect(() => {
-    if (savedScrollRef.current !== null && feedRef.current) {
-      feedRef.current.scrollTop = savedScrollRef.current;
-      savedScrollRef.current = null;
-    }
-  });
 
   // ── Derived ───────────────────────────────────────────────────────────────────
 
@@ -572,19 +549,14 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
                     >■ All</button>
                   </div>
                 )}
-                <div className="kafka-feed-messages" ref={feedRef}>
+                <div className="kafka-feed-messages">
                   {allMessages.length === 0 && (
                     <div className="kafka-feed-empty">
                       {listenedTopics.length === 0 ? 'Press ▶ on a topic to start a live feed' : 'Waiting for messages…'}
                     </div>
                   )}
                   {allMessages.map((m) => (
-                    <MessageRow
-                      key={m._id}
-                      msg={m}
-                      expanded={expandedMsgs.has(m._id)}
-                      onToggle={() => toggleExpand(m._id)}
-                    />
+                    <MessageRow key={m._id} msg={m} />
                   ))}
                 </div>
               </div>
