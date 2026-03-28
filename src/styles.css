@@ -5948,7 +5948,7 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 
 /* Topics section */
 .kafka-topics-section { flex-shrink: 0; display: flex; flex-direction: column; overflow: hidden; }
-.kafka-topics-header { padding: 5px 10px; flex-shrink: 0; }
+.kafka-topics-header { display: flex; align-items: center; justify-content: space-between; padding: 5px 8px 5px 10px; flex-shrink: 0; }
 .kafka-topic-filter { margin: 0 8px 6px; width: calc(100% - 16px); }
 .kafka-topic-list { overflow-y: auto; flex: 1; }
 .kafka-topic-row { display: flex; align-items: center; gap: 4px; padding: 3px 8px; border-bottom: 1px solid var(--border-subtle); }

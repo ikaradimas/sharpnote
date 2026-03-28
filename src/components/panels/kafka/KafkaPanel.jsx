@@ -125,7 +125,7 @@ export function KafkaPanel({ onToggle }) {
   const [topicFilter,   setTopicFilter]   = useState('');
   const [loadingTopics, setLoadingTopics] = useState(false);
   const [topicError,    setTopicError]    = useState('');
-  const [maxMessages,   setMaxMessages]   = useState(100);
+  const [maxMessages,   setMaxMessages]   = useState(1000);
 
   // topic -> consumerId (tracks active listeners)
   const [listeners,   setListeners]   = useState({});
@@ -360,6 +360,13 @@ export function KafkaPanel({ onToggle }) {
                   <span className="kafka-section-label">
                     {loadingTopics ? 'Connecting…' : `Topics (${filteredTopics.length}${topicFilter ? ' filtered' : ''})`}
                   </span>
+                  {filteredTopics.length > 0 && !loadingTopics && (
+                    <button
+                      className="kafka-btn"
+                      onClick={() => filteredTopics.forEach((t) => { if (!listeners[t]) handleListen(t); })}
+                      title="Listen to all visible topics"
+                    >▶ All</button>
+                  )}
                 </div>
                 {topicError && <div className="kafka-error">{topicError}</div>}
                 {!loadingTopics && !topicError && topics.length > 0 && (
