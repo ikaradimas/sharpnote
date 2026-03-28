@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { DOCS_TAB_ID } from '../../constants.js';
+import { DOCS_TAB_ID, KAFKA_TAB_ID } from '../../constants.js';
 import { isLibEditorId, getNotebookDisplayName } from '../../utils.js';
 import { Tab } from './Tab.jsx';
 import { TabSection } from './TabSection.jsx';
@@ -7,6 +7,7 @@ import { TabSection } from './TabSection.jsx';
 export function TabBar({ notebooks, activeId, onActivate, onClose, onNew, onRename,
                   onReorder, onSetColor, activeTabColor,
                   docsOpen, onActivateDocs, onCloseDocs,
+                  kafkaTabOpen, onActivateKafka, onCloseKafka, onKafkaReturnToPanel,
                   libEditors, onCloseLibEditor,
                   pinnedPaths, onTogglePin }) {
   const [dragId, setDragId] = useState(null);
@@ -31,6 +32,18 @@ export function TabBar({ notebooks, activeId, onActivate, onClose, onNew, onRena
       >
         <span className="tab-title">Documentation</span>
         <button className="tab-close" onClick={(e) => { e.stopPropagation(); onCloseDocs(); }} title="Close">×</button>
+      </div>
+    );
+    if (item.id === KAFKA_TAB_ID) return (
+      <div
+        className={`tab${activeId === KAFKA_TAB_ID ? ' tab-active' : ''}`}
+        onClick={onActivateKafka}
+      >
+        <span className="tab-title">Kafka</span>
+        {onKafkaReturnToPanel && (
+          <button className="tab-action" onClick={(e) => { e.stopPropagation(); onKafkaReturnToPanel(); }} title="Move to panel">↙</button>
+        )}
+        <button className="tab-close" onClick={(e) => { e.stopPropagation(); onCloseKafka(); }} title="Close">×</button>
       </div>
     );
     if (isLibEditorId(item.id)) return (
@@ -81,7 +94,8 @@ export function TabBar({ notebooks, activeId, onActivate, onClose, onNew, onRena
       _label: e.filename,
       _onActivate: () => onActivate(e.id),
     })),
-    ...(docsOpen ? [{ id: DOCS_TAB_ID, isDirty: false, _label: 'Documentation', _onActivate: onActivateDocs }] : []),
+    ...(docsOpen      ? [{ id: DOCS_TAB_ID,  isDirty: false, _label: 'Documentation', _onActivate: onActivateDocs  }] : []),
+    ...(kafkaTabOpen  ? [{ id: KAFKA_TAB_ID, isDirty: false, _label: 'Kafka',         _onActivate: onActivateKafka }] : []),
   ];
 
   return (

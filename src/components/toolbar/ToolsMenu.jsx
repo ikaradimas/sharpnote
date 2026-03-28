@@ -4,7 +4,7 @@ import { Wrench } from 'lucide-react';
 import {
   IconReset, IconConfig, IconPackages, IconLogs, IconDB,
   IconVars, IconToC, IconLibrary, IconFiles, IconApi,
-  IconGraph, IconTodo, IconRegex,
+  IconGraph, IconTodo, IconRegex, IconKafka,
 } from './Icons.jsx';
 
 export function ToolsMenu({
@@ -21,6 +21,7 @@ export function ToolsMenu({
   graphPanelOpen, onToggleGraph,
   todoPanelOpen, onToggleTodo,
   regexPanelOpen, onToggleRegex,
+  kafkaPanelOpen, onToggleKafka,
   onCloseAllPanels,
 }) {
   const [open, setOpen] = useState(false);
@@ -72,6 +73,7 @@ export function ToolsMenu({
     { icon: <IconGraph />,     label: 'Graph',             action: onToggleGraph,    active: graphPanelOpen },
     { icon: <IconTodo />,      label: 'To Do',             action: onToggleTodo,     active: todoPanelOpen },
     { icon: <IconRegex />,     label: 'Regex',             action: onToggleRegex,    active: regexPanelOpen },
+    { icon: <IconKafka />,     label: 'Kafka',             action: onToggleKafka,    active: kafkaPanelOpen },
   ];
 
   const anyPanelActive = panelItems.some((p) => p.active);

@@ -659,7 +659,7 @@ export const DOCS_SECTIONS = [
       { type: 'ul', items: [
         'All File operations (New, Open, Save, Save As, Export as HTML)',
         'All Run operations (Run All, Reset Kernel, Clear Output)',
-        'All panel toggles (Logs, Packages, Config, DB, Variables, ToC, Library, Files, API Browser, Graph, To Do)',
+        'All panel toggles (Logs, Packages, Config, DB, Variables, ToC, Library, Files, API Browser, Kafka Browser, Graph, To Do)',
         'Settings, Documentation, and About',
       ]},
     ],
@@ -860,7 +860,22 @@ export const DOCS_SECTIONS = [
         'Ctrl+Shift+D — Database',
         'Ctrl+Shift+A — API Browser',
         'Ctrl+Shift+X — Regex editor',
+        'Ctrl+Shift+K — Kafka Browser',
       ]},
+    ],
+  },
+  {
+    id: 'kafka-browser', title: 'Kafka Browser',
+    content: [
+      { type: 'p', text: 'The Kafka Browser panel (Tools → Kafka, Ctrl+Shift+K) lets you browse topics, listen to live message streams, and generate C# consumer code for any topic.' },
+      { type: 'h3', text: 'Saved Connections' },
+      { type: 'p', text: 'Add broker connections using the + button in the left column. Each connection stores a name, a comma-separated list of broker addresses, optional SSL, and optional SASL credentials (PLAIN, SCRAM-SHA-256, or SCRAM-SHA-512). Connections are persisted to disk.' },
+      { type: 'h3', text: 'Topic Browser' },
+      { type: 'p', text: 'Click the → button next to a saved connection (or click the connection row) to connect via the Kafka admin API and list all topics. Use the filter box to search within a large topic list.' },
+      { type: 'h3', text: 'Live Message Streaming' },
+      { type: 'p', text: 'Click ▶ next to any topic to start a live consumer. Messages appear in a feed below the topic list, showing partition, offset, key, and value. Multiple topics can be listened to simultaneously. Click ■ to stop a feed. The Max messages setting (bottom of the left panel) caps how many messages are retained per topic.' },
+      { type: 'h3', text: 'C# Code Generation' },
+      { type: 'p', text: 'Click the C# button next to any topic to copy a ready-to-run Confluent.Kafka consumer snippet to the clipboard. The snippet includes SASL or SSL configuration if the connection uses it, and can be pasted directly into a SharpNote code cell.' },
     ],
   },
   {

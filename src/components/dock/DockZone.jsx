@@ -97,6 +97,13 @@ export function DockZone({ zone, dockLayout, openFlags, panelProps,
           >
             {PANEL_META[id].icon}
             <span>{PANEL_META[id].label}</span>
+            {panelProps?.[id]?.onTabAction && (
+              <span
+                className="dock-zone-tab-action"
+                onClick={(e) => { e.stopPropagation(); panelProps[id].onTabAction(); }}
+                title={panelProps[id].onTabActionTitle ?? ''}
+              >{panelProps[id].onTabActionIcon ?? '↗'}</span>
+            )}
             <span
               className="dock-zone-tab-close"
               onClick={(e) => { e.stopPropagation(); onPanelClose(id); }}

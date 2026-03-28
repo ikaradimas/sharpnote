@@ -2303,6 +2303,29 @@ body {
   color: var(--status-error);
 }
 
+.tab-action {
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  cursor: pointer;
+  font-size: 8px;
+  font-weight: 900;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s, background 0.15s;
+}
+.tab:hover .tab-action,
+.tab.tab-active .tab-action { opacity: 0.8; }
+.tab-action:hover { opacity: 1; background: var(--bg-elevated); }
+
 .tab-color-btn {
   background: transparent;
   border: none;
@@ -3852,6 +3875,22 @@ body {
   align-items: center;
 }
 .dock-zone-tab-close:hover { opacity: 1; color: var(--status-error); }
+
+.dock-zone-tab-action {
+  opacity: 0.35;
+  font-size: 9px;
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--text-muted);
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.dock-zone-tab-action:hover { opacity: 1; color: var(--text-primary); background: var(--bg-elevated); }
 
 /* Scroll-shadow indicators — appear at the edges when the tab bar overflows */
 .dock-zone-tabbar.scroll-shadow-left  { box-shadow: inset 18px 0 10px -10px rgba(0,0,0,0.4); }
@@ -5899,5 +5938,134 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
   flex-shrink: 0;
   min-width: 62px;
 }
+
+/* ── Kafka Browser Panel ─────────────────────────────────────────────────────── */
+
+.kafka-panel { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+
+.kafka-panel-header { display: flex; align-items: center; gap: 6px; padding: 6px 10px 6px 12px; background: var(--bg-mid); border-bottom: 1px solid var(--border-default); flex-shrink: 0; }
+.kafka-panel-title { font-family: var(--font-heading); font-size: 11px; letter-spacing: 0.08em; color: var(--accent-primary); text-transform: uppercase; }
+.kafka-panel-close-btn { margin-left: auto; }
+.kafka-btn:disabled { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
+
+.kafka-panel-body { display: flex; flex: 1; min-height: 0; overflow: hidden; }
+
+/* Left column — connection list */
+.kafka-conn-list { flex-shrink: 0; display: flex; flex-direction: column; overflow-y: auto; background: var(--bg-deep); min-width: 140px; max-width: 400px; }
+.kafka-conn-list-header { display: flex; align-items: center; justify-content: space-between; padding: 6px 8px 4px; flex-shrink: 0; }
+.kafka-section-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.07em; }
+
+.kafka-conn-item { display: flex; align-items: center; gap: 4px; padding: 5px 8px; border-bottom: 1px solid var(--border-subtle); cursor: pointer; }
+.kafka-conn-item:hover { background: var(--bg-mid); }
+.kafka-conn-item--selected { background: var(--panel-active-bg); }
+.kafka-conn-info { flex: 1; min-width: 0; overflow: hidden; }
+.kafka-conn-name { display: block; font-size: 11px; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kafka-conn-brokers { display: block; font-size: 10px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kafka-conn-actions { display: flex; gap: 2px; flex-shrink: 0; opacity: 0; transition: opacity 0.1s; }
+.kafka-conn-item:hover .kafka-conn-actions { opacity: 1; }
+
+/* Connection form */
+.kafka-conn-form { display: flex; flex-direction: column; gap: 4px; padding: 8px; border-bottom: 1px solid var(--border-default); }
+.kafka-checkbox-row { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-secondary); cursor: pointer; padding: 2px 0; }
+.kafka-form-error { font-size: 10px; color: var(--status-error); padding: 2px 0; }
+.kafka-form-actions { display: flex; gap: 6px; margin-top: 2px; }
+
+.kafka-empty-hint { font-size: 10px; color: var(--text-muted); padding: 8px; }
+
+/* Max messages config row */
+.kafka-max-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 8px; margin-top: auto; border-top: 1px solid var(--border-subtle); flex-shrink: 0; }
+.kafka-offset-row { display: flex; align-items: center; justify-content: space-between; padding: 5px 8px; border-top: 1px solid var(--border-subtle); flex-shrink: 0; }
+.kafka-offset-toggle { display: flex; border: 1px solid var(--border-default); border-radius: 3px; overflow: hidden; }
+.kafka-offset-btn { background: none; border: none; border-right: 1px solid var(--border-default); padding: 2px 7px; font-size: 10px; color: var(--text-muted); cursor: pointer; }
+.kafka-offset-btn:last-child { border-right: none; }
+.kafka-offset-btn:hover { color: var(--text-primary); }
+.kafka-offset-btn.active { background: var(--accent); color: #fff; }
+.kafka-max-input { width: 60px; background: var(--bg-mid); border: 1px solid var(--border-default); color: var(--text-primary); font-size: 11px; padding: 2px 5px; border-radius: 3px; outline: none; text-align: right; }
+.kafka-max-input:focus { border-color: var(--accent-primary-dim); }
+
+/* Resize handles */
+.kafka-resize-h { width: 4px; flex-shrink: 0; cursor: col-resize; background: var(--border-default); transition: background 0.15s; }
+.kafka-resize-h:hover { background: var(--accent-primary-dim); }
+.kafka-resize-v { height: 4px; flex-shrink: 0; cursor: row-resize; background: var(--border-default); transition: background 0.15s; }
+.kafka-resize-v:hover { background: var(--accent-primary-dim); }
+
+/* Right column — topics + unified feed */
+.kafka-right { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+.kafka-right-empty { font-size: 11px; color: var(--text-muted); padding: 12px; }
+
+/* Topics section */
+.kafka-topics-section { flex-shrink: 0; display: flex; flex-direction: column; overflow: hidden; }
+.kafka-topics-header { display: flex; align-items: center; justify-content: space-between; padding: 5px 8px 5px 10px; flex-shrink: 0; }
+.kafka-topic-filter { margin: 0 8px 6px; width: calc(100% - 16px); }
+.kafka-topic-list { overflow-y: auto; flex: 1; }
+.kafka-topic-row { display: flex; align-items: center; gap: 4px; padding: 3px 8px; border-bottom: 1px solid var(--border-subtle); }
+.kafka-topic-row:hover { background: var(--bg-mid); }
+.kafka-topic-row--listening { background: rgba(78, 201, 176, 0.06); }
+.kafka-topic-name { flex: 1; font-size: 11px; color: var(--text-primary); font-family: var(--font-code); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kafka-topic-actions { display: flex; gap: 3px; flex-shrink: 0; }
+
+/* Unified feed section */
+.kafka-feed-section { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+
+/* Active listener chips */
+.kafka-listener-chips { display: flex; flex-wrap: wrap; gap: 4px; padding: 5px 8px; background: var(--bg-deep); border-bottom: 1px solid var(--border-default); flex-shrink: 0; align-items: center; }
+.kafka-listener-chip { display: inline-flex; align-items: center; gap: 4px; background: var(--bg-mid); border: 1px solid var(--border-default); border-radius: 3px; padding: 1px 5px; font-size: 10px; font-family: var(--font-code); color: var(--accent-secondary); max-width: 200px; overflow: hidden; }
+.kafka-listener-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kafka-chip-stop { background: none; border: none; cursor: pointer; color: var(--status-error); font-size: 9px; padding: 0 0 0 2px; line-height: 1; flex-shrink: 0; opacity: 0.7; }
+.kafka-chip-stop:hover { opacity: 1; }
+
+/* Overflow chips */
+.kafka-chips-overflow { position: relative; display: inline-flex; align-items: center; }
+.kafka-chips-overflow-btn { display: inline-flex; align-items: center; background: var(--bg-mid); border: 1px solid var(--border-default); border-radius: 3px; padding: 1px 5px; font-size: 10px; color: var(--text-muted); cursor: pointer; white-space: nowrap; }
+.kafka-chips-overflow-btn:hover, .kafka-chips-overflow-btn.active { color: var(--text-primary); border-color: var(--accent); }
+.kafka-chips-overflow-tooltip { position: absolute; top: 100%; left: 0; z-index: 200; background: var(--bg-elevated); border: 1px solid var(--border-default); border-radius: 4px; padding: 5px; display: flex; flex-direction: column; gap: 3px; min-width: 160px; max-width: 280px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); margin-top: 3px; }
+.kafka-chips-overflow-tooltip .kafka-listener-chip { max-width: 100%; }
+
+/* Stop all button */
+.kafka-feed-btns { margin-left: auto; display: flex; gap: 4px; flex-shrink: 0; }
+
+/* Message rows */
+.kafka-feed-messages { overflow-y: auto; overflow-anchor: none; flex: 1; min-height: 0; }
+/* Pager */
+.kafka-feed-pager { display: flex; align-items: center; gap: 4px; padding: 4px 8px; border-top: 1px solid var(--border-default); background: var(--bg-deep); flex-shrink: 0; }
+.kafka-pager-info { font-size: 10px; color: var(--text-secondary); flex: 1; text-align: center; }
+.kafka-pager-count { color: var(--text-muted); }
+.kafka-btn:disabled { opacity: 0.3; cursor: default; }
+.kafka-feed-empty { font-size: 10px; color: var(--text-muted); padding: 8px 10px; }
+.kafka-feed-message { border-bottom: 1px solid var(--border-subtle); font-size: 10px; font-family: var(--font-code); }
+.kafka-feed-message:hover { background: var(--bg-mid); }
+.kafka-feed-message[open] { background: var(--bg-mid); }
+.kafka-msg-summary { display: flex; gap: 6px; padding: 3px 8px; align-items: center; cursor: pointer; list-style: none; }
+.kafka-msg-copy { display: none; flex-shrink: 0; background: none; border: none; padding: 2px 3px; color: var(--text-muted); cursor: pointer; border-radius: 3px; line-height: 1; align-items: center; }
+.kafka-feed-message:hover .kafka-msg-copy { display: inline-flex; }
+.kafka-msg-copy:hover { color: var(--text-primary); background: var(--bg-elevated); }
+.kafka-msg-summary::-webkit-details-marker { display: none; }
+.kafka-msg-stream { color: var(--accent-secondary); flex-shrink: 0; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9px; opacity: 0.8; }
+.kafka-msg-meta { color: var(--text-faint); flex-shrink: 0; min-width: 46px; }
+.kafka-msg-key { color: var(--accent-primary); flex-shrink: 0; max-width: 80px; overflow: hidden; text-overflow: ellipsis; }
+.kafka-msg-value { color: var(--text-primary); flex: 1; min-width: 0; }
+.kafka-msg-value--collapsed { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kafka-msg-body { padding: 2px 8px 5px 8px; }
+.kafka-msg-value--expanded { white-space: pre-wrap; overflow-wrap: break-word; display: block; line-height: 1.5; }
+
+/* JSON syntax highlight */
+.kafka-json-key   { color: var(--accent-secondary); }
+.kafka-json-str   { color: #ce9178; }
+.kafka-json-num   { color: #b5cea8; }
+.kafka-json-kw    { color: #569cd6; }
+.kafka-json-punct { color: var(--text-muted); }
+
+/* Shared button styles */
+.kafka-btn { background: var(--bg-mid); border: 1px solid var(--border-default); color: var(--text-secondary); font-size: 10px; padding: 2px 6px; border-radius: 3px; cursor: pointer; font-family: var(--font-ui); line-height: 1.4; white-space: nowrap; }
+.kafka-btn:hover { background: var(--bg-elevated); color: var(--text-primary); }
+.kafka-btn-primary { background: var(--accent-primary-dim); color: var(--accent-primary); border-color: var(--accent-primary-dim); }
+.kafka-btn-primary:hover { background: var(--accent-primary); color: #000; }
+.kafka-btn-add { padding: 1px 6px; font-size: 13px; line-height: 1.2; }
+.kafka-btn-connect { padding: 2px 7px; color: var(--accent-secondary); }
+.kafka-btn-listen { color: var(--status-success); }
+.kafka-btn-stop { color: var(--status-error); }
+.kafka-btn-danger { color: var(--status-error); }
+.kafka-btn-copied { color: var(--status-success); }
+.kafka-error { font-size: 11px; color: var(--status-error); padding: 6px 10px; }
 
 .rx-ref-desc { color: var(--text-dim); }

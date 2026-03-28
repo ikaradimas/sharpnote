@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useOutsideClick } from '../../hooks/useOutsideClick.js';
 import { createPortal } from 'react-dom';
 import { THEMES } from '../../config/themes.js';
 import { IconTheme } from './Icons.jsx';
@@ -8,17 +9,7 @@ export function ThemePicker({ theme, onSelect, lineAltEnabled, onLineAltChange }
   const btnRef = useRef(null);
   const popupRef = useRef(null);
 
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e) => {
-      if (popupRef.current && !popupRef.current.contains(e.target) &&
-          btnRef.current && !btnRef.current.contains(e.target)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [open]);
+  useOutsideClick([popupRef, btnRef], () => setOpen(false), open);
 
   // Calculate popup position anchored to button
   const [popupStyle, setPopupStyle] = useState({});

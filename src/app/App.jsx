@@ -5,7 +5,7 @@ import React, {
   useCallback,
   useMemo,
 } from 'react';
-import { DOCS_TAB_ID } from '../constants.js';
+import { DOCS_TAB_ID, KAFKA_TAB_ID } from '../constants.js';
 import {
   makeLibEditorId, isLibEditorId, isNotebookId, getNotebookDisplayName,
 } from '../utils.js';
@@ -18,6 +18,7 @@ import { TabBar } from '../components/toolbar/TabBar.jsx';
 import { NotebookView } from '../components/NotebookView.jsx';
 import { LibraryEditorPane } from '../components/panels/library/LibraryEditorPane.jsx';
 import { DocsPanel } from '../components/panels/docs/DocsPanel.jsx';
+import { KafkaPanel } from '../components/panels/kafka/KafkaPanel.jsx';
 import { DockZone } from '../components/dock/DockZone.jsx';
 import { FloatPanel } from '../components/dock/FloatPanel.jsx';
 import { DockDropOverlay } from '../components/dock/DockDropOverlay.jsx';
@@ -71,6 +72,7 @@ export function App() {
   const [libraryPanelOpen, setLibraryPanelOpen] = useState(false);
   const [filesPanelOpen, setFilesPanelOpen]     = useState(false);
   const [apiPanelOpen, setApiPanelOpen]         = useState(false);
+  const [kafkaPanelOpen, setKafkaPanelOpen]     = useState(false);
   const [filesCurrentDir, setFilesCurrentDir]   = useState(null);
   const [libEditors, setLibEditors] = useState([]);
   const libEditorsRef = useRef([]);
@@ -93,7 +95,9 @@ export function App() {
     setNb, setNbDirty, buildNotebookData,
     handleNew, handleLoad, handleImportPolyglot, handleOpenRecent, handleCloseTab, handleReorder,
     handleRenameTab, handleSetTabColor, handleSave, handleSaveAs, handleExportHtml,
-    handleOpenDocs, handleCloseDocs, handleTogglePin, handleNavigateToCell,
+    handleOpenDocs, handleCloseDocs,
+    kafkaTabOpen, handleOpenKafkaTab, handleCloseKafkaTab,
+    handleTogglePin, handleNavigateToCell,
     handleInsertLibraryFile, openPinnedNotebooks,
   } = useNotebookManager({ cancelPendingCellsRef, saveSettingsRef });
 
@@ -110,7 +114,7 @@ export function App() {
 
   const setPanelVisible = useCallback((panelId, open) => {
     // open: true = open, false = close, null = toggle
-    const globalSetters = { library: setLibraryPanelOpen, files: setFilesPanelOpen, api: setApiPanelOpen };
+    const globalSetters = { library: setLibraryPanelOpen, files: setFilesPanelOpen, api: setApiPanelOpen, kafka: setKafkaPanelOpen };
     const nbFlagMap = {
       log: 'logPanelOpen', nuget: 'nugetPanelOpen', config: 'configPanelOpen',
       db: 'dbPanelOpen', vars: 'varsPanelOpen', toc: 'tocPanelOpen',
@@ -157,6 +161,7 @@ export function App() {
     setLibraryPanelOpen(false);
     setFilesPanelOpen(false);
     setApiPanelOpen(false);
+    setKafkaPanelOpen(false);
     const nbId = activeIdRef.current;
     if (isNotebookId(nbId))
       setNb(nbId, () => ({
@@ -164,7 +169,7 @@ export function App() {
         dbPanelOpen: false, varsPanelOpen: false, tocPanelOpen: false,
         graphPanelOpen: false, todoPanelOpen: false, regexPanelOpen: false,
       }));
-  }, [setNb, setLibraryPanelOpen, setFilesPanelOpen, setApiPanelOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [setNb, setLibraryPanelOpen, setFilesPanelOpen, setApiPanelOpen, setKafkaPanelOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { runCell, runSqlCell, runAll, runFrom, runTo, handleInterrupt, handleReset,
           cancelPendingCells } =
@@ -620,6 +625,7 @@ export function App() {
     'toggle-toc':      () => setPanelVisible('toc',     null),
     'toggle-files':    () => setPanelVisible('files',   null),
     'toggle-api':      () => setPanelVisible('api',     null),
+    'toggle-kafka':    () => setPanelVisible('kafka',   null),
     'toggle-graph':    () => setPanelVisible('graph',   null),
     'toggle-todo':     () => setPanelVisible('todo',    null),
     'toggle-regex':    () => setPanelVisible('regex',   null),
@@ -643,9 +649,10 @@ export function App() {
       ...libEditors.map((e) => ({
         id: e.id, label: e.filename, isDirty: e.isDirty, isActive: e.id === activeId,
       })),
-      ...(docsOpen ? [{ id: DOCS_TAB_ID, label: 'Documentation', isDirty: false, isActive: activeId === DOCS_TAB_ID }] : []),
+      ...(docsOpen     ? [{ id: DOCS_TAB_ID,  label: 'Documentation', isDirty: false, isActive: activeId === DOCS_TAB_ID  }] : []),
+      ...(kafkaTabOpen ? [{ id: KAFKA_TAB_ID, label: 'Kafka',         isDirty: false, isActive: activeId === KAFKA_TAB_ID }] : []),
     ]);
-  }, [notebooks, libEditors, docsOpen, activeId]);
+  }, [notebooks, libEditors, docsOpen, kafkaTabOpen, activeId]);
 
   // ── Menu action handler ────────────────────────────────────────────────────
   useEffect(() => {
@@ -714,10 +721,11 @@ export function App() {
     toc:     isNotebookId(activeId) ? (activeNb?.tocPanelOpen    ?? false) : false,
     files:   filesPanelOpen,
     api:     apiPanelOpen,
+    kafka:   kafkaPanelOpen,
     graph:   isNotebookId(activeId) ? (activeNb?.graphPanelOpen  ?? false) : false,
     todo:    isNotebookId(activeId) ? (activeNb?.todoPanelOpen   ?? false) : false,
     regex:   isNotebookId(activeId) ? (activeNb?.regexPanelOpen  ?? false) : false,
-  }), [activeId, activeNb, libraryPanelOpen, filesPanelOpen, apiPanelOpen]);
+  }), [activeId, activeNb, libraryPanelOpen, filesPanelOpen, apiPanelOpen, kafkaPanelOpen]);
 
   const panelPropsMap = useMemo(() => {
     const nbId = activeNb?.id ?? null;
@@ -807,6 +815,13 @@ export function App() {
       api: {
         onToggle: () => setApiPanelOpen((v) => !v),
       },
+      kafka: {
+        onToggle: () => setKafkaPanelOpen((v) => !v),
+        onOpenAsTab: () => { setKafkaPanelOpen(false); handleOpenKafkaTab(); },
+        onTabAction: () => { setKafkaPanelOpen(false); handleOpenKafkaTab(); },
+        onTabActionIcon: '↗',
+        onTabActionTitle: 'Open as tab',
+      },
       graph: {
         onToggle: nbId ? () => setNb(nbId, (n) => ({ graphPanelOpen: !n.graphPanelOpen })) : () => {},
         varHistory: activeNb?.varHistory ?? {},
@@ -820,7 +835,7 @@ export function App() {
       regex: {},
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeNb, dbConnections, filesPanelOpen, filesCurrentDir, apiPanelOpen]);
+  }, [activeNb, dbConnections, filesPanelOpen, filesCurrentDir, apiPanelOpen, kafkaPanelOpen]);
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -851,6 +866,10 @@ export function App() {
         docsOpen={docsOpen}
         onActivateDocs={handleOpenDocs}
         onCloseDocs={handleCloseDocs}
+        kafkaTabOpen={kafkaTabOpen}
+        onActivateKafka={handleOpenKafkaTab}
+        onCloseKafka={handleCloseKafkaTab}
+        onKafkaReturnToPanel={() => { handleCloseKafkaTab(); setKafkaPanelOpen(true); }}
         libEditors={libEditors}
         onCloseLibEditor={handleCloseLibEditor}
         pinnedPaths={pinnedPaths}
@@ -899,6 +918,11 @@ export function App() {
                       if (!apiPanelOpen) handleFocusPanel('api');
                       setApiPanelOpen((v) => !v);
                     }}
+                    kafkaPanelOpen={kafkaPanelOpen}
+                    onToggleKafka={() => {
+                      if (!kafkaPanelOpen) handleFocusPanel('kafka');
+                      setKafkaPanelOpen((v) => !v);
+                    }}
                     onFocusPanel={handleFocusPanel}
                     theme={theme}
                     onThemeChange={setTheme}
@@ -933,6 +957,21 @@ export function App() {
                   style={activeId === DOCS_TAB_ID ? undefined : { display: 'none' }}
                 >
                   <DocsPanel />
+                </div>
+              )}
+              {kafkaTabOpen && (
+                <div
+                  className="notebook-pane"
+                  style={activeId === KAFKA_TAB_ID ? undefined : { display: 'none' }}
+                >
+                  <KafkaPanel
+                    asTab
+                    onToggle={handleCloseKafkaTab}
+                    onReturnToPanel={() => {
+                      handleCloseKafkaTab();
+                      setKafkaPanelOpen(true);
+                    }}
+                  />
                 </div>
               )}
             </div>
