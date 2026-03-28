@@ -599,6 +599,7 @@ export function App() {
     'toggle-api':      () => setPanelVisible('api',     null),
     'toggle-graph':    () => setPanelVisible('graph',   null),
     'toggle-todo':     () => setPanelVisible('todo',    null),
+    'toggle-regex':    () => setPanelVisible('regex',   null),
     about:             () => setAboutOpen(true),
     settings:          () => setSettingsOpen(true),
     'export-html':     handleExportHtml,

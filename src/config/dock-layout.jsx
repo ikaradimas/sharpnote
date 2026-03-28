@@ -3,8 +3,8 @@ import React from 'react';
 // ── Dock Layout System ────────────────────────────────────────────────────────
 
 export const DEFAULT_DOCK_LAYOUT = {
-  assignments: { log: 'right', nuget: 'bottom', config: 'bottom', db: 'bottom', library: 'left', vars: 'right', toc: 'left', files: 'left', api: 'right', graph: 'right', todo: 'bottom' },
-  order:       { log: 0, nuget: 0, config: 1, db: 2, library: 0, vars: 1, toc: 1, files: 2, api: 2, graph: 3, todo: 3 },
+  assignments: { log: 'right', nuget: 'bottom', config: 'bottom', db: 'bottom', library: 'left', vars: 'right', toc: 'left', files: 'left', api: 'right', graph: 'right', todo: 'bottom', regex: 'bottom' },
+  order:       { log: 0, nuget: 0, config: 1, db: 2, library: 0, vars: 1, toc: 1, files: 2, api: 2, graph: 3, todo: 3, regex: 4 },
   sizes:       { left: 300, right: 320, bottom: 280 },
   floatPos:    {},
   zoneTab:     { left: 'library', right: 'log', bottom: 'nuget' },
@@ -108,6 +108,15 @@ function IconTodo() {
     <line x1="7.5" y1="8.5" x2="11.5" y2="8.5" />
   </svg>;
 }
+function IconRegex() {
+  return <svg {..._ic} stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="4" y1="11" x2="2.5" y2="2" />
+    <line x1="9" y1="11" x2="10.5" y2="2" />
+    <circle cx="5.5" cy="6.5" r="0.9" fill="currentColor" stroke="none" />
+    <circle cx="7.5" cy="6.5" r="0.9" fill="currentColor" stroke="none" />
+    <path d="M5 4 L6.5 2.5 L8 4" />
+  </svg>;
+}
 
 export const PANEL_META = {
   log:     { label: 'Logs',       icon: <IconLogs /> },
@@ -121,6 +130,7 @@ export const PANEL_META = {
   api:     { label: 'API Browser', icon: <IconApi /> },
   graph:   { label: 'Graph',      icon: <IconGraph /> },
   todo:    { label: 'To Do',      icon: <IconTodo /> },
+  regex:   { label: 'Regex',      icon: <IconRegex /> },
 };
 
 // ── Dock drop zones ───────────────────────────────────────────────────────────
