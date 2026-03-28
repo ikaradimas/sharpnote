@@ -1,6 +1,6 @@
 {
   "name": "sharpnote",
-  "version": "1.24.9",
+  "version": "1.24.10",
   "description": "SharpNote — interactive C# notebook with multi-tab MDI, NuGet, and Chart.js output",
   "main": "main.js",
   "scripts": {

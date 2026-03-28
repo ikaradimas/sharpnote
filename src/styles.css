@@ -4515,9 +4515,9 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 
 /* Copy C# class dropdown */
 .api-copy-class-wrap { position: relative; display: inline-block; flex-shrink: 0; }
-.api-copy-class-menu { position: absolute; left: 0; top: calc(100% + 2px); z-index: 50; background: var(--bg-panel); border: 1px solid var(--border-subtle); border-radius: 3px; box-shadow: 0 4px 12px rgba(0,0,0,0.35); min-width: 148px; }
+.api-copy-class-menu { position: absolute; left: 0; top: calc(100% + 2px); z-index: 50; background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: 3px; box-shadow: 0 4px 12px rgba(0,0,0,0.35); min-width: 148px; }
 .api-copy-class-menu button { display: block; width: 100%; text-align: left; background: none; border: none; color: var(--text-dim); font-size: 10px; padding: 5px 10px; cursor: pointer; font-family: var(--font-code); }
-.api-copy-class-menu button:hover { background: var(--bg-hover); color: var(--text-main); }
+.api-copy-class-menu button:hover { background: var(--bg-mid); color: var(--text-primary); }
 
 /* Try-it form */
 .api-tryit { border-top: 1px solid var(--border-subtle); margin-top: 6px; padding-top: 6px; }
