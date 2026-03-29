@@ -33,7 +33,8 @@ import { renderPanelContent } from '../components/dock/renderPanelContent.jsx';
 export function App() {
   // ── UI settings ────────────────────────────────────────────────────────────
   const [theme, setTheme] = useState('kl1nt');
-  const isFirstThemeRender = useRef(true);
+  const isFirstThemeRender  = useRef(true);
+  const settingsLoadedRef   = useRef(false);
   const themeRef = useRef('kl1nt');
   useEffect(() => { themeRef.current = theme; }, [theme]);
 
@@ -229,6 +230,7 @@ export function App() {
         });
       }
       if (Array.isArray(s?.savedLayouts)) setSavedLayouts(s.savedLayouts);
+      settingsLoadedRef.current = true;
       const pinned = Array.isArray(s?.pinnedTabs) ? s.pinnedTabs : [];
       if (pinned.length > 0) openPinnedNotebooks(pinned);
     }).catch(() => {});
@@ -267,14 +269,17 @@ export function App() {
   }, [theme]); // pinnedPathsRef / dockLayoutRef are stable refs, no dep needed
 
   useEffect(() => {
+    if (!settingsLoadedRef.current) return;
     saveSettingsRef.current();
   }, [lineAltEnabled]);
 
   useEffect(() => {
+    if (!settingsLoadedRef.current) return;
     saveSettingsRef.current();
   }, [lintEnabled]);
 
   useEffect(() => {
+    if (!settingsLoadedRef.current) return;
     saveSettingsRef.current();
   }, [tablePageSize]);
 
