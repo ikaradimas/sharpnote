@@ -129,6 +129,7 @@ partial class Program
             if (attachedDbs.TryGetValue(connectionId, out var existing))
                 dbMetaRefs.Remove(existing.MetaRef);
             dbMetaRefs.Add(metaRef);
+            _workspaceManager.UpdateReferences(new[] { metaRef });
 
             var info = new DbConnectionInfo(connectionId, connName, providerKey, effectiveCs, varName, metaRef, schema);
             attachedDbs[connectionId] = info;
