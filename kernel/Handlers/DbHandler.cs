@@ -150,10 +150,11 @@ partial class Program
             }
 
             // 4. Update state
-            if (attachedDbs.TryGetValue(connectionId, out var existing))
+            attachedDbs.TryGetValue(connectionId, out var existing);
+            if (existing != null)
                 dbMetaRefs.Remove(existing.MetaRef);
             dbMetaRefs.Add(metaRef);
-            _workspaceManager.UpdateReferences(new[] { metaRef });
+            _workspaceManager.ReplaceReference(existing?.MetaRef, metaRef);
 
             var info = new DbConnectionInfo(connectionId, connName, providerKey, effectiveCs, varName, metaRef, schema);
             attachedDbs[connectionId] = info;

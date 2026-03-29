@@ -130,6 +130,8 @@ public sealed class WorkspaceManager : IDisposable
     /// <summary>
     /// Adds new metadata references (e.g. after a NuGet package loads).
     /// References already present, identified by file path, are skipped.
+    /// Image-based references (no file path) are not handled here — use
+    /// <see cref="ReplaceReference"/> for dynamically compiled assemblies.
     /// </summary>
     public void UpdateReferences(IEnumerable<MetadataReference> refs)
     {
@@ -153,6 +155,21 @@ public sealed class WorkspaceManager : IDisposable
 
         if (changed)
             _workspace.TryApplyChanges(solution);
+    }
+
+    /// <summary>
+    /// Swaps <paramref name="oldRef"/> for <paramref name="newRef"/> in the workspace.
+    /// If <paramref name="oldRef"/> is null, simply adds <paramref name="newRef"/>.
+    /// Use this for dynamically compiled references (e.g. DB context assemblies) that
+    /// have no file path and cannot be deduplicated by <see cref="UpdateReferences"/>.
+    /// </summary>
+    public void ReplaceReference(MetadataReference? oldRef, MetadataReference newRef)
+    {
+        var solution = _workspace.CurrentSolution;
+        if (oldRef != null)
+            solution = solution.RemoveMetadataReference(_projectId, oldRef);
+        solution = solution.AddMetadataReference(_projectId, newRef);
+        _workspace.TryApplyChanges(solution);
     }
 
     /// <summary>
