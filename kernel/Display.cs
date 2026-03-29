@@ -375,9 +375,14 @@ public class DisplayHelper
         return items.Select(row =>
         {
             if (row == null) return new Dictionary<string, object?> { ["value"] = null };
+            // Rows from SQL cells are already dictionaries — use them directly
+            if (row is Dictionary<string, object?> d) return d;
             var dict = new Dictionary<string, object?>();
             foreach (var p in row.GetType().GetProperties())
+            {
+                if (p.GetIndexParameters().Length > 0) continue; // skip indexers
                 dict[p.Name] = p.GetValue(row);
+            }
             if (dict.Count == 0)
                 dict["value"] = row.ToString();
             return dict;
