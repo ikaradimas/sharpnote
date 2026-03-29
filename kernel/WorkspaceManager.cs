@@ -44,7 +44,10 @@ public sealed class WorkspaceManager : IDisposable
     // Preamble is derived from ScriptGlobals via reflection so the workspace
     // always mirrors the actual script execution environment.
     private static readonly string GlobalsPreamble = BuildGlobalsPreamble();
-    private static readonly int    PreambleLength  = GlobalsPreamble.Length;
+
+    // Dynamic declarations appended after GlobalsPreamble (e.g. attached DB variables).
+    private string _dynamicPreamble = "";
+    private int TotalPreambleLength => GlobalsPreamble.Length + _dynamicPreamble.Length;
 
     private readonly AdhocWorkspace _workspace;
     private readonly ProjectId      _projectId;
@@ -110,9 +113,18 @@ public sealed class WorkspaceManager : IDisposable
     /// </summary>
     public void UpdateDocument(string code)
     {
-        var text     = SourceText.From(GlobalsPreamble + code);
+        var text     = SourceText.From(GlobalsPreamble + _dynamicPreamble + code);
         var solution = _workspace.CurrentSolution.WithDocumentText(_docId, text);
         _workspace.TryApplyChanges(solution);
+    }
+
+    /// <summary>
+    /// Replaces the dynamic preamble segment (variable declarations for attached DBs, etc.).
+    /// Call after any DB connect or disconnect.
+    /// </summary>
+    public void SetDynamicPreamble(string declarations)
+    {
+        _dynamicPreamble = declarations;
     }
 
     /// <summary>
@@ -154,7 +166,7 @@ public sealed class WorkspaceManager : IDisposable
         var service = CompletionService.GetService(doc);
         if (service == null) return Array.Empty<CompletionItemData>();
 
-        var result = await service.GetCompletionsAsync(doc, PreambleLength + position);
+        var result = await service.GetCompletionsAsync(doc, TotalPreambleLength + position);
         if (result?.ItemsList == null) return Array.Empty<CompletionItemData>();
 
         return result.ItemsList
@@ -180,10 +192,10 @@ public sealed class WorkspaceManager : IDisposable
             .Where(d =>
                 d.Location.IsInSource &&
                 d.Severity >= DiagnosticSeverity.Warning &&
-                d.Location.SourceSpan.Start >= PreambleLength)
+                d.Location.SourceSpan.Start >= TotalPreambleLength)
             .Select(d => new DiagnosticData(
-                d.Location.SourceSpan.Start - PreambleLength,
-                d.Location.SourceSpan.End   - PreambleLength,
+                d.Location.SourceSpan.Start - TotalPreambleLength,
+                d.Location.SourceSpan.End   - TotalPreambleLength,
                 d.Severity == DiagnosticSeverity.Error ? "error" : "warning",
                 d.GetMessage()))
             .ToList();
@@ -201,7 +213,7 @@ public sealed class WorkspaceManager : IDisposable
         var model = await doc.GetSemanticModelAsync();
         if (root == null || model == null) return SignatureHelpData.Empty;
 
-        var adjustedPos = Math.Clamp(PreambleLength + position, 0, root.FullSpan.End - 1);
+        var adjustedPos = Math.Clamp(TotalPreambleLength + position, 0, root.FullSpan.End - 1);
         var token       = root.FindToken(adjustedPos);
 
         var argList = token.Parent?

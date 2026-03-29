@@ -3336,15 +3336,30 @@ body {
 
 /* Var name badge */
 .db-var-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
   font-family: var(--font-code);
   font-size: 10px;
   background: #0d2030;
   color: #6889a0;
   border: 1px solid #1e3040;
   border-radius: 3px;
-  padding: 0 5px;
+  padding: 0 4px 0 5px;
   margin-left: 4px;
 }
+.db-var-copy {
+  display: inline-flex;
+  align-items: center;
+  background: none;
+  border: none;
+  padding: 0 1px;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.6;
+  line-height: 1;
+}
+.db-var-copy:hover { opacity: 1; }
 
 /* Connection form */
 .db-connection-form {

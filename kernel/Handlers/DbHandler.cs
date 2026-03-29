@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
@@ -57,6 +58,29 @@ partial class Program
 
     // Safe C# string literal
     private static string S(string value) => JsonSerializer.Serialize(value);
+
+    // Builds typed variable declarations for all attached DBs so the workspace
+    // preamble reflects the current script state and completions resolve them.
+    private static string BuildDbPreamble()
+    {
+        var sb = new StringBuilder();
+        foreach (var info in attachedDbs.Values)
+        {
+            var provider = DbProviders.Get(info.Provider);
+            string typeName;
+            if (!provider.IsRelational)
+            {
+                typeName = "StackExchange.Redis.IDatabase";
+            }
+            else
+            {
+                var ns = $"DynDb_{DbCodeGen.SanitizeTypeName(info.Name)}";
+                typeName = $"{ns}.{DbCodeGen.SanitizeTypeName(info.Name)}DbContext";
+            }
+            sb.AppendLine($"{typeName} {info.VarName} = default!;");
+        }
+        return sb.ToString();
+    }
 
     // ── db_connect handler ────────────────────────────────────────────────────
 
@@ -133,6 +157,7 @@ partial class Program
 
             var info = new DbConnectionInfo(connectionId, connName, providerKey, effectiveCs, varName, metaRef, schema);
             attachedDbs[connectionId] = info;
+            _workspaceManager.SetDynamicPreamble(BuildDbPreamble());
 
             // 5. Inject variable
             await InjectDbContextAsync(info, options, globals);
@@ -155,6 +180,7 @@ partial class Program
         {
             dbMetaRefs.Remove(info.MetaRef);
             attachedDbs.Remove(connectionId);
+            _workspaceManager.SetDynamicPreamble(BuildDbPreamble());
         }
         lock (realStdout) { realStdout.WriteLine(JsonSerializer.Serialize(new { type = "db_disconnected", connectionId })); }
     }
