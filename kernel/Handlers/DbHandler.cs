@@ -59,8 +59,6 @@ partial class Program
     // Safe C# string literal
     private static string S(string value) => JsonSerializer.Serialize(value);
 
-    // Builds typed variable declarations for all attached DBs so the workspace
-    // preamble reflects the current script state and completions resolve them.
     private static string BuildDbPreamble()
     {
         var sb = new StringBuilder();
@@ -150,8 +148,7 @@ partial class Program
             }
 
             // 4. Update state
-            attachedDbs.TryGetValue(connectionId, out var existing);
-            if (existing != null)
+            if (attachedDbs.TryGetValue(connectionId, out var existing))
                 dbMetaRefs.Remove(existing.MetaRef);
             dbMetaRefs.Add(metaRef);
             _workspaceManager.ReplaceReference(existing?.MetaRef, metaRef);

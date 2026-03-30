@@ -1,6 +1,7 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useResize } from '../../../hooks/useResize.js';
+import { useClipboard } from '../../../hooks/useClipboard.js';
 import { DB_PROVIDERS, DB_CONNSTR_PLACEHOLDER } from '../../../config/db-providers.js';
 
 function DbStatusDot({ status }) {
@@ -98,17 +99,11 @@ function DbConnectionForm({ connection, existingNames, onSave, onCancel }) {
 }
 
 function VarBadge({ varName }) {
-  const [copied, setCopied] = useState(false);
-  const copy = useCallback(() => {
-    navigator.clipboard.writeText(varName).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    });
-  }, [varName]);
+  const [copied, copy] = useClipboard();
   return (
     <span className="db-var-badge">
       {varName}
-      <button className="db-var-copy" onClick={copy} title="Copy variable name">
+      <button className="db-var-copy" onClick={() => copy(varName)} title="Copy variable name">
         {copied ? '✓' : <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>}
       </button>
     </span>

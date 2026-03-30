@@ -1,16 +1,13 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { useClipboard } from '../../hooks/useClipboard.js';
 
 export function VarInspectDialog({ name, typeName, value, fullValue, onLoadFull, onClose }) {
-  const [copied, setCopied] = useState(false);
+  const [copied, copy] = useClipboard();
 
   const displayed = fullValue ?? value ?? '';
   const isTruncated = !fullValue && typeof value === 'string' && value.length >= 119;
 
-  const handleCopy = () => {
-    navigator.clipboard?.writeText(displayed).catch(() => {});
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  };
+  const handleCopy = () => copy(displayed);
 
   const handleOverlayClick = (e) => {
     if (e.target === e.currentTarget) onClose();

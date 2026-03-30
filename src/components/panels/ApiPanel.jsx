@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useClipboard } from '../../hooks/useClipboard.js';
 import yaml from 'js-yaml';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -638,18 +639,14 @@ function ResponsesTable({ spec, responses }) {
 }
 
 function CopyClassButton({ spec, schema, name }) {
-  const [open,   setOpen]   = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [open,   setOpen] = useState(false);
+  const [copied, copyText] = useClipboard();
 
   if (!schemaHasClass(spec, schema)) return null;
 
   function copy(style) {
-    const code = schemaToCSharpClass(spec, schema, name, style);
-    navigator.clipboard.writeText(code).then(() => {
-      setOpen(false);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    });
+    setOpen(false);
+    copyText(schemaToCSharpClass(spec, schema, name, style));
   }
 
   return (
@@ -679,14 +676,10 @@ function Operation({ spec, method, path, op, expanded, onToggle, tryItOpen, onTo
   const displayParams = sw2Body
     ? (op.parameters ?? []).filter(p => p.in !== 'body')
     : op.parameters ?? [];
-  const [copied, setCopied] = useState(false);
+  const [copied, copyText] = useClipboard();
 
   function copyAsCs() {
-    const snippet = buildHttpClientSnippet(method, path, op, baseUrl, auth, spec);
-    navigator.clipboard.writeText(snippet).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    });
+    copyText(buildHttpClientSnippet(method, path, op, baseUrl, auth, spec));
   }
 
   return (
