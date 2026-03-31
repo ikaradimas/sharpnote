@@ -13,6 +13,7 @@ import { DEFAULT_DOCK_LAYOUT, DEFAULT_FLOAT_W, DEFAULT_FLOAT_H } from '../config
 import { TablePageSizeContext } from '../config/table-page-size-context.js';
 import { useNotebookManager } from '../hooks/useNotebookManager.js';
 import { useKernelManager } from '../hooks/useKernelManager.js';
+import { useCellScheduler } from '../hooks/useCellScheduler.js';
 import { useDockLayout } from '../hooks/useDockLayout.js';
 import { TabBar } from '../components/toolbar/TabBar.jsx';
 import { NotebookView } from '../components/NotebookView.jsx';
@@ -183,6 +184,21 @@ export function App() {
       setDbConnections,
     });
   cancelPendingCellsRef.current = cancelPendingCells;
+
+  const { scheduledCells, startSchedule, stopSchedule, stopAllSchedules } =
+    useCellScheduler({ notebooksRef, runCell });
+
+  const handleResetWithSchedules = useCallback((notebookId) => {
+    stopAllSchedules(notebookId);
+    handleReset(notebookId);
+  }, [handleReset, stopAllSchedules]);
+
+  const handleCloseTabWithSchedules = useCallback((...args) => {
+    // args[0] is the tab id (notebookId) for notebook tabs
+    const tabId = args[0];
+    if (tabId) stopAllSchedules(tabId);
+    handleCloseTab(...args);
+  }, [handleCloseTab, stopAllSchedules]);
 
   // Wire up the settings-persist function. Called by hooks and effects whenever
   // settings need persisting. Reads all state from stable refs in one place.
@@ -618,7 +634,7 @@ export function App() {
     },
     'save-as':         () => { if (isNotebook()) handleSaveAs(activeIdRef.current); },
     'run-all':         () => { if (isNotebook()) runAll(activeIdRef.current); },
-    reset:             () => { if (isNotebook()) handleReset(activeIdRef.current); },
+    reset:             () => { if (isNotebook()) handleResetWithSchedules(activeIdRef.current); },
     'clear-output':    () => { if (isNotebook()) setNb(activeIdRef.current, { outputs: {} }); },
     docs:              handleOpenDocs,
     'toggle-packages': () => setPanelVisible('nuget',   null),
@@ -862,7 +878,7 @@ export function App() {
         notebooks={notebooks}
         activeId={activeId}
         onActivate={setActiveId}
-        onClose={handleCloseTab}
+        onClose={handleCloseTabWithSchedules}
         onNew={handleNew}
         onRename={handleRenameTab}
         onReorder={handleReorder}
@@ -906,7 +922,7 @@ export function App() {
                     onRunTo={runTo}
                     onSave={handleSave}
                     onLoad={handleLoad}
-                    onReset={handleReset}
+                    onReset={handleResetWithSchedules}
                     onRename={(newName) => handleRenameTab(notebook.id, newName)}
                     libraryPanelOpen={libraryPanelOpen}
                     onToggleLibrary={() => {
@@ -940,6 +956,9 @@ export function App() {
                     onLoadLayout={handleLoadLayout}
                     onDeleteLayout={handleDeleteLayout}
                     onCloseAllPanels={setPanelCloseAll}
+                    scheduledCells={scheduledCells}
+                    onScheduleStart={startSchedule}
+                    onScheduleStop={stopSchedule}
                   />
                 </div>
               ))}

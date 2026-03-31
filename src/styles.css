@@ -641,6 +641,72 @@ body {
   text-shadow: 0 0 6px var(--accent-glow);
 }
 
+/* ── Cell scheduling ─────────────────────────────────────────────────────── */
+
+.cell-schedule-group {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6px;
+}
+
+.cell-schedule-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  padding: 2px 5px;
+  border-radius: 3px;
+  color: var(--text-muted);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.cell:hover .cell-schedule-btn {
+  opacity: 0.45;
+}
+
+.cell:hover .cell-schedule-btn:hover {
+  opacity: 1;
+  background: rgba(0, 229, 204, 0.08);
+  color: var(--accent-primary);
+}
+
+.cell-schedule-btn.active {
+  opacity: 1 !important;
+  color: var(--accent-primary) !important;
+  text-shadow: 0 0 6px var(--accent-glow);
+  animation: schedule-pulse 2s ease-in-out infinite;
+}
+
+@keyframes schedule-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.cell-schedule-dropdown {
+  position: absolute; bottom: calc(100% + 4px); left: 0; z-index: 200;
+  background: var(--bg-elevated); border: 1px solid var(--border-default);
+  border-radius: 3px; box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+  min-width: 120px; padding: 2px 0;
+}
+
+.cell-schedule-dropdown-item {
+  display: block; width: 100%; background: none; border: none;
+  color: var(--text-secondary); font-family: var(--font-ui); font-size: 12px;
+  padding: 5px 12px; text-align: left; cursor: pointer; white-space: nowrap;
+}
+
+.cell-schedule-dropdown-item:hover {
+  background: var(--accent-warm-bg);
+  color: var(--accent-primary);
+}
+
+.cell-scheduled {
+  border-left: 2px solid var(--accent-primary);
+}
+
 /* Subtle tint on locked cells */
 .cell-locked .cm-editor {
   background: #0f0f11 !important;

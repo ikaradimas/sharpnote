@@ -92,6 +92,7 @@
 - **Cell output toggle** — show or hide cell output with the ▾ Output / ▸ Output toggle above each output block; useful for decluttering long-running cells
 - **Find in Notebook** — `Ctrl+F` opens a floating search bar that searches across all cell contents; ↑ / ↓ buttons (or Enter / Shift+Enter) navigate between matches; matched cells are highlighted; press Escape to close
 - **Auto-run on open** — the ⚡ toolbar button enables auto-run mode per notebook; when enabled, all code cells are run automatically when the notebook opens and the kernel becomes ready; state is saved in the `.cnb` file
+- **Scheduled execution** — click the ⏱ button in any code cell footer to run it on a repeating interval (5s, 10s, 30s, 1m, or 5m); skips ticks if the cell is still running; schedules stop on kernel reset or tab close and do not auto-start on load
 
 ### Output & Display
 
