@@ -218,13 +218,16 @@ export function App() {
   };
 
   // ── DB connections: load on mount, persist on change ──────────────────────
+  const dbConnectionsLoadedRef = useRef(false);
   useEffect(() => {
     window.electronAPI?.loadDbConnections().then((list) => {
       if (Array.isArray(list)) setDbConnections(list);
+      dbConnectionsLoadedRef.current = true;
     }).catch(() => {});
   }, []);
 
   useEffect(() => {
+    if (!dbConnectionsLoadedRef.current) return; // skip save during initial load
     window.electronAPI?.saveDbConnections(dbConnections);
   }, [dbConnections]);
 
