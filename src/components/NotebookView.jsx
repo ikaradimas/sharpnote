@@ -43,6 +43,9 @@ export function NotebookView({
   onLoadLayout,
   onDeleteLayout,
   onCloseAllPanels,
+  scheduledCells,
+  onScheduleStart,
+  onScheduleStop,
 }) {
   const { cells, outputs, outputHistory, cellResults, running, kernelStatus,
           config, logPanelOpen, nugetPanelOpen, configPanelOpen,
@@ -104,6 +107,7 @@ export function NotebookView({
   );
 
   const deleteCell = (id) => {
+    onScheduleStop?.(id);
     onSetNbDirty((n) => {
       const newOutputs = { ...n.outputs };
       delete newOutputs[id];
@@ -262,9 +266,12 @@ export function NotebookView({
                 onDelete={() => deleteCell(cell.id)}
                 onMoveUp={() => moveCell(cell.id, -1)}
                 onMoveDown={() => moveCell(cell.id, 1)}
+                isScheduled={scheduledCells?.has(cell.id) || false}
                 onOutputModeChange={(mode) => updateCellProp(cell.id, 'outputMode', mode)}
                 onToggleLock={() => updateCellProp(cell.id, 'locked', !(cell.locked || false))}
                 onToggleFold={() => toggleFold(cell.id)}
+                onScheduleStart={(ms) => { updateCellProp(cell.id, 'scheduleInterval', ms); onScheduleStart?.(nb.id, cell.id, ms); }}
+                onScheduleStop={() => onScheduleStop?.(cell.id)}
               />
             )}
             <AddBar

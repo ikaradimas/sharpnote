@@ -13,6 +13,7 @@ import { DEFAULT_DOCK_LAYOUT, DEFAULT_FLOAT_W, DEFAULT_FLOAT_H } from '../config
 import { TablePageSizeContext } from '../config/table-page-size-context.js';
 import { useNotebookManager } from '../hooks/useNotebookManager.js';
 import { useKernelManager } from '../hooks/useKernelManager.js';
+import { useCellScheduler } from '../hooks/useCellScheduler.js';
 import { useDockLayout } from '../hooks/useDockLayout.js';
 import { TabBar } from '../components/toolbar/TabBar.jsx';
 import { NotebookView } from '../components/NotebookView.jsx';
@@ -27,6 +28,7 @@ import { AboutDialog } from '../components/dialogs/AboutDialog.jsx';
 import { SettingsDialog } from '../components/dialogs/SettingsDialog.jsx';
 import { CommandPalette } from '../components/dialogs/CommandPalette.jsx';
 import { VarInspectDialog } from '../components/dialogs/VarInspectDialog.jsx';
+import { DbConnectionDialog } from '../components/dialogs/DbConnectionDialog.jsx';
 import { StatusBar } from './StatusBar.jsx';
 import { renderPanelContent } from '../components/dock/renderPanelContent.jsx';
 
@@ -68,6 +70,7 @@ export function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [varInspectDialog, setVarInspectDialog] = useState(null);
+  const [dbConnDialog, setDbConnDialog] = useState(null); // null | connection object (edit) | opened with null (new)
 
   // ── Panel / pane states ────────────────────────────────────────────────────
   const [libraryPanelOpen, setLibraryPanelOpen] = useState(false);
@@ -184,6 +187,21 @@ export function App() {
     });
   cancelPendingCellsRef.current = cancelPendingCells;
 
+  const { scheduledCells, startSchedule, stopSchedule, stopAllSchedules } =
+    useCellScheduler({ notebooksRef, runCell });
+
+  const handleResetWithSchedules = useCallback((notebookId) => {
+    stopAllSchedules(notebookId);
+    handleReset(notebookId);
+  }, [handleReset, stopAllSchedules]);
+
+  const handleCloseTabWithSchedules = useCallback((...args) => {
+    // args[0] is the tab id (notebookId) for notebook tabs
+    const tabId = args[0];
+    if (tabId) stopAllSchedules(tabId);
+    handleCloseTab(...args);
+  }, [handleCloseTab, stopAllSchedules]);
+
   // Wire up the settings-persist function. Called by hooks and effects whenever
   // settings need persisting. Reads all state from stable refs in one place.
   saveSettingsRef.current = () => {
@@ -200,13 +218,19 @@ export function App() {
   };
 
   // ── DB connections: load on mount, persist on change ──────────────────────
+  const dbLoadedRef = useRef(null);
   useEffect(() => {
     window.electronAPI?.loadDbConnections().then((list) => {
-      if (Array.isArray(list)) setDbConnections(list);
+      if (Array.isArray(list)) {
+        dbLoadedRef.current = list;
+        setDbConnections(list);
+      }
     }).catch(() => {});
   }, []);
 
   useEffect(() => {
+    // Skip the initial empty state and the freshly-loaded data.
+    if (dbConnections === dbLoadedRef.current || dbConnections.length === 0) return;
     window.electronAPI?.saveDbConnections(dbConnections);
   }, [dbConnections]);
 
@@ -432,7 +456,24 @@ export function App() {
 
   const handleUpdateDbConnection = useCallback((id, updates) => {
     setDbConnections((prev) => prev.map((c) => c.id === id ? { ...c, ...updates } : c));
-  }, []);
+    // Auto-reconnect attached databases using the updated properties
+    const merged = { ...dbConnectionsRef.current.find((c) => c.id === id), ...updates };
+    for (const nb of notebooksRef.current) {
+      const attached = nb.attachedDbs.find((d) => d.connectionId === id);
+      if (!attached || nb.kernelStatus !== 'ready') continue;
+      // Re-send db_connect with updated properties; kernel handles reconnect idempotently
+      setNb(nb.id, (n) => ({
+        attachedDbs: n.attachedDbs.map((d) =>
+          d.connectionId === id ? { ...d, status: 'connecting', error: undefined } : d
+        ),
+      }));
+      window.electronAPI?.sendToKernel(nb.id, {
+        type: 'db_connect', connectionId: id,
+        name: merged.name, provider: merged.provider,
+        connectionString: merged.connectionString, varName: attached.varName,
+      });
+    }
+  }, [setNb]);
 
   const handleRemoveDbConnection = useCallback((id) => {
     setDbConnections((prev) => prev.filter((c) => c.id !== id));
@@ -618,7 +659,7 @@ export function App() {
     },
     'save-as':         () => { if (isNotebook()) handleSaveAs(activeIdRef.current); },
     'run-all':         () => { if (isNotebook()) runAll(activeIdRef.current); },
-    reset:             () => { if (isNotebook()) handleReset(activeIdRef.current); },
+    reset:             () => { if (isNotebook()) handleResetWithSchedules(activeIdRef.current); },
     'clear-output':    () => { if (isNotebook()) setNb(activeIdRef.current, { outputs: {} }); },
     docs:              handleOpenDocs,
     'toggle-packages': () => setPanelVisible('nuget',   null),
@@ -780,8 +821,7 @@ export function App() {
         onDetach:  nbId ? (connId) => handleDetachDb(nbId, connId)  : () => {},
         onRefresh: nbId ? (connId) => handleRefreshDb(nbId, connId) : () => {},
         onRetry:   nbId ? (connId) => handleRetryDb(nbId, connId)   : () => {},
-        onAdd:    handleAddDbConnection,
-        onUpdate: handleUpdateDbConnection,
+        onEditConnection: (conn) => setDbConnDialog(conn === null ? 'new' : conn),
         onRemove: handleRemoveDbConnection,
       },
       library: {
@@ -862,7 +902,7 @@ export function App() {
         notebooks={notebooks}
         activeId={activeId}
         onActivate={setActiveId}
-        onClose={handleCloseTab}
+        onClose={handleCloseTabWithSchedules}
         onNew={handleNew}
         onRename={handleRenameTab}
         onReorder={handleReorder}
@@ -906,7 +946,7 @@ export function App() {
                     onRunTo={runTo}
                     onSave={handleSave}
                     onLoad={handleLoad}
-                    onReset={handleReset}
+                    onReset={handleResetWithSchedules}
                     onRename={(newName) => handleRenameTab(notebook.id, newName)}
                     libraryPanelOpen={libraryPanelOpen}
                     onToggleLibrary={() => {
@@ -940,6 +980,9 @@ export function App() {
                     onLoadLayout={handleLoadLayout}
                     onDeleteLayout={handleDeleteLayout}
                     onCloseAllPanels={setPanelCloseAll}
+                    scheduledCells={scheduledCells}
+                    onScheduleStart={startSchedule}
+                    onScheduleStop={stopSchedule}
                   />
                 </div>
               ))}
@@ -1039,6 +1082,19 @@ export function App() {
         <CommandPalette
           onExecute={(id) => menuHandlersRef.current[id]?.()}
           onClose={() => setCommandPaletteOpen(false)}
+        />
+      )}
+      {dbConnDialog && (
+        <DbConnectionDialog
+          connection={dbConnDialog === 'new' ? null : dbConnDialog}
+          existingNames={dbConnections
+            .filter((c) => dbConnDialog === 'new' || c.id !== dbConnDialog.id)
+            .map((c) => c.name)}
+          onSave={(conn) => {
+            if (dbConnDialog === 'new') handleAddDbConnection(conn);
+            else handleUpdateDbConnection(conn.id, conn);
+          }}
+          onClose={() => setDbConnDialog(null)}
         />
       )}
       {varInspectDialog && (

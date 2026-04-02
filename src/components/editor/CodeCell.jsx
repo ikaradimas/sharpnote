@@ -44,6 +44,19 @@ function formatElapsed(ms) {
   return `${m}m ${s}s`;
 }
 
+const SCHEDULE_PRESETS = [
+  { label: '5s',  ms: 5000 },
+  { label: '10s', ms: 10000 },
+  { label: '30s', ms: 30000 },
+  { label: '1m',  ms: 60000 },
+  { label: '5m',  ms: 300000 },
+];
+
+function formatInterval(ms) {
+  if (ms >= 60000) return `${ms / 60000}m`;
+  return `${ms / 1000}s`;
+}
+
 export function CodeCell({
   cell,
   cellIndex,
@@ -55,6 +68,7 @@ export function CodeCell({
   isRunning,
   anyRunning,
   kernelReady = true,
+  isScheduled = false,
   onUpdate,
   onRun,
   onInterrupt,
@@ -66,6 +80,8 @@ export function CodeCell({
   onOutputModeChange,
   onToggleLock,
   onToggleFold,
+  onScheduleStart,
+  onScheduleStop,
 }) {
   const outputMode = cell.outputMode || 'auto';
   const locked = cell.locked || false;
@@ -73,6 +89,8 @@ export function CodeCell({
   const [outputCollapsed, setOutputCollapsed] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const [scheduleDropdownOpen, setScheduleDropdownOpen] = useState(false);
+  const scheduleDropdownRef = useRef(null);
   const [elapsed, setElapsed] = useState(0);
   const [lastDuration, setLastDuration] = useState(null);
   const [lastRanAt, setLastRanAt] = useState(null);
@@ -111,13 +129,23 @@ export function CodeCell({
     return () => document.removeEventListener('mousedown', handler);
   }, [dropdownOpen]);
 
+  useEffect(() => {
+    if (!scheduleDropdownOpen) return;
+    const handler = (e) => {
+      if (scheduleDropdownRef.current && !scheduleDropdownRef.current.contains(e.target))
+        setScheduleDropdownOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [scheduleDropdownOpen]);
+
   const histLen = outputHistory ? outputHistory.length : 0;
   const displayedOutputs = histIdx >= 0 && histLen > 0
     ? outputHistory[histIdx]
     : outputs;
 
   return (
-    <div className={`cell code-cell${isRunning ? ' running' : ''}${locked ? ' cell-locked' : ''}${isStale ? ' cell-stale' : ''}${codeFolded ? ' cell-folded' : ''}`}>
+    <div className={`cell code-cell${isRunning ? ' running' : ''}${locked ? ' cell-locked' : ''}${isStale ? ' cell-stale' : ''}${codeFolded ? ' cell-folded' : ''}${isScheduled ? ' cell-scheduled' : ''}`}>
       {cellIndex != null && <span className="cell-index-badge">{cellIndex + 1}</span>}
       {isStale && (
         <div className="cell-stale-banner" title="Variables used in this cell may have changed — consider re-running">
@@ -244,6 +272,38 @@ export function CodeCell({
             >›</button>
           </span>
         )}
+        <div className="cell-schedule-group" ref={scheduleDropdownRef}>
+          {isScheduled ? (
+            <button
+              className="cell-schedule-btn active"
+              onClick={onScheduleStop}
+              title="Stop scheduled execution"
+            >
+              ⏱ {formatInterval(cell.scheduleInterval)}
+            </button>
+          ) : (
+            <button
+              className="cell-schedule-btn"
+              onClick={() => setScheduleDropdownOpen((v) => !v)}
+              title="Run on interval"
+            >
+              ⏱
+            </button>
+          )}
+          {scheduleDropdownOpen && !isScheduled && (
+            <div className="cell-schedule-dropdown">
+              {SCHEDULE_PRESETS.map(({ label, ms }) => (
+                <button
+                  key={ms}
+                  className="cell-schedule-dropdown-item"
+                  onClick={() => { onScheduleStart(ms); setScheduleDropdownOpen(false); }}
+                >
+                  Every {label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <button
           className={`cell-lock-btn${locked ? ' cell-lock-btn-on' : ''}`}
           onClick={onToggleLock}

@@ -1,10 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Text.Json;
-using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Xunit;
@@ -14,114 +11,27 @@ namespace kernel.Tests;
 
 /// <summary>
 /// Integration tests for the Util scripting global —
-/// spawns the actual kernel and verifies the JSON-line protocol messages emitted.
+/// uses a shared kernel process and resets state between tests.
 /// </summary>
-public class UtilTests : IAsyncDisposable
+public class UtilTests : IClassFixture<KernelFixture>, IAsyncLifetime
 {
-    private readonly ITestOutputHelper _out;
-    private Process? _proc;
-    private StreamWriter? _stdin;
-    private readonly List<JsonElement> _received = new();
-    private readonly SemaphoreSlim _messageSignal = new(0);
-    private Task? _readerTask;
-    private bool _running;
+    private readonly KernelFixture _k;
 
-    public UtilTests(ITestOutputHelper output) => _out = output;
+    public UtilTests(KernelFixture fixture, ITestOutputHelper _) => _k = fixture;
 
-    // ── Lifecycle ─────────────────────────────────────────────────────────────
-
-    private async Task StartKernelAsync()
-    {
-        var kernelDir   = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../"));
-        var projectPath = Path.Combine(kernelDir, "kernel.csproj");
-
-        var psi = new ProcessStartInfo
-        {
-            FileName               = "dotnet",
-            Arguments              = $"run --project \"{projectPath}\" --no-launch-profile",
-            RedirectStandardInput  = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError  = true,
-            UseShellExecute        = false,
-            WorkingDirectory       = kernelDir,
-        };
-
-        _proc = Process.Start(psi)!;
-        _stdin = new StreamWriter(_proc.StandardInput.BaseStream, System.Text.Encoding.UTF8)
-            { AutoFlush = true };
-
-        _running = true;
-        _readerTask = Task.Run(async () =>
-        {
-            var reader = new StreamReader(_proc.StandardOutput.BaseStream);
-            while (_running && !_proc.HasExited)
-            {
-                var line = await reader.ReadLineAsync();
-                if (line is null) break;
-                try
-                {
-                    var el = JsonSerializer.Deserialize<JsonElement>(line);
-                    lock (_received) _received.Add(el);
-                    _messageSignal.Release();
-                    _out.WriteLine($"<< {line}");
-                }
-                catch { /* skip non-JSON lines */ }
-            }
-        });
-
-        await WaitForMessageAsync(
-            el => el.TryGetProperty("type", out var t) && t.GetString() == "ready",
-            timeoutMs: 30_000);
-    }
-
-    private async Task<JsonElement> WaitForMessageAsync(
-        Func<JsonElement, bool> predicate, int timeoutMs = 10_000)
-    {
-        var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
-        while (DateTime.UtcNow < deadline)
-        {
-            lock (_received)
-            {
-                var match = _received.FirstOrDefault(predicate);
-                if (match.ValueKind != JsonValueKind.Undefined) return match;
-            }
-            await _messageSignal.WaitAsync(500);
-        }
-        throw new TimeoutException($"Timed out waiting for kernel message (timeout={timeoutMs}ms)");
-    }
-
-    private async Task SendAsync(object msg)
-    {
-        var json = JsonSerializer.Serialize(msg);
-        _out.WriteLine($">> {json}");
-        await _stdin!.WriteLineAsync(json);
-    }
-
-    private void ClearMessages() { lock (_received) _received.Clear(); }
-
-    private static string NewId() => Guid.NewGuid().ToString("N")[..8];
-
-    public async ValueTask DisposeAsync()
-    {
-        _running = false;
-        try { if (_stdin != null) await _stdin.WriteLineAsync(JsonSerializer.Serialize(new { type = "exit" })); } catch { }
-        try { _proc?.Kill(entireProcessTree: true); } catch { }
-        if (_readerTask != null) await _readerTask.WaitAsync(TimeSpan.FromSeconds(3)).ConfigureAwait(false);
-        _proc?.Dispose();
-        _stdin?.Dispose();
-    }
+    public Task InitializeAsync() => _k.ResetAsync();
+    public Task DisposeAsync() => Task.CompletedTask;
 
     // ── .Dump() alias ────────────────────────────────────────────────────────
 
     [Fact]
     public async Task Dump_ProducesDisplayMessage_LikeDisplay()
     {
-        await StartKernelAsync();
-        var id = NewId();
-        ClearMessages();
-        await SendAsync(new { type = "execute", id, code = "\"hello world\".Dump();" });
+        var id = KernelFixture.NewId();
+        _k.ClearMessages();
+        await _k.SendAsync(new { type = "execute", id, code = "\"hello world\".Dump();" });
 
-        var msg = await WaitForMessageAsync(el =>
+        var msg = await _k.WaitForMessageAsync(el =>
             el.TryGetProperty("type", out var t) && t.GetString() == "display",
             timeoutMs: 15_000);
 
@@ -134,12 +44,11 @@ public class UtilTests : IAsyncDisposable
     [Fact]
     public async Task Time_Action_EmitsHtmlWithElapsedMs()
     {
-        await StartKernelAsync();
-        var id = NewId();
-        ClearMessages();
-        await SendAsync(new { type = "execute", id, code = "Util.Time(() => System.Threading.Thread.Sleep(10), \"myLabel\");" });
+        var id = KernelFixture.NewId();
+        _k.ClearMessages();
+        await _k.SendAsync(new { type = "execute", id, code = "Util.Time(() => System.Threading.Thread.Sleep(10), \"myLabel\");" });
 
-        var msg = await WaitForMessageAsync(el =>
+        var msg = await _k.WaitForMessageAsync(el =>
             el.TryGetProperty("type", out var t) && t.GetString() == "display" &&
             el.TryGetProperty("format", out var f) && f.GetString() == "html",
             timeoutMs: 15_000);
@@ -152,19 +61,16 @@ public class UtilTests : IAsyncDisposable
     [Fact]
     public async Task Time_Func_ReturnsValue()
     {
-        await StartKernelAsync();
-        var id = NewId();
-        ClearMessages();
-        await SendAsync(new { type = "execute", id, code = "var x = Util.Time(() => 42, \"compute\");" });
+        var id = KernelFixture.NewId();
+        _k.ClearMessages();
+        await _k.SendAsync(new { type = "execute", id, code = "var x = Util.Time(() => 42, \"compute\");" });
 
-        await WaitForMessageAsync(el =>
+        await _k.WaitForMessageAsync(el =>
             el.TryGetProperty("type", out var t) && t.GetString() == "complete" &&
             el.TryGetProperty("id", out var i) && i.GetString() == id,
             timeoutMs: 15_000);
 
-        // Variable x should equal 42
-        List<JsonElement> all;
-        lock (_received) { all = _received.ToList(); }
+        var all = _k.GetMessages();
         var varsMsg = all.FirstOrDefault(el =>
             el.TryGetProperty("type", out var t) && t.GetString() == "vars_update");
         varsMsg.ValueKind.Should().NotBe(JsonValueKind.Undefined);
@@ -179,14 +85,12 @@ public class UtilTests : IAsyncDisposable
     [Fact]
     public async Task Cmd_CapturesCommandOutput()
     {
-        await StartKernelAsync();
-        var id = NewId();
-        ClearMessages();
-        // Use 'echo' which is available on all platforms
-        await SendAsync(new { type = "execute", id,
+        var id = KernelFixture.NewId();
+        _k.ClearMessages();
+        await _k.SendAsync(new { type = "execute", id,
             code = "Util.Cmd(\"echo\", \"hello from util cmd\");" });
 
-        var msg = await WaitForMessageAsync(el =>
+        var msg = await _k.WaitForMessageAsync(el =>
             el.TryGetProperty("type", out var t) && t.GetString() == "display" &&
             el.TryGetProperty("format", out var f) && f.GetString() == "html",
             timeoutMs: 15_000);
@@ -199,20 +103,19 @@ public class UtilTests : IAsyncDisposable
     [Fact]
     public async Task Dif_ShowsAddedAndRemovedLines()
     {
-        await StartKernelAsync();
-        var id = NewId();
-        ClearMessages();
-        await SendAsync(new { type = "execute", id,
+        var id = KernelFixture.NewId();
+        _k.ClearMessages();
+        await _k.SendAsync(new { type = "execute", id,
             code = "Util.Dif(\"a\\nb\\nc\", \"a\\nX\\nc\", \"before\", \"after\");" });
 
-        var msg = await WaitForMessageAsync(el =>
+        var msg = await _k.WaitForMessageAsync(el =>
             el.TryGetProperty("type", out var t) && t.GetString() == "display" &&
             el.TryGetProperty("format", out var f) && f.GetString() == "html",
             timeoutMs: 15_000);
 
         var content = msg.GetProperty("content").GetString()!;
-        content.Should().Contain("diff-del");   // removed line
-        content.Should().Contain("diff-add");   // added line
+        content.Should().Contain("diff-del");
+        content.Should().Contain("diff-add");
         content.Should().Contain("before");
         content.Should().Contain("after");
     }
@@ -222,25 +125,21 @@ public class UtilTests : IAsyncDisposable
     [Fact]
     public async Task Cache_ReturnsCachedValue_OnSecondCall()
     {
-        await StartKernelAsync();
-        var id1 = NewId();
-        ClearMessages();
+        var id1 = KernelFixture.NewId();
+        _k.ClearMessages();
 
-        // First call: counter increments to 1 and caches
-        await SendAsync(new { type = "execute", id = id1,
+        await _k.SendAsync(new { type = "execute", id = id1,
             code = "var counter = 0;\nvar v1 = Util.Cache(\"testKey\", () => { counter++; return 99; });\nvar v2 = Util.Cache(\"testKey\", () => { counter++; return 99; });" });
 
-        await WaitForMessageAsync(el =>
+        await _k.WaitForMessageAsync(el =>
             el.TryGetProperty("type", out var t) && t.GetString() == "complete" &&
             el.TryGetProperty("id", out var i) && i.GetString() == id1,
             timeoutMs: 15_000);
 
-        List<JsonElement> all;
-        lock (_received) { all = _received.ToList(); }
+        var all = _k.GetMessages();
         var varsMsg = all.LastOrDefault(el =>
             el.TryGetProperty("type", out var t) && t.GetString() == "vars_update");
         var vars = varsMsg.GetProperty("vars").EnumerateArray().ToList();
-        // counter should be 1 (factory only called once)
         var counterVar = vars.FirstOrDefault(v => v.GetProperty("name").GetString() == "counter");
         counterVar.GetProperty("value").GetString().Should().Be("1");
     }
@@ -250,16 +149,13 @@ public class UtilTests : IAsyncDisposable
     [Fact]
     public async Task ConfirmAsync_OkResponse_ReturnsTrue()
     {
-        await StartKernelAsync();
-        var id = NewId();
-        ClearMessages();
+        var id = KernelFixture.NewId();
+        _k.ClearMessages();
 
-        // Start execution — it will block waiting for confirm_response
-        var executeTask = SendAsync(new { type = "execute", id,
+        var executeTask = _k.SendAsync(new { type = "execute", id,
             code = "var result = await Util.ConfirmAsync(\"Delete all?\", \"Confirm\");\nresult.Display();" });
 
-        // Wait for the confirm display message
-        var confirmMsg = await WaitForMessageAsync(el =>
+        var confirmMsg = await _k.WaitForMessageAsync(el =>
             el.TryGetProperty("type", out var t) && t.GetString() == "display" &&
             el.TryGetProperty("format", out var f) && f.GetString() == "confirm",
             timeoutMs: 15_000);
@@ -268,20 +164,16 @@ public class UtilTests : IAsyncDisposable
         confirmMsg.GetProperty("content").GetProperty("message").GetString().Should().Be("Delete all?");
         confirmMsg.GetProperty("content").GetProperty("title").GetString().Should().Be("Confirm");
 
-        // Send the OK response
-        await SendAsync(new { type = "confirm_response", requestId, confirmed = true });
+        await _k.SendAsync(new { type = "confirm_response", requestId, confirmed = true });
 
-        // Wait for execution to complete successfully
-        var complete = await WaitForMessageAsync(el =>
+        var complete = await _k.WaitForMessageAsync(el =>
             el.TryGetProperty("type", out var t) && t.GetString() == "complete" &&
             el.TryGetProperty("id", out var i) && i.GetString() == id,
             timeoutMs: 10_000);
 
         complete.GetProperty("success").GetBoolean().Should().BeTrue();
 
-        // result.Display() should have emitted "True"
-        List<JsonElement> all;
-        lock (_received) { all = _received.ToList(); }
+        var all = _k.GetMessages();
         var displayMsgs = all.Where(el =>
             el.TryGetProperty("type", out var t) && t.GetString() == "display" &&
             el.TryGetProperty("format", out var f) && f.GetString() == "html").ToList();
@@ -292,32 +184,29 @@ public class UtilTests : IAsyncDisposable
     [Fact]
     public async Task ConfirmAsync_CancelResponse_ReturnsFalse()
     {
-        await StartKernelAsync();
-        var id = NewId();
-        ClearMessages();
+        var id = KernelFixture.NewId();
+        _k.ClearMessages();
 
-        var executeTask = SendAsync(new { type = "execute", id,
+        var executeTask = _k.SendAsync(new { type = "execute", id,
             code = "var result = await Util.ConfirmAsync(\"Proceed?\");\nresult.Display();" });
 
-        var confirmMsg = await WaitForMessageAsync(el =>
+        var confirmMsg = await _k.WaitForMessageAsync(el =>
             el.TryGetProperty("type", out var t) && t.GetString() == "display" &&
             el.TryGetProperty("format", out var f) && f.GetString() == "confirm",
             timeoutMs: 15_000);
 
         var requestId = confirmMsg.GetProperty("content").GetProperty("requestId").GetString()!;
 
-        // Send cancel
-        await SendAsync(new { type = "confirm_response", requestId, confirmed = false });
+        await _k.SendAsync(new { type = "confirm_response", requestId, confirmed = false });
 
-        var complete = await WaitForMessageAsync(el =>
+        var complete = await _k.WaitForMessageAsync(el =>
             el.TryGetProperty("type", out var t) && t.GetString() == "complete" &&
             el.TryGetProperty("id", out var i) && i.GetString() == id,
             timeoutMs: 10_000);
 
         complete.GetProperty("success").GetBoolean().Should().BeTrue();
 
-        List<JsonElement> all;
-        lock (_received) { all = _received.ToList(); }
+        var all = _k.GetMessages();
         var displayMsgs = all.Where(el =>
             el.TryGetProperty("type", out var t) && t.GetString() == "display" &&
             el.TryGetProperty("format", out var f) && f.GetString() == "html").ToList();
@@ -330,13 +219,12 @@ public class UtilTests : IAsyncDisposable
     [Fact]
     public async Task HorizontalRun_EmitsHorizontalDisplayMessage()
     {
-        await StartKernelAsync();
-        var id = NewId();
-        ClearMessages();
-        await SendAsync(new { type = "execute", id,
+        var id = KernelFixture.NewId();
+        _k.ClearMessages();
+        await _k.SendAsync(new { type = "execute", id,
             code = "Util.HorizontalRun(\"16px\", \"left\", \"right\");" });
 
-        var msg = await WaitForMessageAsync(el =>
+        var msg = await _k.WaitForMessageAsync(el =>
             el.TryGetProperty("type", out var t) && t.GetString() == "display" &&
             el.TryGetProperty("format", out var f) && f.GetString() == "horizontal",
             timeoutMs: 15_000);

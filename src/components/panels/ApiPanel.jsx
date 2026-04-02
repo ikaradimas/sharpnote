@@ -165,6 +165,68 @@ export function schemaToCSharpClass(spec, rootSchema, rootName, style) {
   }).join('\n\n');
 }
 
+// ── C# literal generators ────────────────────────────────────────────────────
+
+function csDefaultLiteral(schema) {
+  const t = csScalarType(schema);
+  if (t === 'string' || t === 'DateTime' || t === 'Guid') return '""';
+  if (t === 'bool') return 'false';
+  if (t === 'double' || t === 'float') return '0.0';
+  return '0';
+}
+
+// Generates a C# anonymous type literal from a JSON schema.
+export function schemaToAnonymousLiteral(spec, schema, indent, depth = 0) {
+  if (!schema || depth > 4) return 'null';
+  const s = schema.$ref ? resolveRef(spec, schema.$ref) ?? schema : schema;
+  if (s.$ref) return 'null';
+  const pad = indent + '    ';
+
+  if (s.type === 'object' || s.properties) {
+    const entries = Object.entries(s.properties ?? {});
+    if (entries.length === 0) return 'new { }';
+    const props = entries.map(([key, prop]) => {
+      const val = schemaToAnonymousLiteral(spec, prop, pad, depth + 1);
+      return `${pad}${key} = ${val},`;
+    });
+    return `new\n${indent}{\n${props.join('\n')}\n${indent}}`;
+  }
+  if (s.type === 'array') {
+    const item = schemaToAnonymousLiteral(spec, s.items, pad, depth + 1);
+    return `new[] { ${item} }`;
+  }
+  return csDefaultLiteral(s);
+}
+
+// Generates a C# typed object initializer from a JSON schema (new ClassName { ... }).
+export function schemaToInitializerLiteral(spec, schema, className, indent, depth = 0) {
+  if (!schema || depth > 4) return 'null';
+  const s = schema.$ref ? resolveRef(spec, schema.$ref) ?? schema : schema;
+  if (s.$ref) return 'null';
+  const pad = indent + '    ';
+
+  if (s.type === 'object' || s.properties) {
+    const entries = Object.entries(s.properties ?? {});
+    if (entries.length === 0) return `new ${className}()`;
+    const props = entries.map(([key, prop]) => {
+      const resolved = prop.$ref ? resolveRef(spec, prop.$ref) ?? prop : prop;
+      let val;
+      if (resolved.type === 'object' || resolved.properties) {
+        const nestedName = prop.$ref ? prop.$ref.split('/').pop() : toPascalCase(key);
+        val = schemaToInitializerLiteral(spec, resolved, nestedName, pad, depth + 1);
+      } else if (resolved.type === 'array') {
+        const item = schemaToAnonymousLiteral(spec, resolved.items, pad + '    ', depth + 1);
+        val = `new[] { ${item} }`;
+      } else {
+        val = csDefaultLiteral(resolved);
+      }
+      return `${pad}${toPascalCase(key)} = ${val},`;
+    });
+    return `new ${className}\n${indent}{\n${props.join('\n')}\n${indent}}`;
+  }
+  return csDefaultLiteral(s);
+}
+
 export function getSchemaType(spec, schema) {
   if (!schema) return '';
   if (schema.$ref) {
@@ -305,13 +367,28 @@ export function buildHttpClientSnippet(method, pathTemplate, op, baseUrl, auth, 
     const bodySchema = op.requestBody
       ? (op.requestBody.content?.['application/json']?.schema ?? null)
       : (op.parameters?.find(p => p.in === 'body')?.schema ?? null);
-    const skel = bodySchema ? schemaSkeleton(spec, bodySchema) : null;
-    const payloadJson = skel !== null ? JSON.stringify(skel, null, 2) : '{\n    // TODO: fill in request body\n}';
-    lines.push('');
-    lines.push(`var payload = ${payloadJson};`);
-    lines.push('var content = new System.Net.Http.StringContent(');
-    lines.push('    System.Text.Json.JsonSerializer.Serialize(payload),');
-    lines.push('    System.Text.Encoding.UTF8, "application/json");');
+
+    if (bodySchema && schemaHasClass(spec, bodySchema)) {
+      // Model path: prepend class declarations, use typed initializer
+      const resolved = bodySchema.$ref ? resolveRef(spec, bodySchema.$ref) : bodySchema;
+      const className = bodySchema.$ref
+        ? bodySchema.$ref.split('/').pop()
+        : (op.operationId ? toPascalCase(op.operationId) + 'Request' : 'RequestBody');
+      const classCode = schemaToCSharpClass(spec, bodySchema, className, 'stj');
+      lines.unshift('');
+      lines.unshift(...classCode.split('\n'));
+      lines.push('');
+      lines.push(`var payload = ${schemaToInitializerLiteral(spec, resolved ?? bodySchema, className, '')};`);
+    } else if (bodySchema) {
+      lines.push('');
+      lines.push(`var payload = ${schemaToAnonymousLiteral(spec, bodySchema, '')};`);
+    } else {
+      lines.push('');
+      lines.push('var payload = new { /* TODO: fill in request body */ };');
+    }
+    lines.push('var content = new StringContent(');
+    lines.push('    JsonSerializer.Serialize(payload),');
+    lines.push('    Encoding.UTF8, "application/json");');
   }
 
   // HTTP call

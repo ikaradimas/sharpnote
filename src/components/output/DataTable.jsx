@@ -53,24 +53,26 @@ export function DataTable({ rows }) {
 
   return (
     <div className="data-table-wrap">
-      <table className="data-table">
-        <thead>
-          <tr>
-            {columns.map((c) => (
-              <th key={c} className="sortable" onClick={() => onSort(c)}>
-                {c}{sortIndicator(c)}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {pageRows.map((row, i) => (
-            <tr key={start + i}>
-              {columns.map((c) => <td key={c}>{String(row[c] ?? '')}</td>)}
+      <div className="data-table-scroll">
+        <table className="data-table">
+          <thead>
+            <tr>
+              {columns.map((c) => (
+                <th key={c} className="sortable" onClick={() => onSort(c)}>
+                  {c}{sortIndicator(c)}
+                </th>
+              ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {pageRows.map((row, i) => (
+              <tr key={start + i}>
+                {columns.map((c) => <td key={c}>{String(row[c] ?? '')}</td>)}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       {pageCount > 1 && (
         <div className="table-pager">
           <span className="table-pager-info">

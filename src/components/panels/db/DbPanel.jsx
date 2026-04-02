@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
-import { v4 as uuidv4 } from 'uuid';
+import React, { useState, useRef, useCallback } from 'react';
 import { useResize } from '../../../hooks/useResize.js';
 import { useClipboard } from '../../../hooks/useClipboard.js';
-import { DB_PROVIDERS, DB_CONNSTR_PLACEHOLDER } from '../../../config/db-providers.js';
+import { DB_PROVIDERS } from '../../../config/db-providers.js';
 
 function DbStatusDot({ status }) {
   return <span className={`db-status-dot db-status-${status || 'none'}`} />;
@@ -38,66 +37,6 @@ function DbSchemaTree({ schema }) {
   );
 }
 
-function DbConnectionForm({ connection, existingNames, onSave, onCancel }) {
-  const [name, setName] = useState(connection?.name ?? '');
-  const [provider, setProvider] = useState(connection?.provider ?? 'sqlite');
-  const [connStr, setConnStr] = useState(connection?.connectionString ?? '');
-  const [error, setError] = useState('');
-
-  const providerMeta = DB_PROVIDERS.find((p) => p.key === provider);
-
-  const handleSave = () => {
-    const n  = name.trim();
-    const cs = connStr.trim();
-    if (!n) return;
-    // Connection string is optional for in-memory providers; required for all others
-    if (!providerMeta?.optionalConnStr && !cs) return;
-    const isDuplicate = existingNames.some(
-      (existing) => existing.toLowerCase() === n.toLowerCase()
-    );
-    if (isDuplicate) {
-      setError(`A connection named "${n}" already exists.`);
-      return;
-    }
-    setError('');
-    const id = connection?.id ?? uuidv4();
-    onSave({ id, name: n, provider, connectionString: cs });
-  };
-
-  return (
-    <div className="db-connection-form">
-      <input
-        className="nuget-input"
-        placeholder="Connection name"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        spellCheck={false}
-      />
-      <select
-        className="nuget-input db-provider-select"
-        value={provider}
-        onChange={(e) => setProvider(e.target.value)}
-      >
-        {DB_PROVIDERS.map((p) => (
-          <option key={p.key} value={p.key}>{p.label}</option>
-        ))}
-      </select>
-      <input
-        className="nuget-input db-connstr-input"
-        placeholder={DB_CONNSTR_PLACEHOLDER[provider] ?? 'Connection string'}
-        value={connStr}
-        onChange={(e) => setConnStr(e.target.value)}
-        spellCheck={false}
-      />
-      {error && <div className="db-form-error">{error}</div>}
-      <div className="db-form-actions">
-        <button className="nuget-remove-btn db-form-btn" onClick={onCancel}>Cancel</button>
-        <button className="nuget-add-btn db-form-btn" onClick={handleSave}>Save</button>
-      </div>
-    </div>
-  );
-}
-
 function VarBadge({ varName }) {
   const [copied, copy] = useClipboard();
   return (
@@ -114,26 +53,34 @@ export function DbPanel({
   isOpen, onToggle,
   connections, attachedDbs, notebookId,
   onAttach, onDetach, onRefresh, onRetry,
-  onAdd, onUpdate, onRemove,
+  onEditConnection, onRemove,
 }) {
   const [height, onResizeMouseDown] = useResize(280, 'top');
   const [leftWidth, onColResizeMouseDown] = useResize(260, 'right');
-  const [editingConn, setEditingConn] = useState(null); // null | 'new' | connection object
+  const [collapsedDbs, setCollapsedDbs] = useState(new Set());
+  const schemaRefsMap = useRef({});
+
+  const toggleDbCollapse = useCallback((connId) => {
+    setCollapsedDbs((prev) => {
+      const next = new Set(prev);
+      if (next.has(connId)) next.delete(connId); else next.add(connId);
+      return next;
+    });
+  }, []);
+
+  const scrollToDb = useCallback((connId) => {
+    const el = schemaRefsMap.current[connId];
+    if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, []);
 
   if (!isOpen) return null;
-
-  const handleSaveConn = (conn) => {
-    if (editingConn === 'new') onAdd(conn);
-    else onUpdate(conn.id, conn);
-    setEditingConn(null);
-  };
 
   return (
     <div className="db-panel" style={{ height }}>
       <div className="resize-handle resize-v" onMouseDown={onResizeMouseDown} />
       <div className="db-panel-header">
         <span className="db-panel-title">Databases</span>
-        <button className="nuget-add-btn db-add-btn" onClick={() => setEditingConn('new')} title="Add connection">+ Add</button>
+        <button className="nuget-add-btn db-add-btn" onClick={() => onEditConnection(null)} title="Add connection">+ Add</button>
         <button className="nuget-close-btn" onClick={onToggle} title="Close">×</button>
       </div>
       <div className="db-panel-body">
@@ -151,6 +98,8 @@ export function DbPanel({
               <div
                 key={conn.id}
                 className={`db-connection-item${attached ? ' db-connection-attached' : ''}`}
+                onClick={attached ? () => scrollToDb(conn.id) : undefined}
+                style={attached ? { cursor: 'pointer' } : undefined}
               >
                 <div className="db-conn-top">
                   <DbStatusDot status={attached?.status ?? 'none'} />
@@ -167,22 +116,12 @@ export function DbPanel({
                       Detach
                     </button>
                   )}
-                  <button className="db-icon-btn db-edit-btn" onClick={() => setEditingConn(conn)} title="Edit">✎</button>
+                  <button className="db-icon-btn db-edit-btn" onClick={() => onEditConnection(conn)} title="Edit">✎</button>
                   <button className="db-icon-btn" onClick={() => { if (window.confirm(`Remove connection "${conn.name}"?`)) onRemove(conn.id); }} title="Remove">×</button>
                 </div>
               </div>
             );
           })}
-          {editingConn && (
-            <DbConnectionForm
-              connection={editingConn === 'new' ? null : editingConn}
-              existingNames={connections
-                .filter((c) => editingConn === 'new' || c.id !== editingConn.id)
-                .map((c) => c.name)}
-              onSave={handleSaveConn}
-              onCancel={() => setEditingConn(null)}
-            />
-          )}
         </div>
 
         {/* Draggable column divider */}
@@ -197,26 +136,36 @@ export function DbPanel({
           )}
           {attachedDbs.map((db) => {
             const conn = connections.find((c) => c.id === db.connectionId);
+            const isCollapsed = collapsedDbs.has(db.connectionId);
             return (
-              <div key={db.connectionId} className="db-schema-section">
-                <div className="db-schema-header">
+              <div
+                key={db.connectionId}
+                className="db-schema-section"
+                ref={(el) => { schemaRefsMap.current[db.connectionId] = el; }}
+              >
+                <div
+                  className="db-schema-header"
+                  onClick={() => toggleDbCollapse(db.connectionId)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <span className="db-table-arrow">{isCollapsed ? '▸' : '▾'}</span>
                   <DbStatusDot status={db.status} />
                   <span className="db-conn-name">{conn?.name ?? db.connectionId}</span>
                   {db.varName && <VarBadge varName={db.varName} />}
                   <button
                     className="db-icon-btn"
-                    onClick={() => onRefresh(db.connectionId)}
+                    onClick={(e) => { e.stopPropagation(); onRefresh(db.connectionId); }}
                     title="Refresh schema"
                     disabled={db.status === 'connecting'}
                   >↻</button>
                 </div>
-                {db.status === 'error' && (
+                {!isCollapsed && db.status === 'error' && (
                   <div className="db-error-msg">
                     <span>{db.error}</span>
                     <button className="db-retry-btn" onClick={() => onRetry(db.connectionId)}>↺ Retry</button>
                   </div>
                 )}
-                {db.schema && <DbSchemaTree schema={db.schema} />}
+                {!isCollapsed && db.schema && <DbSchemaTree schema={db.schema} />}
               </div>
             );
           })}

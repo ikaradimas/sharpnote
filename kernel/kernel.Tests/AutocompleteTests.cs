@@ -82,4 +82,29 @@ public class AutocompleteTests
 
         await act.Should().NotThrowAsync();
     }
+
+    // ── HttpClient default availability ──────────────────────────────────────
+
+    [Fact]
+    public async Task GetCompletions_HttpClient_ReturnsMemberItems()
+    {
+        using var wm = new WorkspaceManager();
+        var code = "var client = new HttpClient();\nclient.";
+        wm.UpdateDocument(code);
+        var items = await wm.GetCompletionsAsync(code.Length);
+        var labels = items.Select(i => i.Label).ToList();
+
+        labels.Should().Contain("GetAsync");
+        labels.Should().Contain("PostAsync");
+    }
+
+    [Fact]
+    public async Task GetDiagnostics_HttpClientUsage_NoDiagnosticErrors()
+    {
+        using var wm = new WorkspaceManager();
+        wm.UpdateDocument("var client = new HttpClient();");
+        var diags = await wm.GetDiagnosticsAsync();
+
+        diags.Where(d => d.Severity == "error").Should().BeEmpty();
+    }
 }

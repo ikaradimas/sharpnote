@@ -34,9 +34,8 @@ partial class Program
         }
 
         CurrentCellId = cellId;
-        var display = new DisplayHelper(realStdout);
-        display.SetCellId(cellId ?? "");
-        DisplayContext.Current = display;
+        globals.Display.SetCellId(cellId ?? "");
+        DisplayContext.Current = globals.Display;
 
         try
         {

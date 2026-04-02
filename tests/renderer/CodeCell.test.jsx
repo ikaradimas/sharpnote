@@ -26,6 +26,10 @@ const defaultProps = (overrides = {}) => ({
   onMoveDown: vi.fn(),
   onOutputModeChange: vi.fn(),
   onToggleLock: vi.fn(),
+  onToggleFold: vi.fn(),
+  isScheduled: false,
+  onScheduleStart: vi.fn(),
+  onScheduleStop: vi.fn(),
   ...overrides,
 });
 
@@ -217,6 +221,71 @@ describe('CodeCell – execution timer', () => {
   it('does not show ran-at timestamp while running', () => {
     render(<CodeCell {...defaultProps({ isRunning: true })} />);
     expect(document.querySelector('.cell-ran-at')).toBeNull();
+  });
+});
+
+describe('CodeCell – schedule controls', () => {
+  it('renders schedule button in footer', () => {
+    render(<CodeCell {...defaultProps()} />);
+    expect(screen.getByTitle('Run on interval')).toBeInTheDocument();
+  });
+
+  it('clicking schedule button opens preset dropdown', () => {
+    render(<CodeCell {...defaultProps()} />);
+    fireEvent.click(screen.getByTitle('Run on interval'));
+    expect(screen.getByText('Every 5s')).toBeInTheDocument();
+    expect(screen.getByText('Every 30s')).toBeInTheDocument();
+    expect(screen.getByText('Every 1m')).toBeInTheDocument();
+  });
+
+  it('selecting a preset calls onScheduleStart with correct ms', () => {
+    const onScheduleStart = vi.fn();
+    render(<CodeCell {...defaultProps({ onScheduleStart })} />);
+    fireEvent.click(screen.getByTitle('Run on interval'));
+    fireEvent.click(screen.getByText('Every 30s'));
+    expect(onScheduleStart).toHaveBeenCalledWith(30000);
+  });
+
+  it('closes dropdown after selecting preset', () => {
+    render(<CodeCell {...defaultProps()} />);
+    fireEvent.click(screen.getByTitle('Run on interval'));
+    fireEvent.click(screen.getByText('Every 5s'));
+    expect(screen.queryByText('Every 30s')).toBeNull();
+  });
+
+  it('shows active state when isScheduled=true', () => {
+    render(<CodeCell {...defaultProps({
+      isScheduled: true,
+      cell: makeCell({ scheduleInterval: 10000 }),
+    })} />);
+    const btn = screen.getByTitle('Stop scheduled execution');
+    expect(btn).toBeInTheDocument();
+    expect(btn.classList.contains('active')).toBe(true);
+    expect(btn.textContent).toContain('10s');
+  });
+
+  it('clicking active button calls onScheduleStop', () => {
+    const onScheduleStop = vi.fn();
+    render(<CodeCell {...defaultProps({
+      isScheduled: true,
+      onScheduleStop,
+      cell: makeCell({ scheduleInterval: 5000 }),
+    })} />);
+    fireEvent.click(screen.getByTitle('Stop scheduled execution'));
+    expect(onScheduleStop).toHaveBeenCalledOnce();
+  });
+
+  it('adds cell-scheduled class when isScheduled=true', () => {
+    render(<CodeCell {...defaultProps({
+      isScheduled: true,
+      cell: makeCell({ scheduleInterval: 5000 }),
+    })} />);
+    expect(document.querySelector('.cell-scheduled')).not.toBeNull();
+  });
+
+  it('does not add cell-scheduled class when isScheduled=false', () => {
+    render(<CodeCell {...defaultProps()} />);
+    expect(document.querySelector('.cell-scheduled')).toBeNull();
   });
 });
 

@@ -193,4 +193,92 @@ public class WorkspaceManagerTests
 
         help.Signatures.Should().BeEmpty();
     }
+
+    // ── Using-directive completions ───────────────────────────────────────────
+
+    [Fact]
+    public async Task GetCompletions_UsingSystem_ReturnsChildNamespaces()
+    {
+        using var wm = new WorkspaceManager();
+        var code = "using System.";
+        wm.UpdateDocument(code);
+        var items = await wm.GetCompletionsAsync(code.Length);
+        var labels = items.Select(i => i.Label).ToList();
+
+        labels.Should().Contain("Net");
+        labels.Should().Contain("Linq");
+        labels.Should().Contain("Collections");
+        items.First(i => i.Label == "Net").Kind.Should().Be("namespace");
+    }
+
+    [Fact]
+    public async Task GetCompletions_UsingSystemNet_ReturnsHttpNamespace()
+    {
+        using var wm = new WorkspaceManager();
+        var code = "using System.Net.";
+        wm.UpdateDocument(code);
+        var items = await wm.GetCompletionsAsync(code.Length);
+
+        items.Select(i => i.Label).Should().Contain("Http");
+    }
+
+    [Fact]
+    public async Task GetCompletions_UsingEmpty_ReturnsTopLevelNamespaces()
+    {
+        using var wm = new WorkspaceManager();
+        var code = "using ";
+        wm.UpdateDocument(code);
+        var items = await wm.GetCompletionsAsync(code.Length);
+        var labels = items.Select(i => i.Label).ToList();
+
+        labels.Should().Contain("System");
+        labels.Should().Contain("Microsoft");
+    }
+
+    [Fact]
+    public async Task GetCompletions_UsingPartialFilter_FiltersCorrectly()
+    {
+        using var wm = new WorkspaceManager();
+        var code = "using System.N";
+        wm.UpdateDocument(code);
+        var items = await wm.GetCompletionsAsync(code.Length);
+        var labels = items.Select(i => i.Label).ToList();
+
+        labels.Should().Contain("Net");
+        labels.Should().Contain("Numerics");
+        labels.Should().NotContain("Linq");
+    }
+
+    [Fact]
+    public async Task GetCompletions_UsingOnSecondLine_StillWorks()
+    {
+        using var wm = new WorkspaceManager();
+        var code = "using System;\nusing System.Net.";
+        wm.UpdateDocument(code);
+        var items = await wm.GetCompletionsAsync(code.Length);
+
+        items.Select(i => i.Label).Should().Contain("Http");
+    }
+
+    [Fact]
+    public async Task GetCompletions_UsingAfterCode_StillWorks()
+    {
+        using var wm = new WorkspaceManager();
+        var code = "var x = 1;\nusing System.";
+        wm.UpdateDocument(code);
+        var items = await wm.GetCompletionsAsync(code.Length);
+
+        items.Select(i => i.Label).Should().Contain("Net");
+    }
+
+    [Fact]
+    public async Task GetCompletions_NonUsingContext_FallsBackToRoslyn()
+    {
+        using var wm = new WorkspaceManager();
+        var code = "Console.";
+        wm.UpdateDocument(code);
+        var items = await wm.GetCompletionsAsync(code.Length);
+
+        items.Select(i => i.Label).Should().Contain("WriteLine");
+    }
 }

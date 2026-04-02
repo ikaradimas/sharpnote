@@ -6,6 +6,9 @@ import {
   getSchemaType,
   getSwagger2BodyInfo,
   schemaSkeleton,
+  schemaToAnonymousLiteral,
+  schemaToInitializerLiteral,
+  buildHttpClientSnippet,
 } from '../../src/components/panels/ApiPanel.jsx';
 
 // ── getBaseUrl ────────────────────────────────────────────────────────────────
@@ -330,5 +333,230 @@ describe('schemaSkeleton', () => {
   it('treats schema with only properties (no explicit type) as object', () => {
     const schema = { properties: { x: { type: 'string' } } };
     expect(schemaSkeleton({}, schema)).toEqual({ x: '' });
+  });
+});
+
+// ── schemaToAnonymousLiteral ─────────────────────────────────────────────────
+
+describe('schemaToAnonymousLiteral', () => {
+  it('generates flat anonymous type for simple object', () => {
+    const schema = {
+      type: 'object',
+      properties: { name: { type: 'string' }, age: { type: 'integer' } },
+    };
+    const result = schemaToAnonymousLiteral({}, schema, '');
+    expect(result).toContain('new');
+    expect(result).toContain('name = ""');
+    expect(result).toContain('age = 0');
+  });
+
+  it('generates correct defaults for all scalar types', () => {
+    const schema = {
+      type: 'object',
+      properties: {
+        s: { type: 'string' },
+        i: { type: 'integer' },
+        n: { type: 'number' },
+        b: { type: 'boolean' },
+      },
+    };
+    const result = schemaToAnonymousLiteral({}, schema, '');
+    expect(result).toContain('s = ""');
+    expect(result).toContain('i = 0');
+    expect(result).toContain('n = 0.0');
+    expect(result).toContain('b = false');
+  });
+
+  it('generates nested anonymous types', () => {
+    const schema = {
+      type: 'object',
+      properties: {
+        address: {
+          type: 'object',
+          properties: { city: { type: 'string' } },
+        },
+      },
+    };
+    const result = schemaToAnonymousLiteral({}, schema, '');
+    expect(result).toContain('address = new');
+    expect(result).toContain('city = ""');
+  });
+
+  it('generates array literals', () => {
+    const schema = {
+      type: 'object',
+      properties: {
+        tags: { type: 'array', items: { type: 'string' } },
+      },
+    };
+    const result = schemaToAnonymousLiteral({}, schema, '');
+    expect(result).toContain('tags = new[] { "" }');
+  });
+
+  it('resolves $ref schemas', () => {
+    const spec = {
+      components: {
+        schemas: {
+          Address: {
+            type: 'object',
+            properties: { zip: { type: 'string' } },
+          },
+        },
+      },
+    };
+    const schema = {
+      type: 'object',
+      properties: { addr: { $ref: '#/components/schemas/Address' } },
+    };
+    const result = schemaToAnonymousLiteral(spec, schema, '');
+    expect(result).toContain('addr = new');
+    expect(result).toContain('zip = ""');
+  });
+
+  it('returns null for null schema', () => {
+    expect(schemaToAnonymousLiteral({}, null, '')).toBe('null');
+  });
+
+  it('handles empty object properties', () => {
+    const schema = { type: 'object', properties: {} };
+    expect(schemaToAnonymousLiteral({}, schema, '')).toBe('new { }');
+  });
+});
+
+// ── schemaToInitializerLiteral ───────────────────────────────────────────────
+
+describe('schemaToInitializerLiteral', () => {
+  it('generates typed initializer with PascalCase properties', () => {
+    const schema = {
+      type: 'object',
+      properties: { user_name: { type: 'string' }, age: { type: 'integer' } },
+    };
+    const result = schemaToInitializerLiteral({}, schema, 'CreateUser', '');
+    expect(result).toContain('new CreateUser');
+    expect(result).toContain('UserName = ""');
+    expect(result).toContain('Age = 0');
+  });
+
+  it('generates nested typed initializers for $ref properties', () => {
+    const spec = {
+      components: {
+        schemas: {
+          Address: {
+            type: 'object',
+            properties: { city: { type: 'string' } },
+          },
+        },
+      },
+    };
+    const schema = {
+      type: 'object',
+      properties: { home: { $ref: '#/components/schemas/Address' } },
+    };
+    const result = schemaToInitializerLiteral(spec, schema, 'User', '');
+    expect(result).toContain('new User');
+    expect(result).toContain('Home = new Address');
+    expect(result).toContain('City = ""');
+  });
+
+  it('returns empty constructor for object with no properties', () => {
+    const schema = { type: 'object', properties: {} };
+    expect(schemaToInitializerLiteral({}, schema, 'Empty', '')).toBe('new Empty()');
+  });
+});
+
+// ── buildHttpClientSnippet payload generation ────────────────────────────────
+
+describe('buildHttpClientSnippet payload', () => {
+  const spec = {
+    components: {
+      schemas: {
+        User: {
+          type: 'object',
+          properties: {
+            name: { type: 'string' },
+            email: { type: 'string' },
+          },
+        },
+      },
+    },
+    servers: [{ url: 'https://api.example.com' }],
+  };
+
+  const auth = { type: 'none' };
+
+  it('generates typed initializer when model schema is available via $ref', () => {
+    const op = {
+      requestBody: {
+        content: {
+          'application/json': { schema: { $ref: '#/components/schemas/User' } },
+        },
+      },
+    };
+    const result = buildHttpClientSnippet('post', '/users', op, 'https://api.example.com', auth, spec);
+    expect(result).toContain('public class User');
+    expect(result).toContain('new User');
+    expect(result).toContain('Name = ""');
+    expect(result).toContain('Email = ""');
+    expect(result).not.toContain('JSON.stringify');
+  });
+
+  it('generates typed initializer for inline object schema', () => {
+    const op = {
+      requestBody: {
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              properties: { title: { type: 'string' } },
+            },
+          },
+        },
+      },
+      operationId: 'createPost',
+    };
+    const result = buildHttpClientSnippet('post', '/posts', op, 'https://api.example.com', auth, spec);
+    expect(result).toContain('public class CreatePostRequest');
+    expect(result).toContain('new CreatePostRequest');
+    expect(result).toContain('Title = ""');
+  });
+
+  it('generates anonymous type for scalar-only body schema', () => {
+    const op = {
+      requestBody: {
+        content: {
+          'application/json': { schema: { type: 'string' } },
+        },
+      },
+    };
+    const result = buildHttpClientSnippet('post', '/echo', op, 'https://api.example.com', auth, spec);
+    expect(result).toContain('var payload = ""');
+  });
+
+  it('generates placeholder when no body schema exists', () => {
+    const op = {
+      requestBody: { content: { 'application/json': {} } },
+    };
+    const result = buildHttpClientSnippet('post', '/action', op, 'https://api.example.com', auth, spec);
+    expect(result).toContain('var payload = new { /* TODO');
+  });
+
+  it('uses JsonSerializer.Serialize for serialization', () => {
+    const op = {
+      requestBody: {
+        content: {
+          'application/json': { schema: { $ref: '#/components/schemas/User' } },
+        },
+      },
+    };
+    const result = buildHttpClientSnippet('post', '/users', op, 'https://api.example.com', auth, spec);
+    expect(result).toContain('JsonSerializer.Serialize(payload)');
+    expect(result).toContain('new StringContent(');
+  });
+
+  it('does not generate payload for GET requests', () => {
+    const op = {};
+    const result = buildHttpClientSnippet('get', '/users', op, 'https://api.example.com', auth, spec);
+    expect(result).not.toContain('payload');
+    expect(result).not.toContain('StringContent');
   });
 });

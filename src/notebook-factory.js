@@ -11,7 +11,7 @@ export function makeCell(type = 'code', content = '') {
     id: shortId(),
     type,
     content,
-    ...(type === 'code' ? { outputMode: 'auto', locked: false } : {}),
+    ...(type === 'code' ? { outputMode: 'auto', locked: false, scheduleInterval: null } : {}),
     ...(type === 'sql'  ? { db: '' } : {}),
   };
 }
