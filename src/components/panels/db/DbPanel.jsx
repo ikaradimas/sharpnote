@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useResize } from '../../../hooks/useResize.js';
 import { useClipboard } from '../../../hooks/useClipboard.js';
@@ -119,6 +119,21 @@ export function DbPanel({
   const [height, onResizeMouseDown] = useResize(280, 'top');
   const [leftWidth, onColResizeMouseDown] = useResize(260, 'right');
   const [editingConn, setEditingConn] = useState(null); // null | 'new' | connection object
+  const [collapsedDbs, setCollapsedDbs] = useState(new Set());
+  const schemaRefsMap = useRef({});
+
+  const toggleDbCollapse = useCallback((connId) => {
+    setCollapsedDbs((prev) => {
+      const next = new Set(prev);
+      if (next.has(connId)) next.delete(connId); else next.add(connId);
+      return next;
+    });
+  }, []);
+
+  const scrollToDb = useCallback((connId) => {
+    const el = schemaRefsMap.current[connId];
+    if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, []);
 
   if (!isOpen) return null;
 
@@ -151,6 +166,8 @@ export function DbPanel({
               <div
                 key={conn.id}
                 className={`db-connection-item${attached ? ' db-connection-attached' : ''}`}
+                onClick={attached ? () => scrollToDb(conn.id) : undefined}
+                style={attached ? { cursor: 'pointer' } : undefined}
               >
                 <div className="db-conn-top">
                   <DbStatusDot status={attached?.status ?? 'none'} />
@@ -197,26 +214,36 @@ export function DbPanel({
           )}
           {attachedDbs.map((db) => {
             const conn = connections.find((c) => c.id === db.connectionId);
+            const isCollapsed = collapsedDbs.has(db.connectionId);
             return (
-              <div key={db.connectionId} className="db-schema-section">
-                <div className="db-schema-header">
+              <div
+                key={db.connectionId}
+                className="db-schema-section"
+                ref={(el) => { schemaRefsMap.current[db.connectionId] = el; }}
+              >
+                <div
+                  className="db-schema-header"
+                  onClick={() => toggleDbCollapse(db.connectionId)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <span className="db-table-arrow">{isCollapsed ? '▸' : '▾'}</span>
                   <DbStatusDot status={db.status} />
                   <span className="db-conn-name">{conn?.name ?? db.connectionId}</span>
                   {db.varName && <VarBadge varName={db.varName} />}
                   <button
                     className="db-icon-btn"
-                    onClick={() => onRefresh(db.connectionId)}
+                    onClick={(e) => { e.stopPropagation(); onRefresh(db.connectionId); }}
                     title="Refresh schema"
                     disabled={db.status === 'connecting'}
                   >↻</button>
                 </div>
-                {db.status === 'error' && (
+                {!isCollapsed && db.status === 'error' && (
                   <div className="db-error-msg">
                     <span>{db.error}</span>
                     <button className="db-retry-btn" onClick={() => onRetry(db.connectionId)}>↺ Retry</button>
                   </div>
                 )}
-                {db.schema && <DbSchemaTree schema={db.schema} />}
+                {!isCollapsed && db.schema && <DbSchemaTree schema={db.schema} />}
               </div>
             );
           })}
