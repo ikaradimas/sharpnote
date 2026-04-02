@@ -19,18 +19,21 @@ partial class Program
     //   1. Non-relational (Redis)     — injects ConnectionMultiplexer + IDatabase
     //   2. Persistent-connection      — injects keeper SqliteConnection + connection-based DbContext
     //   3. Regular relational (default) — injects string-based DbContext
-    internal static async Task InjectDbContextAsync(DbConnectionInfo info, ScriptOptions options, ScriptGlobals globals)
+    internal static async Task InjectDbContextAsync(
+        DbConnectionInfo info, ScriptOptions options, ScriptGlobals globals, bool isReconnect = false)
     {
         var provider = DbProviders.Get(info.Provider);
         var opts     = options.AddReferences(dbMetaRefs);
+        // On reconnect, skip 'var' to avoid "variable already exists" in the Roslyn script state.
+        var decl = isReconnect ? "" : "var ";
         string code;
 
         if (!provider.IsRelational)
         {
             // Redis: inject a ConnectionMultiplexer and expose GetDatabase() as the variable
             var muxVar = $"__{info.VarName}_mux";
-            code = $"var {muxVar} = StackExchange.Redis.ConnectionMultiplexer.Connect({S(info.ConnectionString)});\n" +
-                   $"var {info.VarName} = {muxVar}.GetDatabase();";
+            code = $"{decl}{muxVar} = StackExchange.Redis.ConnectionMultiplexer.Connect({S(info.ConnectionString)});\n" +
+                   $"{decl}{info.VarName} = {muxVar}.GetDatabase();";
         }
         else if (provider.UsesPersistentConnection)
         {
@@ -39,16 +42,16 @@ partial class Program
             var ns        = $"DynDb_{DbCodeGen.SanitizeTypeName(info.Name)}";
             var ctx       = $"{ns}.{DbCodeGen.SanitizeTypeName(info.Name)}DbContext";
             var keeperVar = $"__{info.VarName}_conn";
-            code = $"var {keeperVar} = new Microsoft.Data.Sqlite.SqliteConnection({S(info.ConnectionString)});\n" +
+            code = $"{decl}{keeperVar} = new Microsoft.Data.Sqlite.SqliteConnection({S(info.ConnectionString)});\n" +
                    $"{keeperVar}.Open();\n" +
-                   $"var {info.VarName} = new {ctx}({keeperVar});";
+                   $"{decl}{info.VarName} = new {ctx}({keeperVar});";
         }
         else
         {
             // Regular relational: string-based DbContext
             var ns  = $"DynDb_{DbCodeGen.SanitizeTypeName(info.Name)}";
             var ctx = $"{ns}.{DbCodeGen.SanitizeTypeName(info.Name)}DbContext";
-            code = $"var {info.VarName} = new {ctx}({S(info.ConnectionString)}, {S(info.Provider)});";
+            code = $"{decl}{info.VarName} = new {ctx}({S(info.ConnectionString)}, {S(info.Provider)});";
         }
 
         script = script == null
@@ -148,8 +151,9 @@ partial class Program
             }
 
             // 4. Update state
-            if (attachedDbs.TryGetValue(connectionId, out var existing))
-                dbMetaRefs.Remove(existing.MetaRef);
+            var isReconnect = attachedDbs.TryGetValue(connectionId, out var existing);
+            if (isReconnect)
+                dbMetaRefs.Remove(existing!.MetaRef);
             dbMetaRefs.Add(metaRef);
             _workspaceManager.ReplaceReference(existing?.MetaRef, metaRef);
 
@@ -157,8 +161,8 @@ partial class Program
             attachedDbs[connectionId] = info;
             _workspaceManager.SetDynamicPreamble(BuildDbPreamble());
 
-            // 5. Inject variable
-            await InjectDbContextAsync(info, options, globals);
+            // 5. Inject variable (skip 'var' on reconnect to avoid duplicate declaration)
+            await InjectDbContextAsync(info, options, globals, isReconnect);
 
             // 6. Confirm ready
             lock (realStdout) { realStdout.WriteLine(JsonSerializer.Serialize(new { type = "db_ready", connectionId, varName })); }

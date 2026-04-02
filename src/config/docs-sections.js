@@ -291,7 +291,7 @@ export const DOCS_SECTIONS = [
         'Redis — key-value store via StackExchange.Redis; injects an IDatabase variable instead of a DbContext',
       ]},
       { type: 'h3', text: 'Adding a Connection' },
-      { type: 'p', text: 'Click the + button in the DB panel. Enter a name (used as the variable name in scripts), choose a provider, and enter a connection string:' },
+      { type: 'p', text: 'Click the + Add button in the DB panel to open the connection dialog. Enter a name (used as the variable name in scripts), choose a provider, and enter a connection string. Connection credentials are encrypted at rest using the OS keychain. Editing a connection\'s properties automatically reconnects any attached notebooks:' },
       { type: 'code', text: '-- SQLite\nData Source=/Users/me/data/mydb.db\n\n-- SQLite (In-Memory)\n(leave blank to auto-generate, or enter a shared-cache name)\n\n-- SQL Server\nServer=localhost;Database=mydb;User Id=sa;Password=pass;TrustServerCertificate=True\n\n-- PostgreSQL\nHost=localhost;Database=mydb;Username=postgres;Password=secret\n\n-- Redis\nlocalhost:6379\n  or\nserver:port,password=secret,ssl=true' },
       { type: 'h3', text: 'Attaching to a Notebook' },
       { type: 'p', text: 'Connections are global and can be attached to individual notebooks. Click Attach next to a connection. The kernel connects, introspects the schema, generates a typed DbContext, and injects it as a variable. Attached connections are saved in the .cnb file and reconnect automatically on open.' },

@@ -77,8 +77,7 @@ function defaultProps(overrides = {}) {
     onDetach: vi.fn(),
     onRefresh: vi.fn(),
     onRetry: vi.fn(),
-    onAdd: vi.fn(),
-    onUpdate: vi.fn(),
+    onEditConnection: vi.fn(),
     onRemove: vi.fn(),
     ...overrides,
   };
@@ -351,65 +350,20 @@ describe('DbPanel', () => {
     expect(props.onRemove).not.toHaveBeenCalled();
   });
 
-  // ── Connection form ────────────────────────────────────────────────────
+  // ── Connection dialog trigger ───────────────────────────────────────────
 
-  it('opens add form when + Add is clicked', () => {
-    render(<DbPanel {...defaultProps()} />);
-    fireEvent.click(screen.getByTitle('Add connection'));
-    expect(screen.getByPlaceholderText('Connection name')).toBeInTheDocument();
-  });
-
-  it('calls onAdd with form data on save', () => {
+  it('calls onEditConnection(null) when + Add is clicked', () => {
     const props = defaultProps();
     render(<DbPanel {...props} />);
     fireEvent.click(screen.getByTitle('Add connection'));
-
-    fireEvent.change(screen.getByPlaceholderText('Connection name'), {
-      target: { value: 'NewDB' },
-    });
-    fireEvent.change(screen.getByPlaceholderText(/Data Source/), {
-      target: { value: 'Data Source=new.db' },
-    });
-    fireEvent.click(screen.getByText('Save'));
-
-    expect(props.onAdd).toHaveBeenCalledWith(
-      expect.objectContaining({
-        name: 'NewDB',
-        provider: 'sqlite',
-        connectionString: 'Data Source=new.db',
-      })
-    );
+    expect(props.onEditConnection).toHaveBeenCalledWith(null);
   });
 
-  it('closes form on Cancel', () => {
-    render(<DbPanel {...defaultProps()} />);
-    fireEvent.click(screen.getByTitle('Add connection'));
-    expect(screen.getByPlaceholderText('Connection name')).toBeInTheDocument();
-
-    fireEvent.click(screen.getByText('Cancel'));
-    expect(screen.queryByPlaceholderText('Connection name')).toBeNull();
-  });
-
-  it('opens edit form when edit button is clicked', () => {
-    render(<DbPanel {...defaultProps()} />);
+  it('calls onEditConnection(conn) when edit button is clicked', () => {
+    const props = defaultProps();
+    render(<DbPanel {...props} />);
     fireEvent.click(screen.getAllByTitle('Edit')[0]);
-    const nameInput = screen.getByPlaceholderText('Connection name');
-    expect(nameInput.value).toBe('TestDB');
-  });
-
-  it('shows error for duplicate connection name', () => {
-    render(<DbPanel {...defaultProps()} />);
-    fireEvent.click(screen.getByTitle('Add connection'));
-
-    fireEvent.change(screen.getByPlaceholderText('Connection name'), {
-      target: { value: 'TestDB' },
-    });
-    fireEvent.change(screen.getByPlaceholderText(/Data Source/), {
-      target: { value: 'something' },
-    });
-    fireEvent.click(screen.getByText('Save'));
-
-    expect(screen.getByText(/already exists/)).toBeInTheDocument();
+    expect(props.onEditConnection).toHaveBeenCalledWith(CONN_SQLITE);
   });
 
   // ── VarBadge ───────────────────────────────────────────────────────────
