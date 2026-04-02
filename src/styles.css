@@ -5048,7 +5048,8 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 
 .cmd-palette-overlay {
   position: fixed; inset: 0; z-index: 9000;
-  background: var(--bg-deep);
+  background: rgba(0,0,0,0.65);
+  backdrop-filter: blur(2px);
   display: flex; align-items: flex-start; justify-content: center;
   padding-top: 80px;
 }
@@ -5082,7 +5083,7 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
   transition: background 0.08s;
 }
 .cmd-palette-item:hover,
-.cmd-palette-item.selected { background: var(--bg-hover); }
+.cmd-palette-item.selected { background: var(--bg-elevated); }
 .cmd-palette-keys {
   font-size: 11px; color: var(--text-muted);
   background: var(--bg-deep); border: 1px solid var(--border-subtle);
