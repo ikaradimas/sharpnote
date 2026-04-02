@@ -1,9 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <linearGradient id="bg4" x1="0" y1="0" x2="0.3" y2="1">
-      <stop offset="0%" stop-color="#0a0a1a"/>
-      <stop offset="100%" stop-color="#12101f"/>
-    </linearGradient>
     <linearGradient id="neonCyan" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%" stop-color="#00f5d4"/>
       <stop offset="100%" stop-color="#00bbf9"/>
@@ -24,18 +20,6 @@
       <feGaussianBlur stdDeviation="12"/>
     </filter>
   </defs>
-  <!-- Background -->
-  <rect width="512" height="512" rx="108" fill="url(#bg4)"/>
-  <!-- Subtle dot grid -->
-  <g opacity="0.04" fill="#ffffff">
-    <circle cx="80" cy="80" r="1.5"/><circle cx="120" cy="80" r="1.5"/><circle cx="160" cy="80" r="1.5"/><circle cx="200" cy="80" r="1.5"/><circle cx="240" cy="80" r="1.5"/><circle cx="280" cy="80" r="1.5"/><circle cx="320" cy="80" r="1.5"/><circle cx="360" cy="80" r="1.5"/><circle cx="400" cy="80" r="1.5"/><circle cx="440" cy="80" r="1.5"/>
-    <circle cx="80" cy="120" r="1.5"/><circle cx="120" cy="120" r="1.5"/><circle cx="160" cy="120" r="1.5"/><circle cx="200" cy="120" r="1.5"/><circle cx="240" cy="120" r="1.5"/><circle cx="280" cy="120" r="1.5"/><circle cx="320" cy="120" r="1.5"/><circle cx="360" cy="120" r="1.5"/><circle cx="400" cy="120" r="1.5"/><circle cx="440" cy="120" r="1.5"/>
-    <circle cx="80" cy="160" r="1.5"/><circle cx="120" cy="160" r="1.5"/><circle cx="160" cy="160" r="1.5"/><circle cx="200" cy="160" r="1.5"/><circle cx="240" cy="160" r="1.5"/><circle cx="280" cy="160" r="1.5"/><circle cx="320" cy="160" r="1.5"/><circle cx="360" cy="160" r="1.5"/><circle cx="400" cy="160" r="1.5"/><circle cx="440" cy="160" r="1.5"/>
-    <circle cx="80" cy="200" r="1.5"/><circle cx="120" cy="200" r="1.5"/><circle cx="160" cy="200" r="1.5"/><circle cx="200" cy="200" r="1.5"/><circle cx="240" cy="200" r="1.5"/><circle cx="280" cy="200" r="1.5"/><circle cx="320" cy="200" r="1.5"/><circle cx="360" cy="200" r="1.5"/><circle cx="400" cy="200" r="1.5"/><circle cx="440" cy="200" r="1.5"/>
-    <circle cx="80" cy="360" r="1.5"/><circle cx="120" cy="360" r="1.5"/><circle cx="160" cy="360" r="1.5"/><circle cx="200" cy="360" r="1.5"/><circle cx="240" cy="360" r="1.5"/><circle cx="280" cy="360" r="1.5"/><circle cx="320" cy="360" r="1.5"/><circle cx="360" cy="360" r="1.5"/><circle cx="400" cy="360" r="1.5"/><circle cx="440" cy="360" r="1.5"/>
-    <circle cx="80" cy="400" r="1.5"/><circle cx="120" cy="400" r="1.5"/><circle cx="160" cy="400" r="1.5"/><circle cx="200" cy="400" r="1.5"/><circle cx="240" cy="400" r="1.5"/><circle cx="280" cy="400" r="1.5"/><circle cx="320" cy="400" r="1.5"/><circle cx="360" cy="400" r="1.5"/><circle cx="400" cy="400" r="1.5"/><circle cx="440" cy="400" r="1.5"/>
-    <circle cx="80" cy="440" r="1.5"/><circle cx="120" cy="440" r="1.5"/><circle cx="160" cy="440" r="1.5"/><circle cx="200" cy="440" r="1.5"/><circle cx="240" cy="440" r="1.5"/><circle cx="280" cy="440" r="1.5"/><circle cx="320" cy="440" r="1.5"/><circle cx="360" cy="440" r="1.5"/><circle cx="400" cy="440" r="1.5"/><circle cx="440" cy="440" r="1.5"/>
-  </g>
   <!-- Opening curly brace — neon cyan -->
   <g filter="url(#neon)">
     <path d="M155,130 Q125,130 125,170 L125,230 Q125,256 100,256 Q125,256 125,282 L125,342 Q125,382 155,382"
