@@ -505,6 +505,9 @@ function AuthConfig({ auth, onChange }) {
           />
         </>
       )}
+      {auth.type !== 'none' && (
+        <button className="api-auth-clear" onClick={() => onChange(DEFAULT_AUTH)} title="Clear auth">×</button>
+      )}
     </div>
   );
 }

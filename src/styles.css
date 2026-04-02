@@ -4795,6 +4795,11 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 .api-auth-input { flex: 1; min-width: 80px; background: var(--bg-mid); border: 1px solid var(--border-subtle); color: var(--text-primary); border-radius: 3px; padding: 2px 6px; font-size: 11px; }
 .api-auth-input:focus, .api-auth-type:focus, .api-auth-in:focus { outline: none; border-color: var(--accent-primary); }
 .api-auth-secret { font-family: var(--font-code); letter-spacing: .08em; }
+.api-auth-clear {
+  background: none; border: none; color: var(--text-muted); cursor: pointer;
+  font-size: 13px; padding: 0 3px; flex-shrink: 0; line-height: 1;
+}
+.api-auth-clear:hover { color: var(--status-error); }
 
 /* Operation action buttons row (Try it + Inject) */
 .api-op-actions { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
