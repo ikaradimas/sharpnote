@@ -960,8 +960,11 @@ body {
 /* ── Data Table ──────────────────────────────────────────────────────────── */
 
 .data-table-wrap {
-  overflow-x: auto;
   font-family: var(--font-ui);
+}
+
+.data-table-scroll {
+  overflow-x: auto;
 }
 
 .data-table {
