@@ -1,22 +1,49 @@
 'use strict';
 
-const path = require('path');
-const fs   = require('fs');
+const path   = require('path');
+const fs     = require('fs');
+const crypto = require('crypto');
 const { safeStorage } = require('electron');
 
 let _dbConnectionsPath = '';
+let _key = null; // cached AES key derived from a single safeStorage call
 
 // ── Encryption helpers ───────────────────────────────────────────────────────
 
+// Derives an AES-256 key from a single safeStorage call, then caches it.
+// Only the first call touches the OS keychain; everything after is in-memory.
+function getKey() {
+  if (_key) return _key;
+  if (!safeStorage.isEncryptionAvailable()) return null;
+  const encrypted = safeStorage.encryptString('sharpnote-db-key');
+  _key = crypto.createHash('sha256').update(encrypted).digest();
+  return _key;
+}
+
 function encryptField(value) {
-  if (!value || !safeStorage.isEncryptionAvailable()) return value;
-  return safeStorage.encryptString(value).toString('base64');
+  const key = getKey();
+  if (!key || !value) return value;
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  const enc = Buffer.concat([cipher.update(value, 'utf8'), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return Buffer.concat([iv, tag, enc]).toString('base64');
 }
 
 function decryptField(value) {
-  if (!value || !safeStorage.isEncryptionAvailable()) return value;
-  try { return safeStorage.decryptString(Buffer.from(value, 'base64')); }
-  catch { return value; } // graceful fallback for unencrypted legacy data
+  const key = getKey();
+  if (!key || !value) return value;
+  try {
+    const buf = Buffer.from(value, 'base64');
+    const iv  = buf.subarray(0, 12);
+    const tag = buf.subarray(12, 28);
+    const enc = buf.subarray(28);
+    const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+    decipher.setAuthTag(tag);
+    return decipher.update(enc, undefined, 'utf8') + decipher.final('utf8');
+  } catch {
+    return value; // graceful fallback for unencrypted legacy data
+  }
 }
 
 // ── Load / Save ──────────────────────────────────────────────────────────────
@@ -51,11 +78,9 @@ function register(ipcMain, { app }) {
   const userDataPath = app.getPath('userData');
   _dbConnectionsPath = path.join(userDataPath, 'db-connections.json');
 
-  // Prime the OS keychain once at startup so subsequent encrypt/decrypt calls
-  // don't each trigger a separate password prompt.
-  if (safeStorage.isEncryptionAvailable()) {
-    try { safeStorage.encryptString(''); } catch {}
-  }
+  // Prime the key derivation so the single keychain prompt happens early,
+  // before any renderer IPC arrives.
+  getKey();
 
   ipcMain.handle('db-connections-load', () => loadDbConnections());
   ipcMain.handle('db-connections-save', (_event, list) => saveDbConnections(list));
