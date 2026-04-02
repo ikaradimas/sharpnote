@@ -80,6 +80,7 @@ partial class Program
                 "System.Threading.Tasks",
                 "System.Text.Json",
                 "System.Net",
+                "System.Net.Http",
                 "SharpNoteKernel",
                 "Microsoft.EntityFrameworkCore"
             )
@@ -87,6 +88,7 @@ partial class Program
                 typeof(object).Assembly,
                 typeof(Enumerable).Assembly,
                 typeof(System.Net.WebUtility).Assembly,
+                typeof(System.Net.Http.HttpClient).Assembly,
                 typeof(DisplayHelper).Assembly,
                 typeof(Microsoft.EntityFrameworkCore.DbContext).Assembly,
                 typeof(Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions).Assembly

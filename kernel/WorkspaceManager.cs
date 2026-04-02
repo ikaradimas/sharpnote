@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Completion;
@@ -81,6 +82,7 @@ public sealed class WorkspaceManager : IDisposable
                 "System.Threading.Tasks",
                 "System.Text.Json",
                 "System.Net",
+                "System.Net.Http",
                 "SharpNoteKernel",
                 "Microsoft.EntityFrameworkCore",
             });
@@ -179,7 +181,17 @@ public sealed class WorkspaceManager : IDisposable
     /// </summary>
     public async Task<IReadOnlyList<CompletionItemData>> GetCompletionsAsync(int position)
     {
-        var doc     = _workspace.CurrentSolution.GetDocument(_docId)!;
+        var doc = _workspace.CurrentSolution.GetDocument(_docId)!;
+
+        // Check for using-directive context — the preamble places variable
+        // declarations before user code, so Roslyn's built-in completion
+        // doesn't recognise the using-directive context.  Detect it ourselves
+        // and walk the compilation's namespace symbol tree instead.
+        var sourceText = await doc.GetTextAsync();
+        var userCode   = sourceText.ToString().Substring(TotalPreambleLength);
+        var usingItems = await TryGetUsingCompletionsAsync(doc, userCode, position);
+        if (usingItems != null) return usingItems;
+
         var service = CompletionService.GetService(doc);
         if (service == null) return Array.Empty<CompletionItemData>();
 
@@ -302,6 +314,68 @@ public sealed class WorkspaceManager : IDisposable
         }
         return sb.ToString();
     }
+
+    // ── Using-directive completions ─────────────────────────────────────────
+
+    private static readonly Regex UsingDirectivePattern =
+        new(@"^using\s+([\w.]*\.?)$", RegexOptions.Compiled);
+
+    /// <summary>
+    /// If the cursor sits inside a <c>using</c> directive, walks the compilation's
+    /// namespace symbol tree and returns child namespace completions.
+    /// Returns <c>null</c> when the cursor is not in a using-directive context.
+    /// </summary>
+    private async Task<IReadOnlyList<CompletionItemData>?> TryGetUsingCompletionsAsync(
+        Document doc, string userCode, int position)
+    {
+        // Find the line containing the cursor
+        var lineStart = userCode.LastIndexOf('\n', Math.Max(0, position - 1)) + 1;
+        var lineText  = userCode.Substring(lineStart, position - lineStart);
+
+        var match = UsingDirectivePattern.Match(lineText);
+        if (!match.Success) return null;
+
+        var prefix = match.Groups[1].Value; // e.g. "System.Net.", "System.N", ""
+
+        var compilation = await doc.Project.GetCompilationAsync();
+        if (compilation == null) return null;
+
+        var ns = compilation.GlobalNamespace;
+
+        if (prefix.Length > 0)
+        {
+            var parts       = prefix.TrimEnd('.').Split('.');
+            var endsWithDot = prefix.EndsWith(".");
+            var walkParts   = endsWithDot ? parts : parts.Take(parts.Length - 1);
+
+            foreach (var part in walkParts)
+            {
+                var child = ns.GetNamespaceMembers()
+                    .FirstOrDefault(n => n.Name == part);
+                if (child == null) return Array.Empty<CompletionItemData>();
+                ns = child;
+            }
+
+            if (!endsWithDot)
+            {
+                var partial = parts.Last();
+                return GetNamespaceChildren(ns)
+                    .Where(c => c.Label.StartsWith(partial, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+            }
+        }
+
+        return GetNamespaceChildren(ns).ToList();
+    }
+
+    private static IEnumerable<CompletionItemData> GetNamespaceChildren(
+        INamespaceSymbol ns)
+    {
+        foreach (var child in ns.GetNamespaceMembers().OrderBy(n => n.Name))
+            yield return new CompletionItemData(child.Name, "namespace", null);
+    }
+
+    // ── Tag mapping ──────────────────────────────────────────────────────────
 
     private static string MapCompletionTags(ImmutableArray<string> tags)
     {

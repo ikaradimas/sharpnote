@@ -136,7 +136,7 @@ export const DOCS_SECTIONS = [
         'graph — interactive Chart.js graph rendered from a config object',
       ]},
       { type: 'h3', text: 'Autocomplete & Lint' },
-      { type: 'p', text: 'The C# editor connects to a Roslyn LSP server running inside the kernel via a named pipe. Completions, hover documentation, and real-time semantic diagnostics (type errors, undefined variables, and more) are all powered by Roslyn Workspace APIs. Press Tab to accept a suggestion (Enter inserts a newline as usual). Squiggles appear as you type whenever the kernel is running.' },
+      { type: 'p', text: 'The C# editor connects to a Roslyn LSP server running inside the kernel via a named pipe. Completions, hover documentation, and real-time semantic diagnostics (type errors, undefined variables, and more) are all powered by Roslyn Workspace APIs. Press Tab to accept a suggestion (Enter inserts a newline as usual). Squiggles appear as you type whenever the kernel is running. Typing "using " triggers namespace completions (System.Net.Http, System.Collections.Concurrent, etc.) by walking the loaded assembly tree.' },
       { type: 'h3', text: 'Auto-Run on Open' },
       { type: 'p', text: 'Click the ⚡ button in the notebook toolbar to enable auto-run mode for that notebook. When enabled, all code cells are automatically executed in order as soon as the notebook opens and the kernel becomes ready — useful for notebooks that serve as dashboards or setup scripts. The ⚡ state is saved in the .cnb file and persists between sessions.' },
       { type: 'h3', text: 'Scheduled Execution' },
