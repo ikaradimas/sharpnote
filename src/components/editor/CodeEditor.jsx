@@ -6,6 +6,7 @@ import { oneDark } from '@codemirror/theme-one-dark';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { StreamLanguage } from '@codemirror/language';
 import { csharp } from '@codemirror/legacy-modes/mode/clike';
+import { standardSQL } from '@codemirror/legacy-modes/mode/sql';
 import { acceptCompletion, autocompletion } from '@codemirror/autocomplete';
 import { LanguageServerClient, languageServerPlugin, jumpToDefinitionKeymap, jumpToDefinitionPos } from 'codemirror-languageserver';
 import { ElectronLspTransport } from './lspTransport.js';
@@ -237,7 +238,9 @@ export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
 
     const langExt = language === 'markdown'
       ? markdown({ base: markdownLanguage })
-      : StreamLanguage.define(csharp);
+      : language === 'sql'
+        ? StreamLanguage.define(standardSQL)
+        : StreamLanguage.define(csharp);
 
     const ctrlEnterKey = keymap.of([{
       key: 'Ctrl-Enter',
