@@ -496,7 +496,7 @@ describe('buildHttpClientSnippet', () => {
     const snippet = buildHttpClientSnippet('post', '/items', op, 'https://api.example.com', NO_AUTH);
     expect(snippet).toContain('client.PostAsync(');
     expect(snippet).toContain('StringContent(');
-    expect(snippet).toContain('// TODO: fill in request body');
+    expect(snippet).toContain('/* TODO');
   });
 
   it('prefills payload from schema skeleton when schema is present', () => {
@@ -508,8 +508,10 @@ describe('buildHttpClientSnippet', () => {
       parameters: [], responses: {},
     };
     const snippet = buildHttpClientSnippet('post', '/items', op, 'https://api.example.com', NO_AUTH, spec);
-    expect(snippet).toContain('"name"');
-    expect(snippet).toContain('"qty"');
+    expect(snippet).toContain('public class Item');
+    expect(snippet).toContain('new Item');
+    expect(snippet).toContain('Name = ""');
+    expect(snippet).toContain('Qty = 0');
     expect(snippet).not.toContain('// TODO');
   });
 
