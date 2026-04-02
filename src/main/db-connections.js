@@ -31,7 +31,7 @@ function encryptField(value) {
   return Buffer.concat([iv, tag, enc]).toString('base64');
 }
 
-function decryptField(value) {
+function decryptField(value, wasMarkedEncrypted) {
   const key = getKey();
   if (!key || !value) return value;
   try {
@@ -43,7 +43,10 @@ function decryptField(value) {
     decipher.setAuthTag(tag);
     return decipher.update(enc, undefined, 'utf8') + decipher.final('utf8');
   } catch {
-    return value; // graceful fallback for unencrypted legacy data
+    // If the record was marked encrypted but we can't decrypt it (e.g. it was
+    // encrypted by a previous method like safeStorage), return empty rather than
+    // passing garbled data to the DB provider.
+    return wasMarkedEncrypted ? '' : value;
   }
 }
 
@@ -55,7 +58,7 @@ function loadDbConnections(userDataPath) {
     const list = JSON.parse(fs.readFileSync(_dbConnectionsPath, 'utf-8'));
     return list.map((c) => ({
       ...c,
-      connectionString: c.encrypted ? decryptField(c.connectionString) : (c.connectionString ?? ''),
+      connectionString: c.encrypted ? decryptField(c.connectionString, true) : (c.connectionString ?? ''),
     }));
   } catch {
     return [];
