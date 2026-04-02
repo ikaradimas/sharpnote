@@ -2,21 +2,22 @@
 
 const path   = require('path');
 const fs     = require('fs');
+const os     = require('os');
 const crypto = require('crypto');
-const { safeStorage } = require('electron');
 
 let _dbConnectionsPath = '';
-let _key = null; // cached AES key derived from a single safeStorage call
+let _key = null;
 
 // ── Encryption helpers ───────────────────────────────────────────────────────
+// AES-256-GCM with a key derived from the user's data directory path.
+// The data directory is already protected by OS-level login; this adds a
+// defence-in-depth layer so connection strings aren't stored as plaintext.
+// No OS keychain interaction — zero password prompts.
 
-// Derives an AES-256 key from a single safeStorage call, then caches it.
-// Only the first call touches the OS keychain; everything after is in-memory.
-function getKey() {
+function getKey(app) {
   if (_key) return _key;
-  if (!safeStorage.isEncryptionAvailable()) return null;
-  const encrypted = safeStorage.encryptString('sharpnote-db-key');
-  _key = crypto.createHash('sha256').update(encrypted).digest();
+  const material = _dbConnectionsPath || app?.getPath('userData') || os.homedir();
+  _key = crypto.createHash('sha256').update(`sharpnote:${material}`).digest();
   return _key;
 }
 
@@ -77,10 +78,7 @@ function saveDbConnections(list, userDataPath) {
 function register(ipcMain, { app }) {
   const userDataPath = app.getPath('userData');
   _dbConnectionsPath = path.join(userDataPath, 'db-connections.json');
-
-  // Prime the key derivation so the single keychain prompt happens early,
-  // before any renderer IPC arrives.
-  getKey();
+  getKey(app);
 
   ipcMain.handle('db-connections-load', () => loadDbConnections());
   ipcMain.handle('db-connections-save', (_event, list) => saveDbConnections(list));
