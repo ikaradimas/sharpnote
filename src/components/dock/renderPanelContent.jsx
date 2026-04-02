@@ -11,7 +11,6 @@ import { ApiPanel } from '../panels/ApiPanel.jsx';
 import { GraphPanel } from '../panels/GraphPanel.jsx';
 import { TodoPanel } from '../panels/TodoPanel.jsx';
 import { RegexPanel } from '../panels/RegexPanel.jsx';
-import { KafkaPanel } from '../panels/kafka/KafkaPanel.jsx';
 
 export function renderPanelContent(panelId, p) {
   if (!p) return null;
@@ -28,7 +27,6 @@ export function renderPanelContent(panelId, p) {
     case 'graph':   return <GraphPanel {...p} />;
     case 'todo':    return <TodoPanel {...p} />;
     case 'regex':   return <RegexPanel {...p} />;
-    case 'kafka':   return <KafkaPanel {...p} />;
     default:        return null;
   }
 }

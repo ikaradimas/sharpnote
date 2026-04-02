@@ -257,7 +257,7 @@ function ChipOverflow({ topics, onStop }) {
 
 // ── Main panel ────────────────────────────────────────────────────────────────
 
-export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPanel }) {
+export function KafkaPanel({ onToggle, asTab = false }) {
   const [savedConns,    setSavedConns]    = useState([]);
   const [selectedId,    setSelectedId]    = useState(null);
   const [formConn,      setFormConn]      = useState(null);
