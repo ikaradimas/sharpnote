@@ -4596,10 +4596,48 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
   font-size: 13px; line-height: 1; padding: 2px 5px; border-radius: 2px;
   cursor: pointer; flex-shrink: 0;
 }
-.files-up-btn:hover, .files-new-folder-btn:hover, .files-refresh-btn:hover {
+.files-up-btn:hover, .files-new-folder-btn:hover, .files-refresh-btn:hover, .files-fav-btn:hover {
   background: var(--bg-elevated); color: var(--text-primary);
 }
+.files-fav-btn {
+  background: none; border: none; color: var(--text-muted);
+  font-size: 12px; line-height: 1; padding: 2px 4px; border-radius: 2px;
+  cursor: pointer; flex-shrink: 0;
+}
+.files-fav-btn.active { color: var(--accent-warning); }
 .files-up-btn:disabled { opacity: 0.25; cursor: not-allowed; }
+
+/* ── Favorites sub-panel ── */
+.files-favorites {
+  border-bottom: 1px solid var(--border-default);
+  flex-shrink: 0;
+}
+.files-favorites-header {
+  display: flex; align-items: center; gap: 4px;
+  padding: 4px 8px; cursor: pointer; user-select: none;
+  font-size: 10px; color: var(--text-muted); text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.files-favorites-header:hover { color: var(--text-secondary); }
+.files-favorites-arrow { font-size: 9px; width: 10px; text-align: center; }
+.files-favorites-list { padding: 0 0 3px; }
+.files-fav-entry {
+  display: flex; align-items: center; gap: 5px;
+  padding: 3px 8px 3px 12px; cursor: pointer;
+  font-size: 11px; color: var(--text-secondary);
+}
+.files-fav-entry:hover { background: var(--bg-elevated); color: var(--text-primary); }
+.files-fav-active { background: var(--bg-mid); color: var(--text-primary); }
+.files-fav-label {
+  flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; font-family: var(--font-code);
+}
+.files-fav-remove {
+  background: none; border: none; color: var(--text-muted); cursor: pointer;
+  font-size: 12px; padding: 0 2px; opacity: 0; flex-shrink: 0;
+}
+.files-fav-entry:hover .files-fav-remove { opacity: 1; }
+.files-fav-remove:hover { color: var(--status-error); }
 
 .files-breadcrumb {
   flex: 1; min-width: 0; display: flex; align-items: center; flex-wrap: nowrap;

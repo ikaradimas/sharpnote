@@ -77,6 +77,9 @@ export function App() {
   const [filesPanelOpen, setFilesPanelOpen]     = useState(false);
   const [apiPanelOpen, setApiPanelOpen]         = useState(false);
   const [filesCurrentDir, setFilesCurrentDir]   = useState(null);
+  const [favoriteFolders, setFavoriteFolders]   = useState([]);
+  const favoriteFoldersRef = useRef([]);
+  useEffect(() => { favoriteFoldersRef.current = favoriteFolders; }, [favoriteFolders]);
   const [libEditors, setLibEditors] = useState([]);
   const libEditorsRef = useRef([]);
   useEffect(() => { libEditorsRef.current = libEditors; }, [libEditors]);
@@ -218,6 +221,7 @@ export function App() {
       pinnedTabs: [...pinnedPathsRef.current],
       dockLayout: dockLayoutRef.current,
       savedLayouts: savedLayoutsRef.current,
+      favoriteFolders: favoriteFoldersRef.current,
     });
   };
 
@@ -258,6 +262,7 @@ export function App() {
         });
       }
       if (Array.isArray(s?.savedLayouts)) setSavedLayouts(s.savedLayouts);
+      if (Array.isArray(s?.favoriteFolders)) setFavoriteFolders(s.favoriteFolders);
       settingsLoadedRef.current = true;
       const pinned = Array.isArray(s?.pinnedTabs) ? s.pinnedTabs : [];
       if (pinned.length > 0) openPinnedNotebooks(pinned);
@@ -859,6 +864,14 @@ export function App() {
         notebookDir: activeNb?.path
           ? (() => { const p = activeNb.path.replace(/\\/g, '/'); return p.slice(0, p.lastIndexOf('/')); })()
           : null,
+        favoriteFolders,
+        onToggleFavorite: (path) => {
+          setFavoriteFolders((prev) => {
+            const next = prev.includes(path) ? prev.filter((p) => p !== path) : [...prev, path];
+            setTimeout(() => saveSettingsRef.current(), 0);
+            return next;
+          });
+        },
       },
       api: {
         onToggle: () => setApiPanelOpen((v) => !v),
