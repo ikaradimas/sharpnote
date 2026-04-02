@@ -16,10 +16,15 @@
       <feGaussianBlur stdDeviation="6" result="blur"/>
       <feComposite in="SourceGraphic" in2="blur" operator="over"/>
     </filter>
+    <linearGradient id="bg" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0%" stop-color="#0a0a1a"/>
+      <stop offset="100%" stop-color="#12101f"/>
+    </linearGradient>
     <filter id="neonglow">
       <feGaussianBlur stdDeviation="12"/>
     </filter>
   </defs>
+  <rect width="512" height="512" rx="108" fill="url(#bg)"/>
   <!-- Opening curly brace — neon cyan -->
   <g filter="url(#neon)">
     <path d="M155,130 Q125,130 125,170 L125,230 Q125,256 100,256 Q125,256 125,282 L125,342 Q125,382 155,382"
