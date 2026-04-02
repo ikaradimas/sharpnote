@@ -51,6 +51,12 @@ function register(ipcMain, { app }) {
   const userDataPath = app.getPath('userData');
   _dbConnectionsPath = path.join(userDataPath, 'db-connections.json');
 
+  // Prime the OS keychain once at startup so subsequent encrypt/decrypt calls
+  // don't each trigger a separate password prompt.
+  if (safeStorage.isEncryptionAvailable()) {
+    try { safeStorage.encryptString(''); } catch {}
+  }
+
   ipcMain.handle('db-connections-load', () => loadDbConnections());
   ipcMain.handle('db-connections-save', (_event, list) => saveDbConnections(list));
 }

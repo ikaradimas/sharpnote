@@ -218,8 +218,6 @@ export function App() {
   };
 
   // ── DB connections: load on mount, persist on change ──────────────────────
-  // Store the loaded array reference so the save effect can skip the initial
-  // load (avoids a second safeStorage/keychain prompt on startup).
   const dbLoadedRef = useRef(null);
   useEffect(() => {
     window.electronAPI?.loadDbConnections().then((list) => {
@@ -231,9 +229,8 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    // Skip the initial empty state and the freshly-loaded data (same reference).
+    // Skip the initial empty state and the freshly-loaded data.
     if (dbConnections === dbLoadedRef.current || dbConnections.length === 0) return;
-    dbLoadedRef.current = null; // clear after first real save
     window.electronAPI?.saveDbConnections(dbConnections);
   }, [dbConnections]);
 
