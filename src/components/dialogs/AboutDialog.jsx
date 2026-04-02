@@ -23,7 +23,7 @@ export function AboutDialog({ onClose }) {
       <div className="about-dialog" onClick={(e) => e.stopPropagation()}>
 
         <div className="about-header">
-          <div className="about-logo">S#</div>
+          <img className="about-logo" src="assets/icon.png" alt="SharpNote" />
           <div className="about-title-group">
             <span className="about-name">SharpNote</span>
             <span className="about-version">v{version}</span>
@@ -43,8 +43,6 @@ export function AboutDialog({ onClose }) {
               <span key={label} className="about-pill">{label}</span>
             ))}
           </div>
-
-          <div className="about-copyright">© 2025 XE</div>
         </div>
 
         <div className="quit-dialog-actions">

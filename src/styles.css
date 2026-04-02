@@ -4445,15 +4445,9 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
   border-bottom: 1px solid var(--border-subtle);
 }
 .about-logo {
-  width: 44px; height: 44px;
+  width: 48px; height: 48px;
   border-radius: 10px;
-  background: linear-gradient(135deg, #1a3a4a 0%, #0d2530 100%);
-  border: 1px solid var(--accent-primary-dim);
-  display: flex; align-items: center; justify-content: center;
-  font-family: var(--font-code);
-  font-size: 15px; font-weight: 700;
-  color: var(--accent-primary);
-  text-shadow: 0 0 8px var(--accent-glow);
+  object-fit: contain;
   flex-shrink: 0;
   letter-spacing: -0.5px;
 }
@@ -4504,11 +4498,6 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
   color: var(--text-muted);
 }
 
-.about-copyright {
-  font-family: var(--font-ui);
-  font-size: 11px;
-  color: var(--text-faint);
-}
 
 /* ── Quit Dialog ─────────────────────────────────────────────────────────── */
 .quit-overlay {

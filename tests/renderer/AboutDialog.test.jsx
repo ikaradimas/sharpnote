@@ -65,8 +65,10 @@ describe('AboutDialog', () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  it('shows copyright line', () => {
+  it('shows app icon', () => {
     render(<AboutDialog onClose={vi.fn()} />);
-    expect(screen.getByText(/© 2025/)).toBeInTheDocument();
+    const img = document.querySelector('.about-logo');
+    expect(img).toBeInTheDocument();
+    expect(img.tagName).toBe('IMG');
   });
 });

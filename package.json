@@ -1,6 +1,6 @@
 {
   "name": "sharpnote",
-  "version": "1.32.3",
+  "version": "1.32.4",
   "description": "SharpNote — interactive C# notebook with multi-tab MDI, NuGet, and Chart.js output",
   "main": "main.js",
   "scripts": {
@@ -32,7 +32,6 @@
   "build": {
     "appId": "com.xe.sharpnote",
     "productName": "SharpNote",
-    "copyright": "Copyright © 2025 XE",
     "icon": "assets/icon",
     "files": [
       "dist/**",
