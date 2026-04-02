@@ -40,12 +40,20 @@ public static class DbCodeGen
         return result;
     }
 
+    /// <summary>Returns the fully-qualified DbContext type name for a connection.</summary>
+    public static string ContextTypeName(string connectionName, string? nsSuffix = null)
+    {
+        var typeName = SanitizeTypeName(connectionName);
+        var ns = nsSuffix != null ? $"DynDb_{typeName}_{nsSuffix}" : $"DynDb_{typeName}";
+        return $"{ns}.{typeName}DbContext";
+    }
+
     // ── Code generation ───────────────────────────────────────────────────────
 
-    public static string GenerateSource(string connectionName, IDbProvider provider, DbSchema schema)
+    public static string GenerateSource(string connectionName, IDbProvider provider, DbSchema schema, string? nsSuffix = null)
     {
         var typeName  = SanitizeTypeName(connectionName);
-        var ns        = $"DynDb_{typeName}";
+        var ns        = nsSuffix != null ? $"DynDb_{typeName}_{nsSuffix}" : $"DynDb_{typeName}";
         var ctxClass  = $"{typeName}DbContext";
         var sb        = new StringBuilder();
 

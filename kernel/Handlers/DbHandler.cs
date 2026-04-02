@@ -39,8 +39,7 @@ partial class Program
         {
             // In-memory SQLite: open a keeper connection to prevent the shared-cache DB from vanishing,
             // then create a DbContext that reuses that same connection.
-            var ns        = $"DynDb_{DbCodeGen.SanitizeTypeName(info.Name)}";
-            var ctx       = $"{ns}.{DbCodeGen.SanitizeTypeName(info.Name)}DbContext";
+            var ctx       = info.ContextTypeName ?? DbCodeGen.ContextTypeName(info.Name);
             var keeperVar = $"__{info.VarName}_conn";
             code = $"{decl}{keeperVar} = new Microsoft.Data.Sqlite.SqliteConnection({S(info.ConnectionString)});\n" +
                    $"{keeperVar}.Open();\n" +
@@ -49,8 +48,7 @@ partial class Program
         else
         {
             // Regular relational: string-based DbContext
-            var ns  = $"DynDb_{DbCodeGen.SanitizeTypeName(info.Name)}";
-            var ctx = $"{ns}.{DbCodeGen.SanitizeTypeName(info.Name)}DbContext";
+            var ctx = info.ContextTypeName ?? DbCodeGen.ContextTypeName(info.Name);
             code = $"{decl}{info.VarName} = new {ctx}({S(info.ConnectionString)}, {S(info.Provider)});";
         }
 
@@ -68,16 +66,9 @@ partial class Program
         foreach (var info in attachedDbs.Values)
         {
             var provider = DbProviders.Get(info.Provider);
-            string typeName;
-            if (!provider.IsRelational)
-            {
-                typeName = "StackExchange.Redis.IDatabase";
-            }
-            else
-            {
-                var ns = $"DynDb_{DbCodeGen.SanitizeTypeName(info.Name)}";
-                typeName = $"{ns}.{DbCodeGen.SanitizeTypeName(info.Name)}DbContext";
-            }
+            var typeName = !provider.IsRelational
+                ? "StackExchange.Redis.IDatabase"
+                : info.ContextTypeName ?? DbCodeGen.ContextTypeName(info.Name);
             sb.AppendLine($"{typeName} {info.VarName} = default!;");
         }
         return sb.ToString();
@@ -134,6 +125,7 @@ partial class Program
             lock (realStdout) { realStdout.WriteLine(JsonSerializer.Serialize(schemaPayload)); }
 
             MetadataReference metaRef;
+            string? contextTypeName = null;
             if (!provider.IsRelational)
             {
                 // Non-relational (Redis): skip EF Core codegen; add the provider's assembly
@@ -146,8 +138,13 @@ partial class Program
             else
             {
                 // 3. Generate + compile DbContext
-                var source = DbCodeGen.GenerateSource(connName, provider, schema);
+                // Use a unique namespace suffix on reconnect so the new type doesn't
+                // collide with the old (still loaded) assembly in the Roslyn script state.
+                var isRecompile = attachedDbs.ContainsKey(connectionId);
+                var nsSuffix = isRecompile ? Guid.NewGuid().ToString("N")[..8] : null;
+                var source = DbCodeGen.GenerateSource(connName, provider, schema, nsSuffix);
                 (_, metaRef) = DbCodeGen.Compile(source, provider);
+                contextTypeName = DbCodeGen.ContextTypeName(connName, nsSuffix);
             }
 
             // 4. Update state
@@ -157,7 +154,7 @@ partial class Program
             dbMetaRefs.Add(metaRef);
             _workspaceManager.ReplaceReference(existing?.MetaRef, metaRef);
 
-            var info = new DbConnectionInfo(connectionId, connName, providerKey, effectiveCs, varName, metaRef, schema);
+            var info = new DbConnectionInfo(connectionId, connName, providerKey, effectiveCs, varName, metaRef, schema, contextTypeName);
             attachedDbs[connectionId] = info;
             _workspaceManager.SetDynamicPreamble(BuildDbPreamble());
 
