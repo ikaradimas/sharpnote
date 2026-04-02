@@ -24,15 +24,18 @@ partial class Program
     {
         var provider = DbProviders.Get(info.Provider);
         var opts     = options.AddReferences(dbMetaRefs);
-        // On reconnect, skip 'var' to avoid "variable already exists" in the Roslyn script state.
+        // On reconnect: skip 'var' (variable already exists in script state) and
+        // cast through dynamic (new type is in a unique namespace to avoid CS0433,
+        // but the old variable was declared with the previous namespace's type).
         var decl = isReconnect ? "" : "var ";
+        var cast = isReconnect ? "(dynamic)" : "";
         string code;
 
         if (!provider.IsRelational)
         {
             // Redis: inject a ConnectionMultiplexer and expose GetDatabase() as the variable
             var muxVar = $"__{info.VarName}_mux";
-            code = $"{decl}{muxVar} = StackExchange.Redis.ConnectionMultiplexer.Connect({S(info.ConnectionString)});\n" +
+            code = $"{decl}{muxVar} = {cast}StackExchange.Redis.ConnectionMultiplexer.Connect({S(info.ConnectionString)});\n" +
                    $"{decl}{info.VarName} = {muxVar}.GetDatabase();";
         }
         else if (provider.UsesPersistentConnection)
@@ -41,15 +44,15 @@ partial class Program
             // then create a DbContext that reuses that same connection.
             var ctx       = info.ContextTypeName ?? DbCodeGen.ContextTypeName(info.Name);
             var keeperVar = $"__{info.VarName}_conn";
-            code = $"{decl}{keeperVar} = new Microsoft.Data.Sqlite.SqliteConnection({S(info.ConnectionString)});\n" +
+            code = $"{decl}{keeperVar} = {cast}new Microsoft.Data.Sqlite.SqliteConnection({S(info.ConnectionString)});\n" +
                    $"{keeperVar}.Open();\n" +
-                   $"{decl}{info.VarName} = new {ctx}({keeperVar});";
+                   $"{decl}{info.VarName} = {cast}new {ctx}({keeperVar});";
         }
         else
         {
             // Regular relational: string-based DbContext
             var ctx = info.ContextTypeName ?? DbCodeGen.ContextTypeName(info.Name);
-            code = $"{decl}{info.VarName} = new {ctx}({S(info.ConnectionString)}, {S(info.Provider)});";
+            code = $"{decl}{info.VarName} = {cast}new {ctx}({S(info.ConnectionString)}, {S(info.Provider)});";
         }
 
         script = script == null
