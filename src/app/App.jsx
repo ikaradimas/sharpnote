@@ -218,16 +218,19 @@ export function App() {
   };
 
   // ── DB connections: load on mount, persist on change ──────────────────────
-  const dbConnectionsLoadedRef = useRef(false);
+  // The flag stays true until the load-triggered render has completed, so the
+  // save effect skips both the initial mount ([]) and the loaded-data render.
+  // setTimeout(0) clears it after React finishes the re-render.
+  const dbLoadingRef = useRef(true);
   useEffect(() => {
     window.electronAPI?.loadDbConnections().then((list) => {
       if (Array.isArray(list)) setDbConnections(list);
-      dbConnectionsLoadedRef.current = true;
-    }).catch(() => {});
+      setTimeout(() => { dbLoadingRef.current = false; }, 0);
+    }).catch(() => { dbLoadingRef.current = false; });
   }, []);
 
   useEffect(() => {
-    if (!dbConnectionsLoadedRef.current) return; // skip save during initial load
+    if (dbLoadingRef.current) return;
     window.electronAPI?.saveDbConnections(dbConnections);
   }, [dbConnections]);
 
