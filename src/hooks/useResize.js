@@ -24,7 +24,8 @@ export function useResize(defaultSize, side, onEnd) {
     const startPos = side === 'top' ? e.clientY : e.clientX;
     const startSize = sizeRef.current;
     const min = 150;
-    const max = side === 'top' ? 540 : 700;
+    const viewport = side === 'top' ? window.innerHeight : window.innerWidth;
+    const max = Math.round(viewport * 0.8);
 
     const onMove = (ev) => {
       const delta = side === 'left'  ? startPos - ev.clientX
