@@ -7,7 +7,7 @@ import { TabSection } from './TabSection.jsx';
 export function TabBar({ notebooks, activeId, onActivate, onClose, onNew, onRename,
                   onReorder, onSetColor, activeTabColor,
                   docsOpen, onActivateDocs, onCloseDocs,
-                  kafkaTabOpen, onActivateKafka, onCloseKafka, onKafkaReturnToPanel,
+                  kafkaTabOpen, onActivateKafka, onCloseKafka,
                   libEditors, onCloseLibEditor,
                   pinnedPaths, onTogglePin }) {
   const [dragId, setDragId] = useState(null);
@@ -40,9 +40,6 @@ export function TabBar({ notebooks, activeId, onActivate, onClose, onNew, onRena
         onClick={onActivateKafka}
       >
         <span className="tab-title">Kafka</span>
-        {onKafkaReturnToPanel && (
-          <button className="tab-action" onClick={(e) => { e.stopPropagation(); onKafkaReturnToPanel(); }} title="Move to panel">↙</button>
-        )}
         <button className="tab-close" onClick={(e) => { e.stopPropagation(); onCloseKafka(); }} title="Close">×</button>
       </div>
     );

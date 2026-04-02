@@ -19,17 +19,13 @@ function mean(arr) {
   return arr.reduce((s, v) => s + v, 0) / arr.length;
 }
 
-/** Normalize a point to { v, t, axis } regardless of legacy (number) or new format. */
+/** Normalize a point to { v, t, axis }. Legacy number-only points get t=0 (no fake timestamp). */
 function normPt(p) {
-  if (typeof p === 'number') return { v: p, t: Date.now(), axis: 'y' };
-  return { v: p.v, t: p.t ?? Date.now(), axis: p.axis ?? 'y' };
+  if (typeof p === 'number') return { v: p, t: 0, axis: 'y' };
+  return { v: p.v, t: p.t ?? 0, axis: p.axis ?? 'y' };
 }
 
-/** Format a millisecond timestamp as HH:MM:SS. */
-function fmtTime(ms) {
-  const d = new Date(ms);
-  return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-}
+const timeFmt = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
 export function GraphPanel({ varHistory, onClearGraph }) {
   const hist = varHistory || {};
@@ -78,21 +74,29 @@ export function GraphPanel({ varHistory, onClearGraph }) {
       map[name] = last ? normPt(last).axis : 'y';
     }
     return map;
-  }, [hist, varNames]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hist]);
 
-  const hasY2 = useMemo(
-    () => [...selected].some((name) => varAxis[name] === 'y2'),
-    [selected, varAxis]
-  );
+  const hasY2 = useMemo(() => {
+    for (const name of selected) {
+      if (varAxis[name] === 'y2') return true;
+    }
+    return false;
+  }, [selected, varAxis]);
 
   const datasets = useMemo(() => {
     const nameIndex = Object.fromEntries(varNames.map((n, i) => [n, i]));
     const result = [];
     for (const name of selected) {
       const raw = hist[name] || [];
-      const pts = raw.map(normPt);
-      const data = pts.map((p) => ({ x: p.t, y: p.v }));
-      const values = pts.map((p) => p.v);
+      // Single pass: build { x, y } data and collect numeric values
+      const data = [];
+      const values = [];
+      for (let i = 0; i < raw.length; i++) {
+        const p = normPt(raw[i]);
+        data.push({ x: p.t, y: p.v });
+        values.push(p.v);
+      }
       const color = colorForIndex(nameIndex[name] ?? 0);
       const fill = chartType === 'area';
       const axisId = varAxis[name] || 'y';
@@ -144,19 +148,16 @@ export function GraphPanel({ varHistory, onClearGraph }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected, hist, chartType, overlays, namesKey, varAxis]);
 
-  useEffect(() => {
-    if (!canvasRef.current) return;
-    chartRef.current?.destroy();
-    if (selected.size === 0) { chartRef.current = null; return; }
-
-    const scales = {
+  // Build scales config (stable across data updates unless hasY2 or chartType changes)
+  const scales = useMemo(() => {
+    const s = {
       x: {
         type: 'linear',
         ticks: {
           color: '#5a7080',
           font: { size: 9 },
           maxTicksLimit: 8,
-          callback: (val) => fmtTime(val),
+          callback: (val) => timeFmt.format(val),
         },
         grid: { color: '#282830' },
       },
@@ -168,16 +169,42 @@ export function GraphPanel({ varHistory, onClearGraph }) {
       },
     };
     if (hasY2) {
-      scales.y2 = {
+      s.y2 = {
         type: 'linear',
         position: 'right',
         ticks: { color: '#5a7080', font: { size: 9 } },
         grid: { drawOnChartArea: false },
       };
     }
+    return s;
+  }, [hasY2]);
 
+  // Create chart once; update data in-place when only datasets change
+  useEffect(() => {
+    if (!canvasRef.current) return;
+
+    if (selected.size === 0) {
+      chartRef.current?.destroy();
+      chartRef.current = null;
+      return;
+    }
+
+    const chart = chartRef.current;
+    const wantType = chartType === 'column' ? 'bar' : 'line';
+
+    // If chart exists with same type, update in-place
+    if (chart && chart.config.type === wantType) {
+      chart.data.datasets = datasets;
+      chart.options.plugins.legend.display = showLegend;
+      chart.options.scales = scales;
+      chart.update('none');
+      return;
+    }
+
+    // Otherwise destroy and recreate
+    chart?.destroy();
     chartRef.current = new Chart(canvasRef.current, {
-      type: chartType === 'column' ? 'bar' : 'line',
+      type: wantType,
       data: { datasets },
       options: {
         responsive: true,
@@ -189,7 +216,7 @@ export function GraphPanel({ varHistory, onClearGraph }) {
           },
           tooltip: {
             callbacks: {
-              title: (items) => items.length > 0 ? fmtTime(items[0].parsed.x) : '',
+              title: (items) => items.length > 0 ? timeFmt.format(items[0].parsed.x) : '',
             },
           },
         },
@@ -199,7 +226,7 @@ export function GraphPanel({ varHistory, onClearGraph }) {
     });
     return () => { chartRef.current?.destroy(); chartRef.current = null; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [datasets, chartType, showLegend, hasY2]);
+  }, [datasets, chartType, showLegend, scales]);
 
   return (
     <div className="graph-panel">
