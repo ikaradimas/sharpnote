@@ -6,7 +6,7 @@ const shared = {
   mockReset: false,
   pool: 'forks',
   poolOptions: {
-    forks: { maxForks: 2 },
+    forks: { maxForks: 1 },
   },
 };
 

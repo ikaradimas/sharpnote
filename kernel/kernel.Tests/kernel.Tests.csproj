@@ -21,8 +21,10 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.*" />
   </ItemGroup>
 
-  <!-- Include the kernel source files directly (excluding Program.cs entry point is not possible,
-       so we compile the whole project and reference via ProjectReference) -->
+  <ItemGroup>
+    <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="../kernel.csproj" />
   </ItemGroup>
