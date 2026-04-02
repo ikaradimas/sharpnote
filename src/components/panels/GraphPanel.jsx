@@ -19,6 +19,18 @@ function mean(arr) {
   return arr.reduce((s, v) => s + v, 0) / arr.length;
 }
 
+/** Normalize a point to { v, t, axis } regardless of legacy (number) or new format. */
+function normPt(p) {
+  if (typeof p === 'number') return { v: p, t: Date.now(), axis: 'y' };
+  return { v: p.v, t: p.t ?? Date.now(), axis: p.axis ?? 'y' };
+}
+
+/** Format a millisecond timestamp as HH:MM:SS. */
+function fmtTime(ms) {
+  const d = new Date(ms);
+  return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
 export function GraphPanel({ varHistory, onClearGraph }) {
   const hist = varHistory || {};
   const varNames = Object.keys(hist);
@@ -57,13 +69,33 @@ export function GraphPanel({ varHistory, onClearGraph }) {
       return { ...prev, [name]: cur };
     });
 
+  // Derive axis per variable from most recent point
+  const varAxis = useMemo(() => {
+    const map = {};
+    for (const name of varNames) {
+      const pts = hist[name] || [];
+      const last = pts[pts.length - 1];
+      map[name] = last ? normPt(last).axis : 'y';
+    }
+    return map;
+  }, [hist, varNames]);
+
+  const hasY2 = useMemo(
+    () => [...selected].some((name) => varAxis[name] === 'y2'),
+    [selected, varAxis]
+  );
+
   const datasets = useMemo(() => {
     const nameIndex = Object.fromEntries(varNames.map((n, i) => [n, i]));
     const result = [];
     for (const name of selected) {
-      const data = hist[name] || [];
+      const raw = hist[name] || [];
+      const pts = raw.map(normPt);
+      const data = pts.map((p) => ({ x: p.t, y: p.v }));
+      const values = pts.map((p) => p.v);
       const color = colorForIndex(nameIndex[name] ?? 0);
       const fill = chartType === 'area';
+      const axisId = varAxis[name] || 'y';
       result.push({
         label: name,
         data,
@@ -73,14 +105,15 @@ export function GraphPanel({ varHistory, onClearGraph }) {
         tension: 0.3,
         pointRadius: data.length <= 20 ? 3 : 0,
         pointHoverRadius: 4,
+        yAxisID: axisId,
       });
       const ov = overlays[name] || new Set();
       const dimColor = color.replace(',1)', ',0.45)');
       if (ov.has('avg') && data.length > 0) {
-        const avg = mean(data);
+        const avg = mean(values);
         result.push({
           label: `${name} avg`,
-          data: Array(data.length).fill(avg),
+          data: data.map((p) => ({ x: p.x, y: avg })),
           borderColor: dimColor,
           backgroundColor: dimColor,
           borderDash: [4, 2],
@@ -88,13 +121,14 @@ export function GraphPanel({ varHistory, onClearGraph }) {
           tension: 0,
           pointRadius: 0,
           pointHoverRadius: 0,
+          yAxisID: axisId,
         });
       }
       if (ov.has('max') && data.length > 0) {
-        const maxVal = Math.max(...data);
+        const maxVal = Math.max(...values);
         result.push({
           label: `${name} max`,
-          data: Array(data.length).fill(maxVal),
+          data: data.map((p) => ({ x: p.x, y: maxVal })),
           borderColor: dimColor,
           backgroundColor: dimColor,
           borderDash: [2, 2],
@@ -102,26 +136,49 @@ export function GraphPanel({ varHistory, onClearGraph }) {
           tension: 0,
           pointRadius: 0,
           pointHoverRadius: 0,
+          yAxisID: axisId,
         });
       }
     }
     return result;
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected, hist, chartType, overlays, namesKey]);
-
-  const maxLen = datasets.filter((d) => !d.borderDash).reduce((m, d) => Math.max(m, d.data.length), 0);
-  const labels = useMemo(
-    () => Array.from({ length: maxLen }, (_, i) => String(i + 1)),
-    [maxLen]
-  );
+  }, [selected, hist, chartType, overlays, namesKey, varAxis]);
 
   useEffect(() => {
     if (!canvasRef.current) return;
     chartRef.current?.destroy();
     if (selected.size === 0) { chartRef.current = null; return; }
+
+    const scales = {
+      x: {
+        type: 'linear',
+        ticks: {
+          color: '#5a7080',
+          font: { size: 9 },
+          maxTicksLimit: 8,
+          callback: (val) => fmtTime(val),
+        },
+        grid: { color: '#282830' },
+      },
+      y: {
+        type: 'linear',
+        position: 'left',
+        ticks: { color: '#5a7080', font: { size: 9 } },
+        grid: { color: '#282830' },
+      },
+    };
+    if (hasY2) {
+      scales.y2 = {
+        type: 'linear',
+        position: 'right',
+        ticks: { color: '#5a7080', font: { size: 9 } },
+        grid: { drawOnChartArea: false },
+      };
+    }
+
     chartRef.current = new Chart(canvasRef.current, {
       type: chartType === 'column' ? 'bar' : 'line',
-      data: { labels, datasets },
+      data: { datasets },
       options: {
         responsive: true,
         maintainAspectRatio: false,
@@ -130,23 +187,19 @@ export function GraphPanel({ varHistory, onClearGraph }) {
             display: showLegend,
             labels: { color: '#b8ccd8', font: { size: 10 }, boxWidth: 10 },
           },
-        },
-        scales: {
-          x: {
-            ticks: { color: '#5a7080', font: { size: 9 }, maxTicksLimit: 8 },
-            grid: { color: '#282830' },
-          },
-          y: {
-            ticks: { color: '#5a7080', font: { size: 9 } },
-            grid: { color: '#282830' },
+          tooltip: {
+            callbacks: {
+              title: (items) => items.length > 0 ? fmtTime(items[0].parsed.x) : '',
+            },
           },
         },
+        scales,
         animation: { duration: 0 },
       },
     });
     return () => { chartRef.current?.destroy(); chartRef.current = null; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [datasets, labels, chartType, showLegend]);
+  }, [datasets, chartType, showLegend, hasY2]);
 
   return (
     <div className="graph-panel">
@@ -188,6 +241,7 @@ export function GraphPanel({ varHistory, onClearGraph }) {
           <div className="graph-panel-vars">
             {varNames.map((name, i) => {
               const ov = overlays[name] || new Set();
+              const axis = varAxis[name];
               return (
                 <div key={name} className="graph-var-row">
                   <label className="graph-var-check-row">
@@ -202,6 +256,7 @@ export function GraphPanel({ varHistory, onClearGraph }) {
                       onChange={() => toggle(name)}
                     />
                     <span className="graph-var-name">{name}</span>
+                    {axis === 'y2' && <span className="graph-axis-badge" title="Right y-axis">R</span>}
                   </label>
                   <div className="graph-var-overlays">
                     <label className="graph-overlay-label" title="Show average line">

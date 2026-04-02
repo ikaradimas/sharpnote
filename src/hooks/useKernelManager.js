@@ -191,7 +191,8 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
         case 'var_point':
           setNb(notebookId, (n) => {
             const hist = { ...(n.varHistory || {}) };
-            hist[msg.name] = [...(hist[msg.name] || []).slice(-49), msg.value];
+            const pt = { v: msg.value, t: msg.time ?? Date.now(), axis: msg.axis ?? 'y' };
+            hist[msg.name] = [...(hist[msg.name] || []).slice(-49), pt];
             return { varHistory: hist };
           });
           break;

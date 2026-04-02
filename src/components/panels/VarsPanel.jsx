@@ -67,7 +67,7 @@ export function VarsPanel({ vars, varHistory, onInspect }) {
                       {v.isNull ? <span className="vars-null">null</span> : v.value}
                     </td>
                     <td className="vars-sparkline-cell">
-                      {hist && hist.length >= 2 && <Sparkline values={hist} />}
+                      {hist && hist.length >= 2 && <Sparkline values={hist.map((p) => typeof p === 'number' ? p : p.v)} />}
                     </td>
                     <td className="vars-inspect-cell">
                       {onInspect && (
