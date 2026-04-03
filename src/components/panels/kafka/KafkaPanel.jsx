@@ -276,6 +276,8 @@ export function KafkaPanel({ onToggle, asTab = false }) {
 
   // unified chronological message feed — stored in a plain ref, never in state
   const allMsgsRef    = useRef([]);
+  const filteredRef   = useRef(null);   // null = no filter; array = filtered subset
+  const searchTermRef = useRef('');
   const feedRef       = useRef(null);   // DOM container for messages
   const pageRef       = useRef(1);
   const renderedPageRef = useRef(1);    // page currently in the DOM (updated after replaceChildren)
@@ -283,6 +285,7 @@ export function KafkaPanel({ onToggle, asTab = false }) {
   const pendingRef    = useRef([]);
   const flushTimer    = useRef(null);
   const [pager, setPager] = useState({ total: 0, page: 1, totalPages: 1 });
+  const [searchQuery, setSearchQuery] = useState('');
   const PAGE_SIZE = 50;
 
   const [copiedTopic, setCopiedTopic] = useState(null);
@@ -330,8 +333,9 @@ export function KafkaPanel({ onToggle, asTab = false }) {
     const openIndices = new Set();
     Array.from(container.children).forEach((el, i) => { if (el.open) openIndices.add(i); });
     expandedRef.current[leaving] = openIndices;
+    const source = filteredRef.current ?? allMsgsRef.current;
     const frag = document.createDocumentFragment();
-    allMsgsRef.current
+    source
       .slice((pageNum - 1) * PAGE_SIZE, pageNum * PAGE_SIZE)
       .forEach((m) => frag.appendChild(buildMessageEl(m)));
     container.replaceChildren(frag);
@@ -365,7 +369,17 @@ export function KafkaPanel({ onToggle, asTab = false }) {
         const all = allMsgsRef.current;
         all.push(...batch);
         if (all.length > maxMessagesRef.current) all.splice(0, all.length - maxMessagesRef.current);
-        const total = all.length;
+        // If a search filter is active, extend it with matching new messages
+        if (filteredRef.current && searchTermRef.current) {
+          const term = searchTermRef.current;
+          const matching = batch.filter((m) =>
+            (m.key && m.key.toLowerCase().includes(term)) ||
+            (m.value && m.value.toLowerCase().includes(term)) ||
+            (m.topic && m.topic.toLowerCase().includes(term)));
+          if (matching.length) filteredRef.current.push(...matching);
+        }
+        const source = filteredRef.current ?? all;
+        const total = source.length;
         const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
         const curPage = Math.min(pageRef.current, totalPages);
         // Only re-paint DOM if the user is watching the last page
@@ -471,6 +485,9 @@ export function KafkaPanel({ onToggle, asTab = false }) {
 
   const clearFeed = () => {
     allMsgsRef.current = [];
+    filteredRef.current = null;
+    searchTermRef.current = '';
+    setSearchQuery('');
     pendingRef.current = [];
     clearTimeout(flushTimer.current);
     flushTimer.current = null;
@@ -479,6 +496,38 @@ export function KafkaPanel({ onToggle, asTab = false }) {
     expandedRef.current = {};
     feedRef.current?.replaceChildren();
     setPager({ total: 0, page: 1, totalPages: 1 });
+  };
+
+  const applySearch = () => {
+    const term = searchQuery.trim().toLowerCase();
+    searchTermRef.current = term;
+    expandedRef.current = {};
+    if (!term) {
+      filteredRef.current = null;
+    } else {
+      filteredRef.current = allMsgsRef.current.filter((m) =>
+        (m.key && m.key.toLowerCase().includes(term)) ||
+        (m.value && m.value.toLowerCase().includes(term)) ||
+        (m.topic && m.topic.toLowerCase().includes(term)));
+    }
+    const source = filteredRef.current ?? allMsgsRef.current;
+    const total = source.length;
+    const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    pageRef.current = 1;
+    renderPage(1);
+    setPager({ total, page: 1, totalPages });
+  };
+
+  const clearSearch = () => {
+    searchTermRef.current = '';
+    filteredRef.current = null;
+    setSearchQuery('');
+    expandedRef.current = {};
+    const total = allMsgsRef.current.length;
+    const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    pageRef.current = 1;
+    renderPage(1);
+    setPager({ total, page: 1, totalPages });
   };
 
   const handleClear = async () => {
@@ -715,9 +764,30 @@ export function KafkaPanel({ onToggle, asTab = false }) {
                     </div>
                   </div>
                 )}
+                {allMsgsRef.current.length > 0 && (
+                  <div className="kafka-search-bar">
+                    <input
+                      className="kafka-search-input"
+                      type="text"
+                      placeholder="Search messages…"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') applySearch(); }}
+                      spellCheck={false}
+                    />
+                    <button className="kafka-btn" onClick={applySearch} title="Search">Search</button>
+                    {filteredRef.current !== null && (
+                      <button className="kafka-btn" onClick={clearSearch} title="Clear search">Clear</button>
+                    )}
+                  </div>
+                )}
                 {pager.total === 0 && (
                   <div className="kafka-feed-empty">
-                    {listenedTopics.length === 0 ? 'Press ▶ on a topic to start a live feed' : 'Waiting for messages…'}
+                    {listenedTopics.length === 0
+                      ? 'Press ▶ on a topic to start a live feed'
+                      : filteredRef.current !== null
+                        ? 'No messages match the search'
+                        : 'Waiting for messages…'}
                   </div>
                 )}
                 <div className="kafka-feed-messages" ref={feedRef} />

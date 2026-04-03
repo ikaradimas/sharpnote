@@ -6199,6 +6199,19 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 /* Stop all button */
 .kafka-feed-btns { margin-left: auto; display: flex; gap: 4px; flex-shrink: 0; }
 
+/* Search bar */
+.kafka-search-bar {
+  display: flex; align-items: center; gap: 4px; padding: 4px 8px;
+  border-bottom: 1px solid var(--border-default); background: var(--bg-deep); flex-shrink: 0;
+}
+.kafka-search-input {
+  flex: 1; min-width: 0; background: var(--bg-mid); border: 1px solid var(--border-subtle);
+  color: var(--text-primary); font-family: var(--font-code); font-size: 11px;
+  padding: 3px 6px; border-radius: 3px; outline: none;
+}
+.kafka-search-input:focus { border-color: var(--accent-primary); }
+.kafka-search-input::placeholder { color: var(--text-muted); }
+
 /* Message rows */
 .kafka-feed-messages { overflow-y: auto; overflow-anchor: none; flex: 1; min-height: 0; }
 /* Pager */
