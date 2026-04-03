@@ -2187,6 +2187,26 @@ body {
 
 .config-key-input { width: 120px; flex-shrink: 0; }
 .config-value-input-add { flex: 1; min-width: 0; }
+.config-type-select {
+  background: var(--bg-mid); border: 1px solid var(--border-subtle);
+  color: var(--text-muted); border-radius: 3px; padding: 1px 2px;
+  font-size: 10px; flex-shrink: 0; outline: none; cursor: pointer;
+}
+.config-type-select:focus { border-color: var(--accent-primary); }
+.config-env-input {
+  width: 90px; flex-shrink: 0; font-family: var(--font-code);
+  font-size: 10px !important; letter-spacing: 0.02em;
+}
+.config-env-badge {
+  font-size: 10px; font-weight: 700; color: var(--accent-warning);
+  flex-shrink: 0; cursor: default;
+}
+.config-show-btn {
+  background: none; border: none; color: var(--text-muted); cursor: pointer;
+  font-size: 13px; padding: 0 4px; flex-shrink: 0;
+}
+.config-show-btn:hover { color: var(--text-primary); }
+.config-show-btn.active { color: var(--accent-primary); }
 
 /* ── Layout classes (multi-pane safe alternatives to #main-area / #content-area) ── */
 

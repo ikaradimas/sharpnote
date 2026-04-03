@@ -53,6 +53,21 @@ public class ConfigHelper
     public string Get(string key, string defaultValue = "") =>
         _values.TryGetValue(key, out var v) ? v : defaultValue;
 
+    /// <summary>Returns the value parsed as an integer, or <paramref name="defaultValue"/> if missing or not a valid number.</summary>
+    public int GetInt(string key, int defaultValue = 0) =>
+        _values.TryGetValue(key, out var v) && int.TryParse(v, out var n) ? n : defaultValue;
+
+    /// <summary>Returns the value parsed as a double, or <paramref name="defaultValue"/> if missing or not a valid number.</summary>
+    public double GetDouble(string key, double defaultValue = 0.0) =>
+        _values.TryGetValue(key, out var v) && double.TryParse(v, System.Globalization.NumberStyles.Float,
+            System.Globalization.CultureInfo.InvariantCulture, out var d) ? d : defaultValue;
+
+    /// <summary>Returns the value parsed as a boolean. Recognises "true"/"1"/"yes" (case-insensitive).</summary>
+    public bool GetBool(string key, bool defaultValue = false) =>
+        _values.TryGetValue(key, out var v)
+            ? v.Equals("true", StringComparison.OrdinalIgnoreCase) || v == "1" || v.Equals("yes", StringComparison.OrdinalIgnoreCase)
+            : defaultValue;
+
     /// <summary>Returns true if the key is present and non-empty.</summary>
     public bool Has(string key) => _values.ContainsKey(key) && !string.IsNullOrEmpty(_values[key]);
 

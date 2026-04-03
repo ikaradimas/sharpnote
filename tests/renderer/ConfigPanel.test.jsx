@@ -38,7 +38,7 @@ describe('ConfigPanel', () => {
     fireEvent.change(keyInput, { target: { value: 'MY_KEY' } });
     fireEvent.change(valInput, { target: { value: 'my-value' } });
     fireEvent.click(screen.getByText('+ Add'));
-    expect(onAdd).toHaveBeenCalledWith('MY_KEY', 'my-value');
+    expect(onAdd).toHaveBeenCalledWith('MY_KEY', 'my-value', 'string', undefined);
   });
 
   it('add: empty key does not fire onAdd', () => {
@@ -63,7 +63,7 @@ describe('ConfigPanel', () => {
     render(<ConfigPanel {...defaultProps({ config, onUpdate })} />);
     const valueInput = screen.getByDisplayValue('old');
     fireEvent.change(valueInput, { target: { value: 'new' } });
-    expect(onUpdate).toHaveBeenCalledWith(0, 'new');
+    expect(onUpdate).toHaveBeenCalledWith(0, { value: 'new' });
   });
 
   it('close button fires onToggle', () => {
@@ -80,6 +80,6 @@ describe('ConfigPanel', () => {
     const keyInput = screen.getByPlaceholderText('Key');
     fireEvent.change(keyInput, { target: { value: 'K' } });
     fireEvent.keyDown(keyInput, { key: 'Enter' });
-    expect(onAdd).toHaveBeenCalledWith('K', '');
+    expect(onAdd).toHaveBeenCalledWith('K', '', 'string', undefined);
   });
 });

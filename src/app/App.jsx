@@ -814,10 +814,10 @@ export function App() {
       config: {
         onToggle: nbId ? () => setNb(nbId, (n) => ({ configPanelOpen: !n.configPanelOpen })) : () => {},
         config: activeNb?.config ?? [],
-        onAdd:    nbId ? (k, v) => setNbDirty(nbId, (n) => ({ config: [...n.config, { key: k, value: v }] })) : () => {},
+        onAdd:    nbId ? (k, v, type, envVar) => setNbDirty(nbId, (n) => ({ config: [...n.config, { key: k, value: v, type: type || 'string', envVar }] })) : () => {},
         onRemove: nbId ? (i)    => setNbDirty(nbId, (n) => ({ config: n.config.filter((_, idx) => idx !== i) })) : () => {},
-        onUpdate: nbId ? (i, val) => setNbDirty(nbId, (n) => ({
-          config: n.config.map((e, idx) => idx === i ? { ...e, value: val } : e),
+        onUpdate: nbId ? (i, updates) => setNbDirty(nbId, (n) => ({
+          config: n.config.map((e, idx) => idx === i ? { ...e, ...updates } : e),
         })) : () => {},
       },
       db: {

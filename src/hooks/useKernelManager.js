@@ -400,11 +400,22 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
 
   // ── Cell execution ─────────────────────────────────────────────────────────
 
-  const runCell = useCallback((notebookId, cell) => {
+  const runCell = useCallback(async (notebookId, cell) => {
     if (!window.electronAPI || cell.type !== 'code') return Promise.resolve();
     prevVarsSnapRef.current[cell.id] = [
       ...(notebooksRef.current.find((n) => n.id === notebookId)?.vars || []),
     ];
+    // Resolve config values before entering the promise: env var overrides take precedence
+    const nb = notebooksRef.current.find((n) => n.id === notebookId);
+    const configEntries = nb ? nb.config.filter((e) => e.key.trim()) : [];
+    const resolvedConfig = {};
+    for (const e of configEntries) resolvedConfig[e.key] = e.value;
+    const envEntries = configEntries.filter((e) => e.envVar);
+    if (envEntries.length > 0) {
+      const envVals = await Promise.all(envEntries.map((e) => window.electronAPI.getEnvVar(e.envVar)));
+      envEntries.forEach((e, i) => { if (envVals[i]) resolvedConfig[e.key] = envVals[i]; });
+    }
+
     return new Promise((resolve) => {
       setNb(notebookId, (n) => {
         const prevOutputs = n.outputs[cell.id];
@@ -421,16 +432,13 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
         };
       });
       pendingResolversRef.current[cell.id] = resolve;
-      const nb = notebooksRef.current.find((n) => n.id === notebookId);
       window.electronAPI.sendToKernel(notebookId, {
         type: 'execute',
         id: cell.id,
         code: cell.content,
         outputMode: cell.outputMode || 'auto',
         sources: nb ? nb.nugetSources.filter((s) => s.enabled).map((s) => s.url) : [],
-        config: nb
-          ? Object.fromEntries(nb.config.filter((e) => e.key.trim()).map((e) => [e.key, e.value]))
-          : {},
+        config: resolvedConfig,
       });
     });
   }, [setNb]); // eslint-disable-line react-hooks/exhaustive-deps

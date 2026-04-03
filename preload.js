@@ -148,6 +148,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   fsMkdir:    (dirPath)           => ipcRenderer.invoke('fs-mkdir', dirPath),
   fsOpenPath: (filePath)          => ipcRenderer.invoke('fs-open-path', filePath),
   fsGetHome:  ()                  => ipcRenderer.invoke('fs-get-home'),
+  getEnvVar:  (name)              => ipcRenderer.invoke('get-env-var', name),
 
   // Code library
   getLibraryFiles: (subfolder) => ipcRenderer.invoke('get-library-files', subfolder || ''),
