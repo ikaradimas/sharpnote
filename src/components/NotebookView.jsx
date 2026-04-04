@@ -52,6 +52,9 @@ export function NotebookView({
   scheduledCells,
   onScheduleStart,
   onScheduleStop,
+  scheduledNotebooks,
+  onNotebookScheduleStart,
+  onNotebookScheduleStop,
   dashboardMode,
   onToggleDashboard,
 }) {
@@ -191,6 +194,10 @@ export function NotebookView({
       onSaveLayout={onSaveLayout}
       onLoadLayout={onLoadLayout}
       onDeleteLayout={onDeleteLayout}
+      notebookId={nb.id}
+      notebookScheduleMs={scheduledNotebooks?.get(nb.id) ?? null}
+      onNotebookScheduleStart={onNotebookScheduleStart}
+      onNotebookScheduleStop={onNotebookScheduleStop}
     />
   );
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { getNotebookDisplayName } from '../../utils.js';
 import { IconSave, IconOpen } from './Icons.jsx';
 import { ThemePicker } from './ThemePicker.jsx';
+import { NOTEBOOK_SCHEDULE_PRESETS } from '../../hooks/useCellScheduler.js';
 import { ToolsMenu } from './ToolsMenu.jsx';
 import { LayoutManager } from '../dock/LayoutManager.jsx';
 
@@ -62,12 +63,18 @@ export function Toolbar({
   onDeleteLayout,
   onCloseAllPanels,
   onImportData,
+  notebookId,
+  notebookScheduleMs,
+  onNotebookScheduleStart,
+  onNotebookScheduleStop,
 }) {
   const [editing,      setEditing]      = useState(false);
   const [draft,        setDraft]        = useState('');
   const [compact,      setCompact]      = useState(false);
   const [overflowOpen, setOverflowOpen] = useState(false);
   const [addCellOpen,  setAddCellOpen]  = useState(false);
+  const [schedOpen,    setSchedOpen]    = useState(false);
+  const schedRef = useRef(null);
   const inputRef       = useRef(null);
   const toolbarRef     = useRef(null);
   const overflowBtnRef = useRef(null);
@@ -116,6 +123,13 @@ export function Toolbar({
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [addCellOpen]);
+
+  useEffect(() => {
+    if (!schedOpen) return;
+    const handler = (e) => { if (schedRef.current && !schedRef.current.contains(e.target)) setSchedOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [schedOpen]);
 
   const startEdit = () => { setDraft(displayName); setEditing(true); };
   const commit    = () => {
@@ -180,6 +194,22 @@ export function Toolbar({
             title={kernelStatus === 'ready' ? 'Run all code cells' : 'Waiting for kernel…'}
             className="toolbar-run-all"
           >▶▶ Run All</button>
+          <div className="toolbar-add-cell-wrap" ref={schedRef}>
+            <button
+              className={`toolbar-text-btn${notebookScheduleMs ? ' toolbar-autorun-btn--on' : ''}`}
+              onClick={() => notebookScheduleMs ? onNotebookScheduleStop?.(notebookId) : setSchedOpen(v => !v)}
+              title={notebookScheduleMs ? `Scheduled: ${NOTEBOOK_SCHEDULE_PRESETS.find(p => p.ms === notebookScheduleMs)?.label ?? 'custom'} — click to stop` : 'Schedule notebook'}
+            >
+              {notebookScheduleMs ? '⏱ Stop' : '⏱'}
+            </button>
+            {schedOpen && !notebookScheduleMs && (
+              <div className="toolbar-add-cell-dropdown">
+                {NOTEBOOK_SCHEDULE_PRESETS.map(({ label, ms }) => (
+                  <button key={ms} onClick={() => { onNotebookScheduleStart?.(notebookId, ms); setSchedOpen(false); }}>{label}</button>
+                ))}
+              </div>
+            )}
+          </div>
           <div className="toolbar-add-cell-wrap" ref={addCellRef}>
             <button className="toolbar-text-btn" onClick={() => setAddCellOpen(v => !v)} title="Add cell">+ Cell ▾</button>
             {addCellOpen && (

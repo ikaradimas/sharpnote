@@ -11,12 +11,22 @@ import { useRef, useState, useCallback, useEffect } from 'react';
  * @param {object}   opts.notebooksRef - Ref to current notebooks array
  * @param {function} opts.runCell      - (notebookId, cell) => Promise
  */
-export function useCellScheduler({ notebooksRef, runCell }) {
+export const NOTEBOOK_SCHEDULE_PRESETS = [
+  { label: 'Every 5 min',  ms: 5 * 60_000 },
+  { label: 'Every 15 min', ms: 15 * 60_000 },
+  { label: 'Every hour',   ms: 60 * 60_000 },
+  { label: 'Every 6 hours', ms: 6 * 60 * 60_000 },
+];
+
+export function useCellScheduler({ notebooksRef, runCell, runAll }) {
   // Reactive set of scheduled cell IDs — drives re-renders
   const [scheduledCells, setScheduledCells] = useState(() => new Set());
+  // Notebook-level schedules: Map<notebookId, { intervalMs, timerId }>
+  const [scheduledNotebooks, setScheduledNotebooks] = useState(() => new Map());
 
   // Ref-based timer storage: Map<cellId, { notebookId, intervalMs, timerId }>
   const timersRef = useRef(new Map());
+  const nbTimersRef = useRef(new Map());
 
   const startSchedule = useCallback((notebookId, cellId, intervalMs) => {
     // Stop any existing schedule for this cell first
@@ -73,15 +83,50 @@ export function useCellScheduler({ notebooksRef, runCell }) {
     setScheduledCells(new Set([...timersRef.current.keys()]));
   }, []);
 
+  // ── Notebook-level scheduling ─────────────────────────────────────────────
+
+  const startNotebookSchedule = useCallback((notebookId, intervalMs) => {
+    const existing = nbTimersRef.current.get(notebookId);
+    if (existing) clearInterval(existing.timerId);
+
+    const tick = () => {
+      const nb = notebooksRef.current.find((n) => n.id === notebookId);
+      if (!nb) { stopNotebookSchedule(notebookId); return; }
+      if (nb.kernelStatus !== 'ready') return;
+      if (nb.running.size > 0) return;
+      runAll?.(notebookId);
+    };
+
+    const timerId = setInterval(tick, intervalMs);
+    nbTimersRef.current.set(notebookId, { intervalMs, timerId });
+    setScheduledNotebooks((prev) => new Map([...prev, [notebookId, intervalMs]]));
+  }, [notebooksRef, runAll]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const stopNotebookSchedule = useCallback((notebookId) => {
+    const entry = nbTimersRef.current.get(notebookId);
+    if (entry) {
+      clearInterval(entry.timerId);
+      nbTimersRef.current.delete(notebookId);
+    }
+    setScheduledNotebooks((prev) => {
+      const next = new Map(prev);
+      next.delete(notebookId);
+      return next;
+    });
+  }, []);
+
   // Cleanup all intervals on unmount
   useEffect(() => {
     return () => {
-      for (const [, entry] of timersRef.current) {
-        clearInterval(entry.timerId);
-      }
+      for (const [, entry] of timersRef.current) clearInterval(entry.timerId);
       timersRef.current.clear();
+      for (const [, entry] of nbTimersRef.current) clearInterval(entry.timerId);
+      nbTimersRef.current.clear();
     };
   }, []);
 
-  return { scheduledCells, startSchedule, stopSchedule, stopAllSchedules };
+  return {
+    scheduledCells, startSchedule, stopSchedule, stopAllSchedules,
+    scheduledNotebooks, startNotebookSchedule, stopNotebookSchedule,
+  };
 }

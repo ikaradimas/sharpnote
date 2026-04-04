@@ -200,8 +200,9 @@ export function App() {
     });
   cancelPendingCellsRef.current = cancelPendingCells;
 
-  const { scheduledCells, startSchedule, stopSchedule, stopAllSchedules } =
-    useCellScheduler({ notebooksRef, runCell });
+  const { scheduledCells, startSchedule, stopSchedule, stopAllSchedules,
+          scheduledNotebooks, startNotebookSchedule, stopNotebookSchedule } =
+    useCellScheduler({ notebooksRef, runCell, runAll });
 
   const handleResetWithSchedules = useCallback((notebookId) => {
     stopAllSchedules(notebookId);
@@ -1064,6 +1065,9 @@ export function App() {
                     scheduledCells={scheduledCells}
                     onScheduleStart={startSchedule}
                     onScheduleStop={stopSchedule}
+                    scheduledNotebooks={scheduledNotebooks}
+                    onNotebookScheduleStart={startNotebookSchedule}
+                    onNotebookScheduleStop={stopNotebookSchedule}
                     dashboardMode={dashboardMode}
                     onToggleDashboard={() => setDashboardMode((v) => !v)}
                   />
