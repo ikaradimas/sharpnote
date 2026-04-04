@@ -46,6 +46,13 @@ export function ConfigPanel({ isOpen, onToggle, config, onAdd, onRemove, onUpdat
             return (
               <div key={i} className="config-item">
                 <span className="config-key">{entry.key}</span>
+                <input
+                  className="nuget-input config-env-input"
+                  value={entry.envVar || ''}
+                  onChange={(e) => onUpdate(i, { envVar: e.target.value || undefined })}
+                  placeholder="ENV_VAR"
+                  spellCheck={false}
+                />
                 <select
                   className="config-type-select"
                   value={entry.type || 'string'}
@@ -60,9 +67,7 @@ export function ConfigPanel({ isOpen, onToggle, config, onAdd, onRemove, onUpdat
                   value={entry.value}
                   onChange={(e) => onUpdate(i, { value: e.target.value })}
                   spellCheck={false}
-                  placeholder={entry.envVar ? `$${entry.envVar}` : undefined}
                 />
-                {entry.envVar && <span className="config-env-badge" title={`Override: $${entry.envVar}`}>$</span>}
                 <button className="nuget-remove-btn" title="Remove" onClick={() => onRemove(i)}>×</button>
               </div>
             );
