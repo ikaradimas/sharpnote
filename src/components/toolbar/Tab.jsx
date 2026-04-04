@@ -87,6 +87,9 @@ export function Tab({ notebook, isActive, isDragOver, onActivate, onClose, onRen
           onClick={(e) => e.stopPropagation()}
         />
       ) : (
+        {notebook.kernelStatus && (
+          <span className={`tab-kernel-dot tab-kernel-${notebook.kernelStatus}`} />
+        )}
         <span className="tab-title" onDoubleClick={startEdit}>{name}</span>
       )}
       {notebook.isDirty && <span className="tab-dirty" title="Unsaved changes">•</span>}

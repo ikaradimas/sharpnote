@@ -505,7 +505,20 @@ body {
 
 .markdown-render-wrap {
   position: relative;
+  border: 1px dashed transparent;
+  transition: border-color 0.2s;
+  cursor: default;
 }
+.markdown-render-wrap:hover {
+  border-color: var(--border-subtle);
+  cursor: text;
+}
+.md-edit-hint {
+  position: absolute; top: 4px; right: 4px;
+  opacity: 0; transition: opacity 0.2s;
+  color: var(--text-muted); pointer-events: none;
+}
+.markdown-render-wrap:hover .md-edit-hint { opacity: 0.6; }
 
 .markdown-render {
   cursor: default;
@@ -801,6 +814,13 @@ body {
 .cell.running .code-cell-header {
   border-left-color: var(--accent-primary);
 }
+
+.cell-header-timer {
+  font-family: var(--font-code); font-size: 11px; font-weight: 600;
+  color: var(--text-muted); margin-left: auto; padding: 0 6px;
+}
+.cell-timer-slow { color: #e0a040; }
+.cell-timer-very-slow { color: #e05050; }
 
 .cell-lang-label {
   font-family: var(--font-heading);
@@ -1236,6 +1256,13 @@ body {
   gap: 4px;
   margin-left: auto;
 }
+
+.header-overflow {
+  display: flex; align-items: center; gap: 4px;
+  opacity: 0; transition: opacity 0.15s;
+}
+.code-cell-header:hover .header-overflow,
+.cell.running .header-overflow { opacity: 1; }
 
 .output-mode-label {
   font-size: 10px;
@@ -6354,3 +6381,30 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 .kafka-error { font-size: 11px; color: var(--status-error); padding: 6px 10px; }
 
 .rx-ref-desc { color: var(--text-dim); }
+
+/* Add-cell dropdown */
+.toolbar-add-cell-wrap { position: relative; }
+.toolbar-add-cell-dropdown {
+  position: absolute; top: 100%; left: 0; z-index: 100;
+  background: var(--bg-panel); border: 1px solid var(--border-default);
+  border-radius: 4px; box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  padding: 4px 0; min-width: 120px;
+}
+.toolbar-add-cell-dropdown button {
+  display: block; width: 100%; text-align: left;
+  padding: 6px 14px; background: none; border: none;
+  color: var(--text-secondary); font-family: var(--font-ui); font-size: 12px;
+  cursor: pointer;
+}
+.toolbar-add-cell-dropdown button:hover {
+  background: var(--bg-elevated); color: var(--text-primary);
+}
+
+/* Tab kernel status dot */
+.tab-kernel-dot {
+  width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+}
+.tab-kernel-starting { background: #e0a040; }
+.tab-kernel-ready { background: #4ec9b0; }
+.tab-kernel-error { background: #e05050; }
+.tab-kernel-stopped { background: #555; }

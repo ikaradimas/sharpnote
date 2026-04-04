@@ -62,10 +62,12 @@ export function Toolbar({
   const [draft,        setDraft]        = useState('');
   const [compact,      setCompact]      = useState(false);
   const [overflowOpen, setOverflowOpen] = useState(false);
+  const [addCellOpen,  setAddCellOpen]  = useState(false);
   const inputRef       = useRef(null);
   const toolbarRef     = useRef(null);
   const overflowBtnRef = useRef(null);
   const overflowRef    = useRef(null);
+  const addCellRef     = useRef(null);
 
   const displayName = getNotebookDisplayName(notebookPath, notebookTitle, 'Untitled Notebook');
 
@@ -99,6 +101,16 @@ export function Toolbar({
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [overflowOpen]);
+
+  // Close add-cell dropdown on outside click
+  useEffect(() => {
+    if (!addCellOpen) return;
+    const handler = (e) => {
+      if (addCellRef.current && !addCellRef.current.contains(e.target)) setAddCellOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [addCellOpen]);
 
   const startEdit = () => { setDraft(displayName); setEditing(true); };
   const commit    = () => {
@@ -162,9 +174,16 @@ export function Toolbar({
             title={kernelStatus === 'ready' ? 'Run all code cells' : 'Waiting for kernel…'}
             className="toolbar-run-all"
           >▶▶ Run All</button>
-          <button onClick={onAddMarkdown} title="Add markdown cell">+ Markdown</button>
-          <button onClick={onAddCode}     title="Add code cell">+ Code</button>
-          <button onClick={onAddSql}      title="Add SQL cell">+ SQL</button>
+          <div className="toolbar-add-cell-wrap" ref={addCellRef}>
+            <button className="toolbar-text-btn" onClick={() => setAddCellOpen(v => !v)} title="Add cell">+ Cell ▾</button>
+            {addCellOpen && (
+              <div className="toolbar-add-cell-dropdown">
+                <button onClick={() => { onAddCode(); setAddCellOpen(false); }}>+ Code</button>
+                <button onClick={() => { onAddMarkdown(); setAddCellOpen(false); }}>+ Markdown</button>
+                <button onClick={() => { onAddSql(); setAddCellOpen(false); }}>+ SQL</button>
+              </div>
+            )}
+          </div>
           <div className="toolbar-separator" />
           <button
             className={`toolbar-autorun-btn${autoRun ? ' toolbar-autorun-btn--on' : ''}`}

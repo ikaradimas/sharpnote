@@ -1,6 +1,6 @@
 {
   "name": "sharpnote",
-  "version": "1.39.1",
+  "version": "1.40.0",
   "description": "SharpNote — interactive C# notebook with multi-tab MDI, NuGet, and Chart.js output",
   "main": "main.js",
   "scripts": {
@@ -75,7 +75,9 @@
         {
           "from": "kernel/bin/osx-${arch}",
           "to": "kernel/osx-${arch}",
-          "filter": ["**/*"]
+          "filter": [
+            "**/*"
+          ]
         }
       ]
     },
@@ -93,7 +95,9 @@
         {
           "from": "kernel/bin/win-x64",
           "to": "kernel/win-x64",
-          "filter": ["**/*"]
+          "filter": [
+            "**/*"
+          ]
         }
       ]
     },
