@@ -117,19 +117,18 @@ export function LibraryPanel({ onInsert, onClose, onOpenFile }) {
       <div className="library-files">
         {loading && <div className="library-empty">Loading&hellip;</div>}
         {!loading && folders.length === 0 && files.length === 0 && (
-          <div className="library-empty">
-            {currentPath.length === 0 ? (
-              <>
-                <p>No snippets yet.</p>
-                <p>Add <code>.cs</code> or <code>.csx</code> files, or subfolders, to your library.</p>
-                <button className="library-folder-btn" onClick={() => window.electronAPI?.openLibraryFolder()}>
-                  Open Library Folder
-                </button>
-              </>
-            ) : (
-              <p>Empty folder.</p>
-            )}
-          </div>
+          currentPath.length === 0 ? (
+            <div className="panel-empty-state">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" style={{ opacity: 0.3 }}>
+                <path d="M4 19.5A2.5 2.5 0 016.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" />
+              </svg>
+              <span className="panel-empty-title">No snippets yet</span>
+              <span className="panel-empty-hint">Add .cs or .csx files to your library</span>
+              <button className="panel-empty-action" onClick={() => window.electronAPI?.openLibraryFolder()}>Open Library Folder</button>
+            </div>
+          ) : (
+            <div className="library-empty"><p>Empty folder.</p></div>
+          )
         )}
         {folders.map((name) => (
           <div key={name} className="library-folder" onClick={() => setCurrentPath([...currentPath, name])}>

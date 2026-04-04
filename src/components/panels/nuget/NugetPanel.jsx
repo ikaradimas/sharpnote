@@ -173,7 +173,15 @@ function InstalledTab({ packages, kernelStatus, sources, onAdd, onRemove, onRetr
   return (
     <div className="nuget-tab-content">
       <div className="nuget-list">
-        {packages.length === 0 && <span className="nuget-empty">No startup packages — add one below or browse</span>}
+        {packages.length === 0 && (
+          <div className="panel-empty-state">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" style={{ opacity: 0.3 }}>
+              <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" /><polyline points="3.27 6.96 12 12.01 20.73 6.96" /><line x1="12" y1="22.08" x2="12" y2="12" />
+            </svg>
+            <span className="panel-empty-title">No packages</span>
+            <span className="panel-empty-hint">Add one below or browse the NuGet gallery</span>
+          </div>
+        )}
         {packages.map((pkg) => (
           <div key={pkg.id} className="nuget-item">
             <NugetStatusDot status={pkg.status} error={pkg.error} />
