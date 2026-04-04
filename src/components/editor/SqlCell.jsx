@@ -42,6 +42,7 @@ export function SqlCell({
 }) {
   const readyDbs = (attachedDbs || []).filter((d) => d.status === 'ready');
   const selectedDb = cell.db || (readyDbs[0]?.connectionId ?? '');
+  const selectedSchema = readyDbs.find((d) => d.connectionId === selectedDb)?.schema ?? null;
 
   return (
     <div className={`cell sql-cell${isRunning ? ' running' : ''}`}>
@@ -83,6 +84,7 @@ export function SqlCell({
         value={cell.content}
         onChange={(val) => onUpdate(val)}
         language="sql"
+        sqlSchema={selectedSchema}
         onCtrlEnter={kernelReady && !anyRunning ? onRun : undefined}
         lintEnabled={false}
         cellIndex={cellIndex}

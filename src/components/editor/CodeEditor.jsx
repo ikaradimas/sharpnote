@@ -210,10 +210,72 @@ function buildLspExtensions(notebookId) {
   ];
 }
 
+// ── SQL completion source ─────────────────────────────────────────────────────
+
+const SQL_KEYWORDS = [
+  'SELECT', 'FROM', 'WHERE', 'AND', 'OR', 'NOT', 'IN', 'IS', 'NULL', 'AS',
+  'JOIN', 'INNER', 'LEFT', 'RIGHT', 'OUTER', 'CROSS', 'ON', 'USING',
+  'ORDER', 'BY', 'ASC', 'DESC', 'GROUP', 'HAVING', 'LIMIT', 'OFFSET',
+  'INSERT', 'INTO', 'VALUES', 'UPDATE', 'SET', 'DELETE', 'CREATE', 'TABLE',
+  'ALTER', 'DROP', 'INDEX', 'VIEW', 'IF', 'EXISTS', 'PRIMARY', 'KEY',
+  'FOREIGN', 'REFERENCES', 'UNIQUE', 'DEFAULT', 'CHECK', 'CONSTRAINT',
+  'UNION', 'ALL', 'DISTINCT', 'BETWEEN', 'LIKE', 'CASE', 'WHEN', 'THEN',
+  'ELSE', 'END', 'CAST', 'COALESCE', 'COUNT', 'SUM', 'AVG', 'MIN', 'MAX',
+  'NULLIF', 'TRUE', 'FALSE', 'BEGIN', 'COMMIT', 'ROLLBACK', 'TRANSACTION',
+];
+
+function buildSqlCompletionSource(schema) {
+  const tables = schema?.tables || [];
+  const tableCompletions = tables.map((t) => ({
+    label: t.name,
+    type: 'class',
+    detail: t.schema && t.schema !== 'dbo' && t.schema !== 'public' ? `${t.schema}` : 'table',
+    boost: 2,
+  }));
+  const columnCompletions = [];
+  for (const t of tables) {
+    for (const c of t.columns || []) {
+      columnCompletions.push({
+        label: c.name,
+        type: 'property',
+        detail: `${t.name}.${c.dbType}${c.isPrimaryKey ? ' PK' : ''}`,
+      });
+    }
+  }
+  const tableColumnMap = {};
+  for (const t of tables) {
+    tableColumnMap[t.name.toLowerCase()] = (t.columns || []).map((c) => ({
+      label: c.name,
+      type: 'property',
+      detail: `${c.dbType}${c.isPrimaryKey ? ' PK' : ''}`,
+    }));
+  }
+  const kwCompletions = SQL_KEYWORDS.map((kw) => ({ label: kw, type: 'keyword', boost: -1 }));
+
+  return (context) => {
+    const dotMatch = context.matchBefore(/\w+\.\w*/);
+    if (dotMatch) {
+      const dotPos = dotMatch.text.indexOf('.');
+      const tableName = dotMatch.text.slice(0, dotPos).toLowerCase();
+      const cols = tableColumnMap[tableName];
+      if (cols) {
+        return { from: dotMatch.from + dotPos + 1, options: cols, filter: true };
+      }
+    }
+    const word = context.matchBefore(/\w+/);
+    if (!word && !context.explicit) return null;
+    return {
+      from: word ? word.from : context.pos,
+      options: [...kwCompletions, ...tableCompletions, ...columnCompletions],
+      filter: true,
+    };
+  };
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
-                      notebookId, readOnly = false, cellIndex = null }) {
+                      notebookId, readOnly = false, cellIndex = null, sqlSchema = null }) {
   const containerRef = useRef(null);
   const viewRef = useRef(null);
   const onChangeRef = useRef(onChange);
@@ -283,11 +345,21 @@ export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
     if (language === 'csharp' && notebookId) {
       extensions.push(
         ...buildLspExtensions(notebookId),
-        // Tab/Enter accept the active completion item; acceptCompletion returns
-        // false when no popup is open so both keys fall through normally.
         Prec.highest(keymap.of([
           { key: 'Tab',   run: acceptCompletion },
           { key: 'Enter', run: acceptCompletion },
+        ])),
+      );
+    }
+
+    if (language === 'sql') {
+      extensions.push(
+        autocompletion({
+          override: [buildSqlCompletionSource(sqlSchema)],
+          defaultKeymap: true,
+        }),
+        Prec.highest(keymap.of([
+          { key: 'Tab', run: acceptCompletion },
         ])),
       );
     }
@@ -301,7 +373,7 @@ export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
       viewRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [language, notebookId]);
+  }, [language, notebookId, sqlSchema]);
 
   // Sync external value changes (e.g., load notebook)
   useEffect(() => {

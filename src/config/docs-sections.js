@@ -91,10 +91,10 @@ export const DOCS_SECTIONS = [
       { type: 'p', text: 'SQL cells let you run raw SQL queries against any attached database without writing C# boilerplate. Select a connection from the dropdown at the top of the cell, then write your SQL and press ▶ Run (or Ctrl+Enter):' },
       { type: 'code', text: 'SELECT u.Name, COUNT(o.Id) AS OrderCount\nFROM Users u\nLEFT JOIN Orders o ON o.UserId = u.Id\nGROUP BY u.Name\nORDER BY OrderCount DESC' },
       { type: 'ul', items: [
-        'SELECT queries render as an interactive data table with sortable columns and pagination',
+        'SELECT queries render as an interactive data table with sortable columns, pagination, and CSV/TSV export',
         'INSERT / UPDATE / DELETE / DDL statements show a "N rows affected" or "Done" status line',
         'The dropdown lists all connections that are currently attached to the notebook',
-        'SQL cells share the same output history and cell controls as code cells',
+        'Autocomplete: type to see SQL keywords, table names, and column names from the attached database schema; type tableName. to see only that table\'s columns',
       ]},
       { type: 'h3', text: 'Cell Folding' },
       { type: 'p', text: 'Click the ▾/▸ arrow at the left of any code cell header to fold the editor down to a single-line preview. The cell remains fully executable while folded — press ▶ Run or Ctrl+Enter to run it without unfolding. Click the arrow again to expand. Fold state is saved in the .cnb file.' },
