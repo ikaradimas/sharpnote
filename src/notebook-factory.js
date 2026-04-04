@@ -778,7 +778,7 @@ var rng = new Random(7);
 for (int i = 0; i < 60; i++)
 {
     Display.Plot("signal", Math.Sin(i * 0.15) * 10 + 20);          // line (default)
-    Display.Plot("events", rng.Next(0, 5), type: "bar");            // bars
+    Display.Plot("events", rng.Next(0, 5), type: ChartType.Bar);    // bars
     await Task.Delay(40);
 }`),
   ];

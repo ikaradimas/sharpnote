@@ -15,6 +15,28 @@ public enum PlotMode
     RateOfChange,
 }
 
+/// <summary>Y-axis assignment for Display.Plot.</summary>
+public enum PlotAxis
+{
+    /// <summary>Left y-axis (default).</summary>
+    Left,
+    /// <summary>Right y-axis — useful for dual-scale charts.</summary>
+    Right,
+}
+
+/// <summary>Chart visualisation type for a plotted series.</summary>
+public enum ChartType
+{
+    /// <summary>Use the Graph panel's current default chart type.</summary>
+    Default,
+    /// <summary>Line chart.</summary>
+    Line,
+    /// <summary>Filled area chart.</summary>
+    Area,
+    /// <summary>Vertical bar chart.</summary>
+    Bar,
+}
+
 // ── WidgetHandle ───────────────────────────────────────────────────────────────
 
 public class WidgetHandle
@@ -298,11 +320,36 @@ public class DisplayHelper
     /// <summary>
     /// Pushes a single numeric data point to the Graph panel immediately, without waiting
     /// for the cell to finish. Useful for plotting loop variables in real time.
-    /// Use <see cref="PlotMode.RateOfChange"/> to plot the delta from the previous call instead of the raw value.
-    /// Use <paramref name="axis"/> to assign the series to the right y-axis (<c>"y2"</c>); defaults to left (<c>"y"</c>).
-    /// Use <paramref name="type"/> to set the chart type for this series (<c>"line"</c>, <c>"area"</c>, or <c>"bar"</c>); defaults to the panel's global setting.
     /// </summary>
-    public void Plot(string name, double value, PlotMode mode = PlotMode.Value, string axis = "y", string? type = null)
+    /// <param name="name">Series name — identifies the line/bar in the Graph panel.</param>
+    /// <param name="value">The numeric value to plot.</param>
+    /// <param name="mode">Plot the raw value or the delta from the previous call.</param>
+    /// <param name="axis">Assign the series to the left or right y-axis.</param>
+    /// <param name="type">Chart visualisation type; <see cref="ChartType.Default"/> uses the panel's current setting.</param>
+    public void Plot(string name, double value, PlotMode mode = PlotMode.Value,
+                     PlotAxis axis = PlotAxis.Left, ChartType type = ChartType.Default)
+    {
+        var axisStr = axis == PlotAxis.Right ? "y2" : "y";
+        var typeStr = type switch
+        {
+            ChartType.Line => "line",
+            ChartType.Area => "area",
+            ChartType.Bar  => "bar",
+            _              => (string?)null,
+        };
+        PlotRaw(name, value, mode, axisStr, typeStr);
+    }
+
+    /// <summary>
+    /// Pushes a single numeric data point to the Graph panel — string-based overload
+    /// for backward compatibility and concise inline usage.
+    /// </summary>
+    /// <param name="axis"><c>"y"</c> (left, default) or <c>"y2"</c> (right).</param>
+    /// <param name="type"><c>"line"</c>, <c>"area"</c>, <c>"bar"</c>, or <c>null</c> (panel default).</param>
+    public void Plot(string name, double value, PlotMode mode, string axis, string? type = null)
+        => PlotRaw(name, value, mode, axis, type);
+
+    private void PlotRaw(string name, double value, PlotMode mode, string axis, string? chartType)
     {
         double plotValue = value;
         if (mode == PlotMode.RateOfChange)
@@ -310,9 +357,9 @@ public class DisplayHelper
             plotValue = _plotLastValues.TryGetValue(name, out var prev) ? value - prev : 0;
         }
         _plotLastValues[name] = value;
-        if (type != null)
+        if (chartType != null)
             Send(new { type = "var_point", name, value = plotValue,
-                       time = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), axis, chartType = type });
+                       time = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), axis, chartType });
         else
             Send(new { type = "var_point", name, value = plotValue,
                        time = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), axis });
