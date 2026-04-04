@@ -322,10 +322,15 @@ Use the **Config** panel (toolbar) to define key/value pairs that become availab
 
 This is useful for environment-specific settings (URLs, feature flags, credentials) without hard-coding them in cells.
 
+Each entry has a **type** (string, number, boolean, secret) and an optional **environment variable** override. When an env var is set, its value takes precedence over the panel value at execution time.
+
 | Expression | Result |
 |------------|--------|
 | \`Config["Key"]\` | Value string, or \`""\` if missing |
 | \`Config.Get("Key", "default")\` | Value with fallback |
+| \`Config.GetInt("Key", 0)\` | Parsed int with fallback |
+| \`Config.GetDouble("Key", 0.0)\` | Parsed double with fallback |
+| \`Config.GetBool("Key", false)\` | Parsed bool (\`true\`/\`1\`/\`yes\`) |
 | \`Config.Has("Key")\` | \`true\` if key exists and non-empty |
 | \`Config.All\` | \`IReadOnlyDictionary<string,string>\` |
 
@@ -333,19 +338,25 @@ Config is persisted in the \`.cnb\` file alongside packages and sources.`),
 
     md('### Reading Config Values'),
 
-    cs(`// Read config values (try editing them in the Config panel first)
-var env     = Config.Get("Environment", "development");
-var baseUrl = Config.Get("ApiBaseUrl", "(not set)");
-var missing = Config.Get("NonExistent", "fallback value");
+    cs(`// Read config values — the example notebook pre-populates these
+// in the Config panel (open it with ⌘⇧, to see and edit them)
+var env     = Config.Get("Environment", "development");  // string
+var baseUrl = Config.Get("ApiBaseUrl", "(not set)");      // string — overridden by $API_BASE_URL if set
+var retries = Config.GetInt("MaxRetries", 3);             // number → int
+var verbose = Config.GetBool("Verbose", false);           // boolean → bool
+var apiKey  = Config.Get("ApiKey", "(not set)");           // secret — overridden by $API_KEY if set
 
 Display.Html($@"
 <table style='border-collapse:collapse;font-size:12px'>
   <tr><th style='padding:4px 12px;text-align:left;color:#4fc3f7'>Key</th>
-      <th style='padding:4px 12px;text-align:left;color:#4fc3f7'>Value</th></tr>
-  <tr><td style='padding:3px 12px'>Environment</td><td style='padding:3px 12px;color:#00e5cc'>{env}</td></tr>
-  <tr><td style='padding:3px 12px'>ApiBaseUrl</td><td style='padding:3px 12px;color:#00e5cc'>{baseUrl}</td></tr>
-  <tr><td style='padding:3px 12px'>NonExistent</td><td style='padding:3px 12px;color:#555'>{missing}</td></tr>
-  <tr><td style='padding:3px 12px;color:#555'>All entries</td><td style='padding:3px 12px;color:#555'>{Config.All.Count} defined</td></tr>
+      <th style='padding:4px 12px;text-align:left;color:#4fc3f7'>Value</th>
+      <th style='padding:4px 12px;text-align:left;color:#4fc3f7'>Type</th></tr>
+  <tr><td style='padding:3px 12px'>Environment</td><td style='padding:3px 12px;color:#00e5cc'>{env}</td><td style='padding:3px 12px;color:#555'>string</td></tr>
+  <tr><td style='padding:3px 12px'>ApiBaseUrl</td><td style='padding:3px 12px;color:#00e5cc'>{baseUrl}</td><td style='padding:3px 12px;color:#555'>string (env: $API_BASE_URL)</td></tr>
+  <tr><td style='padding:3px 12px'>MaxRetries</td><td style='padding:3px 12px;color:#f9a826'>{retries}</td><td style='padding:3px 12px;color:#555'>int</td></tr>
+  <tr><td style='padding:3px 12px'>Verbose</td><td style='padding:3px 12px;color:#f9a826'>{verbose}</td><td style='padding:3px 12px;color:#555'>bool</td></tr>
+  <tr><td style='padding:3px 12px'>ApiKey</td><td style='padding:3px 12px;color:#f9a826'>{(Config.Has("ApiKey") ? "****" : "(not set)")}</td><td style='padding:3px 12px;color:#555'>secret (env: $API_KEY)</td></tr>
+  <tr><td style='padding:3px 12px;color:#555'>All entries</td><td style='padding:3px 12px;color:#555'>{Config.All.Count} defined</td><td></td></tr>
 </table>");`),
 
     md(`## 10 · Databases
@@ -1060,7 +1071,13 @@ export function createNotebook(withExamples = false) {
     kernelStatus: 'starting',
     nugetPackages: [],
     nugetSources: [...DEFAULT_NUGET_SOURCES],
-    config: [],
+    config: withExamples ? [
+      { key: 'Environment', value: 'development', type: 'string' },
+      { key: 'ApiBaseUrl',  value: 'https://api.example.com', type: 'string', envVar: 'API_BASE_URL' },
+      { key: 'MaxRetries',  value: '5', type: 'number' },
+      { key: 'Verbose',     value: 'true', type: 'boolean' },
+      { key: 'ApiKey',      value: '', type: 'secret', envVar: 'API_KEY' },
+    ] : [],
     logPanelOpen: false,
     nugetPanelOpen: false,
     configPanelOpen: false,

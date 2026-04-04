@@ -110,6 +110,7 @@ partial class Program
                 type         = "db_schema",
                 connectionId,
                 databaseName = schema.DatabaseName,
+                redisCursor  = schema.RedisCursor,
                 tables       = schema.Tables.Select(t => new
                 {
                     schema   = t.Schema,
@@ -122,6 +123,7 @@ partial class Program
                         isPrimaryKey= c.IsPrimaryKey,
                         isNullable  = c.IsNullable,
                         isIdentity  = c.IsIdentity,
+                        sampleValue = c.SampleValue,
                     }).ToList(),
                 }).ToList(),
             };
@@ -217,11 +219,55 @@ partial class Program
                         isPrimaryKey= c.IsPrimaryKey,
                         isNullable  = c.IsNullable,
                         isIdentity  = c.IsIdentity,
+                        sampleValue = c.SampleValue,
                     }).ToList(),
                 }).ToList(),
             };
             lock (realStdout) { realStdout.WriteLine(JsonSerializer.Serialize(schemaPayload)); }
             attachedDbs[connectionId] = info with { Schema = schema };
+        }
+        catch (Exception ex)
+        {
+            lock (realStdout) { realStdout.WriteLine(JsonSerializer.Serialize(new { type = "db_error", connectionId, message = ex.Message })); }
+        }
+    }
+
+    // ── db_redis_scan handler ────────────────────────────────────────────────
+
+    internal static async Task HandleDbRedisScan(JsonElement msg, TextWriter realStdout)
+    {
+        var connectionId = msg.GetProperty("connectionId").GetString()!;
+        var cursor       = msg.TryGetProperty("cursor", out var curProp) ? curProp.GetInt64() : 0;
+        if (!attachedDbs.TryGetValue(connectionId, out var info))
+            return;
+
+        try
+        {
+            var schema = await RedisProvider.ScanKeysAsync(
+                connectionId, info.ConnectionString, cursor, RedisProvider.DefaultPageSize);
+
+            var payload = new
+            {
+                type         = "db_redis_page",
+                connectionId,
+                redisCursor  = schema.RedisCursor,
+                tables       = schema.Tables.Select(t => new
+                {
+                    schema   = t.Schema,
+                    name     = t.Name,
+                    columns  = t.Columns.Select(c => new
+                    {
+                        name        = c.Name,
+                        dbType      = c.DbType,
+                        csharpType  = c.CSharpType,
+                        isPrimaryKey= c.IsPrimaryKey,
+                        isNullable  = c.IsNullable,
+                        isIdentity  = c.IsIdentity,
+                        sampleValue = c.SampleValue,
+                    }).ToList(),
+                }).ToList(),
+            };
+            lock (realStdout) { realStdout.WriteLine(JsonSerializer.Serialize(payload)); }
         }
         catch (Exception ex)
         {

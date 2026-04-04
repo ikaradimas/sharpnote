@@ -399,6 +399,8 @@ export function SettingsDialog({
   onUnpin,
   onExport,
   onImport,
+  onExportDb,
+  onImportDb,
   onClose,
 }) {
   const [activeSection, setActiveSection] = useState('appearance');
@@ -425,6 +427,18 @@ export function SettingsDialog({
   const handleImport = async () => {
     const result = await onImport?.();
     if (result?.success) showStatus('success', 'Settings imported.');
+    else if (result?.error) showStatus('error', result.error);
+  };
+
+  const handleExportDb = async () => {
+    const result = await onExportDb?.();
+    if (result?.success) showStatus('success', 'DB connections exported (unencrypted).');
+    else if (result?.error) showStatus('error', result.error);
+  };
+
+  const handleImportDb = async () => {
+    const result = await onImportDb?.();
+    if (result?.success) showStatus('success', 'DB connections imported.');
     else if (result?.error) showStatus('error', result.error);
   };
 
@@ -455,10 +469,16 @@ export function SettingsDialog({
               </div>
             )}
             <button className="settings-io-btn" onClick={handleExport} title="Export all settings to a JSON file">
-              Export…
+              Export Settings…
             </button>
             <button className="settings-io-btn" onClick={handleImport} title="Import settings from a JSON file">
-              Import…
+              Import Settings…
+            </button>
+            <button className="settings-io-btn" onClick={handleExportDb} title="Export database connections as unencrypted JSON">
+              Export DB Connections…
+            </button>
+            <button className="settings-io-btn" onClick={handleImportDb} title="Import database connections from a JSON file">
+              Import DB Connections…
             </button>
           </div>
         </div>

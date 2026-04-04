@@ -191,7 +191,8 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
         case 'var_point':
           setNb(notebookId, (n) => {
             const hist = { ...(n.varHistory || {}) };
-            hist[msg.name] = [...(hist[msg.name] || []).slice(-49), msg.value];
+            const pt = { v: msg.value, t: msg.time ?? Date.now(), axis: msg.axis ?? 'y' };
+            hist[msg.name] = [...(hist[msg.name] || []).slice(-49), pt];
             return { varHistory: hist };
           });
           break;
@@ -321,7 +322,7 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
             const existing = n.config.findIndex((e) => e.key === msg.key);
             const config = existing >= 0
               ? n.config.map((e, i) => (i === existing ? { ...e, value: msg.value } : e))
-              : [...n.config, { key: msg.key, value: msg.value }];
+              : [...n.config, { key: msg.key, value: msg.value, type: 'string' }];
             return { config };
           });
           break;
@@ -347,9 +348,31 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
           setNb(notebookId, (n) => ({
             attachedDbs: n.attachedDbs.map((d) =>
               d.connectionId === msg.connectionId
-                ? { ...d, schema: { databaseName: msg.databaseName, tables: msg.tables } }
+                ? { ...d, schema: { databaseName: msg.databaseName, tables: msg.tables, redisCursor: msg.redisCursor ?? 0 } }
                 : d
             ),
+          }));
+          break;
+
+        case 'db_redis_page':
+          setNb(notebookId, (n) => ({
+            attachedDbs: n.attachedDbs.map((d) => {
+              if (d.connectionId !== msg.connectionId || !d.schema) return d;
+              // Merge new tables into existing schema
+              const merged = [...d.schema.tables];
+              for (const t of msg.tables) {
+                const idx = merged.findIndex((m) => m.name === t.name);
+                if (idx >= 0) {
+                  // Append new columns to existing table, dedup by name
+                  const existing = new Set(merged[idx].columns.map((c) => c.name));
+                  const newCols = t.columns.filter((c) => !existing.has(c.name));
+                  merged[idx] = { ...merged[idx], columns: [...merged[idx].columns, ...newCols] };
+                } else {
+                  merged.push(t);
+                }
+              }
+              return { ...d, schema: { ...d.schema, tables: merged, redisCursor: msg.redisCursor ?? 0 } };
+            }),
           }));
           break;
 
@@ -399,11 +422,22 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
 
   // ── Cell execution ─────────────────────────────────────────────────────────
 
-  const runCell = useCallback((notebookId, cell) => {
+  const runCell = useCallback(async (notebookId, cell) => {
     if (!window.electronAPI || cell.type !== 'code') return Promise.resolve();
     prevVarsSnapRef.current[cell.id] = [
       ...(notebooksRef.current.find((n) => n.id === notebookId)?.vars || []),
     ];
+    // Resolve config values before entering the promise: env var overrides take precedence
+    const nb = notebooksRef.current.find((n) => n.id === notebookId);
+    const configEntries = nb ? nb.config.filter((e) => e.key.trim()) : [];
+    const resolvedConfig = {};
+    for (const e of configEntries) resolvedConfig[e.key] = e.value;
+    const envEntries = configEntries.filter((e) => e.envVar);
+    if (envEntries.length > 0) {
+      const envVals = await Promise.all(envEntries.map((e) => window.electronAPI.getEnvVar(e.envVar)));
+      envEntries.forEach((e, i) => { if (envVals[i]) resolvedConfig[e.key] = envVals[i]; });
+    }
+
     return new Promise((resolve) => {
       setNb(notebookId, (n) => {
         const prevOutputs = n.outputs[cell.id];
@@ -420,16 +454,13 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
         };
       });
       pendingResolversRef.current[cell.id] = resolve;
-      const nb = notebooksRef.current.find((n) => n.id === notebookId);
       window.electronAPI.sendToKernel(notebookId, {
         type: 'execute',
         id: cell.id,
         code: cell.content,
         outputMode: cell.outputMode || 'auto',
         sources: nb ? nb.nugetSources.filter((s) => s.enabled).map((s) => s.url) : [],
-        config: nb
-          ? Object.fromEntries(nb.config.filter((e) => e.key.trim()).map((e) => [e.key, e.value]))
-          : {},
+        config: resolvedConfig,
       });
     });
   }, [setNb]); // eslint-disable-line react-hooks/exhaustive-deps

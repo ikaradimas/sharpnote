@@ -124,3 +124,117 @@ describe('FilesPanel', () => {
     });
   });
 });
+
+describe('FilesPanel — favorite folders', () => {
+  beforeEach(() => {
+    window.electronAPI.fsGetHome.mockResolvedValue('/home/user');
+    window.electronAPI.fsReaddir.mockResolvedValue(
+      fakeReaddirResult([
+        makeEntry('docs', true),
+        makeEntry('readme.txt', false),
+      ])
+    );
+  });
+
+  const baseProps = () => ({
+    currentDir: '/home/user',
+    onNavigate: vi.fn(),
+    onOpenNotebook: vi.fn(),
+    notebookDir: null,
+  });
+
+  it('does not render favorites section when favoriteFolders is empty', async () => {
+    render(<FilesPanel {...baseProps()} favoriteFolders={[]} onToggleFavorite={vi.fn()} />);
+    await waitFor(() => expect(screen.getByText('docs')).toBeInTheDocument());
+    expect(document.querySelector('.files-favorites')).toBeNull();
+  });
+
+  it('renders favorites section with folder names when favoriteFolders has entries', async () => {
+    render(<FilesPanel
+      {...baseProps()}
+      favoriteFolders={['/home/user/projects', '/home/user/work']}
+      onToggleFavorite={vi.fn()}
+    />);
+    await waitFor(() => expect(screen.getByText('docs')).toBeInTheDocument());
+    expect(document.querySelector('.files-favorites')).not.toBeNull();
+    expect(screen.getByText('Favorites')).toBeInTheDocument();
+    expect(screen.getByText('projects')).toBeInTheDocument();
+    expect(screen.getByText('work')).toBeInTheDocument();
+  });
+
+  it('star button shows active class when current directory is a favorite', async () => {
+    render(<FilesPanel
+      {...baseProps()}
+      favoriteFolders={['/home/user']}
+      onToggleFavorite={vi.fn()}
+    />);
+    await waitFor(() => expect(screen.getByText('docs')).toBeInTheDocument());
+    const starBtn = document.querySelector('.files-fav-btn');
+    expect(starBtn).not.toBeNull();
+    expect(starBtn.classList.contains('active')).toBe(true);
+  });
+
+  it('star button does not have active class when current directory is not a favorite', async () => {
+    render(<FilesPanel
+      {...baseProps()}
+      favoriteFolders={['/somewhere/else']}
+      onToggleFavorite={vi.fn()}
+    />);
+    await waitFor(() => expect(screen.getByText('docs')).toBeInTheDocument());
+    const starBtn = document.querySelector('.files-fav-btn');
+    expect(starBtn).not.toBeNull();
+    expect(starBtn.classList.contains('active')).toBe(false);
+  });
+
+  it('clicking star button calls onToggleFavorite with currentDir', async () => {
+    const onToggleFavorite = vi.fn();
+    render(<FilesPanel
+      {...baseProps()}
+      favoriteFolders={[]}
+      onToggleFavorite={onToggleFavorite}
+    />);
+    await waitFor(() => expect(screen.getByText('docs')).toBeInTheDocument());
+    const starBtn = document.querySelector('.files-fav-btn');
+    fireEvent.click(starBtn);
+    expect(onToggleFavorite).toHaveBeenCalledWith('/home/user');
+  });
+
+  it('clicking a favorite entry calls fsReaddir to navigate there', async () => {
+    render(<FilesPanel
+      {...baseProps()}
+      favoriteFolders={['/home/user/projects']}
+      onToggleFavorite={vi.fn()}
+    />);
+    await waitFor(() => expect(screen.getByText('docs')).toBeInTheDocument());
+    // Clear the initial load calls
+    window.electronAPI.fsReaddir.mockClear();
+    window.electronAPI.fsReaddir.mockResolvedValue(
+      fakeReaddirResult([], '/home/user/projects')
+    );
+    fireEvent.click(screen.getByText('projects'));
+    await waitFor(() => {
+      expect(window.electronAPI.fsReaddir).toHaveBeenCalledWith('/home/user/projects');
+    });
+  });
+
+  it('collapsing favorites header hides the list, expanding shows it', async () => {
+    render(<FilesPanel
+      {...baseProps()}
+      favoriteFolders={['/home/user/projects']}
+      onToggleFavorite={vi.fn()}
+    />);
+    await waitFor(() => expect(screen.getByText('docs')).toBeInTheDocument());
+    // Initially expanded — list visible
+    expect(document.querySelector('.files-favorites-list')).not.toBeNull();
+    expect(screen.getByText('projects')).toBeInTheDocument();
+
+    // Collapse by clicking the header
+    fireEvent.click(screen.getByText('Favorites'));
+    expect(document.querySelector('.files-favorites-list')).toBeNull();
+
+    // Expand again
+    fireEvent.click(screen.getByText('Favorites'));
+    expect(document.querySelector('.files-favorites-list')).not.toBeNull();
+    expect(screen.getByText('projects')).toBeInTheDocument();
+  });
+});

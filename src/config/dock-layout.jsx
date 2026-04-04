@@ -3,8 +3,8 @@ import React from 'react';
 // ── Dock Layout System ────────────────────────────────────────────────────────
 
 export const DEFAULT_DOCK_LAYOUT = {
-  assignments: { log: 'right', nuget: 'bottom', config: 'bottom', db: 'bottom', library: 'left', vars: 'right', toc: 'left', files: 'left', api: 'right', graph: 'right', todo: 'bottom', regex: 'bottom', kafka: 'right' },
-  order:       { log: 0, nuget: 0, config: 1, db: 2, library: 0, vars: 1, toc: 1, files: 2, api: 2, graph: 3, todo: 3, regex: 4, kafka: 4 },
+  assignments: { log: 'right', nuget: 'bottom', config: 'bottom', db: 'bottom', library: 'left', vars: 'right', toc: 'left', files: 'left', api: 'right', graph: 'right', todo: 'bottom', regex: 'bottom' },
+  order:       { log: 0, nuget: 0, config: 1, db: 2, library: 0, vars: 1, toc: 1, files: 2, api: 2, graph: 3, todo: 3, regex: 4 },
   sizes:       { left: 300, right: 320, bottom: 280 },
   floatPos:    {},
   zoneTab:     { left: 'library', right: 'log', bottom: 'nuget' },
@@ -117,16 +117,6 @@ function IconRegex() {
     <path d="M5 4 L6.5 2.5 L8 4" />
   </svg>;
 }
-function IconKafka() {
-  return <svg {..._ic} stroke="currentColor" strokeWidth="1.1" strokeLinecap="round">
-    <circle cx="3" cy="6.5" r="1.5" />
-    <circle cx="10" cy="2.5" r="1.5" />
-    <circle cx="10" cy="10.5" r="1.5" />
-    <line x1="4.4" y1="5.8" x2="8.6" y2="3.2" />
-    <line x1="4.4" y1="7.2" x2="8.6" y2="9.8" />
-  </svg>;
-}
-
 export const PANEL_META = {
   log:     { label: 'Logs',       icon: <IconLogs /> },
   nuget:   { label: 'Packages',   icon: <IconPackages /> },
@@ -140,7 +130,6 @@ export const PANEL_META = {
   graph:   { label: 'Graph',      icon: <IconGraph /> },
   todo:    { label: 'To Do',      icon: <IconTodo /> },
   regex:   { label: 'Regex',      icon: <IconRegex /> },
-  kafka:   { label: 'Kafka',      icon: <IconKafka /> },
 };
 
 // ── Dock drop zones ───────────────────────────────────────────────────────────

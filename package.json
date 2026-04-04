@@ -1,6 +1,6 @@
 {
   "name": "sharpnote",
-  "version": "1.29.14",
+  "version": "1.37.2",
   "description": "SharpNote — interactive C# notebook with multi-tab MDI, NuGet, and Chart.js output",
   "main": "main.js",
   "scripts": {
@@ -32,7 +32,6 @@
   "build": {
     "appId": "com.xe.sharpnote",
     "productName": "SharpNote",
-    "copyright": "Copyright © 2025 XE",
     "icon": "assets/icon",
     "files": [
       "dist/**",
@@ -55,15 +54,7 @@
       "!logs/**",
       "!release/**"
     ],
-    "extraResources": [
-      {
-        "from": "kernel/bin",
-        "to": "kernel",
-        "filter": [
-          "**/*"
-        ]
-      }
-    ],
+    "extraResources": [],
     "afterPack": "./afterPack.js",
     "directories": {
       "output": "/tmp/sharpnote-build"
@@ -79,6 +70,13 @@
             "arm64"
           ]
         }
+      ],
+      "extraResources": [
+        {
+          "from": "kernel/bin/osx-${arch}",
+          "to": "kernel/osx-${arch}",
+          "filter": ["**/*"]
+        }
       ]
     },
     "win": {
@@ -89,6 +87,13 @@
           "arch": [
             "x64"
           ]
+        }
+      ],
+      "extraResources": [
+        {
+          "from": "kernel/bin/win-x64",
+          "to": "kernel/win-x64",
+          "filter": ["**/*"]
         }
       ]
     },

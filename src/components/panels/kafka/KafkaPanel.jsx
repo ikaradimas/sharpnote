@@ -257,7 +257,7 @@ function ChipOverflow({ topics, onStop }) {
 
 // ── Main panel ────────────────────────────────────────────────────────────────
 
-export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPanel }) {
+export function KafkaPanel({ onToggle, asTab = false }) {
   const [savedConns,    setSavedConns]    = useState([]);
   const [selectedId,    setSelectedId]    = useState(null);
   const [formConn,      setFormConn]      = useState(null);
@@ -276,6 +276,8 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
 
   // unified chronological message feed — stored in a plain ref, never in state
   const allMsgsRef    = useRef([]);
+  const filteredRef   = useRef(null);   // null = no filter; array = filtered subset
+  const searchTermRef = useRef('');
   const feedRef       = useRef(null);   // DOM container for messages
   const pageRef       = useRef(1);
   const renderedPageRef = useRef(1);    // page currently in the DOM (updated after replaceChildren)
@@ -283,6 +285,7 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
   const pendingRef    = useRef([]);
   const flushTimer    = useRef(null);
   const [pager, setPager] = useState({ total: 0, page: 1, totalPages: 1 });
+  const [searchQuery, setSearchQuery] = useState('');
   const PAGE_SIZE = 50;
 
   const [copiedTopic, setCopiedTopic] = useState(null);
@@ -330,8 +333,9 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
     const openIndices = new Set();
     Array.from(container.children).forEach((el, i) => { if (el.open) openIndices.add(i); });
     expandedRef.current[leaving] = openIndices;
+    const source = filteredRef.current ?? allMsgsRef.current;
     const frag = document.createDocumentFragment();
-    allMsgsRef.current
+    source
       .slice((pageNum - 1) * PAGE_SIZE, pageNum * PAGE_SIZE)
       .forEach((m) => frag.appendChild(buildMessageEl(m)));
     container.replaceChildren(frag);
@@ -364,8 +368,20 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
         const batch = pendingRef.current.splice(0);
         const all = allMsgsRef.current;
         all.push(...batch);
-        if (all.length > maxMessagesRef.current) all.splice(0, all.length - maxMessagesRef.current);
-        const total = all.length;
+        if (all.length > maxMessagesRef.current) {
+          const excess = all.length - maxMessagesRef.current;
+          all.splice(0, excess);
+          // Rebuild filtered list from the trimmed source to remove stale entries
+          if (filteredRef.current && searchTermRef.current) {
+            filteredRef.current = all.filter((m) => msgMatchesTerm(m, searchTermRef.current));
+          }
+        } else if (filteredRef.current && searchTermRef.current) {
+          // No trimming — just extend filtered with matching new messages
+          const matching = batch.filter((m) => msgMatchesTerm(m, searchTermRef.current));
+          if (matching.length) filteredRef.current.push(...matching);
+        }
+        const source = filteredRef.current ?? all;
+        const total = source.length;
         const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
         const curPage = Math.min(pageRef.current, totalPages);
         // Only re-paint DOM if the user is watching the last page
@@ -471,6 +487,9 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
 
   const clearFeed = () => {
     allMsgsRef.current = [];
+    filteredRef.current = null;
+    searchTermRef.current = '';
+    setSearchQuery('');
     pendingRef.current = [];
     clearTimeout(flushTimer.current);
     flushTimer.current = null;
@@ -479,6 +498,36 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
     expandedRef.current = {};
     feedRef.current?.replaceChildren();
     setPager({ total: 0, page: 1, totalPages: 1 });
+  };
+
+  const msgMatchesTerm = (m, term) =>
+    (m.key && m.key.toLowerCase().includes(term)) ||
+    (m.value && m.value.toLowerCase().includes(term)) ||
+    (m.topic && m.topic.toLowerCase().includes(term));
+
+  const resetPager = (source) => {
+    expandedRef.current = {};
+    const total = source.length;
+    const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    pageRef.current = 1;
+    renderPage(1);
+    setPager({ total, page: 1, totalPages });
+  };
+
+  const applySearch = () => {
+    const term = searchQuery.trim().toLowerCase();
+    searchTermRef.current = term;
+    filteredRef.current = term
+      ? allMsgsRef.current.filter((m) => msgMatchesTerm(m, term))
+      : null;
+    resetPager(filteredRef.current ?? allMsgsRef.current);
+  };
+
+  const clearSearch = () => {
+    searchTermRef.current = '';
+    filteredRef.current = null;
+    setSearchQuery('');
+    resetPager(allMsgsRef.current);
   };
 
   const handleClear = async () => {
@@ -715,9 +764,30 @@ export function KafkaPanel({ onToggle, asTab = false, onOpenAsTab, onReturnToPan
                     </div>
                   </div>
                 )}
+                {allMsgsRef.current.length > 0 && (
+                  <div className="kafka-search-bar">
+                    <input
+                      className="kafka-search-input"
+                      type="text"
+                      placeholder="Search messages…"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') applySearch(); }}
+                      spellCheck={false}
+                    />
+                    <button className="kafka-btn" onClick={applySearch} title="Search">Search</button>
+                    {filteredRef.current !== null && (
+                      <button className="kafka-btn" onClick={clearSearch} title="Clear search">Clear</button>
+                    )}
+                  </div>
+                )}
                 {pager.total === 0 && (
                   <div className="kafka-feed-empty">
-                    {listenedTopics.length === 0 ? 'Press ▶ on a topic to start a live feed' : 'Waiting for messages…'}
+                    {listenedTopics.length === 0
+                      ? 'Press ▶ on a topic to start a live feed'
+                      : filteredRef.current !== null
+                        ? 'No messages match the search'
+                        : 'Waiting for messages…'}
                   </div>
                 )}
                 <div className="kafka-feed-messages" ref={feedRef} />

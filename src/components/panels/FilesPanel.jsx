@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { formatFileSize } from '../../utils.js';
 import { IconFolderSvg, IconFileSvg } from '../toolbar/Icons.jsx';
 
@@ -12,7 +12,13 @@ function formatFileMtime(ms) {
   return d.toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
-export function FilesPanel({ currentDir, onNavigate, onOpenNotebook, notebookDir }) {
+function folderLabel(path) {
+  const normalized = path.replace(/\\/g, '/').replace(/\/$/, '');
+  return normalized.split('/').filter(Boolean).pop() || path;
+}
+
+export function FilesPanel({ currentDir, onNavigate, onOpenNotebook, notebookDir,
+                             favoriteFolders = [], onToggleFavorite }) {
   const [entries, setEntries]           = useState([]);
   const [parentDir, setParentDir]       = useState(null);
   const [loading, setLoading]           = useState(false);
@@ -22,6 +28,7 @@ export function FilesPanel({ currentDir, onNavigate, onOpenNotebook, notebookDir
   const [renameDraft, setRenameDraft]   = useState('');
   const [creating, setCreating]         = useState(false);
   const [createDraft, setCreateDraft]   = useState('');
+  const [favsCollapsed, setFavsCollapsed] = useState(false);
   const renameRef    = useRef(null);
   const createRef    = useRef(null);
 
@@ -109,8 +116,9 @@ export function FilesPanel({ currentDir, onNavigate, onOpenNotebook, notebookDir
     setCreateDraft('');
   };
 
-  // Breadcrumb segments from currentDir
-  const crumbs = (() => {
+  const isFavorite = currentDir && favoriteFolders.includes(currentDir);
+
+  const crumbs = useMemo(() => {
     if (!currentDir) return [];
     const normalized = currentDir.replace(/\\/g, '/');
     const isAbsolute = normalized.startsWith('/');
@@ -123,7 +131,7 @@ export function FilesPanel({ currentDir, onNavigate, onOpenNotebook, notebookDir
       });
     });
     return result;
-  })();
+  }, [currentDir]);
 
   return (
     <div className="files-panel"
@@ -168,10 +176,47 @@ export function FilesPanel({ currentDir, onNavigate, onOpenNotebook, notebookDir
             </svg>
           </button>
         )}
+        {onToggleFavorite && currentDir && (
+          <button
+            className={`files-fav-btn${isFavorite ? ' active' : ''}`}
+            onClick={() => onToggleFavorite(currentDir)}
+            title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+          >★</button>
+        )}
         <button className="files-new-folder-btn" onClick={() => { setCreating(true); setCreateDraft(''); }}
                 title="New folder">+</button>
         <button className="files-refresh-btn" onClick={refresh} title="Refresh">↺</button>
       </div>
+
+      {/* Favorites sub-panel */}
+      {favoriteFolders.length > 0 && (
+        <div className="files-favorites">
+          <div className="files-favorites-header" onClick={() => setFavsCollapsed((v) => !v)}>
+            <span className="files-favorites-arrow">{favsCollapsed ? '▸' : '▾'}</span>
+            <span className="files-favorites-title">Favorites</span>
+          </div>
+          {!favsCollapsed && (
+            <div className="files-favorites-list">
+              {favoriteFolders.map((path) => (
+                <div
+                  key={path}
+                  className={`files-fav-entry${currentDir === path ? ' files-fav-active' : ''}`}
+                  onClick={() => loadDir(path)}
+                  title={path}
+                >
+                  <span className="files-icon"><IconFolderSvg /></span>
+                  <span className="files-fav-label">{folderLabel(path)}</span>
+                  <button
+                    className="files-fav-remove"
+                    onClick={(e) => { e.stopPropagation(); onToggleFavorite(path); }}
+                    title="Remove from favorites"
+                  >×</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* File list */}
       <div className="files-list">

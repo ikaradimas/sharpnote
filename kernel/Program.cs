@@ -279,6 +279,12 @@ partial class Program
                     break;
                 }
 
+                case "db_redis_scan":
+                {
+                    await HandleDbRedisScan(msg, realStdout);
+                    break;
+                }
+
                 case "widget_change":
                 {
                     if (msg.TryGetProperty("widgetKey", out var wkProp))

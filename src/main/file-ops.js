@@ -73,6 +73,10 @@ function register(ipcMain, { app, shell }) {
   });
 
   handle('fs-get-home', () => app.getPath('home'));
+  handle('get-env-var', (_event, name) => {
+    if (typeof name !== 'string' || !name) return '';
+    return process.env[name] ?? '';
+  });
 }
 
 // Auto-register IPC handlers when running under Vitest so tests can

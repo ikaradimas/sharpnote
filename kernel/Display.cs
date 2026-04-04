@@ -299,8 +299,9 @@ public class DisplayHelper
     /// Pushes a single numeric data point to the Graph panel immediately, without waiting
     /// for the cell to finish. Useful for plotting loop variables in real time.
     /// Use <see cref="PlotMode.RateOfChange"/> to plot the delta from the previous call instead of the raw value.
+    /// Use <paramref name="axis"/> to assign the series to the right y-axis (<c>"y2"</c>); defaults to left (<c>"y"</c>).
     /// </summary>
-    public void Plot(string name, double value, PlotMode mode = PlotMode.Value)
+    public void Plot(string name, double value, PlotMode mode = PlotMode.Value, string axis = "y")
     {
         double plotValue = value;
         if (mode == PlotMode.RateOfChange)
@@ -308,7 +309,8 @@ public class DisplayHelper
             plotValue = _plotLastValues.TryGetValue(name, out var prev) ? value - prev : 0;
         }
         _plotLastValues[name] = value;
-        Send(new { type = "var_point", name, value = plotValue });
+        Send(new { type = "var_point", name, value = plotValue,
+                   time = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), axis });
     }
 
     /// <summary>

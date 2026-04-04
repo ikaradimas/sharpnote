@@ -142,7 +142,7 @@ describe('KernelPanelControl — config_set', () => {
     const opts = mountHook();
     act(() => emit('nb-1', 'config_set', { key: 'env', value: 'staging' }));
     const [, updater] = opts.setNb.mock.calls.find(([id]) => id === 'nb-1') ?? [];
-    expect(updater({ config: [] }).config).toEqual([{ key: 'env', value: 'staging' }]);
+    expect(updater({ config: [] }).config).toEqual([{ key: 'env', value: 'staging', type: 'string' }]);
   });
 
   it('updates an existing key in-place', () => {

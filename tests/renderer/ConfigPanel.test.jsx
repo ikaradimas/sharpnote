@@ -38,7 +38,7 @@ describe('ConfigPanel', () => {
     fireEvent.change(keyInput, { target: { value: 'MY_KEY' } });
     fireEvent.change(valInput, { target: { value: 'my-value' } });
     fireEvent.click(screen.getByText('+ Add'));
-    expect(onAdd).toHaveBeenCalledWith('MY_KEY', 'my-value');
+    expect(onAdd).toHaveBeenCalledWith('MY_KEY', 'my-value', 'string', undefined);
   });
 
   it('add: empty key does not fire onAdd', () => {
@@ -63,7 +63,7 @@ describe('ConfigPanel', () => {
     render(<ConfigPanel {...defaultProps({ config, onUpdate })} />);
     const valueInput = screen.getByDisplayValue('old');
     fireEvent.change(valueInput, { target: { value: 'new' } });
-    expect(onUpdate).toHaveBeenCalledWith(0, 'new');
+    expect(onUpdate).toHaveBeenCalledWith(0, { value: 'new' });
   });
 
   it('close button fires onToggle', () => {
@@ -80,6 +80,83 @@ describe('ConfigPanel', () => {
     const keyInput = screen.getByPlaceholderText('Key');
     fireEvent.change(keyInput, { target: { value: 'K' } });
     fireEvent.keyDown(keyInput, { key: 'Enter' });
-    expect(onAdd).toHaveBeenCalledWith('K', '');
+    expect(onAdd).toHaveBeenCalledWith('K', '', 'string', undefined);
+  });
+
+  it('renders type dropdown for existing entries', () => {
+    const config = [{ key: 'K', value: 'V', type: 'secret' }];
+    render(<ConfigPanel {...defaultProps({ config })} />);
+    const select = document.querySelector('.config-item .config-type-select');
+    expect(select).not.toBeNull();
+    expect(select.value).toBe('secret');
+  });
+
+  it('changing type dropdown fires onUpdate with { type }', () => {
+    const onUpdate = vi.fn();
+    const config = [{ key: 'K', value: 'V', type: 'string' }];
+    render(<ConfigPanel {...defaultProps({ config, onUpdate })} />);
+    const select = document.querySelector('.config-item .config-type-select');
+    fireEvent.change(select, { target: { value: 'number' } });
+    expect(onUpdate).toHaveBeenCalledWith(0, { type: 'number' });
+  });
+
+  it('renders envVar input for existing entries', () => {
+    const config = [{ key: 'K', value: 'V', envVar: 'MY_ENV' }];
+    render(<ConfigPanel {...defaultProps({ config })} />);
+    expect(screen.getByDisplayValue('MY_ENV')).toBeInTheDocument();
+  });
+
+  it('changing envVar input fires onUpdate with { envVar }', () => {
+    const onUpdate = vi.fn();
+    const config = [{ key: 'K', value: 'V' }];
+    render(<ConfigPanel {...defaultProps({ config, onUpdate })} />);
+    const envInput = document.querySelector('.config-item .config-env-input');
+    fireEvent.change(envInput, { target: { value: 'NEW_ENV' } });
+    expect(onUpdate).toHaveBeenCalledWith(0, { envVar: 'NEW_ENV' });
+  });
+
+  it('show/hide secrets button renders', () => {
+    render(<ConfigPanel {...defaultProps()} />);
+    const btn = document.querySelector('.config-show-btn');
+    expect(btn).not.toBeNull();
+    expect(btn.title).toBe('Show secret values');
+  });
+
+  it('clicking show/hide secrets toggles button state', () => {
+    render(<ConfigPanel {...defaultProps()} />);
+    const btn = document.querySelector('.config-show-btn');
+    expect(btn.textContent).toBe('◎');
+    fireEvent.click(btn);
+    expect(btn.textContent).toBe('◉');
+    expect(btn.title).toBe('Hide secret values');
+  });
+
+  it('secret entries use password type when secrets hidden', () => {
+    const config = [{ key: 'TOKEN', value: 'abc', type: 'secret' }];
+    render(<ConfigPanel {...defaultProps({ config })} />);
+    const valueInput = document.querySelector('.config-item .config-value-input');
+    expect(valueInput.type).toBe('password');
+  });
+
+  it('secret entries use text type when secrets shown', () => {
+    const config = [{ key: 'TOKEN', value: 'abc', type: 'secret' }];
+    render(<ConfigPanel {...defaultProps({ config })} />);
+    const btn = document.querySelector('.config-show-btn');
+    fireEvent.click(btn);
+    const valueInput = document.querySelector('.config-item .config-value-input');
+    expect(valueInput.type).toBe('text');
+  });
+
+  it('add row with type and envVar fires onAdd with all params', () => {
+    const onAdd = vi.fn();
+    render(<ConfigPanel {...defaultProps({ onAdd })} />);
+    fireEvent.change(screen.getByPlaceholderText('Key'), { target: { value: 'SECRET_KEY' } });
+    fireEvent.change(screen.getByPlaceholderText('Value'), { target: { value: 's3cret' } });
+    const addRowSelects = document.querySelectorAll('.config-add-row .config-type-select');
+    fireEvent.change(addRowSelects[0], { target: { value: 'secret' } });
+    const envInputs = document.querySelectorAll('.config-add-row .config-env-input');
+    fireEvent.change(envInputs[0], { target: { value: 'MY_SECRET' } });
+    fireEvent.click(screen.getByText('+ Add'));
+    expect(onAdd).toHaveBeenCalledWith('SECRET_KEY', 's3cret', 'secret', 'MY_SECRET');
   });
 });

@@ -76,8 +76,10 @@ export function App() {
   const [libraryPanelOpen, setLibraryPanelOpen] = useState(false);
   const [filesPanelOpen, setFilesPanelOpen]     = useState(false);
   const [apiPanelOpen, setApiPanelOpen]         = useState(false);
-  const [kafkaPanelOpen, setKafkaPanelOpen]     = useState(false);
   const [filesCurrentDir, setFilesCurrentDir]   = useState(null);
+  const [favoriteFolders, setFavoriteFolders]   = useState([]);
+  const favoriteFoldersRef = useRef([]);
+  useEffect(() => { favoriteFoldersRef.current = favoriteFolders; }, [favoriteFolders]);
   const [libEditors, setLibEditors] = useState([]);
   const libEditorsRef = useRef([]);
   useEffect(() => { libEditorsRef.current = libEditors; }, [libEditors]);
@@ -118,7 +120,13 @@ export function App() {
 
   const setPanelVisible = useCallback((panelId, open) => {
     // open: true = open, false = close, null = toggle
-    const globalSetters = { library: setLibraryPanelOpen, files: setFilesPanelOpen, api: setApiPanelOpen, kafka: setKafkaPanelOpen };
+    if (panelId === 'kafka') {
+      // Kafka always opens as a tab, not a dock panel
+      const shouldOpen = open === null ? !kafkaTabOpen : open;
+      if (shouldOpen) handleOpenKafkaTab(); else handleCloseKafkaTab();
+      return;
+    }
+    const globalSetters = { library: setLibraryPanelOpen, files: setFilesPanelOpen, api: setApiPanelOpen };
     const nbFlagMap = {
       log: 'logPanelOpen', nuget: 'nugetPanelOpen', config: 'configPanelOpen',
       db: 'dbPanelOpen', vars: 'varsPanelOpen', toc: 'tocPanelOpen',
@@ -132,7 +140,7 @@ export function App() {
       if (flag && isNotebookId(nbId))
         setNb(nbId, open === null ? (n) => ({ [flag]: !n[flag] }) : { [flag]: open });
     }
-  }, [setNb, setLibraryPanelOpen, setFilesPanelOpen, setApiPanelOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [setNb, setLibraryPanelOpen, setFilesPanelOpen, setApiPanelOpen, handleOpenKafkaTab, handleCloseKafkaTab, kafkaTabOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const setPanelDock = useCallback((panelId, zone, size) => {
     setDockLayout((prev) => {
@@ -165,7 +173,6 @@ export function App() {
     setLibraryPanelOpen(false);
     setFilesPanelOpen(false);
     setApiPanelOpen(false);
-    setKafkaPanelOpen(false);
     const nbId = activeIdRef.current;
     if (isNotebookId(nbId))
       setNb(nbId, () => ({
@@ -173,7 +180,7 @@ export function App() {
         dbPanelOpen: false, varsPanelOpen: false, tocPanelOpen: false,
         graphPanelOpen: false, todoPanelOpen: false, regexPanelOpen: false,
       }));
-  }, [setNb, setLibraryPanelOpen, setFilesPanelOpen, setApiPanelOpen, setKafkaPanelOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [setNb, setLibraryPanelOpen, setFilesPanelOpen, setApiPanelOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { runCell, runSqlCell, runAll, runFrom, runTo, handleInterrupt, handleReset,
           cancelPendingCells } =
@@ -214,36 +221,32 @@ export function App() {
       pinnedTabs: [...pinnedPathsRef.current],
       dockLayout: dockLayoutRef.current,
       savedLayouts: savedLayoutsRef.current,
+      favoriteFolders: favoriteFoldersRef.current,
     });
   };
 
-  // ── DB connections: load on mount, persist on change ──────────────────────
+  // ── DB connections + app settings: load in parallel on mount ──────────────
   const dbLoadedRef = useRef(null);
   useEffect(() => {
-    window.electronAPI?.loadDbConnections().then((list) => {
-      if (Array.isArray(list)) {
-        dbLoadedRef.current = list;
-        setDbConnections(list);
+    const api = window.electronAPI;
+    if (!api) return;
+    Promise.all([
+      api.loadDbConnections().catch(() => null),
+      api.loadAppSettings().catch(() => null),
+    ]).then(([dbList, s]) => {
+      // DB connections
+      if (Array.isArray(dbList)) {
+        dbLoadedRef.current = dbList;
+        setDbConnections(dbList);
       }
-    }).catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    // Skip the initial empty state and the freshly-loaded data.
-    if (dbConnections === dbLoadedRef.current || dbConnections.length === 0) return;
-    window.electronAPI?.saveDbConnections(dbConnections);
-  }, [dbConnections]);
-
-  // ── App settings: load on mount ───────────────────────────────────────────
-  useEffect(() => {
-    window.electronAPI?.loadAppSettings().then((s) => {
+      // App settings
       if (s?.theme) setTheme(s.theme);
       if (typeof s?.lineAltEnabled === 'boolean') setLineAltEnabled(s.lineAltEnabled);
       if (typeof s?.lintEnabled === 'boolean') setLintEnabled(s.lintEnabled);
       if (typeof s?.tablePageSize === 'number') setTablePageSize(s.tablePageSize);
       if (s?.customShortcuts && typeof s.customShortcuts === 'object') {
         setCustomShortcuts(s.customShortcuts);
-        window.electronAPI?.rebuildMenu(s.customShortcuts);
+        api.rebuildMenu(s.customShortcuts);
       }
       if (s?.dockLayout) {
         setDockLayout({
@@ -254,11 +257,18 @@ export function App() {
         });
       }
       if (Array.isArray(s?.savedLayouts)) setSavedLayouts(s.savedLayouts);
+      if (Array.isArray(s?.favoriteFolders)) setFavoriteFolders(s.favoriteFolders);
       settingsLoadedRef.current = true;
       const pinned = Array.isArray(s?.pinnedTabs) ? s.pinnedTabs : [];
       if (pinned.length > 0) openPinnedNotebooks(pinned);
-    }).catch(() => {});
+    });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    // Skip the initial empty state and the freshly-loaded data.
+    if (dbConnections === dbLoadedRef.current || dbConnections.length === 0) return;
+    window.electronAPI?.saveDbConnections(dbConnections);
+  }, [dbConnections]);
 
   // ── Theme + lineAlt: apply to DOM, persist on change ─────────────────────
   useEffect(() => { document.documentElement.dataset.theme = theme; }, [theme]);
@@ -627,6 +637,28 @@ export function App() {
     return result;
   }, [setDockLayout, setSavedLayouts]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const handleExportDbConnections = useCallback(async () => {
+    // Export unencrypted — strip the encrypted flag so the file is plaintext
+    const plain = dbConnectionsRef.current.map(({ encrypted, ...c }) => c);
+    return window.electronAPI?.exportDbConnections(plain);
+  }, []);
+
+  const handleImportDbConnections = useCallback(async () => {
+    const result = await window.electronAPI?.importDbConnections();
+    if (!result?.success || !result?.data) return result;
+    // Merge: imported connections replace existing ones with the same id, others are appended
+    setDbConnections((prev) => {
+      const merged = [...prev];
+      for (const imported of result.data) {
+        const idx = merged.findIndex((c) => c.id === imported.id);
+        if (idx >= 0) merged[idx] = imported; else merged.push(imported);
+      }
+      window.electronAPI?.saveDbConnections(merged);
+      return merged;
+    });
+    return result;
+  }, []);
+
   // ── Quit handlers ──────────────────────────────────────────────────────────
 
   const handleQuitSave = useCallback(async (selectedIds) => {
@@ -767,11 +799,10 @@ export function App() {
     toc:     isNotebookId(activeId) ? (activeNb?.tocPanelOpen    ?? false) : false,
     files:   filesPanelOpen,
     api:     apiPanelOpen,
-    kafka:   kafkaPanelOpen,
     graph:   isNotebookId(activeId) ? (activeNb?.graphPanelOpen  ?? false) : false,
     todo:    isNotebookId(activeId) ? (activeNb?.todoPanelOpen   ?? false) : false,
     regex:   isNotebookId(activeId) ? (activeNb?.regexPanelOpen  ?? false) : false,
-  }), [activeId, activeNb, libraryPanelOpen, filesPanelOpen, apiPanelOpen, kafkaPanelOpen]);
+  }), [activeId, activeNb, libraryPanelOpen, filesPanelOpen, apiPanelOpen]);
 
   const panelPropsMap = useMemo(() => {
     const nbId = activeNb?.id ?? null;
@@ -806,10 +837,10 @@ export function App() {
       config: {
         onToggle: nbId ? () => setNb(nbId, (n) => ({ configPanelOpen: !n.configPanelOpen })) : () => {},
         config: activeNb?.config ?? [],
-        onAdd:    nbId ? (k, v) => setNbDirty(nbId, (n) => ({ config: [...n.config, { key: k, value: v }] })) : () => {},
+        onAdd:    nbId ? (k, v, type, envVar) => setNbDirty(nbId, (n) => ({ config: [...n.config, { key: k, value: v, type: type || 'string', envVar }] })) : () => {},
         onRemove: nbId ? (i)    => setNbDirty(nbId, (n) => ({ config: n.config.filter((_, idx) => idx !== i) })) : () => {},
-        onUpdate: nbId ? (i, val) => setNbDirty(nbId, (n) => ({
-          config: n.config.map((e, idx) => idx === i ? { ...e, value: val } : e),
+        onUpdate: nbId ? (i, updates) => setNbDirty(nbId, (n) => ({
+          config: n.config.map((e, idx) => idx === i ? { ...e, ...updates } : e),
         })) : () => {},
       },
       db: {
@@ -823,6 +854,9 @@ export function App() {
         onRetry:   nbId ? (connId) => handleRetryDb(nbId, connId)   : () => {},
         onEditConnection: (conn) => setDbConnDialog(conn === null ? 'new' : conn),
         onRemove: handleRemoveDbConnection,
+        onLoadMoreRedis: nbId ? (connId, cursor) => {
+          window.electronAPI?.sendToKernel(nbId, { type: 'db_redis_scan', connectionId: connId, cursor });
+        } : () => {},
       },
       library: {
         onInsert:   handleInsertLibraryFile,
@@ -856,16 +890,18 @@ export function App() {
         notebookDir: activeNb?.path
           ? (() => { const p = activeNb.path.replace(/\\/g, '/'); return p.slice(0, p.lastIndexOf('/')); })()
           : null,
+        favoriteFolders,
+        onToggleFavorite: (path) => {
+          setFavoriteFolders((prev) => {
+            const next = prev.includes(path) ? prev.filter((p) => p !== path) : [...prev, path];
+            favoriteFoldersRef.current = next;
+            saveSettingsRef.current();
+            return next;
+          });
+        },
       },
       api: {
         onToggle: () => setApiPanelOpen((v) => !v),
-      },
-      kafka: {
-        onToggle: () => setKafkaPanelOpen((v) => !v),
-        onOpenAsTab: () => { setKafkaPanelOpen(false); handleOpenKafkaTab(); },
-        onTabAction: () => { setKafkaPanelOpen(false); handleOpenKafkaTab(); },
-        onTabActionIcon: '↗',
-        onTabActionTitle: 'Open as tab',
       },
       graph: {
         onToggle: nbId ? () => setNb(nbId, (n) => ({ graphPanelOpen: !n.graphPanelOpen })) : () => {},
@@ -880,7 +916,7 @@ export function App() {
       regex: {},
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeNb, dbConnections, filesPanelOpen, filesCurrentDir, apiPanelOpen, kafkaPanelOpen]);
+  }, [activeNb, dbConnections, filesPanelOpen, filesCurrentDir, apiPanelOpen, favoriteFolders]);
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -914,7 +950,6 @@ export function App() {
         kafkaTabOpen={kafkaTabOpen}
         onActivateKafka={handleOpenKafkaTab}
         onCloseKafka={handleCloseKafkaTab}
-        onKafkaReturnToPanel={() => { handleCloseKafkaTab(); setKafkaPanelOpen(true); }}
         libEditors={libEditors}
         onCloseLibEditor={handleCloseLibEditor}
         pinnedPaths={pinnedPaths}
@@ -963,10 +998,9 @@ export function App() {
                       if (!apiPanelOpen) handleFocusPanel('api');
                       setApiPanelOpen((v) => !v);
                     }}
-                    kafkaPanelOpen={kafkaPanelOpen}
+                    kafkaPanelOpen={kafkaTabOpen}
                     onToggleKafka={() => {
-                      if (!kafkaPanelOpen) handleFocusPanel('kafka');
-                      setKafkaPanelOpen((v) => !v);
+                      if (kafkaTabOpen) handleCloseKafkaTab(); else handleOpenKafkaTab();
                     }}
                     onFocusPanel={handleFocusPanel}
                     theme={theme}
@@ -1015,10 +1049,6 @@ export function App() {
                   <KafkaPanel
                     asTab
                     onToggle={handleCloseKafkaTab}
-                    onReturnToPanel={() => {
-                      handleCloseKafkaTab();
-                      setKafkaPanelOpen(true);
-                    }}
                   />
                 </div>
               )}
@@ -1067,6 +1097,8 @@ export function App() {
           onUnpin={handleTogglePin}
           onExport={handleExportSettings}
           onImport={handleImportSettings}
+          onExportDb={handleExportDbConnections}
+          onImportDb={handleImportDbConnections}
           onClose={() => setSettingsOpen(false)}
         />
       )}

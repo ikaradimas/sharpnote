@@ -52,25 +52,28 @@ partial class Program
         using var __sql_cmd__ = __sql_conn__.CreateCommand();
         __sql_cmd__.CommandText = @"{{escapedSql}}";
         using var __sql_reader__ = await __sql_cmd__.ExecuteReaderAsync();
-        var __sql_cols__ = Enumerable.Range(0, __sql_reader__.FieldCount)
-            .Select(i => __sql_reader__.GetName(i)).ToList();
-        var __sql_rows__ = new List<Dictionary<string, object?>>();
-        while (await __sql_reader__.ReadAsync())
+        do
         {
-            var __sql_row__ = new Dictionary<string, object?>();
-            for (int __i__ = 0; __i__ < __sql_reader__.FieldCount; __i__++)
-                __sql_row__[__sql_cols__[__i__]] = __sql_reader__.IsDBNull(__i__) ? null : __sql_reader__.GetValue(__i__);
-            __sql_rows__.Add(__sql_row__);
-        }
-        if (__sql_rows__.Count > 0)
-        {
-            __sql_rows__.DisplayTable();
-        }
-        else
-        {
-            var __sql_aff__ = __sql_reader__.RecordsAffected;
-            Display.Html($"<div class=\"sql-status\">{(__sql_aff__ >= 0 ? $"{__sql_aff__} row{(__sql_aff__ == 1 ? "" : "s")} affected" : "Query executed.")}</div>");
-        }
+            var __sql_cols__ = Enumerable.Range(0, __sql_reader__.FieldCount)
+                .Select(i => __sql_reader__.GetName(i)).ToList();
+            var __sql_rows__ = new List<Dictionary<string, object?>>();
+            while (await __sql_reader__.ReadAsync())
+            {
+                var __sql_row__ = new Dictionary<string, object?>();
+                for (int __i__ = 0; __i__ < __sql_reader__.FieldCount; __i__++)
+                    __sql_row__[__sql_cols__[__i__]] = __sql_reader__.IsDBNull(__i__) ? null : __sql_reader__.GetValue(__i__);
+                __sql_rows__.Add(__sql_row__);
+            }
+            if (__sql_rows__.Count > 0)
+            {
+                __sql_rows__.DisplayTable();
+            }
+            else
+            {
+                var __sql_aff__ = __sql_reader__.RecordsAffected;
+                Display.Html($"<div class=\"sql-status\">{(__sql_aff__ >= 0 ? $"{__sql_aff__} row{(__sql_aff__ == 1 ? "" : "s")} affected" : "Query executed.")}</div>");
+            }
+        } while (await __sql_reader__.NextResultAsync());
     }
     finally
     {

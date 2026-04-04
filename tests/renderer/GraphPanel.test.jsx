@@ -4,6 +4,9 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { GraphPanel } from '../../src/renderer.jsx';
 
+// Helper: create point objects in the new { v, t, axis } format
+const pt = (v, axis = 'y') => ({ v, t: Date.now(), axis });
+
 // ── Empty state ────────────────────────────────────────────────────────────────
 
 describe('GraphPanel — empty state', () => {
@@ -20,7 +23,11 @@ describe('GraphPanel — empty state', () => {
 
 // ── Populated state ────────────────────────────────────────────────────────────
 
-const HIST = { x: [1, 2, 3], y: [4, 5, 6], z: [7, 8] };
+const HIST = {
+  x: [pt(1), pt(2), pt(3)],
+  y: [pt(4), pt(5), pt(6)],
+  z: [pt(7), pt(8)],
+};
 
 describe('GraphPanel — with variables', () => {
   it('renders variable checkboxes for each var', () => {
@@ -37,14 +44,13 @@ describe('GraphPanel — with variables', () => {
 
   it('shows "Select a variable" prompt when all unchecked', () => {
     render(<GraphPanel varHistory={HIST} />);
-    // Uncheck all checkboxes
     const boxes = document.querySelectorAll('.graph-var-check');
     boxes.forEach((cb) => { if (cb.checked) fireEvent.click(cb); });
     expect(screen.getByText(/Select a variable above to plot/)).toBeInTheDocument();
   });
 
   it('toggling a checked var removes it from selection', () => {
-    render(<GraphPanel varHistory={{ a: [1, 2] }} />);
+    render(<GraphPanel varHistory={{ a: [pt(1), pt(2)] }} />);
     const cb = document.querySelector('.graph-var-check');
     expect(cb.checked).toBe(true);
     fireEvent.click(cb);
@@ -52,11 +58,17 @@ describe('GraphPanel — with variables', () => {
   });
 
   it('toggling an unchecked var adds it back', () => {
-    render(<GraphPanel varHistory={{ a: [1, 2] }} />);
+    render(<GraphPanel varHistory={{ a: [pt(1), pt(2)] }} />);
     const cb = document.querySelector('.graph-var-check');
     fireEvent.click(cb); // uncheck
     fireEvent.click(cb); // re-check
     expect(cb.checked).toBe(true);
+  });
+
+  it('handles legacy plain-number points gracefully', () => {
+    render(<GraphPanel varHistory={{ x: [1, 2, 3] }} />);
+    expect(screen.getByText('x')).toBeInTheDocument();
+    expect(document.querySelector('canvas')).toBeInTheDocument();
   });
 });
 
@@ -111,39 +123,39 @@ describe('GraphPanel — clear button', () => {
 
 describe('GraphPanel — avg/max overlays', () => {
   it('renders avg and max checkboxes for each variable', () => {
-    render(<GraphPanel varHistory={{ x: [1, 2, 3] }} />);
+    render(<GraphPanel varHistory={{ x: [pt(1), pt(2), pt(3)] }} />);
     expect(screen.getByTitle('Show average line')).toBeInTheDocument();
     expect(screen.getByTitle('Show max line')).toBeInTheDocument();
   });
 
   it('avg checkbox is unchecked by default', () => {
-    render(<GraphPanel varHistory={{ x: [1, 2, 3] }} />);
+    render(<GraphPanel varHistory={{ x: [pt(1), pt(2), pt(3)] }} />);
     const avgBox = screen.getByTitle('Show average line').querySelector('input');
     expect(avgBox.checked).toBe(false);
   });
 
   it('max checkbox is unchecked by default', () => {
-    render(<GraphPanel varHistory={{ x: [1, 2, 3] }} />);
+    render(<GraphPanel varHistory={{ x: [pt(1), pt(2), pt(3)] }} />);
     const maxBox = screen.getByTitle('Show max line').querySelector('input');
     expect(maxBox.checked).toBe(false);
   });
 
   it('avg checkbox becomes checked after click', () => {
-    render(<GraphPanel varHistory={{ x: [1, 2, 3] }} />);
+    render(<GraphPanel varHistory={{ x: [pt(1), pt(2), pt(3)] }} />);
     const avgBox = screen.getByTitle('Show average line').querySelector('input');
     fireEvent.click(avgBox);
     expect(avgBox.checked).toBe(true);
   });
 
   it('max checkbox becomes checked after click', () => {
-    render(<GraphPanel varHistory={{ x: [1, 2, 3] }} />);
+    render(<GraphPanel varHistory={{ x: [pt(1), pt(2), pt(3)] }} />);
     const maxBox = screen.getByTitle('Show max line').querySelector('input');
     fireEvent.click(maxBox);
     expect(maxBox.checked).toBe(true);
   });
 
   it('avg and max checkboxes can both be checked independently', () => {
-    render(<GraphPanel varHistory={{ x: [1, 2, 3] }} />);
+    render(<GraphPanel varHistory={{ x: [pt(1), pt(2), pt(3)] }} />);
     const avgBox = screen.getByTitle('Show average line').querySelector('input');
     const maxBox = screen.getByTitle('Show max line').querySelector('input');
     fireEvent.click(avgBox);
@@ -153,7 +165,7 @@ describe('GraphPanel — avg/max overlays', () => {
   });
 
   it('each variable has its own independent overlay checkboxes', () => {
-    render(<GraphPanel varHistory={{ x: [1, 2], y: [3, 4] }} />);
+    render(<GraphPanel varHistory={{ x: [pt(1), pt(2)], y: [pt(3), pt(4)] }} />);
     const avgBoxes = screen.getAllByTitle('Show average line');
     expect(avgBoxes).toHaveLength(2);
     fireEvent.click(avgBoxes[0].querySelector('input'));
@@ -189,5 +201,23 @@ describe('GraphPanel — legend toggle', () => {
     fireEvent.click(btn);
     fireEvent.click(btn);
     expect(btn.className).toContain('active');
+  });
+});
+
+// ── Dual y-axis ───────────────────────────────────────────────────────────────
+
+describe('GraphPanel — dual y-axis', () => {
+  it('shows R badge for variables on the y2 axis', () => {
+    const hist = { temp: [pt(22, 'y')], humidity: [pt(60, 'y2')] };
+    render(<GraphPanel varHistory={hist} />);
+    const badges = document.querySelectorAll('.graph-axis-badge');
+    expect(badges).toHaveLength(1);
+    expect(badges[0].textContent).toBe('R');
+  });
+
+  it('does not show R badge for variables on the default y axis', () => {
+    const hist = { temp: [pt(22)], pressure: [pt(1013)] };
+    render(<GraphPanel varHistory={hist} />);
+    expect(document.querySelectorAll('.graph-axis-badge')).toHaveLength(0);
   });
 });

@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="neonCyan" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#00f5d4"/>
+      <stop offset="100%" stop-color="#00bbf9"/>
+    </linearGradient>
+    <linearGradient id="neonPink" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f15bb5"/>
+      <stop offset="100%" stop-color="#9b5de5"/>
+    </linearGradient>
+    <linearGradient id="neonAmber" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#fee440"/>
+      <stop offset="100%" stop-color="#f9a826"/>
+    </linearGradient>
+    <filter id="neon">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+    <linearGradient id="bg" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0%" stop-color="#0a0a1a"/>
+      <stop offset="100%" stop-color="#12101f"/>
+    </linearGradient>
+    <filter id="neonglow">
+      <feGaussianBlur stdDeviation="12"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <!-- Opening curly brace — neon cyan -->
+  <g filter="url(#neon)">
+    <path d="M155,130 Q125,130 125,170 L125,230 Q125,256 100,256 Q125,256 125,282 L125,342 Q125,382 155,382"
+          fill="none" stroke="url(#neonCyan)" stroke-width="16" stroke-linecap="round"/>
+  </g>
+  <g filter="url(#neonglow)" opacity="0.3">
+    <path d="M155,130 Q125,130 125,170 L125,230 Q125,256 100,256 Q125,256 125,282 L125,342 Q125,382 155,382"
+          fill="none" stroke="#00f5d4" stroke-width="24"/>
+  </g>
+  <!-- Closing curly brace — neon pink -->
+  <g filter="url(#neon)">
+    <path d="M357,130 Q387,130 387,170 L387,230 Q387,256 412,256 Q387,256 387,282 L387,342 Q387,382 357,382"
+          fill="none" stroke="url(#neonPink)" stroke-width="16" stroke-linecap="round"/>
+  </g>
+  <g filter="url(#neonglow)" opacity="0.3">
+    <path d="M357,130 Q387,130 387,170 L387,230 Q387,256 412,256 Q387,256 387,282 L387,342 Q387,382 357,382"
+          fill="none" stroke="#f15bb5" stroke-width="24"/>
+  </g>
+  <!-- Sharp symbol in the center — neon amber -->
+  <g filter="url(#neon)">
+    <text x="195" y="310" font-family="'SF Mono','Menlo','Consolas',monospace"
+          font-size="180" font-weight="800" fill="url(#neonAmber)">#</text>
+  </g>
+  <g filter="url(#neonglow)" opacity="0.2">
+    <text x="195" y="310" font-family="'SF Mono','Menlo','Consolas',monospace"
+          font-size="180" font-weight="800" fill="#fee440">#</text>
+  </g>
+</svg>
