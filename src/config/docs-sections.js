@@ -1003,4 +1003,19 @@ export const DOCS_SECTIONS = [
       { type: 'code', text: '// Start a Redis container for testing\nvar id = Docker.Run("redis:7", name: "test-redis",\n    ports: new() { ["6379"] = "6379" });\n\n// Use it...\nawait Task.Delay(2000); // wait for startup\nDocker.IsRunning("test-redis").Display();\n\n// Clean up\nDocker.Stop("test-redis");\nDocker.Remove("test-redis");' },
     ],
   },
+  {
+    id: 'cli-execution', title: 'CLI / Headless Execution',
+    content: [
+      { type: 'p', text: 'Run notebooks from the command line without opening the GUI. Useful for CI/CD, cron jobs, and automated reporting.' },
+      { type: 'code', text: '# Basic execution\nelectron . run path/to/notebook.cnb\n\n# With config overrides\nelectron . run report.cnb --config Environment=prod --config ApiKey=secret\n\n# Output to file\nelectron . run report.cnb --output results.txt\n\n# JSON output\nelectron . run report.cnb --format json --output results.json' },
+      { type: 'ul', items: [
+        'All executable cells run sequentially (code, SQL, HTTP, shell, check)',
+        'Markdown cells are skipped',
+        'Config values can be overridden with --config key=value flags',
+        'Exit code 0 if all checks pass, 1 if any check fails',
+        'Output written to stdout by default, or to a file with --output',
+        'Use --format json for machine-readable structured output',
+      ]},
+    ],
+  },
 ];

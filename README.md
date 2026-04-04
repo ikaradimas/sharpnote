@@ -139,6 +139,7 @@
 - **Command Palette** — ⌘K / Ctrl+K opens a fuzzy-search overlay of every action in the app; keyboard-navigable with arrow keys and Enter; results filter as you type
 - **Keyboard Shortcuts** — Settings → Shortcuts shows all shortcuts grouped by category with a search box; click any reassignable shortcut to capture a custom key combination; custom bindings are persisted and applied to the application menu instantly
 - **Recent files** — last 12 opened notebooks persisted to `userData/recent-files.json`; exposed in the File menu
+- **CLI / headless execution** — run notebooks from the command line (`electron . run notebook.cnb`) without opening the GUI; supports `--config Key=Value` overrides, `--output path` to write results to a file, and `--format json` for machine-readable output; exits with code 0 when all checks pass, 1 on any failure; ideal for CI/CD, cron jobs, and automated reporting
 - **Dark theme** — purpose-built urban dark CSS; no UI framework dependency
 
 ---

@@ -4,6 +4,7 @@ const path = require('path');
 const fs   = require('fs');
 const { parseDib, parseIpynb } = require('./polyglot-import');
 const { encryptField, decryptField } = require('./db-connections');
+const notebookHistory = require('./notebook-history');
 
 let _mainWindow   = null;
 let _addRecentFile = null;
@@ -45,6 +46,7 @@ function decryptConfigSecrets(config) {
 }
 
 function writeNotebookFile(filePath, data) {
+  notebookHistory.saveSnapshot(filePath, data);
   const encrypted = { ...data, config: encryptConfigSecrets(data.config) };
   const tmp = filePath + '.tmp';
   fs.writeFileSync(tmp, JSON.stringify(encrypted, null, 2), 'utf-8');
@@ -193,4 +195,4 @@ function register(ipcMain, { mainWindow, dialog, addRecentFile, writeLog } = {})
   });
 }
 
-module.exports = { writeNotebookFile, init, setMainWindow, register };
+module.exports = { writeNotebookFile, decryptConfigSecrets, init, setMainWindow, register };

@@ -36,8 +36,9 @@ const notebookIo    = require('./src/main/notebook-io');
 const logOps        = require('./src/main/log-ops');
 const settings      = require('./src/main/settings');
 const apiSaved      = require('./src/main/api-saved');
-const kafka         = require('./dist/kafka');
-const menuBuilder   = require('./src/main/menu');
+const kafka           = require('./dist/kafka');
+const notebookHistory = require('./src/main/notebook-history');
+const menuBuilder     = require('./src/main/menu');
 
 // ── Process-level state ───────────────────────────────────────────────────────
 let mainWindow = null;
@@ -145,6 +146,8 @@ function registerAllHandlers() {
   apiSaved.register(ipcMain, { app });
 
   kafka.register(ipcMain, { app });
+
+  notebookHistory.register(ipcMain);
 
   // Settings export / import
   ipcMain.handle('settings-export', async (_event, data) => {
@@ -352,6 +355,18 @@ function registerAllHandlers() {
 
 // ── App lifecycle ─────────────────────────────────────────────────────────────
 app.whenReady().then(() => {
+  // ── Headless CLI execution ───────────────────────────────────────────────────
+  const cliArgs = process.argv.slice(process.defaultApp ? 3 : 2);
+  if (cliArgs[0] === 'run' && cliArgs.length > 1) {
+    const headless = require('./src/main/headless');
+    headless.run(app, cliArgs.slice(1)).then((code) => {
+      process.exitCode = code;
+      app.quit();
+    });
+    return;
+  }
+
+  // ── Normal GUI startup ─────────────────────────────────────────────────────
   recentFiles.loadRecentFiles(app.getPath('userData'));
   fs.mkdirSync(libraryDir, { recursive: true });
 
