@@ -98,7 +98,7 @@ export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef }) {
     if (!window.electronAPI) return;
     const result = await window.electronAPI.loadNotebook();
     if (!result.success || !result.data) return;
-    const nb = createNotebook(false);
+    const nb = createNotebook();
     setNotebooks((prev) => [...prev, {
       ...nb,
       path: result.filePath,
@@ -124,7 +124,7 @@ export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef }) {
       alert(`Could not open file:\n${result.error || 'File not found'}`);
       return;
     }
-    const nb = createNotebook(false);
+    const nb = createNotebook();
     setNotebooks((prev) => [...prev, {
       ...nb,
       path: result.filePath,
@@ -152,7 +152,7 @@ export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef }) {
     }
 
     const nb = {
-      ...createNotebook(false),
+      ...createNotebook(),
       title: result.title || 'Imported Notebook',
       path: null,
       cells: result.cells.map((c) => makeCell(c.type, c.content)),
@@ -169,14 +169,11 @@ export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef }) {
 
   // ── Tab management ─────────────────────────────────────────────────────────
 
-  const handleNew = useCallback(async () => {
-    if (!window.electronAPI) return;
-    const response = await window.electronAPI.showNewNotebookDialog();
-    if (response === 2) return;
-    const nb = createNotebook(response === 0);
+  const handleNew = useCallback((templateKey = undefined) => {
+    const nb = createNotebook(templateKey);
     setNotebooks((prev) => [...prev, nb]);
     setActiveId(nb.id);
-    window.electronAPI.startKernel(nb.id);
+    window.electronAPI?.startKernel(nb.id);
   }, []);
 
   const handleCloseTab = useCallback((tabId) => {
@@ -191,7 +188,7 @@ export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef }) {
 
     const remaining = current.filter((n) => n.id !== tabId);
     if (remaining.length === 0) {
-      const fresh = createNotebook(false);
+      const fresh = createNotebook();
       window.electronAPI?.startKernel(fresh.id);
       setNotebooks([fresh]);
       setActiveId(fresh.id);
@@ -428,7 +425,7 @@ ${cellsHtml}
     const toAdd = [];
     results.forEach((r) => {
       if (r.status !== 'fulfilled' || !r.value?.success) return;
-      const nb = createNotebook(false);
+      const nb = createNotebook();
       toAdd.push({
         nb: {
           ...nb,

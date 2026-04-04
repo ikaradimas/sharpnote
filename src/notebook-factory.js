@@ -22,15 +22,55 @@ export const DEFAULT_NUGET_SOURCES = [
   { name: 'nuget.org', url: 'https://api.nuget.org/v3/index.json', enabled: true },
 ];
 
-// ── Example notebook cells ────────────────────────────────────────────────────
+// ── Cell builder helpers ─────────────────────────────────────────────────────
 
-function makeExampleCells() {
-  const md = (content) => makeCell('markdown', content);
-  const cs = (content, outputMode = 'auto') =>
-    ({ ...makeCell('code', content), outputMode });
+const md = (content) => makeCell('markdown', content);
+const cs = (content, outputMode = 'auto') =>
+  ({ ...makeCell('code', content), outputMode });
 
+// ── Template registry ────────────────────────────────────────────────────────
+
+export const NOTEBOOK_TEMPLATES = [
+  { key: 'getting-started',  label: 'Getting Started',          description: 'Variables, LINQ, HTML, tables, extensions' },
+  { key: 'data-charts',      label: 'Data & Charts',            description: 'CSV import, Chart.js, dashboards' },
+  { key: 'databases',        label: 'Databases',                description: 'SQLite, EF Core, NuGet packages' },
+  { key: 'display-output',   label: 'Display & Rich Output',   description: 'Live updates, Mermaid, KaTeX, widgets' },
+  { key: 'scripting-utils',  label: 'Scripting & Utilities',   description: 'Logging, config, async, Util helpers' },
+  { key: 'workspace-panels', label: 'Workspace & Panels',      description: 'Panels API, dock/float, layout scripting' },
+];
+
+function cellsForTemplate(key) {
+  switch (key) {
+    case 'getting-started':  return makeGettingStartedCells();
+    case 'data-charts':      return makeDataChartsCells();
+    case 'databases':        return makeDatabasesCells();
+    case 'display-output':   return makeDisplayOutputCells();
+    case 'scripting-utils':  return makeScriptingUtilsCells();
+    case 'workspace-panels': return makeWorkspacePanelsCells();
+    default:                 return [];
+  }
+}
+
+function configForTemplate(key) {
+  if (key === 'scripting-utils') {
+    return [
+      { key: 'Environment', value: 'development', type: 'string' },
+      { key: 'ApiBaseUrl',  value: 'https://api.example.com', type: 'string', envVar: 'API_BASE_URL' },
+      { key: 'MaxRetries',  value: '5', type: 'number' },
+      { key: 'Verbose',     value: 'true', type: 'boolean' },
+      { key: 'ApiKey',      value: '', type: 'secret', envVar: 'API_KEY' },
+    ];
+  }
+  return [];
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Template 1 — Getting Started
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function makeGettingStartedCells() {
   return [
-    md(`# Notebook
+    md(`# Getting Started
 
 An interactive C# notebook. Press **Ctrl+Enter** to run a cell, or click **▶ Run**.
 
@@ -47,11 +87,11 @@ An interactive C# notebook. Press **Ctrl+Enter** to run a cell, or click **▶ R
 | Database | Attach via **DB** panel or \`Db.Add\` / \`Db.Attach\` → \`mydb.Users.ToList()\` |
 | Panels | \`Panels.Open/Close/CloseAll(PanelId.*)\` · \`Panels.Dock/Float\` |
 | Util | \`obj.Dump()\` · \`Util.Time()\` · \`Util.Dif()\` · \`Util.HorizontalRun()\` · \`Util.Cache()\` · \`Util.ConfirmAsync()\` |
-| Auto-render | Return a value — type is detected automatically |`),
+| Auto-render | Return a value — type is detected automatically |
 
-    md('## 1 · Basic C#'),
+> **More examples:** File → New Notebook → choose a template topic.`),
 
-    md('### Variables, LINQ, and Auto-render'),
+    md('## Variables, LINQ, and Auto-render'),
 
     cs(`// Variables, interpolation, LINQ
 var name = "SharpNote";
@@ -65,9 +105,7 @@ Console.WriteLine($"Evens: {string.Join(", ", evens)}");
 // Returning a value auto-renders it
 DateTime.Now`),
 
-    md('## 2 · HTML & Tables'),
-
-    md('### HTML Output and Tables'),
+    md('## HTML & Tables'),
 
     cs(`Display.Html(@"
   <h3 style='color:#4ec9b0;margin:0 0 6px'>Rich HTML output</h3>
@@ -81,9 +119,7 @@ var products = new[] {
 };
 Display.Table(products);`),
 
-    md('## 3 · Extension Methods'),
-
-    md('### Extension Methods'),
+    md('## Extension Methods'),
 
     cs(`// .Display() auto-detects type
 "Extension methods work directly on any object!".Display();
@@ -96,27 +132,68 @@ var cities = new[] {
   new { City = "Lisbon",  Country = "Portugal",Pop = 2_957_000 },
 };
 cities.DisplayTable();`),
+  ];
+}
 
-    md(`## 4 · NuGet Packages
+// ═══════════════════════════════════════════════════════════════════════════════
+// Template 2 — Data & Charts
+// ═══════════════════════════════════════════════════════════════════════════════
 
-Use \`#r "nuget: PackageName, Version"\` to load any NuGet package inline.
-The first run downloads and caches it; subsequent runs are instant.`),
+function makeDataChartsCells() {
+  return [
+    md(`# Data & Charts
 
-    md('### NuGet — Newtonsoft.Json'),
+Load data from files, render tables, and build interactive charts.`),
 
-    cs(`#r "nuget: Newtonsoft.Json, 13.0.3"
-using Newtonsoft.Json;
+    // ── CSV & Data Import ──────────────────────────────────────────────────
 
-var payload = new {
-  name         = "Ada Lovelace",
-  born         = 1815,
-  contributions = new[] { "First algorithm", "Analytical Engine notes" },
-};
+    md('## CSV & Data Import'),
 
-var json = JsonConvert.SerializeObject(payload, Formatting.Indented);
-Display.Html($"<pre style='color:#9cdcfe;margin:0'>{json}</pre>");`),
+    md('### Inline CSV'),
 
-    md('## 5 · Charts'),
+    cs(`// Parse and render CSV inline
+Display.Csv("Name,Score,Grade\\nAlice,95,A\\nBob,82,B\\nCharlie,78,C+\\nDiana,91,A-");`),
+
+    md(`### Data.LoadCsv — Load CSV files
+
+\`Data.LoadCsv(path)\` parses a CSV file and returns a \`List<Dictionary<string, object>>\`.
+Values are type-inferred (integers, doubles, booleans, strings). The result auto-displays as a table.
+
+Use **File → Import Data File** (⇧⌘I) to pick a file and generate the code automatically.
+Excel (.xlsx) and Parquet files are also supported via code-generated NuGet directives.`),
+
+    cs(`// Write a sample CSV, then load and display it
+var csvPath = Path.Combine(Path.GetTempPath(), "sample.csv");
+File.WriteAllText(csvPath, "Name,Age,Score,Active\\nAlice,30,95.5,true\\nBob,25,82.0,true\\nCharlie,35,78.3,false\\nDiana,28,91.1,true\\n");
+
+var data = Data.LoadCsv(csvPath);
+data  // auto-displayed as a sortable table`),
+
+    cs(`// LINQ on imported data — filter, project, aggregate
+var csvPath = Path.Combine(Path.GetTempPath(), "sample.csv");
+var data = Data.LoadCsv(csvPath);
+
+// Filter: only active people with score > 80
+var highScorers = data
+    .Where(r => (bool)r["Active"] && (double)r["Score"] > 80)
+    .Select(r => new { Name = r["Name"], Score = r["Score"] })
+    .ToList();
+highScorers.DisplayTable();
+
+// Aggregate
+var avgScore = data.Average(r => (double)r["Score"]);
+Console.WriteLine($"Average score: {avgScore:F1}");`),
+
+    cs(`// Tab-delimited and headerless files
+var tsvPath = Path.Combine(Path.GetTempPath(), "data.tsv");
+File.WriteAllText(tsvPath, "Alice\\t30\\nBob\\t25\\n");
+
+var tsv = Data.LoadCsv(tsvPath, hasHeader: false, delimiter: '\\t');
+tsv  // columns are named Col1, Col2, …`),
+
+    // ── Charts ─────────────────────────────────────────────────────────────
+
+    md('## Charts'),
 
     md('### Line Chart — Revenue vs Costs'),
 
@@ -208,202 +285,95 @@ new {
     },
 }`, 'graph'),
 
-    md('## 6 · CSV & Data Import'),
+    // ── Display.Layout dashboards ──────────────────────────────────────────
 
-    md('### Inline CSV'),
+    md(`## Display.Layout — Dashboard Grid
 
-    cs(`// Parse and render CSV inline
-Display.Csv("Name,Score,Grade\\nAlice,95,A\\nBob,82,B\\nCharlie,78,C+\\nDiana,91,A-");`),
+\`Display.Layout(columns, items...)\` arranges multiple outputs side-by-side in a grid.
+Wrap items with \`Display.Cell(title, content)\` to add per-cell titles.`),
 
-    md(`### Data.LoadCsv — Load CSV files
+    md('### Two-Column Dashboard'),
 
-\`Data.LoadCsv(path)\` parses a CSV file and returns a \`List<Dictionary<string, object>>\`.
-Values are type-inferred (integers, doubles, booleans, strings). The result auto-displays as a table.
+    cs(`// Two-column dashboard — tables and summary stats side by side
+var sales = new[] {
+    new { Region = "North", Q1 = 42, Q2 = 58, Q3 = 51, Q4 = 74 },
+    new { Region = "South", Q1 = 35, Q2 = 47, Q3 = 62, Q4 = 88 },
+    new { Region = "East",  Q1 = 29, Q2 = 41, Q3 = 55, Q4 = 63 },
+    new { Region = "West",  Q1 = 51, Q2 = 60, Q3 = 70, Q4 = 95 },
+};
 
-Use **File → Import Data File** (⇧⌘I) to pick a file and generate the code automatically.
-Excel (.xlsx) and Parquet files are also supported via code-generated NuGet directives.`),
+var summary = new {
+    TotalRegions = sales.Length,
+    BestRegion   = sales.OrderByDescending(s => s.Q1 + s.Q2 + s.Q3 + s.Q4).First().Region,
+    BestQ4       = sales.Max(s => s.Q4),
+    AverageQ1    = sales.Average(s => s.Q1),
+};
 
-    cs(`// Write a sample CSV, then load and display it
-var csvPath = Path.Combine(Path.GetTempPath(), "sample.csv");
-File.WriteAllText(csvPath, "Name,Age,Score,Active\\nAlice,30,95.5,true\\nBob,25,82.0,true\\nCharlie,35,78.3,false\\nDiana,28,91.1,true\\n");
+Display.Layout(2,
+    Display.Cell("Sales by Region", (object)sales),
+    Display.Cell("Summary", summary)
+);`),
 
-var data = Data.LoadCsv(csvPath);
-data  // auto-displayed as a sortable table`),
+    md('### Three-Column Chart Grid'),
 
-    cs(`// LINQ on imported data — filter, project, aggregate
-var csvPath = Path.Combine(Path.GetTempPath(), "sample.csv");
-var data = Data.LoadCsv(csvPath);
+    cs(`// Three charts side by side — great for comparing distributions
+var labels = new[] { "Jan", "Feb", "Mar", "Apr", "May", "Jun" };
 
-// Filter: only active people with score > 80
-var highScorers = data
-    .Where(r => (bool)r["Active"] && (double)r["Score"] > 80)
-    .Select(r => new { Name = r["Name"], Score = r["Score"] })
-    .ToList();
-highScorers.DisplayTable();
-
-// Aggregate
-var avgScore = data.Average(r => (double)r["Score"]);
-Console.WriteLine($"Average score: {avgScore:F1}");`),
-
-    cs(`// Tab-delimited and headerless files
-var tsvPath = Path.Combine(Path.GetTempPath(), "data.tsv");
-File.WriteAllText(tsvPath, "Alice\\t30\\nBob\\t25\\n");
-
-var tsv = Data.LoadCsv(tsvPath, hasHeader: false, delimiter: '\\t');
-tsv  // columns are named Col1, Col2, …`),
-
-    md(`## 7 · Live Updates
-
-\`Display.NewHtml()\`, \`NewTable()\`, and \`NewGraph()\` return a **handle** whose \`Update*\` methods
-replace the output in-place while the cell is still running — useful for progress indicators,
-streaming results, and live charts.`),
-
-    md('### Progress Bar'),
-
-    cs(`// Display.Progress — live-updating progress bar
-var progress = Display.Progress("Processing", total: 20);
-for (int i = 1; i <= 20; i++) {
-    await Task.Delay(80);
-    progress.Report(i);
-}
-progress.Complete();`),
-
-    md('### Live Updating Chart'),
-
-    cs(`// Live chart — data updates in-place without flicker
-var rng = new Random(42);
-int[] vals = { 30, 50, 40, 60, 45 };
-var labels = new[] { "A", "B", "C", "D", "E" };
-
-var chart = Display.NewGraph(new {
+object MakeChart(string label, int[] data, string color) => new {
     type = "bar",
     data = new {
         labels,
         datasets = new[] { new {
-            label = "Live data",
-            data = vals,
-            backgroundColor = "rgba(86,156,214,0.7)",
+            label,
+            data,
+            backgroundColor = color,
         }},
     },
-    options = new { responsive = true, animation = new { duration = 150 } },
-});
+    options = new { responsive = true, plugins = new { legend = new { display = false } } },
+};
 
-for (int frame = 0; frame < 15; frame++) {
-    await Task.Delay(250);
-    for (int j = 0; j < vals.Length; j++)
-        vals[j] = Math.Clamp(vals[j] + rng.Next(-15, 16), 5, 100);
-    chart.UpdateGraph(new {
-        type = "bar",
-        data = new {
-            labels,
-            datasets = new[] { new {
-                label = "Live data",
-                data = (int[])vals.Clone(),
-                backgroundColor = "rgba(86,156,214,0.7)",
-            }},
-        },
-        options = new { responsive = true, animation = new { duration = 150 } },
-    });
-}`, 'graph'),
-
-    md(`## 8 · Logging
-
-\`.Log()\` writes an entry to the **Logs panel** (open it with the **Logs** button in the toolbar)
-and to a daily rotating file in \`logs/YYYY-MM-DD.log\` beside the app.
-
-- \`value.Log()\` — logs the value and returns it, so it can be chained inline
-- \`value.Log("label")\` — prefixes the entry with a label
-- Entries tagged **USER** appear in teal; notebook activity tagged **NOTEBOOK** appears in blue`),
-
-    md('### Logging Basics'),
-
-    cs(`// Plain string
-"Starting data pipeline".Log();
-
-// Label + value (returns the value, so chaining works)
-var threshold = 0.75.Log("threshold");
-
-// Log inside a LINQ chain without breaking it
-var scores = new[] { 0.42, 0.81, 0.67, 0.91, 0.55 };
-var passing = scores
-    .Where(s => s >= threshold)
-    .Select(s => s.Log("pass"))   // logs each passing score
-    .ToList();
-
-// Log a complex object — serialised to JSON automatically
-var summary = new { Total = scores.Length, Passing = passing.Count, Threshold = threshold };
-summary.Log("summary");
-
-// Display the result too
-Display.Html($@"<p style='color:#4ec9b0'>
-  {passing.Count} of {scores.Length} scores passed (threshold {threshold:P0})
-</p>");`),
-
-    md('### Async Loop with Logging'),
-
-    cs(`// Logging inside an async loop — useful for tracking long-running work
-var results = new List<(int Step, double Value)>();
-var rng2 = new Random(7);
-
-for (int i = 1; i <= 8; i++) {
-    await Task.Delay(120);
-    var v = Math.Round(rng2.NextDouble() * 100, 1);
-    results.Add((i, v));
-    $"step {i}: {v}".Log("loop");
+Display.Layout(3,
+    Display.Cell("Revenue",  MakeChart("Revenue",  new[] { 42, 58, 51, 74, 83, 91 }, "rgba(78,201,176,0.8)"), "graph"),
+    Display.Cell("Costs",    MakeChart("Costs",    new[] { 31, 35, 38, 40, 45, 48 }, "rgba(244,71,71,0.8)"), "graph"),
+    Display.Cell("Profit",   MakeChart("Profit",   new[] { 11, 23, 13, 34, 38, 43 }, "rgba(196,150,74,0.8)"), "graph")
+);`),
+  ];
 }
 
-results.DisplayTable();`),
+// ═══════════════════════════════════════════════════════════════════════════════
+// Template 3 — Databases
+// ═══════════════════════════════════════════════════════════════════════════════
 
-    md(`## 9 · Notebook Configuration
+function makeDatabasesCells() {
+  return [
+    md(`# Databases
 
-Use the **Config** panel (toolbar) to define key/value pairs that become available to all scripts in the notebook via the \`Config\` global.
+Connect to SQLite, SQL Server, PostgreSQL, or Redis. The kernel introspects the schema and injects a typed \`DbContext\`.
 
-This is useful for environment-specific settings (URLs, feature flags, credentials) without hard-coding them in cells.
+## NuGet Packages
 
-Each entry has a **type** (string, number, boolean, secret) and an optional **environment variable** override. When an env var is set, its value takes precedence over the panel value at execution time.
+Use \`#r "nuget: PackageName, Version"\` to load any NuGet package inline.
+The first run downloads and caches it; subsequent runs are instant.`),
 
-| Expression | Result |
-|------------|--------|
-| \`Config["Key"]\` | Value string, or \`""\` if missing |
-| \`Config.Get("Key", "default")\` | Value with fallback |
-| \`Config.GetInt("Key", 0)\` | Parsed int with fallback |
-| \`Config.GetDouble("Key", 0.0)\` | Parsed double with fallback |
-| \`Config.GetBool("Key", false)\` | Parsed bool (\`true\`/\`1\`/\`yes\`) |
-| \`Config.Has("Key")\` | \`true\` if key exists and non-empty |
-| \`Config.All\` | \`IReadOnlyDictionary<string,string>\` |
+    cs(`#r "nuget: Newtonsoft.Json, 13.0.3"
+using Newtonsoft.Json;
 
-Config is persisted in the \`.cnb\` file alongside packages and sources.`),
+var payload = new {
+  name         = "Ada Lovelace",
+  born         = 1815,
+  contributions = new[] { "First algorithm", "Analytical Engine notes" },
+};
 
-    md('### Reading Config Values'),
+var json = JsonConvert.SerializeObject(payload, Formatting.Indented);
+Display.Html($"<pre style='color:#9cdcfe;margin:0'>{json}</pre>");`),
 
-    cs(`// Read config values — the example notebook pre-populates these
-// in the Config panel (open it with ⌘⇧, to see and edit them)
-var env     = Config.Get("Environment", "development");  // string
-var baseUrl = Config.Get("ApiBaseUrl", "(not set)");      // string — overridden by $API_BASE_URL if set
-var retries = Config.GetInt("MaxRetries", 3);             // number → int
-var verbose = Config.GetBool("Verbose", false);           // boolean → bool
-var apiKey  = Config.Get("ApiKey", "(not set)");           // secret — overridden by $API_KEY if set
-
-Display.Html($@"
-<table style='border-collapse:collapse;font-size:12px'>
-  <tr><th style='padding:4px 12px;text-align:left;color:#4fc3f7'>Key</th>
-      <th style='padding:4px 12px;text-align:left;color:#4fc3f7'>Value</th>
-      <th style='padding:4px 12px;text-align:left;color:#4fc3f7'>Type</th></tr>
-  <tr><td style='padding:3px 12px'>Environment</td><td style='padding:3px 12px;color:#00e5cc'>{env}</td><td style='padding:3px 12px;color:#555'>string</td></tr>
-  <tr><td style='padding:3px 12px'>ApiBaseUrl</td><td style='padding:3px 12px;color:#00e5cc'>{baseUrl}</td><td style='padding:3px 12px;color:#555'>string (env: $API_BASE_URL)</td></tr>
-  <tr><td style='padding:3px 12px'>MaxRetries</td><td style='padding:3px 12px;color:#f9a826'>{retries}</td><td style='padding:3px 12px;color:#555'>int</td></tr>
-  <tr><td style='padding:3px 12px'>Verbose</td><td style='padding:3px 12px;color:#f9a826'>{verbose}</td><td style='padding:3px 12px;color:#555'>bool</td></tr>
-  <tr><td style='padding:3px 12px'>ApiKey</td><td style='padding:3px 12px;color:#f9a826'>{(Config.Has("ApiKey") ? "****" : "(not set)")}</td><td style='padding:3px 12px;color:#555'>secret (env: $API_KEY)</td></tr>
-  <tr><td style='padding:3px 12px;color:#555'>All entries</td><td style='padding:3px 12px;color:#555'>{Config.All.Count} defined</td><td></td></tr>
-</table>");`),
-
-    md(`## 10 · Databases
+    md(`## Database Connections
 
 There are two ways to connect a database to a notebook:
 
 **Via the DB panel** — click **+ Add** to register a connection, then **Attach** to connect it. The kernel introspects the schema and injects a typed \`DbContext\` variable. The variable name is derived from the connection name (e.g. *"My CRM"* → \`myCrm\`).
 
-**From code** — use the \`Db\` global to register and attach connections programmatically (see the in-memory example below):
+**From code** — use the \`Db\` global to register and attach connections programmatically:
 
 \`\`\`
 Db.Add(name, DbProvider.Sqlite, connectionString)  // register
@@ -418,10 +388,10 @@ var conns = await Db.ListAsync()                    // DbEntry[] with IsAttached
 | Filter | \`mydb.Orders.Where(o => o.Total > 100).ToList()\` |
 | Project | \`mydb.Products.Select(p => new { p.Name, p.Price }).ToList()\` |
 | Raw SQL | \`mydb.Database.SqlQueryRaw<T>("SELECT …").ToList()\` |
-| Add connection | \`await Db.AddAsync(name, provider, connStr)\` — throws if name already exists |
+| Add connection | \`await Db.AddAsync(name, provider, connStr)\` |
 | Async | \`await mydb.Orders.ToListAsync()\` |`),
 
-    md(`### 10a · In-memory SQLite from code
+    md(`### In-memory SQLite from code
 
 \`Db.Add\` + \`Db.Attach\` register and connect a database without touching the DB panel.
 \`Db.Attach\` triggers schema introspection via a round-trip to the renderer, so the injected
@@ -517,13 +487,398 @@ Display.Html(@"
   Attach a database in the <strong style='color:#c4964a'>DB panel</strong> (or run the in-memory
   example above) to query it here.
 </p>");`),
+  ];
+}
 
-    md(`## 11 · Shared State & Records
+// ═══════════════════════════════════════════════════════════════════════════════
+// Template 4 — Display & Rich Output
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function makeDisplayOutputCells() {
+  return [
+    md(`# Display & Rich Output
+
+Live updates, progress bars, Mermaid diagrams, KaTeX math, interactive widgets, and real-time graphs.`),
+
+    // ── Live updates ───────────────────────────────────────────────────────
+
+    md(`## Live Updates
+
+\`Display.NewHtml()\`, \`NewTable()\`, and \`NewGraph()\` return a **handle** whose \`Update*\` methods
+replace the output in-place while the cell is still running — useful for progress indicators,
+streaming results, and live charts.`),
+
+    md('### Progress Bar'),
+
+    cs(`// Display.Progress — live-updating progress bar
+var progress = Display.Progress("Processing", total: 20);
+for (int i = 1; i <= 20; i++) {
+    await Task.Delay(80);
+    progress.Report(i);
+}
+progress.Complete();`),
+
+    md('### Live Updating Chart'),
+
+    cs(`// Live chart — data updates in-place without flicker
+var rng = new Random(42);
+int[] vals = { 30, 50, 40, 60, 45 };
+var labels = new[] { "A", "B", "C", "D", "E" };
+
+var chart = Display.NewGraph(new {
+    type = "bar",
+    data = new {
+        labels,
+        datasets = new[] { new {
+            label = "Live data",
+            data = vals,
+            backgroundColor = "rgba(86,156,214,0.7)",
+        }},
+    },
+    options = new { responsive = true, animation = new { duration = 150 } },
+});
+
+for (int frame = 0; frame < 15; frame++) {
+    await Task.Delay(250);
+    for (int j = 0; j < vals.Length; j++)
+        vals[j] = Math.Clamp(vals[j] + rng.Next(-15, 16), 5, 100);
+    chart.UpdateGraph(new {
+        type = "bar",
+        data = new {
+            labels,
+            datasets = new[] { new {
+                label = "Live data",
+                data = (int[])vals.Clone(),
+                backgroundColor = "rgba(86,156,214,0.7)",
+            }},
+        },
+        options = new { responsive = true, animation = new { duration = 150 } },
+    });
+}`, 'graph'),
+
+    // ── Mermaid + KaTeX ────────────────────────────────────────────────────
+
+    md(`## Diagrams (Mermaid)
+
+Use a fenced code block with the \`mermaid\` language tag to render diagrams inline.
+Flowcharts, sequence diagrams, class diagrams, state machines, Gantt charts, and more are all supported.
+
+\`\`\`mermaid
+flowchart TD
+    A([Start]) --> B{Input valid?}
+    B -- Yes --> C[Process data]
+    B -- No  --> D[Return error]
+    C --> E[Save to DB]
+    E --> F([Done])
+    D --> F
+\`\`\`
+
+\`\`\`mermaid
+sequenceDiagram
+    participant U as User
+    participant A as App
+    participant K as Kernel
+    participant N as NuGet
+
+    U->>A: Run cell (#r nuget: Pkg)
+    A->>K: execute message
+    K->>N: resolve & download
+    N-->>K: DLLs loaded
+    K-->>A: output stream
+    A-->>U: rendered output
+\`\`\`
+
+\`\`\`mermaid
+pie title Revenue by Category
+    "Hardware" : 42
+    "Software" : 29
+    "Services" : 18
+    "Support"  : 11
+\`\`\``),
+
+    md(`## Math Formulas (KaTeX)
+
+Use \`$...$\` for **inline math** and \`$$...$$\` for **display (block) math**.
+
+---
+
+**Euler's identity** — considered the most beautiful equation in mathematics:
+
+$$e^{i\\pi} + 1 = 0$$
+
+**Quadratic formula** — roots of $ax^2 + bx + c = 0$:
+
+$$x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$$
+
+**Fundamental theorem of calculus:**
+
+$$\\int_a^b f(x)\\, dx = F(b) - F(a)$$
+
+**Gaussian (normal) distribution** PDF:
+
+$$f(x) = \\frac{1}{\\sigma\\sqrt{2\\pi}}\\, e^{-\\frac{(x-\\mu)^2}{2\\sigma^2}}$$
+
+**Triangular number** — inline example: the sum $\\sum_{i=1}^{n} i = \\frac{n(n+1)}{2}$ gives $\\frac{n(n+1)}{2}$ for the $n$-th triangular number.
+
+**Matrix multiplication** (element notation):
+
+$$(AB)_{ij} = \\sum_{k=1}^{p} A_{ik}\\, B_{kj}$$`),
+
+    // ── Widgets ────────────────────────────────────────────────────────────
+
+    md(`## Interactive Widgets
+
+Widgets are live UI controls rendered inline in cell output. Their values **persist across re-runs** — changing a slider and pressing Run reads the new position.
+
+| Widget | Kernel API |
+|--------|-----------|
+| Slider | \`Display.Slider(label, min, max, step, defaultValue)\` |
+| Dropdown | \`Display.Dropdown(label, options[], defaultValue)\` |
+| Date Picker | \`Display.DatePicker(label, defaultValue)\` |
+
+All three return a \`WidgetHandle\` with implicit conversions to \`double\`, \`int\`, \`float\`, and \`string\`.`),
+
+    md('### Slider, Dropdown, and Date Picker'),
+
+    cs(`// ── Slider + Dropdown + DatePicker demonstration ────────────────────────────
+
+// Slider: numeric range
+var temperature = Display.Slider("Temperature (°C)", min: -20, max: 50, step: 0.5, defaultValue: 22);
+
+// Dropdown: enumerated choice
+var unit = Display.Dropdown("Unit", new[] { "Celsius", "Fahrenheit", "Kelvin" });
+
+// Date Picker: calendar date
+var reportDate = Display.DatePicker("Report Date", defaultValue: "2025-01-01");
+
+// Use the values in code
+double converted = unit.StringValue switch {
+    "Fahrenheit" => temperature * 9.0 / 5.0 + 32,
+    "Kelvin"     => temperature + 273.15,
+    _            => (double)temperature,
+};
+
+string unitSymbol = unit.StringValue switch {
+    "Fahrenheit" => "°F", "Kelvin" => "K", _ => "°C"
+};
+
+Display.Html($@"
+<div style='font-family:sans-serif;padding:6px 0'>
+  <p style='color:#cdd6e0'>
+    <strong>{temperature:F1} °C</strong> =
+    <span style='color:#4ec9b0'>{converted:F2} {unitSymbol}</span>
+    &nbsp;·&nbsp; Report date: <span style='color:#c4964a'>{reportDate}</span>
+  </p>
+</div>");`),
+
+    md(`### Confirm Dialog
+
+\`Util.ConfirmAsync(message, title?)\` renders an **OK / Cancel** dialog inline in the cell output
+and **pauses execution** until the user clicks. Returns \`true\` (OK) or \`false\` (Cancel).`),
+
+    cs(`// Util.ConfirmAsync — pause the cell and wait for user confirmation.
+// Click OK to proceed, or Cancel to skip the action.
+
+if (await Util.ConfirmAsync("Proceed with the operation?", "Confirm"))
+{
+    "✓ Confirmed — running operation.".Display();
+}
+else
+{
+    "✕ Cancelled by user.".Display();
+}`),
+
+    // ── Display.Markdown ───────────────────────────────────────────────────
+
+    md(`## Display.Markdown
+
+\`Display.Markdown(text)\` renders rich markdown from C# code — including **Mermaid diagrams** and **KaTeX math**.
+Useful for generating dynamic documentation, reports, or structured output.`),
+
+    md('### Dynamic Markdown Report'),
+
+    cs(`// Generate a markdown report from computed data
+var items = new[] {
+    new { Name = "Alpha",   Score = 92, Grade = "A"  },
+    new { Name = "Beta",    Score = 78, Grade = "B+"  },
+    new { Name = "Gamma",   Score = 85, Grade = "A-" },
+};
+
+var rows = string.Join("\\n", items.Select(i =>
+    $"| {i.Name} | {i.Score} | {i.Grade} |"));
+
+Display.Markdown($@"
+### Results Summary
+
+| Name | Score | Grade |
+|------|-------|-------|
+{rows}
+
+> Best score: **{items.Max(i => i.Score)}** by *{items.OrderByDescending(i => i.Score).First().Name}*
+
+$$\\bar{{x}} = \\frac{{1}}{{n}} \\sum_{{i=1}}^{{n}} x_i = {items.Average(i => i.Score):F1}$$
+");`),
+
+    md('### Mermaid Diagram from Code'),
+
+    cs(`// Mermaid diagram generated from C# data
+var steps = new[] { "Fetch", "Parse", "Transform", "Validate", "Save" };
+var arrows = string.Join("\\n    ", steps.Zip(steps.Skip(1), (a, b) => $"{a} --> {b}"));
+
+Display.Markdown($@"
+### Pipeline Flow
+
+\`\`\`mermaid
+flowchart LR
+    {arrows}
+\`\`\`
+");`),
+
+    // ── Display.Plot ───────────────────────────────────────────────────────
+
+    md(`## Live Graph with Display.Plot
+
+\`Display.Plot(name, value)\` pushes a data point to the **Graph panel** immediately — no need to wait for the cell to finish.
+
+| Mode | Description |
+|------|-------------|
+| \`PlotMode.Value\` | Plot the raw value *(default)* |
+| \`PlotMode.RateOfChange\` | Plot the change since the last call |
+
+Open the **Graph panel** (Ctrl+Shift+R), then run the cell below to see both series update in real time.`),
+
+    md('### Display.Plot — Raw Value and Rate of Change'),
+
+    cs(`// ── Display.Plot: raw value vs. rate of change ───────────────────────────────
+// Open the Graph panel (Ctrl+Shift+R) before running.
+
+var rng = new Random(42);
+double position = 0;
+
+for (int step = 0; step < 200; step++)
+{
+    double velocity = Math.Sin(step * 0.15) * 5 + rng.NextDouble() - 0.5;
+    position += velocity;
+
+    Display.Plot("position", position);                             // raw value
+    Display.Plot("velocity", velocity, PlotMode.RateOfChange);     // Δ per tick
+
+    await Task.Delay(30);
+}`),
+  ];
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Template 5 — Scripting & Utilities
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function makeScriptingUtilsCells() {
+  return [
+    md(`# Scripting & Utilities
+
+Logging, configuration, shared state, async HTTP, modern C# patterns, and LinqPAD-compatible helpers.`),
+
+    // ── Logging ────────────────────────────────────────────────────────────
+
+    md(`## Logging
+
+\`.Log()\` writes an entry to the **Logs panel** (open it with the **Logs** button in the toolbar)
+and to a daily rotating file in \`logs/YYYY-MM-DD.log\` beside the app.
+
+- \`value.Log()\` — logs the value and returns it, so it can be chained inline
+- \`value.Log("label")\` — prefixes the entry with a label
+- Entries tagged **USER** appear in teal; notebook activity tagged **NOTEBOOK** appears in blue`),
+
+    cs(`// Plain string
+"Starting data pipeline".Log();
+
+// Label + value (returns the value, so chaining works)
+var threshold = 0.75.Log("threshold");
+
+// Log inside a LINQ chain without breaking it
+var scores = new[] { 0.42, 0.81, 0.67, 0.91, 0.55 };
+var passing = scores
+    .Where(s => s >= threshold)
+    .Select(s => s.Log("pass"))   // logs each passing score
+    .ToList();
+
+// Log a complex object — serialised to JSON automatically
+var summary = new { Total = scores.Length, Passing = passing.Count, Threshold = threshold };
+summary.Log("summary");
+
+// Display the result too
+Display.Html($@"<p style='color:#4ec9b0'>
+  {passing.Count} of {scores.Length} scores passed (threshold {threshold:P0})
+</p>");`),
+
+    md('### Async Loop with Logging'),
+
+    cs(`// Logging inside an async loop — useful for tracking long-running work
+var results = new List<(int Step, double Value)>();
+var rng2 = new Random(7);
+
+for (int i = 1; i <= 8; i++) {
+    await Task.Delay(120);
+    var v = Math.Round(rng2.NextDouble() * 100, 1);
+    results.Add((i, v));
+    $"step {i}: {v}".Log("loop");
+}
+
+results.DisplayTable();`),
+
+    // ── Configuration ──────────────────────────────────────────────────────
+
+    md(`## Notebook Configuration
+
+Use the **Config** panel (toolbar) to define key/value pairs that become available to all scripts in the notebook via the \`Config\` global.
+
+This is useful for environment-specific settings (URLs, feature flags, credentials) without hard-coding them in cells.
+
+Each entry has a **type** (string, number, boolean, secret) and an optional **environment variable** override. When an env var is set, its value takes precedence over the panel value at execution time.
+
+| Expression | Result |
+|------------|--------|
+| \`Config["Key"]\` | Value string, or \`""\` if missing |
+| \`Config.Get("Key", "default")\` | Value with fallback |
+| \`Config.GetInt("Key", 0)\` | Parsed int with fallback |
+| \`Config.GetDouble("Key", 0.0)\` | Parsed double with fallback |
+| \`Config.GetBool("Key", false)\` | Parsed bool (\`true\`/\`1\`/\`yes\`) |
+| \`Config.Has("Key")\` | \`true\` if key exists and non-empty |
+| \`Config.All\` | \`IReadOnlyDictionary<string,string>\` |
+
+Config is persisted in the \`.cnb\` file alongside packages and sources.`),
+
+    md('### Reading Config Values'),
+
+    cs(`// Read config values — the example notebook pre-populates these
+// in the Config panel (open it with ⌘⇧, to see and edit them)
+var env     = Config.Get("Environment", "development");  // string
+var baseUrl = Config.Get("ApiBaseUrl", "(not set)");      // string — overridden by $API_BASE_URL if set
+var retries = Config.GetInt("MaxRetries", 3);             // number → int
+var verbose = Config.GetBool("Verbose", false);           // boolean → bool
+var apiKey  = Config.Get("ApiKey", "(not set)");           // secret — overridden by $API_KEY if set
+
+Display.Html($@"
+<table style='border-collapse:collapse;font-size:12px'>
+  <tr><th style='padding:4px 12px;text-align:left;color:#4fc3f7'>Key</th>
+      <th style='padding:4px 12px;text-align:left;color:#4fc3f7'>Value</th>
+      <th style='padding:4px 12px;text-align:left;color:#4fc3f7'>Type</th></tr>
+  <tr><td style='padding:3px 12px'>Environment</td><td style='padding:3px 12px;color:#00e5cc'>{env}</td><td style='padding:3px 12px;color:#555'>string</td></tr>
+  <tr><td style='padding:3px 12px'>ApiBaseUrl</td><td style='padding:3px 12px;color:#00e5cc'>{baseUrl}</td><td style='padding:3px 12px;color:#555'>string (env: $API_BASE_URL)</td></tr>
+  <tr><td style='padding:3px 12px'>MaxRetries</td><td style='padding:3px 12px;color:#f9a826'>{retries}</td><td style='padding:3px 12px;color:#555'>int</td></tr>
+  <tr><td style='padding:3px 12px'>Verbose</td><td style='padding:3px 12px;color:#f9a826'>{verbose}</td><td style='padding:3px 12px;color:#555'>bool</td></tr>
+  <tr><td style='padding:3px 12px'>ApiKey</td><td style='padding:3px 12px;color:#f9a826'>{(Config.Has("ApiKey") ? "****" : "(not set)")}</td><td style='padding:3px 12px;color:#555'>secret (env: $API_KEY)</td></tr>
+  <tr><td style='padding:3px 12px;color:#555'>All entries</td><td style='padding:3px 12px;color:#555'>{Config.All.Count} defined</td><td></td></tr>
+</table>");`),
+
+    // ── Shared state ───────────────────────────────────────────────────────
+
+    md(`## Shared State & Records
 
 All cells in a notebook share a single execution context — types, variables, and \`using\`
 directives defined in one cell are available in every cell that runs afterwards.`),
 
-    md('### Shared State — Dataset Setup'),
+    md('### Dataset Setup'),
 
     cs(`// Define a record type and build a dataset — both persist for the cells below.
 public record Sale(string Region, string Product, int Qty, decimal Revenue);
@@ -541,7 +896,7 @@ var sales = new List<Sale> {
 
 $"Dataset ready: {sales.Count} sales records across {sales.Select(s => s.Region).Distinct().Count()} regions".Display();`),
 
-    md('### Shared State — Aggregation'),
+    md('### Aggregation'),
 
     cs(`// 'sales' and the Sale record are still in scope — no redefinition needed.
 var byRegion = sales
@@ -557,12 +912,12 @@ var byRegion = sales
 
 byRegion.DisplayTable();`),
 
-    md(`## 12 · Async & HTTP
+    // ── Async & HTTP ───────────────────────────────────────────────────────
+
+    md(`## Async & HTTP
 
 \`await\` works at the top level in any cell — no wrapper needed.
 The example below calls a public test API; it requires an internet connection.`),
-
-    md('### Async HTTP Fetch'),
 
     cs(`using System.Net.Http;
 using System.Text.Json;
@@ -584,7 +939,9 @@ var rows = posts.EnumerateArray().Select(p => {
 
 rows.DisplayTable();`),
 
-    md(`## 14 · Modern C#
+    // ── Modern C# ──────────────────────────────────────────────────────────
+
+    md(`## Modern C#
 
 Pattern matching, switch expressions, list patterns, and the range operator all work
 out of the box — Roslyn scripting targets C# 12.`),
@@ -655,266 +1012,9 @@ data.Select((v, i) => new { Index = i, Value = v })
     .Take(3)
     .DisplayTable();`),
 
-    md(`## 15 · Diagrams (Mermaid)
+    // ── Util helpers ───────────────────────────────────────────────────────
 
-Use a fenced code block with the \`mermaid\` language tag to render diagrams inline.
-Flowcharts, sequence diagrams, class diagrams, state machines, Gantt charts, and more are all supported.
-
-\`\`\`mermaid
-flowchart TD
-    A([Start]) --> B{Input valid?}
-    B -- Yes --> C[Process data]
-    B -- No  --> D[Return error]
-    C --> E[Save to DB]
-    E --> F([Done])
-    D --> F
-\`\`\`
-
-\`\`\`mermaid
-sequenceDiagram
-    participant U as User
-    participant A as App
-    participant K as Kernel
-    participant N as NuGet
-
-    U->>A: Run cell (#r nuget: Pkg)
-    A->>K: execute message
-    K->>N: resolve & download
-    N-->>K: DLLs loaded
-    K-->>A: output stream
-    A-->>U: rendered output
-\`\`\`
-
-\`\`\`mermaid
-pie title Revenue by Category
-    "Hardware" : 42
-    "Software" : 29
-    "Services" : 18
-    "Support"  : 11
-\`\`\``),
-
-    md(`## 16 · Math Formulas (KaTeX)
-
-Use \`$...$\` for **inline math** and \`$$...$$\` for **display (block) math**.
-
----
-
-**Euler's identity** — considered the most beautiful equation in mathematics:
-
-$$e^{i\\pi} + 1 = 0$$
-
-**Quadratic formula** — roots of $ax^2 + bx + c = 0$:
-
-$$x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$$
-
-**Fundamental theorem of calculus:**
-
-$$\\int_a^b f(x)\\, dx = F(b) - F(a)$$
-
-**Gaussian (normal) distribution** PDF:
-
-$$f(x) = \\frac{1}{\\sigma\\sqrt{2\\pi}}\\, e^{-\\frac{(x-\\mu)^2}{2\\sigma^2}}$$
-
-**Triangular number** — inline example: the sum $\\sum_{i=1}^{n} i = \\frac{n(n+1)}{2}$ gives $\\frac{n(n+1)}{2}$ for the $n$-th triangular number.
-
-**Matrix multiplication** (element notation):
-
-$$(AB)_{ij} = \\sum_{k=1}^{p} A_{ik}\\, B_{kj}$$`),
-
-    md(`## 17 · Interactive Widgets
-
-Widgets are live UI controls rendered inline in cell output. Their values **persist across re-runs** — changing a slider and pressing Run reads the new position.
-
-| Widget | Kernel API |
-|--------|-----------|
-| Slider | \`Display.Slider(label, min, max, step, defaultValue)\` |
-| Dropdown | \`Display.Dropdown(label, options[], defaultValue)\` |
-| Date Picker | \`Display.DatePicker(label, defaultValue)\` |
-
-All three return a \`WidgetHandle\` with implicit conversions to \`double\`, \`int\`, \`float\`, and \`string\`.`),
-
-    md('### Slider, Dropdown, and Date Picker'),
-
-    cs(`// ── Slider + Dropdown + DatePicker demonstration ────────────────────────────
-
-// Slider: numeric range
-var temperature = Display.Slider("Temperature (°C)", min: -20, max: 50, step: 0.5, defaultValue: 22);
-
-// Dropdown: enumerated choice
-var unit = Display.Dropdown("Unit", new[] { "Celsius", "Fahrenheit", "Kelvin" });
-
-// Date Picker: calendar date
-var reportDate = Display.DatePicker("Report Date", defaultValue: "2025-01-01");
-
-// Use the values in code
-double converted = unit.StringValue switch {
-    "Fahrenheit" => temperature * 9.0 / 5.0 + 32,
-    "Kelvin"     => temperature + 273.15,
-    _            => (double)temperature,
-};
-
-string unitSymbol = unit.StringValue switch {
-    "Fahrenheit" => "°F", "Kelvin" => "K", _ => "°C"
-};
-
-Display.Html($@"
-<div style='font-family:sans-serif;padding:6px 0'>
-  <p style='color:#cdd6e0'>
-    <strong>{temperature:F1} °C</strong> =
-    <span style='color:#4ec9b0'>{converted:F2} {unitSymbol}</span>
-    &nbsp;·&nbsp; Report date: <span style='color:#c4964a'>{reportDate}</span>
-  </p>
-</div>");`),
-
-    md(`### Confirm Dialog
-
-\`Util.ConfirmAsync(message, title?)\` renders an **OK / Cancel** dialog inline in the cell output
-and **pauses execution** until the user clicks. Returns \`true\` (OK) or \`false\` (Cancel).
-Useful for guarding destructive operations or branching on user intent mid-script.`),
-
-    cs(`// Util.ConfirmAsync — pause the cell and wait for user confirmation.
-// Click OK to proceed, or Cancel to skip the action.
-
-if (await Util.ConfirmAsync("Proceed with the operation?", "Confirm"))
-{
-    "✓ Confirmed — running operation.".Display();
-    // your code here
-}
-else
-{
-    "✕ Cancelled by user.".Display();
-}`),
-
-    md(`## 18 · Display.Markdown
-
-\`Display.Markdown(text)\` renders rich markdown from C# code — including **Mermaid diagrams** and **KaTeX math**.
-Useful for generating dynamic documentation, reports, or structured output.`),
-
-    md('### Dynamic Markdown Report'),
-
-    cs(`// Generate a markdown report from computed data
-var items = new[] {
-    new { Name = "Alpha",   Score = 92, Grade = "A"  },
-    new { Name = "Beta",    Score = 78, Grade = "B+"  },
-    new { Name = "Gamma",   Score = 85, Grade = "A-" },
-};
-
-var rows = string.Join("\\n", items.Select(i =>
-    $"| {i.Name} | {i.Score} | {i.Grade} |"));
-
-Display.Markdown($@"
-### Results Summary
-
-| Name | Score | Grade |
-|------|-------|-------|
-{rows}
-
-> Best score: **{items.Max(i => i.Score)}** by *{items.OrderByDescending(i => i.Score).First().Name}*
-
-$$\\bar{{x}} = \\frac{{1}}{{n}} \\sum_{{i=1}}^{{n}} x_i = {items.Average(i => i.Score):F1}$$
-");`),
-
-    md('### Mermaid Diagram from Code'),
-
-    cs(`// Mermaid diagram generated from C# data
-var steps = new[] { "Fetch", "Parse", "Transform", "Validate", "Save" };
-var arrows = string.Join("\\n    ", steps.Zip(steps.Skip(1), (a, b) => $"{a} --> {b}"));
-
-Display.Markdown($@"
-### Pipeline Flow
-
-\`\`\`mermaid
-flowchart LR
-    {arrows}
-\`\`\`
-");`),
-
-    md(`## 19 · Live Graph with Display.Plot
-
-\`Display.Plot(name, value)\` pushes a data point to the **Graph panel** immediately — no need to wait for the cell to finish.
-
-| Mode | Description |
-|------|-------------|
-| \`PlotMode.Value\` | Plot the raw value *(default)* |
-| \`PlotMode.RateOfChange\` | Plot the change since the last call |
-
-Open the **Graph panel** (Ctrl+Shift+R), then run the cell below to see both series update in real time.`),
-
-    md('### Display.Plot — Raw Value and Rate of Change'),
-
-    cs(`// ── Display.Plot: raw value vs. rate of change ───────────────────────────────
-// Open the Graph panel (Ctrl+Shift+R) before running.
-
-var rng = new Random(42);
-double position = 0;
-
-for (int step = 0; step < 200; step++)
-{
-    double velocity = Math.Sin(step * 0.15) * 5 + rng.NextDouble() - 0.5;
-    position += velocity;
-
-    Display.Plot("position", position);                             // raw value
-    Display.Plot("velocity", velocity, PlotMode.RateOfChange);     // Δ per tick
-
-    await Task.Delay(30);
-}`),
-
-    md(`## 20 · Panels Layout API
-
-Scripts can open, close, dock, and float panels — useful in setup notebooks that configure the workspace before you start working.
-
-| Method | Description |
-|--------|-------------|
-| \`Panels.Open(PanelId.*)\` | Make a panel visible |
-| \`Panels.Close(PanelId.*)\` | Hide a panel |
-| \`Panels.CloseAll()\` | Close every open panel at once |
-| \`Panels.Dock(PanelId.*, DockZone.*, size?)\` | Move to a dock zone; \`size < 1\` = fraction of window, \`size ≥ 1\` = pixels |
-| \`Panels.Float(PanelId.*, x?, y?, width?, height?)\` | Float with optional exact position and size |
-
-**DockZone constants:** \`DockZone.Left\` · \`DockZone.Right\` · \`DockZone.Bottom\`
-
-**PanelId constants:** \`Log\` · \`Packages\` · \`Config\` · \`Db\` · \`Library\` · \`Variables\` · \`Toc\` · \`Files\` · \`Api\` · \`Graph\` · \`Todo\``),
-
-    md('### Dock Panels to Zones'),
-
-    cs(`// ── Dock panels to zones ─────────────────────────────────────────────────────
-// Arrange the workspace for a data-exploration session.
-
-// Right zone: Graph at 38% of window width, Variables below it
-Panels.Open(PanelId.Graph);
-Panels.Dock(PanelId.Graph, DockZone.Right, 0.38);
-
-Panels.Open(PanelId.Variables);
-Panels.Dock(PanelId.Variables, DockZone.Right);
-
-// Bottom zone: Log panel at 160 px tall
-Panels.Open(PanelId.Log);
-Panels.Dock(PanelId.Log, DockZone.Bottom, 160);
-
-Display.Html("<p style='color:#4ec9b0'>Layout applied — Graph and Variables on the right, Log at the bottom.</p>");`),
-
-    cs(`// ── Float panels with precise position and size ───────────────────────────────
-// Float two panels side by side on the right half of the screen.
-
-Panels.Open(PanelId.Variables);
-Panels.Float(PanelId.Variables, x: 880, y: 80, width: 380, height: 480);
-
-Panels.Open(PanelId.Config);
-Panels.Float(PanelId.Config, x: 880, y: 580, width: 380, height: 260);
-
-Display.Html("<p style='color:#4ec9b0'>Variables and Config floating — drag them anywhere.</p>");`),
-
-    cs(`// ── CloseAll then open only what you need ────────────────────────────────────
-// Clear every open panel, then set a focused single-panel layout.
-
-Panels.CloseAll();
-
-Panels.Open(PanelId.Graph);
-Panels.Dock(PanelId.Graph, DockZone.Right, 0.42);
-
-Display.Html("<p style='color:#4ec9b0'>Focused layout: Graph panel only.</p>");`),
-
-    md(`## 21 · Util — LinqPAD Utilities
+    md(`## Util — LinqPAD Utilities
 
 SharpNote includes a \`Util\` global with LinqPAD-compatible helpers.
 \`.Dump()\` is a direct alias for \`.Display()\` — LinqPAD notebooks work as-is.
@@ -1022,79 +1122,75 @@ $"Loaded {dataset.Count:N0} rows (cached after first run)".Display();`),
 // The result is also returned as a string for further processing.
 
 Util.Cmd("dotnet", "--version");`),
-
-    md('### Util.ConfirmAsync — Confirm Dialog'),
-
-    cs(`// Util.ConfirmAsync — pause execution and ask the user before continuing.
-// The cell awaits the user's click; OK returns true, Cancel returns false.
-// Great for guarding destructive operations in an interactive notebook.
-
-if (await Util.ConfirmAsync("Proceed with the operation?", "Confirm"))
-{
-    "✓ User confirmed — running operation.".Display();
+  ];
 }
-else
-{
-    "✕ Cancelled by user.".Display();
-}`),
 
-    md(`## 22 · Display.Layout — Dashboard Grid
+// ═══════════════════════════════════════════════════════════════════════════════
+// Template 6 — Workspace & Panels
+// ═══════════════════════════════════════════════════════════════════════════════
 
-\`Display.Layout(columns, items...)\` arranges multiple outputs side-by-side in a grid.
-Wrap items with \`Display.Cell(title, content)\` to add per-cell titles.
-Any object that works with \`.Display()\` works inside a layout cell.`),
+function makeWorkspacePanelsCells() {
+  return [
+    md(`# Workspace & Panels
 
-    md('### Two-Column Dashboard'),
+Scripts can open, close, dock, and float panels — useful in setup notebooks that configure the workspace before you start working.
 
-    cs(`// Two-column dashboard — tables and summary stats side by side
-var sales = new[] {
-    new { Region = "North", Q1 = 42, Q2 = 58, Q3 = 51, Q4 = 74 },
-    new { Region = "South", Q1 = 35, Q2 = 47, Q3 = 62, Q4 = 88 },
-    new { Region = "East",  Q1 = 29, Q2 = 41, Q3 = 55, Q4 = 63 },
-    new { Region = "West",  Q1 = 51, Q2 = 60, Q3 = 70, Q4 = 95 },
-};
+| Method | Description |
+|--------|-------------|
+| \`Panels.Open(PanelId.*)\` | Make a panel visible |
+| \`Panels.Close(PanelId.*)\` | Hide a panel |
+| \`Panels.CloseAll()\` | Close every open panel at once |
+| \`Panels.Dock(PanelId.*, DockZone.*, size?)\` | Move to a dock zone; \`size < 1\` = fraction of window, \`size ≥ 1\` = pixels |
+| \`Panels.Float(PanelId.*, x?, y?, width?, height?)\` | Float with optional exact position and size |
 
-var summary = new {
-    TotalRegions = sales.Length,
-    BestRegion   = sales.OrderByDescending(s => s.Q1 + s.Q2 + s.Q3 + s.Q4).First().Region,
-    BestQ4       = sales.Max(s => s.Q4),
-    AverageQ1    = sales.Average(s => s.Q1),
-};
+**DockZone constants:** \`DockZone.Left\` · \`DockZone.Right\` · \`DockZone.Bottom\`
 
-Display.Layout(2,
-    Display.Cell("Sales by Region", (object)sales),
-    Display.Cell("Summary", summary)
-);`),
+**PanelId constants:** \`Log\` · \`Packages\` · \`Config\` · \`Db\` · \`Library\` · \`Variables\` · \`Toc\` · \`Files\` · \`Api\` · \`Graph\` · \`Todo\``),
 
-    md('### Three-Column Chart Grid'),
+    md('### Dock Panels to Zones'),
 
-    cs(`// Three charts side by side — great for comparing distributions
-var labels = new[] { "Jan", "Feb", "Mar", "Apr", "May", "Jun" };
+    cs(`// ── Dock panels to zones ─────────────────────────────────────────────────────
+// Arrange the workspace for a data-exploration session.
 
-object MakeChart(string label, int[] data, string color) => new {
-    type = "bar",
-    data = new {
-        labels,
-        datasets = new[] { new {
-            label,
-            data,
-            backgroundColor = color,
-        }},
-    },
-    options = new { responsive = true, plugins = new { legend = new { display = false } } },
-};
+// Right zone: Graph at 38% of window width, Variables below it
+Panels.Open(PanelId.Graph);
+Panels.Dock(PanelId.Graph, DockZone.Right, 0.38);
 
-Display.Layout(3,
-    Display.Cell("Revenue",  MakeChart("Revenue",  new[] { 42, 58, 51, 74, 83, 91 }, "rgba(78,201,176,0.8)"), "graph"),
-    Display.Cell("Costs",    MakeChart("Costs",    new[] { 31, 35, 38, 40, 45, 48 }, "rgba(244,71,71,0.8)"), "graph"),
-    Display.Cell("Profit",   MakeChart("Profit",   new[] { 11, 23, 13, 34, 38, 43 }, "rgba(196,150,74,0.8)"), "graph")
-);`),
+Panels.Open(PanelId.Variables);
+Panels.Dock(PanelId.Variables, DockZone.Right);
+
+// Bottom zone: Log panel at 160 px tall
+Panels.Open(PanelId.Log);
+Panels.Dock(PanelId.Log, DockZone.Bottom, 160);
+
+Display.Html("<p style='color:#4ec9b0'>Layout applied — Graph and Variables on the right, Log at the bottom.</p>");`),
+
+    cs(`// ── Float panels with precise position and size ───────────────────────────────
+// Float two panels side by side on the right half of the screen.
+
+Panels.Open(PanelId.Variables);
+Panels.Float(PanelId.Variables, x: 880, y: 80, width: 380, height: 480);
+
+Panels.Open(PanelId.Config);
+Panels.Float(PanelId.Config, x: 880, y: 580, width: 380, height: 260);
+
+Display.Html("<p style='color:#4ec9b0'>Variables and Config floating — drag them anywhere.</p>");`),
+
+    cs(`// ── CloseAll then open only what you need ────────────────────────────────────
+// Clear every open panel, then set a focused single-panel layout.
+
+Panels.CloseAll();
+
+Panels.Open(PanelId.Graph);
+Panels.Dock(PanelId.Graph, DockZone.Right, 0.42);
+
+Display.Html("<p style='color:#4ec9b0'>Focused layout: Graph panel only.</p>");`),
   ];
 }
 
 // ── Notebook factory ──────────────────────────────────────────────────────────
 
-export function createNotebook(withExamples = false) {
+export function createNotebook(templateKey = null) {
   return {
     id: uuidv4(),
     title: 'Untitled',
@@ -1102,20 +1198,14 @@ export function createNotebook(withExamples = false) {
     isDirty: false,
     color: null,
     memoryHistory: [],
-    cells: withExamples ? makeExampleCells() : [],
+    cells: templateKey ? cellsForTemplate(templateKey) : [],
     outputs: {},
     cellResults: {},
     running: new Set(),
     kernelStatus: 'starting',
     nugetPackages: [],
     nugetSources: [...DEFAULT_NUGET_SOURCES],
-    config: withExamples ? [
-      { key: 'Environment', value: 'development', type: 'string' },
-      { key: 'ApiBaseUrl',  value: 'https://api.example.com', type: 'string', envVar: 'API_BASE_URL' },
-      { key: 'MaxRetries',  value: '5', type: 'number' },
-      { key: 'Verbose',     value: 'true', type: 'boolean' },
-      { key: 'ApiKey',      value: '', type: 'secret', envVar: 'API_KEY' },
-    ] : [],
+    config: templateKey ? configForTemplate(templateKey) : [],
     logPanelOpen: false,
     nugetPanelOpen: false,
     configPanelOpen: false,

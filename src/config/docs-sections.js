@@ -41,7 +41,7 @@ export const DOCS_SECTIONS = [
     id: 'notebooks', title: 'Notebooks',
     content: [
       { type: 'h3', text: 'Creating a Notebook' },
-      { type: 'p', text: 'File → New Notebook (⌘N) or click the + button in the tab bar. A dialog asks whether to start from the Examples template or a blank notebook.' },
+      { type: 'p', text: 'File → New Notebook (⌘N) or click the + button in the tab bar. A dialog lets you choose from six topic-based example templates (Getting Started, Data & Charts, Databases, Display & Rich Output, Scripting & Utilities, Workspace & Panels) or start blank.' },
       { type: 'h3', text: 'Opening a Notebook' },
       { type: 'p', text: 'File → Open… (⌘O). The notebook always opens in a new tab — your existing tabs are unaffected.' },
       { type: 'h3', text: 'Recent Files' },

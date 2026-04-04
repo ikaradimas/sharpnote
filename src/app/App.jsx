@@ -29,6 +29,7 @@ import { SettingsDialog } from '../components/dialogs/SettingsDialog.jsx';
 import { CommandPalette } from '../components/dialogs/CommandPalette.jsx';
 import { VarInspectDialog } from '../components/dialogs/VarInspectDialog.jsx';
 import { DbConnectionDialog } from '../components/dialogs/DbConnectionDialog.jsx';
+import { NewNotebookDialog } from '../components/dialogs/NewNotebookDialog.jsx';
 import { StatusBar } from './StatusBar.jsx';
 import { renderPanelContent } from '../components/dock/renderPanelContent.jsx';
 
@@ -68,6 +69,7 @@ export function App() {
   const [quitDirtyNbs, setQuitDirtyNbs] = useState(null);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [newNbDialogOpen, setNewNbDialogOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [varInspectDialog, setVarInspectDialog] = useState(null);
   const [dbConnDialog, setDbConnDialog] = useState(null); // null | connection object (edit) | opened with null (new)
@@ -694,7 +696,7 @@ export function App() {
   const isNotebook = () => isNotebookId(activeIdRef.current);
 
   menuHandlersRef.current = {
-    new:              handleNew,
+    new:              () => setNewNbDialogOpen(true),
     open:             handleLoad,
     'import-polyglot': handleImportPolyglot,
     'import-data':     handleImportData,
@@ -953,7 +955,7 @@ export function App() {
         activeId={activeId}
         onActivate={setActiveId}
         onClose={handleCloseTabWithSchedules}
-        onNew={handleNew}
+        onNew={() => setNewNbDialogOpen(true)}
         onRename={handleRenameTab}
         onReorder={handleReorder}
         onSetColor={handleSetTabColor}
@@ -1092,6 +1094,12 @@ export function App() {
         hovered={hoveredDropZone}
       />
       {aboutOpen && <AboutDialog onClose={() => setAboutOpen(false)} />}
+      {newNbDialogOpen && (
+        <NewNotebookDialog
+          onSelect={(templateKey) => { setNewNbDialogOpen(false); handleNew(templateKey); }}
+          onCancel={() => setNewNbDialogOpen(false)}
+        />
+      )}
       {settingsOpen && (
         <SettingsDialog
           theme={theme}

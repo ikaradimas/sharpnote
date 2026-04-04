@@ -4631,6 +4631,40 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 .quit-btn-save:hover { box-shadow: 0 0 8px rgba(196,150,74,0.3); }
 .quit-btn-save:disabled { opacity: 0.4; cursor: not-allowed; }
 
+/* ── New Notebook Dialog ────────────────────────────────────────────────── */
+.new-nb-dialog {
+  background: var(--bg-mid);
+  border: 1px solid var(--border-default);
+  border-radius: 5px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.7);
+  width: 380px; max-width: 90vw;
+  display: flex; flex-direction: column;
+}
+.new-nb-dialog-body {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 10px 12px; max-height: 360px; overflow-y: auto;
+}
+.new-nb-item {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 8px 12px; border-radius: 4px;
+  border: 1px solid transparent; cursor: pointer;
+  background: transparent; text-align: left;
+  font-family: var(--font-ui);
+}
+.new-nb-item:hover, .new-nb-item-selected {
+  background: var(--bg-elevated);
+  border-color: var(--border-default);
+}
+.new-nb-item-selected {
+  border-color: var(--accent-primary-dim);
+}
+.new-nb-item-label {
+  font-size: 12.5px; font-weight: 500; color: var(--text-primary);
+}
+.new-nb-item-desc {
+  font-size: 11px; color: var(--text-muted);
+}
+
 /* ── File Explorer Panel ─────────────────────────────────────────────────── */
 .files-panel {
   flex: 1; display: flex; flex-direction: column; overflow: hidden;

@@ -8,7 +8,6 @@ const kafkaMessageWrappers = new WeakMap();
 
 contextBridge.exposeInMainWorld('electronAPI', {
   // Dialogs
-  showNewNotebookDialog: () => ipcRenderer.invoke('new-notebook-dialog'),
   renameFile: (oldPath, newPath) => ipcRenderer.invoke('rename-file', { oldPath, newPath }),
 
   // Kernel lifecycle

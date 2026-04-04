@@ -34,18 +34,6 @@ function register(ipcMain, { mainWindow, dialog, addRecentFile, writeLog } = {})
   if (writeLog)      _writeLog      = writeLog;
   if (dialog)        _dialog        = dialog;
 
-  ipcMain.handle('new-notebook-dialog', async () => {
-    const { response } = await _dialog.showMessageBox(_mainWindow, {
-      type: 'question',
-      title: 'New Notebook',
-      message: 'Start with a template?',
-      buttons: ['Examples', 'Blank', 'Cancel'],
-      defaultId: 0,
-      cancelId: 2,
-    });
-    return response;
-  });
-
   ipcMain.handle('save-notebook', async (_event, data) => {
     const { filePath, canceled } = await _dialog.showSaveDialog(_mainWindow, {
       title: 'Save Notebook',
