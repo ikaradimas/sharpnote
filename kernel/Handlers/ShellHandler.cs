@@ -57,36 +57,46 @@ partial class Program
             using var proc = Process.Start(psi)!;
 
             // Stream output using an updatable display handle — single <pre> block
-            // that grows as lines arrive, avoiding per-line output blocks.
+            // that grows as lines arrive. Throttled: flush at most every 100ms to
+            // avoid O(n²) serialization and IPC flooding for fast-producing commands.
             var handleId = Guid.NewGuid().ToString("N")[..12];
             var output   = new StringBuilder();
+            var dirty    = false;
+            var emitLock = new object();
 
-            void EmitUpdate()
+            void EmitUpdate(bool force = false)
             {
-                var html = $"<pre class=\"util-cmd-output\" style=\"margin:0;white-space:pre-wrap;max-height:500px;overflow:auto\">" +
-                           $"{System.Net.WebUtility.HtmlEncode(output.ToString())}</pre>";
-                lock (realStdout)
+                lock (emitLock)
                 {
-                    realStdout.WriteLine(JsonSerializer.Serialize(new
+                    if (!force && !dirty) return;
+                    dirty = false;
+                    var html = $"<pre class=\"util-cmd-output\" style=\"margin:0;white-space:pre-wrap;max-height:500px;overflow:auto\">" +
+                               $"{System.Net.WebUtility.HtmlEncode(output.ToString())}</pre>";
+                    lock (realStdout)
                     {
-                        type     = "display",
-                        id       = cellId,
-                        format   = "html",
-                        content  = html,
-                        handleId,
-                        update   = output.Length > 0, // first emit is not an update
-                    }));
+                        realStdout.WriteLine(JsonSerializer.Serialize(new
+                        {
+                            type     = "display",
+                            id       = cellId,
+                            format   = "html",
+                            content  = html,
+                            handleId,
+                            update   = output.Length > 0,
+                        }));
+                    }
                 }
             }
 
-            // Read stdout and stderr concurrently, emitting updates
+            // Flush timer: emit pending output every 100ms
+            using var flushTimer = new System.Threading.Timer(_ => EmitUpdate(), null, 100, 100);
+
+            // Read stdout and stderr concurrently, marking dirty
             var stdoutTask = Task.Run(async () =>
             {
                 string? line;
                 while ((line = await proc.StandardOutput.ReadLineAsync()) != null)
                 {
-                    output.AppendLine(line);
-                    EmitUpdate();
+                    lock (emitLock) { output.AppendLine(line); dirty = true; }
                 }
             });
 
@@ -95,13 +105,13 @@ partial class Program
                 string? line;
                 while ((line = await proc.StandardError.ReadLineAsync()) != null)
                 {
-                    output.AppendLine(line);
-                    EmitUpdate();
+                    lock (emitLock) { output.AppendLine(line); dirty = true; }
                 }
             });
 
             await Task.WhenAll(stdoutTask, stderrTask);
             await proc.WaitForExitAsync();
+            EmitUpdate(force: true); // final flush
 
             // Final update with exit code
             var exitCode = proc.ExitCode;

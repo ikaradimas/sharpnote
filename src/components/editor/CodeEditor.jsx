@@ -281,11 +281,23 @@ export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
   const onChangeRef = useRef(onChange);
   const onCtrlEnterRef = useRef(onCtrlEnter);
   const readOnlyCompartmentRef = useRef(null);
+  const sqlCompletionCompartmentRef = useRef(null);
   const cellIndexRef = useRef(cellIndex);
 
   useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
   useEffect(() => { onCtrlEnterRef.current = onCtrlEnter; }, [onCtrlEnter]);
   useEffect(() => { cellIndexRef.current = cellIndex; }, [cellIndex]);
+
+  // Reconfigure SQL completions without recreating the editor
+  useEffect(() => {
+    const view = viewRef.current;
+    const compartment = sqlCompletionCompartmentRef.current;
+    if (!view || !compartment || language !== 'sql') return;
+    view.dispatch({ effects: compartment.reconfigure(autocompletion({
+      override: [buildSqlCompletionSource(sqlSchema)],
+      defaultKeymap: true,
+    })) });
+  }, [sqlSchema, language]);
 
   // Toggle read-only without recreating the editor
   useEffect(() => {
@@ -355,11 +367,13 @@ export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
     }
 
     if (language === 'sql') {
+      const sqlCompletionCompartment = new Compartment();
+      sqlCompletionCompartmentRef.current = sqlCompletionCompartment;
       extensions.push(
-        autocompletion({
+        sqlCompletionCompartment.of(autocompletion({
           override: [buildSqlCompletionSource(sqlSchema)],
           defaultKeymap: true,
-        }),
+        })),
         Prec.highest(keymap.of([
           { key: 'Tab', run: acceptCompletion },
         ])),
@@ -375,7 +389,7 @@ export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
       viewRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [language, notebookId, sqlSchema]);
+  }, [language, notebookId]);
 
   // Sync external value changes (e.g., load notebook)
   useEffect(() => {

@@ -357,12 +357,9 @@ public class DisplayHelper
             plotValue = _plotLastValues.TryGetValue(name, out var prev) ? value - prev : 0;
         }
         _plotLastValues[name] = value;
-        if (chartType != null)
-            Send(new { type = "var_point", name, value = plotValue,
-                       time = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), axis, chartType });
-        else
-            Send(new { type = "var_point", name, value = plotValue,
-                       time = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), axis });
+        Send(new { type = "var_point", name, value = plotValue,
+                   time = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), axis,
+                   chartType = (object?)chartType });
     }
 
     /// <summary>

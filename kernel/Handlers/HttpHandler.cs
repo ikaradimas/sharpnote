@@ -15,6 +15,8 @@ namespace SharpNoteKernel;
 partial class Program
 {
     private static readonly Regex PlaceholderPattern = new(@"\{\{(\w+)\}\}", RegexOptions.Compiled);
+    private static readonly HashSet<string> ValidHttpMethods = new(StringComparer.OrdinalIgnoreCase)
+        { "GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS" };
 
     internal static async Task HandleExecuteHttp(
         JsonElement msg,
@@ -55,7 +57,7 @@ partial class Program
                 if (spaceIdx > 0)
                 {
                     var maybeMethod = firstLine[..spaceIdx].ToUpperInvariant();
-                    if (new[] { "GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS" }.Contains(maybeMethod))
+                    if (ValidHttpMethods.Contains(maybeMethod))
                     {
                         method = maybeMethod;
                         url = firstLine[(spaceIdx + 1)..].Trim();
