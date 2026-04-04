@@ -322,7 +322,7 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
             const existing = n.config.findIndex((e) => e.key === msg.key);
             const config = existing >= 0
               ? n.config.map((e, i) => (i === existing ? { ...e, value: msg.value } : e))
-              : [...n.config, { key: msg.key, value: msg.value }];
+              : [...n.config, { key: msg.key, value: msg.value, type: 'string' }];
             return { config };
           });
           break;

@@ -368,14 +368,16 @@ export function KafkaPanel({ onToggle, asTab = false }) {
         const batch = pendingRef.current.splice(0);
         const all = allMsgsRef.current;
         all.push(...batch);
-        if (all.length > maxMessagesRef.current) all.splice(0, all.length - maxMessagesRef.current);
-        // If a search filter is active, extend it with matching new messages
-        if (filteredRef.current && searchTermRef.current) {
-          const term = searchTermRef.current;
-          const matching = batch.filter((m) =>
-            (m.key && m.key.toLowerCase().includes(term)) ||
-            (m.value && m.value.toLowerCase().includes(term)) ||
-            (m.topic && m.topic.toLowerCase().includes(term)));
+        if (all.length > maxMessagesRef.current) {
+          const excess = all.length - maxMessagesRef.current;
+          all.splice(0, excess);
+          // Rebuild filtered list from the trimmed source to remove stale entries
+          if (filteredRef.current && searchTermRef.current) {
+            filteredRef.current = all.filter((m) => msgMatchesTerm(m, searchTermRef.current));
+          }
+        } else if (filteredRef.current && searchTermRef.current) {
+          // No trimming — just extend filtered with matching new messages
+          const matching = batch.filter((m) => msgMatchesTerm(m, searchTermRef.current));
           if (matching.length) filteredRef.current.push(...matching);
         }
         const source = filteredRef.current ?? all;
@@ -498,19 +500,13 @@ export function KafkaPanel({ onToggle, asTab = false }) {
     setPager({ total: 0, page: 1, totalPages: 1 });
   };
 
-  const applySearch = () => {
-    const term = searchQuery.trim().toLowerCase();
-    searchTermRef.current = term;
+  const msgMatchesTerm = (m, term) =>
+    (m.key && m.key.toLowerCase().includes(term)) ||
+    (m.value && m.value.toLowerCase().includes(term)) ||
+    (m.topic && m.topic.toLowerCase().includes(term));
+
+  const resetPager = (source) => {
     expandedRef.current = {};
-    if (!term) {
-      filteredRef.current = null;
-    } else {
-      filteredRef.current = allMsgsRef.current.filter((m) =>
-        (m.key && m.key.toLowerCase().includes(term)) ||
-        (m.value && m.value.toLowerCase().includes(term)) ||
-        (m.topic && m.topic.toLowerCase().includes(term)));
-    }
-    const source = filteredRef.current ?? allMsgsRef.current;
     const total = source.length;
     const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
     pageRef.current = 1;
@@ -518,16 +514,20 @@ export function KafkaPanel({ onToggle, asTab = false }) {
     setPager({ total, page: 1, totalPages });
   };
 
+  const applySearch = () => {
+    const term = searchQuery.trim().toLowerCase();
+    searchTermRef.current = term;
+    filteredRef.current = term
+      ? allMsgsRef.current.filter((m) => msgMatchesTerm(m, term))
+      : null;
+    resetPager(filteredRef.current ?? allMsgsRef.current);
+  };
+
   const clearSearch = () => {
     searchTermRef.current = '';
     filteredRef.current = null;
     setSearchQuery('');
-    expandedRef.current = {};
-    const total = allMsgsRef.current.length;
-    const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-    pageRef.current = 1;
-    renderPage(1);
-    setPager({ total, page: 1, totalPages });
+    resetPager(allMsgsRef.current);
   };
 
   const handleClear = async () => {

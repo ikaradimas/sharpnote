@@ -868,7 +868,8 @@ export function App() {
         onToggleFavorite: (path) => {
           setFavoriteFolders((prev) => {
             const next = prev.includes(path) ? prev.filter((p) => p !== path) : [...prev, path];
-            setTimeout(() => saveSettingsRef.current(), 0);
+            favoriteFoldersRef.current = next;
+            saveSettingsRef.current();
             return next;
           });
         },
@@ -889,7 +890,7 @@ export function App() {
       regex: {},
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeNb, dbConnections, filesPanelOpen, filesCurrentDir, apiPanelOpen]);
+  }, [activeNb, dbConnections, filesPanelOpen, filesCurrentDir, apiPanelOpen, favoriteFolders]);
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
