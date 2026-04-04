@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useContext } from 'react';
+import React, { useState, useEffect, useMemo, useContext } from 'react';
 import { TablePageSizeContext } from '../../config/table-page-size-context.js';
 
 export function DataTable({ rows }) {
@@ -10,6 +10,9 @@ export function DataTable({ rows }) {
   const [pageSize, setPageSize] = useState(defaultPageSize);
   const [sortCol, setSortCol]   = useState(null);
   const [sortDir, setSortDir]   = useState('asc');
+  const [colWidths, setColWidths] = useState(null);
+
+  useEffect(() => setColWidths(null), [rows]);
 
   const columns = Object.keys(rows[0]);
 
@@ -51,15 +54,43 @@ export function DataTable({ rows }) {
       ? <span className="sort-indicator">⇅</span>
       : <span className="sort-indicator active">{sortDir === 'asc' ? '▲' : '▼'}</span>;
 
+  const startResize = (e, colIndex) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const th = e.target.parentElement;
+    const startWidth = th.offsetWidth;
+
+    const table = th.closest('table');
+    const ths = table.querySelectorAll('th');
+    const currentWidths = colWidths || Array.from(ths).map(t => t.offsetWidth);
+
+    const onMouseMove = (moveE) => {
+      const delta = moveE.clientX - startX;
+      const newWidths = [...currentWidths];
+      newWidths[colIndex] = Math.max(40, startWidth + delta);
+      setColWidths(newWidths);
+    };
+
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  };
+
   return (
     <div className="data-table-wrap">
       <div className="data-table-scroll">
-        <table className="data-table">
+        <table className="data-table" style={colWidths ? { tableLayout: 'fixed' } : undefined}>
           <thead>
             <tr>
-              {columns.map((c) => (
-                <th key={c} className="sortable" onClick={() => onSort(c)}>
+              {columns.map((c, i) => (
+                <th key={c} className="sortable" onClick={() => onSort(c)}
+                    style={colWidths ? { width: colWidths[i] } : undefined}>
                   {c}{sortIndicator(c)}
+                  <div className="col-resize-handle" onMouseDown={(e) => { e.stopPropagation(); startResize(e, i); }} />
                 </th>
               ))}
             </tr>

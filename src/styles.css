@@ -933,6 +933,8 @@ body {
   background: #111113;
   border-top: 1px solid var(--border-subtle);
   padding: 8px 12px;
+  padding-top: 4px;
+  margin-top: 2px;
   font-family: var(--font-code);
   font-size: calc((var(--base-font-size) - 1.5) * 1px);
 }
@@ -996,6 +998,7 @@ body {
 }
 
 .data-table th {
+  position: relative;
   background: var(--bg-mid);
   color: var(--accent-secondary);
   padding: 5px 12px;
@@ -6433,3 +6436,24 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
   text-decoration: underline; text-underline-offset: 2px; padding: 4px 0;
 }
 .panel-empty-action:hover { color: var(--text-primary); }
+
+/* ── Command palette categories & icons ─────────────────────────────────── */
+.cmd-palette-category {
+  font-family: var(--font-heading); font-size: 10px; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--text-muted);
+  padding: 10px 16px 4px; user-select: none;
+}
+.cmd-palette-icon {
+  display: inline-flex; align-items: center; margin-right: 8px; opacity: 0.6;
+}
+.cmd-palette-list::-webkit-scrollbar { width: 6px; }
+.cmd-palette-list::-webkit-scrollbar-track { background: transparent; }
+.cmd-palette-list::-webkit-scrollbar-thumb { background: var(--border-default); border-radius: 3px; }
+.cmd-palette-list::-webkit-scrollbar-thumb:hover { background: var(--border-subtle); }
+
+/* ── DataTable column resize ────────────────────────────────────────────── */
+.col-resize-handle {
+  position: absolute; right: 0; top: 0; bottom: 0; width: 4px;
+  cursor: col-resize; user-select: none;
+}
+.col-resize-handle:hover { background: var(--accent-primary-dim); }
