@@ -98,3 +98,27 @@ describe('IPC – fs-get-home', () => {
     expect(result).toBeTruthy();
   });
 });
+
+describe('IPC – get-env-var', () => {
+  it('returns value of existing env var', async () => {
+    process.env.__SHARPNOTE_TEST_VAR__ = 'test-value-123';
+    const result = await ipcHandlers['get-env-var'](fakeEvent, '__SHARPNOTE_TEST_VAR__');
+    expect(result).toBe('test-value-123');
+    delete process.env.__SHARPNOTE_TEST_VAR__;
+  });
+
+  it('returns empty string for non-existent env var', async () => {
+    const result = await ipcHandlers['get-env-var'](fakeEvent, '__SHARPNOTE_NONEXISTENT__');
+    expect(result).toBe('');
+  });
+
+  it('returns empty string for non-string input', async () => {
+    const result = await ipcHandlers['get-env-var'](fakeEvent, 42);
+    expect(result).toBe('');
+  });
+
+  it('returns empty string for empty string input', async () => {
+    const result = await ipcHandlers['get-env-var'](fakeEvent, '');
+    expect(result).toBe('');
+  });
+});
