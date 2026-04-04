@@ -487,6 +487,22 @@ Display.Html(@"
   Attach a database in the <strong style='color:#c4964a'>DB panel</strong> (or run the in-memory
   example above) to query it here.
 </p>");`),
+
+    md(`### Parameterized SQL from Config
+
+SQL cells can use \`@ParamName\` placeholders that are automatically bound from the **Config** panel.
+Any \`@ParamName\` matching a Config key is injected as a safe, parameterized query argument.
+
+Open the **Config** panel, add entries like \`Region = North\` and \`MinTotal = 100\`, then
+use them in a SQL cell:
+
+\`\`\`sql
+SELECT * FROM Orders
+WHERE Region = @Region AND Total > @MinTotal
+ORDER BY Total DESC
+\`\`\`
+
+Config values can also be overridden by environment variables — useful for switching between dev/prod.`),
   ];
 }
 

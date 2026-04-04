@@ -481,12 +481,22 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
   // Keep the ref in sync so the ready handler can call runAll
   runAllRef.current = runAll;
 
-  const runSqlCell = useCallback((notebookId, cell) => {
-    if (!window.electronAPI || cell.type !== 'sql') return Promise.resolve();
+  const runSqlCell = useCallback(async (notebookId, cell) => {
+    if (!window.electronAPI || cell.type !== 'sql') return;
     const nb = notebooksRef.current.find((n) => n.id === notebookId);
     const effectiveDb = cell.db || nb?.attachedDbs?.find((d) => d.status === 'ready')?.connectionId || '';
     const attached = nb?.attachedDbs?.find((d) => d.connectionId === effectiveDb && d.status === 'ready');
-    if (!attached) return Promise.resolve();
+    if (!attached) return;
+
+    // Resolve config (same as runCell) so SQL can use @ConfigKey parameters
+    const configEntries = nb?.config || [];
+    const resolvedConfig = {};
+    for (const e of configEntries) resolvedConfig[e.key] = e.value;
+    const envEntries = configEntries.filter((e) => e.envVar);
+    if (envEntries.length > 0) {
+      const envVals = await Promise.all(envEntries.map((e) => window.electronAPI.getEnvVar(e.envVar)));
+      envEntries.forEach((e, i) => { if (envVals[i]) resolvedConfig[e.key] = envVals[i]; });
+    }
 
     return new Promise((resolve) => {
       setNb(notebookId, (n) => {
@@ -508,6 +518,7 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
         id: cell.id,
         sql: cell.content,
         varName: attached.varName,
+        config: resolvedConfig,
       });
     });
   }, [setNb]); // eslint-disable-line react-hooks/exhaustive-deps

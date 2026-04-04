@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
@@ -12,6 +13,12 @@ namespace SharpNoteKernel;
 
 partial class Program
 {
+    // Matches @ParamName tokens in SQL that are NOT inside single-quoted strings.
+    // Lookbehind/lookahead for quotes is fragile, so we use a simple regex and
+    // cross-reference against known Config keys — false positives are harmless
+    // (unmatched params are just left in the SQL for the DB to handle).
+    private static readonly Regex SqlParamPattern = new(@"@(\w+)", RegexOptions.Compiled);
+
     internal static async Task HandleExecuteSql(
         JsonElement msg,
         ScriptOptions options,
@@ -33,6 +40,13 @@ partial class Program
             return;
         }
 
+        // ── Apply notebook config (same pattern as ExecuteHandler) ────────────
+        var configDict = new Dictionary<string, string>();
+        if (msg.TryGetProperty("config", out var cfgProp))
+            foreach (var entry in cfgProp.EnumerateObject())
+                configDict[entry.Name] = entry.Value.GetString() ?? "";
+        ConfigContext.Current = new ConfigHelper(configDict, realStdout);
+
         CurrentCellId = cellId;
         globals.Display.SetCellId(cellId ?? "");
         DisplayContext.Current = globals.Display;
@@ -41,6 +55,29 @@ partial class Program
         {
             // Escape the SQL for inclusion in a C# verbatim string (double up double-quotes)
             var escapedSql = (sql ?? "").Replace("\"", "\"\"");
+
+            // ── Detect @Param placeholders that match Config keys ─────────────
+            var paramMatches = SqlParamPattern.Matches(sql ?? "");
+            var boundParams = new List<(string paramName, string configKey)>();
+            foreach (Match m in paramMatches)
+            {
+                var name = m.Groups[1].Value;
+                if (configDict.ContainsKey(name) && !boundParams.Any(p => p.paramName == name))
+                    boundParams.Add((name, name));
+            }
+
+            // Build parameter-binding code
+            var paramCode = "";
+            if (boundParams.Count > 0)
+            {
+                var sb = new System.Text.StringBuilder();
+                foreach (var p in boundParams)
+                {
+                    var escapedKey = p.configKey.Replace("\\", "\\\\").Replace("\"", "\\\"");
+                    sb.AppendLine($"        {{ var __p__ = __sql_cmd__.CreateParameter(); __p__.ParameterName = \"@{p.paramName}\"; __p__.Value = (object)Config[\"{escapedKey}\"] ?? System.DBNull.Value; __sql_cmd__.Parameters.Add(__p__); }}");
+                }
+                paramCode = sb.ToString();
+            }
 
             var code = $$"""
 {
@@ -51,7 +88,7 @@ partial class Program
     {
         using var __sql_cmd__ = __sql_conn__.CreateCommand();
         __sql_cmd__.CommandText = @"{{escapedSql}}";
-        using var __sql_reader__ = await __sql_cmd__.ExecuteReaderAsync();
+{{paramCode}}        using var __sql_reader__ = await __sql_cmd__.ExecuteReaderAsync();
         do
         {
             var __sql_cols__ = Enumerable.Range(0, __sql_reader__.FieldCount)
