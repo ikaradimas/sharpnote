@@ -10,6 +10,9 @@ public class RedisNamespaceTests
 {
     private static List<(string key, string type)> Keys(params (string key, string type)[] items) => items.ToList();
 
+    private static List<(string key, string type, string? value)> KeysWithValues(
+        params (string key, string type, string? value)[] items) => items.ToList();
+
     [Fact]
     public void FlatKeys_GroupedUnderKeysTable()
     {
@@ -43,9 +46,7 @@ public class RedisNamespaceTests
             ("app:config", "string")));
 
         var names = tables.Select(t => t.Name).ToList();
-        // "app" should have leaf "config"
         names.Should().Contain("app");
-        // "app:cache:user" and "app:cache:session" (or collapsed) should exist
         names.Should().Contain(n => n.StartsWith("app:cache"));
 
         var appTable = tables.First(t => t.Name == "app");
@@ -61,19 +62,17 @@ public class RedisNamespaceTests
             ("ns:key2", "list")));
 
         var names = tables.Select(t => t.Name).ToList();
-        names.Should().Contain("(keys)"); // standalone flat key
-        names.Should().Contain("ns");     // namespace prefix
+        names.Should().Contain("(keys)");
+        names.Should().Contain("ns");
     }
 
     [Fact]
     public void CollapsesSingleChildNamespaces()
     {
-        // "a:b:c:leaf" where a→b→c is a single-path chain should collapse
         var tables = RedisProvider.BuildNamespaceTree(Keys(
             ("deep:nested:path:key1", "string"),
             ("deep:nested:path:key2", "hash")));
 
-        // Should collapse "deep:nested:path" into one table
         tables.Should().HaveCount(1);
         tables[0].Name.Should().Be("deep:nested:path");
         tables[0].Columns.Should().HaveCount(2);
@@ -99,5 +98,39 @@ public class RedisNamespaceTests
         cols.First(c => c.Name == "lst").CSharpType.Should().Be("RedisValue[]");
         cols.First(c => c.Name == "st").CSharpType.Should().Be("RedisValue[]");
         cols.First(c => c.Name == "zst").CSharpType.Should().Be("SortedSetEntry[]");
+    }
+
+    // ── Value propagation ─────────────────────────────────────────────────────
+
+    [Fact]
+    public void Values_PropagatedToColumns()
+    {
+        var tables = RedisProvider.BuildNamespaceTree(KeysWithValues(
+            ("ns:key1", "string", "hello world"),
+            ("ns:key2", "hash", "(3 fields) a=1, b=2, c=3")));
+
+        var cols = tables[0].Columns;
+        cols.First(c => c.Name == "key1").SampleValue.Should().Be("hello world");
+        cols.First(c => c.Name == "key2").SampleValue.Should().Be("(3 fields) a=1, b=2, c=3");
+    }
+
+    [Fact]
+    public void NullValues_AllowedInColumns()
+    {
+        var tables = RedisProvider.BuildNamespaceTree(KeysWithValues(
+            ("ns:key1", "string", null)));
+
+        tables[0].Columns[0].SampleValue.Should().BeNull();
+    }
+
+    [Fact]
+    public void FlatKeys_PreserveValues()
+    {
+        var tables = RedisProvider.BuildNamespaceTree(KeysWithValues(
+            ("alpha", "string", "value-a"),
+            ("beta", "hash", "value-b")));
+
+        tables[0].Columns.First(c => c.Name == "alpha").SampleValue.Should().Be("value-a");
+        tables[0].Columns.First(c => c.Name == "beta").SampleValue.Should().Be("value-b");
     }
 }

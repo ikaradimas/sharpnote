@@ -7,32 +7,58 @@ function DbStatusDot({ status }) {
   return <span className={`db-status-dot db-status-${status || 'none'}`} />;
 }
 
-function DbSchemaTree({ schema }) {
+const NS_COLORS = ['#4fc3f7', '#ce93d8', '#81c784', '#ffb74d', '#ef9a9a', '#90caf9', '#a5d6a7'];
+
+function CopyBtn({ text }) {
+  const [copied, copy] = useClipboard();
+  return (
+    <button className="db-key-copy" onClick={(e) => { e.stopPropagation(); copy(text); }}
+            title={copied ? 'Copied!' : 'Copy key'}>
+      {copied ? '✓' : '⎘'}
+    </button>
+  );
+}
+
+function DbSchemaTree({ schema, isRedis, onLoadMore }) {
   const [expanded, setExpanded] = useState({});
   if (!schema) return null;
   const toggle = (name) => setExpanded((prev) => ({ ...prev, [name]: !prev[name] }));
+
   return (
     <div className="db-schema-tree">
-      {schema.tables.map((table) => (
-        <div key={`${table.schema}.${table.name}`} className="db-table-node">
-          <div className="db-table-header" onClick={() => toggle(`${table.schema}.${table.name}`)}>
-            <span className="db-table-arrow">{expanded[`${table.schema}.${table.name}`] ? '▾' : '▸'}</span>
-            <span className="db-table-name">{table.schema ? `${table.schema}.${table.name}` : table.name}</span>
-            <span className="db-col-count">{table.columns.length}</span>
-          </div>
-          {expanded[`${table.schema}.${table.name}`] && (
-            <div className="db-columns-list">
-              {table.columns.map((col) => (
-                <div key={col.name} className={`db-column-node${col.isPrimaryKey ? ' db-col-pk' : ''}`}>
-                  <span className="db-col-name">{col.name}</span>
-                  <span className="db-col-type">{col.csharpType}</span>
-                  {col.isPrimaryKey && <span className="db-pk-badge">PK</span>}
-                </div>
-              ))}
+      {schema.tables.map((table) => {
+        const tableKey = `${table.schema}.${table.name}`;
+        const depth = isRedis ? table.name.split(':').length - 1 : 0;
+        return (
+          <div key={tableKey} className="db-table-node">
+            <div className="db-table-header" onClick={() => toggle(tableKey)}>
+              <span className="db-table-arrow">{expanded[tableKey] ? '▾' : '▸'}</span>
+              <span className="db-table-name" style={isRedis && depth > 0 ? { color: NS_COLORS[depth % NS_COLORS.length] } : undefined}>
+                {table.schema ? `${table.schema}.${table.name}` : table.name}
+              </span>
+              <span className="db-col-count">{table.columns.length}</span>
             </div>
-          )}
-        </div>
-      ))}
+            {expanded[tableKey] && (
+              <div className="db-columns-list">
+                {table.columns.map((col) => (
+                  <div key={col.name} className={`db-column-node${col.isPrimaryKey ? ' db-col-pk' : ''}${isRedis ? ' db-redis-key' : ''}`}>
+                    <span className="db-col-name">{col.name}</span>
+                    {isRedis && <CopyBtn text={table.name === '(keys)' ? col.name : `${table.name}:${col.name}`} />}
+                    <span className="db-col-type">{isRedis ? col.dbType : col.csharpType}</span>
+                    {col.isPrimaryKey && <span className="db-pk-badge">PK</span>}
+                    {isRedis && col.sampleValue && (
+                      <span className="db-redis-value" title={col.sampleValue}>{col.sampleValue}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+      {isRedis && schema.redisCursor !== 0 && onLoadMore && (
+        <button className="db-load-more-btn" onClick={onLoadMore}>Load more keys…</button>
+      )}
     </div>
   );
 }
@@ -53,7 +79,7 @@ export function DbPanel({
   isOpen, onToggle,
   connections, attachedDbs, notebookId,
   onAttach, onDetach, onRefresh, onRetry,
-  onEditConnection, onRemove,
+  onEditConnection, onRemove, onLoadMoreRedis,
 }) {
   const [height, onResizeMouseDown] = useResize(280, 'top');
   const [leftWidth, onColResizeMouseDown] = useResize(260, 'right');
@@ -165,7 +191,15 @@ export function DbPanel({
                     <button className="db-retry-btn" onClick={() => onRetry(db.connectionId)}>↺ Retry</button>
                   </div>
                 )}
-                {!isCollapsed && db.schema && <DbSchemaTree schema={db.schema} />}
+                {!isCollapsed && db.schema && (
+                  <DbSchemaTree
+                    schema={db.schema}
+                    isRedis={conn?.provider === 'redis'}
+                    onLoadMore={conn?.provider === 'redis' && db.schema.redisCursor !== 0
+                      ? () => onLoadMoreRedis(db.connectionId, db.schema.redisCursor)
+                      : undefined}
+                  />
+                )}
               </div>
             );
           })}

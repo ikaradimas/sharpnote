@@ -348,9 +348,31 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
           setNb(notebookId, (n) => ({
             attachedDbs: n.attachedDbs.map((d) =>
               d.connectionId === msg.connectionId
-                ? { ...d, schema: { databaseName: msg.databaseName, tables: msg.tables } }
+                ? { ...d, schema: { databaseName: msg.databaseName, tables: msg.tables, redisCursor: msg.redisCursor ?? 0 } }
                 : d
             ),
+          }));
+          break;
+
+        case 'db_redis_page':
+          setNb(notebookId, (n) => ({
+            attachedDbs: n.attachedDbs.map((d) => {
+              if (d.connectionId !== msg.connectionId || !d.schema) return d;
+              // Merge new tables into existing schema
+              const merged = [...d.schema.tables];
+              for (const t of msg.tables) {
+                const idx = merged.findIndex((m) => m.name === t.name);
+                if (idx >= 0) {
+                  // Append new columns to existing table, dedup by name
+                  const existing = new Set(merged[idx].columns.map((c) => c.name));
+                  const newCols = t.columns.filter((c) => !existing.has(c.name));
+                  merged[idx] = { ...merged[idx], columns: [...merged[idx].columns, ...newCols] };
+                } else {
+                  merged.push(t);
+                }
+              }
+              return { ...d, schema: { ...d.schema, tables: merged, redisCursor: msg.redisCursor ?? 0 } };
+            }),
           }));
           break;
 

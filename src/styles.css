@@ -3614,6 +3614,27 @@ body {
   border-radius: 2px;
   padding: 0 3px;
 }
+.db-redis-key { flex-wrap: wrap; }
+.db-redis-value {
+  width: 100%; margin-top: 1px;
+  font-size: 9px; color: var(--text-muted);
+  font-family: var(--font-code);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.db-key-copy {
+  background: none; border: none; cursor: pointer;
+  color: var(--text-muted); font-size: 10px; padding: 0 2px;
+  opacity: 0; flex-shrink: 0;
+}
+.db-column-node:hover .db-key-copy { opacity: 1; }
+.db-key-copy:hover { color: var(--accent-primary); }
+.db-load-more-btn {
+  display: block; width: 100%; padding: 5px 8px;
+  background: none; border: none; border-top: 1px solid var(--border-subtle);
+  color: var(--accent-primary); font-size: 10px; cursor: pointer;
+  font-family: var(--font-ui); text-align: center;
+}
+.db-load-more-btn:hover { background: var(--bg-elevated); }
 
 .db-error-msg {
   display: flex;

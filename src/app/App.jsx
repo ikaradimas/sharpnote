@@ -854,6 +854,9 @@ export function App() {
         onRetry:   nbId ? (connId) => handleRetryDb(nbId, connId)   : () => {},
         onEditConnection: (conn) => setDbConnDialog(conn === null ? 'new' : conn),
         onRemove: handleRemoveDbConnection,
+        onLoadMoreRedis: nbId ? (connId, cursor) => {
+          window.electronAPI?.sendToKernel(nbId, { type: 'db_redis_scan', connectionId: connId, cursor });
+        } : () => {},
       },
       library: {
         onInsert:   handleInsertLibraryFile,
