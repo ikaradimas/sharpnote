@@ -43,6 +43,7 @@ An interactive C# notebook. Press **Ctrl+Enter** to run a cell, or click **▶ R
 | NuGet | \`#r "nuget: Package, Version"\` |
 | Logging | \`value.Log()\` · \`value.Log("label")\` |
 | Config | \`Config["Key"]\` · \`Config.Set("Key","val")\` · \`Config.Remove("Key")\` |
+| Data Import | \`Data.LoadCsv(path)\` · File → Import Data File (⇧⌘I) for Excel/Parquet |
 | Database | Attach via **DB** panel or \`Db.Add\` / \`Db.Attach\` → \`mydb.Users.ToList()\` |
 | Panels | \`Panels.Open/Close/CloseAll(PanelId.*)\` · \`Panels.Dock/Float\` |
 | Util | \`obj.Dump()\` · \`Util.Time()\` · \`Util.Dif()\` · \`Util.HorizontalRun()\` · \`Util.Cache()\` · \`Util.ConfirmAsync()\` |
@@ -207,12 +208,49 @@ new {
     },
 }`, 'graph'),
 
-    md('## 6 · CSV'),
+    md('## 6 · CSV & Data Import'),
 
     md('### Inline CSV'),
 
     cs(`// Parse and render CSV inline
 Display.Csv("Name,Score,Grade\\nAlice,95,A\\nBob,82,B\\nCharlie,78,C+\\nDiana,91,A-");`),
+
+    md(`### Data.LoadCsv — Load CSV files
+
+\`Data.LoadCsv(path)\` parses a CSV file and returns a \`List<Dictionary<string, object>>\`.
+Values are type-inferred (integers, doubles, booleans, strings). The result auto-displays as a table.
+
+Use **File → Import Data File** (⇧⌘I) to pick a file and generate the code automatically.
+Excel (.xlsx) and Parquet files are also supported via code-generated NuGet directives.`),
+
+    cs(`// Write a sample CSV, then load and display it
+var csvPath = Path.Combine(Path.GetTempPath(), "sample.csv");
+File.WriteAllText(csvPath, "Name,Age,Score,Active\\nAlice,30,95.5,true\\nBob,25,82.0,true\\nCharlie,35,78.3,false\\nDiana,28,91.1,true\\n");
+
+var data = Data.LoadCsv(csvPath);
+data  // auto-displayed as a sortable table`),
+
+    cs(`// LINQ on imported data — filter, project, aggregate
+var csvPath = Path.Combine(Path.GetTempPath(), "sample.csv");
+var data = Data.LoadCsv(csvPath);
+
+// Filter: only active people with score > 80
+var highScorers = data
+    .Where(r => (bool)r["Active"] && (double)r["Score"] > 80)
+    .Select(r => new { Name = r["Name"], Score = r["Score"] })
+    .ToList();
+highScorers.DisplayTable();
+
+// Aggregate
+var avgScore = data.Average(r => (double)r["Score"]);
+Console.WriteLine($"Average score: {avgScore:F1}");`),
+
+    cs(`// Tab-delimited and headerless files
+var tsvPath = Path.Combine(Path.GetTempPath(), "data.tsv");
+File.WriteAllText(tsvPath, "Alice\\t30\\nBob\\t25\\n");
+
+var tsv = Data.LoadCsv(tsvPath, hasHeader: false, delimiter: '\\t');
+tsv  // columns are named Col1, Col2, …`),
 
     md(`## 7 · Live Updates
 
