@@ -16,13 +16,13 @@ export function IconOpen() {
   </svg>;
 }
 export function IconReset() {
-  return <svg {..._ic} stroke="currentColor" strokeWidth="1.2" strokeLinecap="round">
+  return <svg {..._ic} stroke="currentColor" strokeWidth="1.1" strokeLinecap="round">
     <path d="M2.5 6.5A4 4 0 1 1 5.5 10.5"/>
     <path d="M2.5 4v2.5H5"/>
   </svg>;
 }
 export function IconConfig() {
-  return <svg {..._ic} stroke="currentColor" strokeWidth="1.2" strokeLinecap="round">
+  return <svg {..._ic} stroke="currentColor" strokeWidth="1.1" strokeLinecap="round">
     <line x1="2" y1="3.5" x2="11" y2="3.5"/>
     <circle cx="4.5" cy="3.5" r="1.3" fill="currentColor" stroke="none"/>
     <line x1="2" y1="6.5" x2="11" y2="6.5"/>
@@ -92,7 +92,7 @@ export function IconLayout() {
 }
 export function IconFiles() {
   return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.3">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.1">
       <rect x="1" y="3" width="8" height="10" rx="1" />
       <path d="M4 3V2a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1h-1" />
       <line x1="3" y1="7" x2="7" y2="7" />

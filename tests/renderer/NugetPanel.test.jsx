@@ -36,7 +36,7 @@ describe('NugetPanel', () => {
 
   it('shows empty state when no packages', () => {
     render(<NugetPanel {...defaultProps()} />);
-    expect(screen.getByText(/No startup packages/)).toBeInTheDocument();
+    expect(screen.getByText(/No packages/)).toBeInTheDocument();
   });
 
   it('shows installed package in list', () => {

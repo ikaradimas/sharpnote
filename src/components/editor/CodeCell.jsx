@@ -189,20 +189,27 @@ export function CodeCell({
             </div>
           )}
         </div>
+        {!isRunning && lastDuration !== null && (
+          <span className={`cell-header-timer${lastDuration > 5000 ? ' cell-timer-very-slow' : lastDuration > 1000 ? ' cell-timer-slow' : ''}`}>
+            {formatElapsed(lastDuration)}
+          </span>
+        )}
         <div className="header-right">
-          <label className="output-mode-label">output</label>
-          <select
-            className="output-mode-select"
-            value={outputMode}
-            onChange={(e) => onOutputModeChange(e.target.value)}
-            title="Output mode"
-          >
-            <option value="auto">auto</option>
-            <option value="text">text</option>
-            <option value="html">html</option>
-            <option value="table">table</option>
-            <option value="graph">graph</option>
-          </select>
+          <div className="header-overflow">
+            <label className="output-mode-label">output</label>
+            <select
+              className="output-mode-select"
+              value={outputMode}
+              onChange={(e) => onOutputModeChange(e.target.value)}
+              title="Output mode"
+            >
+              <option value="auto">auto</option>
+              <option value="text">text</option>
+              <option value="html">html</option>
+              <option value="table">table</option>
+              <option value="graph">graph</option>
+            </select>
+          </div>
           <CellControls onMoveUp={onMoveUp} onMoveDown={onMoveDown} onDelete={onDelete} />
         </div>
       </div>

@@ -20,7 +20,7 @@ describe('ConfigPanel', () => {
 
   it('shows empty state with no entries', () => {
     render(<ConfigPanel {...defaultProps()} />);
-    expect(screen.getByText(/No entries/)).toBeInTheDocument();
+    expect(screen.getByText(/No config entries/)).toBeInTheDocument();
   });
 
   it('renders existing config entries', () => {

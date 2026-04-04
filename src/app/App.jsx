@@ -30,6 +30,7 @@ import { CommandPalette } from '../components/dialogs/CommandPalette.jsx';
 import { VarInspectDialog } from '../components/dialogs/VarInspectDialog.jsx';
 import { DbConnectionDialog } from '../components/dialogs/DbConnectionDialog.jsx';
 import { NewNotebookDialog } from '../components/dialogs/NewNotebookDialog.jsx';
+import { KeyboardShortcutsOverlay } from '../components/dialogs/KeyboardShortcutsOverlay.jsx';
 import { StatusBar } from './StatusBar.jsx';
 import { renderPanelContent } from '../components/dock/renderPanelContent.jsx';
 
@@ -70,6 +71,7 @@ export function App() {
   const [aboutOpen, setAboutOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [newNbDialogOpen, setNewNbDialogOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [varInspectDialog, setVarInspectDialog] = useState(null);
   const [dbConnDialog, setDbConnDialog] = useState(null); // null | connection object (edit) | opened with null (new)
@@ -783,6 +785,10 @@ export function App() {
         e.preventDefault();
         setCommandPaletteOpen((v) => !v);
       }
+      if ((e.metaKey || e.ctrlKey) && e.key === '/') {
+        e.preventDefault();
+        setShortcutsOpen((v) => !v);
+      }
     };
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
@@ -1135,9 +1141,15 @@ export function App() {
       )}
       {commandPaletteOpen && (
         <CommandPalette
-          onExecute={(id) => menuHandlersRef.current[id]?.()}
+          onExecute={(id) => {
+            if (id === 'shortcuts') { setCommandPaletteOpen(false); setShortcutsOpen(true); return; }
+            menuHandlersRef.current[id]?.();
+          }}
           onClose={() => setCommandPaletteOpen(false)}
         />
+      )}
+      {shortcutsOpen && (
+        <KeyboardShortcutsOverlay onClose={() => setShortcutsOpen(false)} />
       )}
       {dbConnDialog && (
         <DbConnectionDialog

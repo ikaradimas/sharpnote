@@ -125,6 +125,11 @@ export function MarkdownCell({
         </div>
       ) : (
         <div className="markdown-render-wrap" onDoubleClick={enterEdit}>
+          <span className="md-edit-hint" title="Double-click to edit">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.2">
+              <path d="M7 2l3 3-7 7H0V9z" /><path d="M6 3l3 3" />
+            </svg>
+          </span>
           <div
             ref={renderRef}
             className="markdown-render"

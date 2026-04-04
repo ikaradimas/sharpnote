@@ -42,6 +42,8 @@ export function StatusBar({ notebooks, activeId }) {
   const history = nb?.memoryHistory ?? [];
   const current = history.length > 0 ? history[history.length - 1] : null;
   const peak    = history.length > 0 ? Math.max(...history) : null;
+  const anyRunning = nb ? nb.running?.size > 0 : false;
+  const totalCells = nb ? nb.cells?.filter((c) => c.type === 'code' || c.type === 'sql').length : 0;
 
   const [cursorPos, setCursorPos] = useState(null);
   useEffect(() => {
@@ -62,9 +64,15 @@ export function StatusBar({ notebooks, activeId }) {
       {nb?.memoryWarning && (
         <span className="status-mem-warning" title="Kernel memory usage is high">⚠ {nb.memoryWarning}</span>
       )}
+      <span className="status-spacer" />
+      {nb && (
+        <span className={`status-save-dot${nb.isDirty ? ' status-save-unsaved' : ''}`}
+              title={nb.isDirty ? 'Unsaved changes' : 'Saved'} />
+      )}
+      {anyRunning && <span className="status-running-spinner" title="Cell executing" />}
       {cursorPos && (
         <span className="status-cursor-pos">
-          {cursorPos.cellIndex != null ? `Cell ${cursorPos.cellIndex + 1}  ` : ''}Ln {cursorPos.line}  Col {cursorPos.col}
+          {cursorPos.cellIndex != null ? `Cell ${cursorPos.cellIndex + 1}/${totalCells}  ` : ''}Ln {cursorPos.line}  Col {cursorPos.col}
         </span>
       )}
     </div>
