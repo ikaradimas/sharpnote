@@ -7,6 +7,7 @@ import { CodeCell } from './editor/CodeCell.jsx';
 import { MarkdownCell } from './editor/MarkdownCell.jsx';
 import { SqlCell } from './editor/SqlCell.jsx';
 import { HttpCell } from './editor/HttpCell.jsx';
+import { ShellCell } from './editor/ShellCell.jsx';
 import { AddBar } from './editor/AddBar.jsx';
 import { FindBar } from './FindBar.jsx';
 
@@ -18,6 +19,7 @@ export function NotebookView({
   onRunCell,
   onRunSqlCell,
   onRunHttpCell,
+  onRunShellCell,
   onRunAll,
   onSave,
   onLoad,
@@ -139,6 +141,7 @@ export function NotebookView({
       onAddCode={() => addCell('code')}
       onAddSql={() => addCell('sql')}
       onAddHttp={() => addCell('http')}
+      onAddShell={() => addCell('shell')}
       autoRun={autoRun || false}
       onToggleAutoRun={() => onSetNbDirty((n) => ({ autoRun: !n.autoRun }))}
       onSave={() => onSave(nb.id)}
@@ -208,6 +211,7 @@ export function NotebookView({
             onAddCode={() => addCell('code', -1)}
             onAddSql={() => addCell('sql', -1)}
             onAddHttp={() => addCell('http', -1)}
+            onAddShell={() => addCell('shell', -1)}
           />
         )}
 
@@ -265,6 +269,21 @@ export function NotebookView({
                 onMoveUp={() => moveCell(cell.id, -1)}
                 onMoveDown={() => moveCell(cell.id, 1)}
               />
+            ) : cell.type === 'shell' ? (
+              <ShellCell
+                cell={cell}
+                cellIndex={index}
+                outputs={outputs[cell.id]}
+                notebookId={nb.id}
+                isRunning={running.has(cell.id)}
+                anyRunning={running.size > 0}
+                kernelReady={kernelStatus === 'ready'}
+                onUpdate={(val) => updateCell(cell.id, val)}
+                onRun={() => onRunShellCell(nb.id, cell)}
+                onDelete={() => deleteCell(cell.id)}
+                onMoveUp={() => moveCell(cell.id, -1)}
+                onMoveDown={() => moveCell(cell.id, 1)}
+              />
             ) : (
               <CodeCell
                 cell={cell}
@@ -298,6 +317,7 @@ export function NotebookView({
               onAddCode={() => addCell('code', index)}
               onAddSql={() => addCell('sql', index)}
               onAddHttp={() => addCell('http', index)}
+              onAddShell={() => addCell('shell', index)}
             />
           </div>
         ); })}

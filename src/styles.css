@@ -5971,6 +5971,7 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 .sql-cell { border-left: 3px solid #56b6c2; }
 .sql-label { color: #56b6c2 !important; }
 .http-label { color: #e0a040 !important; }
+.shell-label { color: #4ec9b0 !important; }
 .sql-db-select {
   padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-subtle);
   background: var(--bg-base); color: var(--text-secondary);

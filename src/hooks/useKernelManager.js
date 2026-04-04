@@ -561,6 +561,32 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
     });
   }, [setNb]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const runShellCell = useCallback((notebookId, cell) => {
+    if (!window.electronAPI || cell.type !== 'shell') return Promise.resolve();
+
+    return new Promise((resolve) => {
+      setNb(notebookId, (n) => {
+        const prevOutputs = n.outputs[cell.id];
+        const newOutputHistory = { ...(n.outputHistory || {}) };
+        if (prevOutputs?.length > 0) {
+          newOutputHistory[cell.id] = [...(newOutputHistory[cell.id] || []).slice(-4), prevOutputs];
+        }
+        return {
+          outputs: { ...n.outputs, [cell.id]: [] },
+          outputHistory: newOutputHistory,
+          cellResults: { ...(n.cellResults || {}), [cell.id]: null },
+          running: new Set([...n.running, cell.id]),
+        };
+      });
+      pendingResolversRef.current[cell.id] = resolve;
+      window.electronAPI.sendToKernel(notebookId, {
+        type: 'execute_shell',
+        id: cell.id,
+        content: cell.content,
+      });
+    });
+  }, [setNb]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const runFrom = useCallback(async (notebookId, cellId) => {
     const nb = notebooksRef.current.find((n) => n.id === notebookId);
     if (!nb || nb.running.size > 0) return;
@@ -607,6 +633,7 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
     runCell,
     runSqlCell,
     runHttpCell,
+    runShellCell,
     runAll,
     runFrom,
     runTo,

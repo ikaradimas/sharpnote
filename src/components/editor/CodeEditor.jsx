@@ -302,7 +302,7 @@ export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
       ? markdown({ base: markdownLanguage })
       : language === 'sql'
         ? StreamLanguage.define(standardSQL)
-        : language === 'http'
+        : language === 'http' || language === 'shell'
           ? [] // plain text — no syntax mode needed
           : StreamLanguage.define(csharp);
 

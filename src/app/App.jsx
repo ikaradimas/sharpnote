@@ -186,7 +186,7 @@ export function App() {
       }));
   }, [setNb, setLibraryPanelOpen, setFilesPanelOpen, setApiPanelOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const { runCell, runSqlCell, runHttpCell, runAll, runFrom, runTo, handleInterrupt, handleReset,
+  const { runCell, runSqlCell, runHttpCell, runShellCell, runAll, runFrom, runTo, handleInterrupt, handleReset,
           cancelPendingCells } =
     useKernelManager({
       setNb, notebooksRef, dbConnectionsRef, setVarInspectDialog,
@@ -998,6 +998,7 @@ export function App() {
                     onRunCell={runCell}
                     onRunSqlCell={runSqlCell}
                     onRunHttpCell={runHttpCell}
+                    onRunShellCell={runShellCell}
                     onRunAll={runAll}
                     onInterrupt={handleInterrupt}
                     onRunFrom={runFrom}

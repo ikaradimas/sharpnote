@@ -286,6 +286,12 @@ partial class Program
                     break;
                 }
 
+                case "execute_shell":
+                {
+                    await HandleExecuteShell(msg, realStdout);
+                    break;
+                }
+
                 case "db_test":
                 {
                     await HandleDbTest(msg, realStdout);
