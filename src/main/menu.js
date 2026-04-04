@@ -187,6 +187,13 @@ function buildMenu(customShortcuts = {}) {
         click:   () => send({ type: 'activate-tab', id: tab.id }),
       }));
 
+  template.push({
+    label: 'View',
+    submenu: [
+      { label: 'Dashboard Mode', accelerator: accel('dashboard', 'Ctrl+Shift+B'), click: () => send('dashboard') },
+    ],
+  });
+
   template.push({ label: 'Window', submenu: windowSubmenu });
 
   template.push({

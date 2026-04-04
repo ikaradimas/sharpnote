@@ -705,6 +705,18 @@ export const DOCS_SECTIONS = [
     ],
   },
   {
+    id: 'dashboard-mode', title: 'Dashboard Mode',
+    content: [
+      { type: 'p', text: 'Dashboard Mode hides all code editors, cell headers, and controls, showing only outputs and rendered markdown. Use it for presentations or wall-mounted monitors.' },
+      { type: 'ul', items: [
+        'Toggle via View → Dashboard Mode (⌘⇧B) or the command palette',
+        'An "Exit Dashboard" button appears in the top-right corner',
+        'Cell outputs, charts, tables, and markdown render at full width',
+        'Auto-run notebooks update their outputs in real time while in dashboard mode',
+      ]},
+    ],
+  },
+  {
     id: 'command-palette', title: 'Command Palette',
     content: [
       { type: 'p', text: 'The Command Palette provides a fast keyboard-driven interface to every action in SharpNote without leaving the keyboard.' },
@@ -973,6 +985,22 @@ export const DOCS_SECTIONS = [
       { type: 'p', text: 'Each match is listed below the test area with its zero-based index, the matched text, and the start–end character positions. Capture groups (numbered and named) are shown indented beneath their parent match.' },
       { type: 'h3', text: 'Quick Reference' },
       { type: 'p', text: 'Click Quick Reference at the bottom of the panel to expand a two-column cheat sheet of the most commonly used regex tokens.' },
+    ],
+  },
+  {
+    id: 'docker', title: 'Docker Integration',
+    content: [
+      { type: 'p', text: 'The Docker global lets you manage containers from code cells. Requires Docker to be installed and running.' },
+      { type: 'h3', text: 'API' },
+      { type: 'ul', items: [
+        'Docker.Run(image, name?, ports?, env?, volume?, detach?) — start a container, returns container ID',
+        'Docker.Stop(nameOrId) — stop a running container',
+        'Docker.Remove(nameOrId) — remove a container (force)',
+        'Docker.Exec(nameOrId, command) — execute a command inside a running container',
+        'Docker.IsRunning(nameOrId) — check if a container is running',
+        'Docker.List() — list all containers with status',
+      ]},
+      { type: 'code', text: '// Start a Redis container for testing\nvar id = Docker.Run("redis:7", name: "test-redis",\n    ports: new() { ["6379"] = "6379" });\n\n// Use it...\nawait Task.Delay(2000); // wait for startup\nDocker.IsRunning("test-redis").Display();\n\n// Clean up\nDocker.Stop("test-redis");\nDocker.Remove("test-redis");' },
     ],
   },
 ];

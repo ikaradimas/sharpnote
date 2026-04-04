@@ -50,6 +50,8 @@ export function NotebookView({
   scheduledCells,
   onScheduleStart,
   onScheduleStop,
+  dashboardMode,
+  onToggleDashboard,
 }) {
   const { cells, outputs, outputHistory, cellResults, running, kernelStatus,
           config, logPanelOpen, nugetPanelOpen, configPanelOpen,
@@ -197,7 +199,7 @@ export function NotebookView({
           onHighlight={setFindHighlighted}
         />
       )}
-      <div className="notebook">
+      <div className={`notebook${dashboardMode ? ' dashboard-mode' : ''}`}>
         {cells.length === 0 && (
           <div className="empty-notebook">
             <h2>Empty Notebook</h2>
@@ -205,7 +207,7 @@ export function NotebookView({
           </div>
         )}
 
-        {cells.length > 0 && (
+        {cells.length > 0 && !dashboardMode && (
           <AddBar
             onAddMarkdown={() => addCell('markdown', -1)}
             onAddCode={() => addCell('code', -1)}
@@ -213,6 +215,12 @@ export function NotebookView({
             onAddHttp={() => addCell('http', -1)}
             onAddShell={() => addCell('shell', -1)}
           />
+        )}
+
+        {dashboardMode && (
+          <button className="dashboard-exit-btn" onClick={onToggleDashboard} title="Exit Dashboard Mode">
+            Exit Dashboard
+          </button>
         )}
 
         {cells.map((cell, index) => {
@@ -312,13 +320,15 @@ export function NotebookView({
                 onScheduleStop={() => onScheduleStop?.(cell.id)}
               />
             )}
-            <AddBar
-              onAddMarkdown={() => addCell('markdown', index)}
-              onAddCode={() => addCell('code', index)}
-              onAddSql={() => addCell('sql', index)}
-              onAddHttp={() => addCell('http', index)}
-              onAddShell={() => addCell('shell', index)}
-            />
+            {!dashboardMode && (
+              <AddBar
+                onAddMarkdown={() => addCell('markdown', index)}
+                onAddCode={() => addCell('code', index)}
+                onAddSql={() => addCell('sql', index)}
+                onAddHttp={() => addCell('http', index)}
+                onAddShell={() => addCell('shell', index)}
+              />
+            )}
           </div>
         ); })}
       </div>

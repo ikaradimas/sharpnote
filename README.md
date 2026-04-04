@@ -93,6 +93,7 @@
 - **Find in Notebook** — `Ctrl+F` opens a floating search bar that searches across all cell contents; ↑ / ↓ buttons (or Enter / Shift+Enter) navigate between matches; matched cells are highlighted; press Escape to close
 - **Auto-run on open** — the ⚡ toolbar button enables auto-run mode per notebook; when enabled, all code cells are run automatically when the notebook opens and the kernel becomes ready; state is saved in the `.cnb` file
 - **Scheduled execution** — click the ⏱ button in any code cell footer to run it on a repeating interval (5s, 10s, 30s, 1m, or 5m); skips ticks if the cell is still running; schedules stop on kernel reset or tab close and do not auto-start on load
+- **Dashboard mode** — View → Dashboard Mode (⌘⇧B) or the command palette hides all code editors, cell headers, and controls, showing only outputs and rendered markdown; ideal for presentations or wall-mounted monitors; an "Exit Dashboard" button appears in the top-right corner
 
 ### Output & Display
 
@@ -130,6 +131,7 @@
 - **Code Library** — file-based snippet library stored in `~/Documents/SharpNote Notebooks/Library/`; subfolder navigation, syntax-highlighted preview, insert-as-cell with animation
 - **API Browser** — enter any OpenAPI 3.x or Swagger 2.0 spec URL (JSON or YAML) to explore endpoints grouped by tag; expandable detail shows parameters, request body, and response schema types; **Try it** form sends live requests with path/query/body inputs; supports Bearer, API Key, and Basic auth applied to every request; save and recall multiple APIs with their auth config; all requests proxied through the main process for http:// local dev servers
 - **Kafka Browser** — save named broker connections (with SSL and SASL-PLAIN/SCRAM support); click → to list all topics via the admin API; click ▶ per topic to start a live consumer feed (multiple topics simultaneously); configurable max-messages cap; click C# to copy a ready-to-run `Confluent.Kafka` consumer snippet to the clipboard (Ctrl+Shift+K)
+- **Docker integration** — the `Docker` kernel global manages containers from code cells via `Docker.Run()`, `Docker.Stop()`, `Docker.Remove()`, `Docker.Exec()`, `Docker.IsRunning()`, and `Docker.List()`; requires Docker to be installed
 
 ### Developer Experience
 

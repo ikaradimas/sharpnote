@@ -76,6 +76,8 @@ export function App() {
   const [varInspectDialog, setVarInspectDialog] = useState(null);
   const [dbConnDialog, setDbConnDialog] = useState(null); // null | connection object (edit) | opened with null (new)
 
+  const [dashboardMode, setDashboardMode] = useState(false);
+
   // ── Panel / pane states ────────────────────────────────────────────────────
   const [libraryPanelOpen, setLibraryPanelOpen] = useState(false);
   const [filesPanelOpen, setFilesPanelOpen]     = useState(false);
@@ -730,6 +732,7 @@ export function App() {
     'export-html':     handleExportHtml,
     'export-pdf':      () => window.electronAPI?.exportPdf(),
     'command-palette': () => setCommandPaletteOpen(true),
+    dashboard:         () => setDashboardMode((v) => !v),
   };
 
   // ── Window tabs sync ───────────────────────────────────────────────────────
@@ -1042,6 +1045,8 @@ export function App() {
                     scheduledCells={scheduledCells}
                     onScheduleStart={startSchedule}
                     onScheduleStop={stopSchedule}
+                    dashboardMode={dashboardMode}
+                    onToggleDashboard={() => setDashboardMode((v) => !v)}
                   />
                 </div>
               ))}

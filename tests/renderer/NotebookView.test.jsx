@@ -115,6 +115,68 @@ describe('NotebookView – onFocusPanel called when opening a panel', () => {
   });
 });
 
+// ── Dashboard mode ───────────────────────────────────────────────────────────
+
+describe('NotebookView – Dashboard mode', () => {
+  it('adds dashboard-mode class to .notebook when dashboardMode is true', () => {
+    const { container } = render(
+      <NotebookView {...defaultProps({
+        dashboardMode: true,
+        onToggleDashboard: vi.fn(),
+        nb: makeNb({ cells: [{ id: 'c1', type: 'code', content: '' }] }),
+      })} />
+    );
+    expect(container.querySelector('.notebook.dashboard-mode')).not.toBeNull();
+  });
+
+  it('does not add dashboard-mode class when dashboardMode is false', () => {
+    const { container } = render(
+      <NotebookView {...defaultProps({
+        dashboardMode: false,
+        onToggleDashboard: vi.fn(),
+      })} />
+    );
+    expect(container.querySelector('.notebook.dashboard-mode')).toBeNull();
+  });
+
+  it('shows exit button when dashboardMode is true', () => {
+    const { container } = render(
+      <NotebookView {...defaultProps({
+        dashboardMode: true,
+        onToggleDashboard: vi.fn(),
+        nb: makeNb({ cells: [{ id: 'c1', type: 'code', content: '' }] }),
+      })} />
+    );
+    const btn = container.querySelector('.dashboard-exit-btn');
+    expect(btn).not.toBeNull();
+    expect(btn.textContent).toBe('Exit Dashboard');
+  });
+
+  it('clicking exit button calls onToggleDashboard', () => {
+    const onToggleDashboard = vi.fn();
+    const { container } = render(
+      <NotebookView {...defaultProps({
+        dashboardMode: true,
+        onToggleDashboard,
+        nb: makeNb({ cells: [{ id: 'c1', type: 'code', content: '' }] }),
+      })} />
+    );
+    container.querySelector('.dashboard-exit-btn').click();
+    expect(onToggleDashboard).toHaveBeenCalledTimes(1);
+  });
+
+  it('hides AddBar components when dashboardMode is true', () => {
+    const { container } = render(
+      <NotebookView {...defaultProps({
+        dashboardMode: true,
+        onToggleDashboard: vi.fn(),
+        nb: makeNb({ cells: [{ id: 'c1', type: 'code', content: '' }] }),
+      })} />
+    );
+    expect(container.querySelector('.cell-add-bar')).toBeNull();
+  });
+});
+
 // ── toggle also calls onSetNb ─────────────────────────────────────────────────
 
 describe('NotebookView – toggle always calls onSetNb', () => {
