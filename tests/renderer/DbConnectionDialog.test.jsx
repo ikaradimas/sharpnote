@@ -100,4 +100,72 @@ describe('DbConnectionDialog', () => {
     fireEvent.click(screen.getByTitle('Close'));
     expect(props.onClose).toHaveBeenCalledOnce();
   });
+
+  // ── Test connection button ──────────────────────────────────────────────
+
+  it('renders Test button when onTestConnection is provided', () => {
+    render(<DbConnectionDialog {...defaultProps({ onTestConnection: vi.fn() })} />);
+    expect(screen.getByText('Test')).toBeInTheDocument();
+  });
+
+  it('does not render Test button when onTestConnection is not provided', () => {
+    render(<DbConnectionDialog {...defaultProps()} />);
+    expect(screen.queryByText('Test')).toBeNull();
+  });
+
+  it('clicking Test calls onTestConnection with provider and connection string', async () => {
+    const onTest = vi.fn().mockResolvedValue({ success: true });
+    render(<DbConnectionDialog {...defaultProps({ onTestConnection: onTest })} />);
+
+    fireEvent.change(screen.getByPlaceholderText(/Data Source/), {
+      target: { value: 'Data Source=my.db' },
+    });
+    fireEvent.click(screen.getByText('Test'));
+
+    expect(onTest).toHaveBeenCalledWith('sqlite', 'Data Source=my.db');
+  });
+
+  it('shows "Testing connection..." during test', async () => {
+    // Create a promise that we control
+    let resolveTest;
+    const onTest = vi.fn().mockReturnValue(new Promise((r) => { resolveTest = r; }));
+    render(<DbConnectionDialog {...defaultProps({ onTestConnection: onTest })} />);
+
+    fireEvent.change(screen.getByPlaceholderText(/Data Source/), {
+      target: { value: 'Data Source=my.db' },
+    });
+    fireEvent.click(screen.getByText('Test'));
+
+    expect(screen.getByText(/Testing connection/)).toBeInTheDocument();
+    // Resolve to clean up
+    resolveTest({ success: true });
+  });
+
+  it('shows success message on successful test', async () => {
+    const onTest = vi.fn().mockResolvedValue({ success: true });
+    render(<DbConnectionDialog {...defaultProps({ onTestConnection: onTest })} />);
+
+    fireEvent.change(screen.getByPlaceholderText(/Data Source/), {
+      target: { value: 'Data Source=my.db' },
+    });
+    fireEvent.click(screen.getByText('Test'));
+
+    // Wait for the async result
+    await screen.findByText(/Connection successful/);
+    expect(screen.getByText(/Connection successful/)).toBeInTheDocument();
+  });
+
+  it('shows error message on failed test', async () => {
+    const onTest = vi.fn().mockResolvedValue({ success: false, message: 'Bad credentials' });
+    render(<DbConnectionDialog {...defaultProps({ onTestConnection: onTest })} />);
+
+    fireEvent.change(screen.getByPlaceholderText(/Data Source/), {
+      target: { value: 'Data Source=my.db' },
+    });
+    fireEvent.click(screen.getByText('Test'));
+
+    // The error message is rendered alongside a "✗ " prefix in the same container
+    await screen.findByText(/Bad credentials/);
+    expect(screen.getByText(/Bad credentials/)).toBeInTheDocument();
+  });
 });

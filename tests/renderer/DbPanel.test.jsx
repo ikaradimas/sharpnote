@@ -373,4 +373,42 @@ describe('DbPanel', () => {
     expect(document.querySelector('.db-var-badge')).not.toBeNull();
     expect(document.querySelector('.db-var-badge').textContent).toContain('db');
   });
+
+  // ── Schema filter ───────────────────────────────────────────────────────
+
+  it('schema tree shows search input for relational databases', () => {
+    render(<DbPanel {...defaultProps({ attachedDbs: [ATTACHED_READY] })} />);
+    expect(screen.getByPlaceholderText('Filter tables / columns…')).toBeInTheDocument();
+  });
+
+  it('typing in search filters tables by name', () => {
+    render(<DbPanel {...defaultProps({ attachedDbs: [ATTACHED_READY] })} />);
+    const input = screen.getByPlaceholderText('Filter tables / columns…');
+    fireEvent.change(input, { target: { value: 'Users' } });
+    expect(screen.getByText('main.Users')).toBeInTheDocument();
+    expect(screen.queryByText('main.Orders')).toBeNull();
+  });
+
+  it('typing in search filters by column name match', () => {
+    render(<DbPanel {...defaultProps({ attachedDbs: [ATTACHED_READY] })} />);
+    const input = screen.getByPlaceholderText('Filter tables / columns…');
+    // "Email" is a column in Users, not in Orders
+    fireEvent.change(input, { target: { value: 'Email' } });
+    expect(screen.getByText('main.Users')).toBeInTheDocument();
+    expect(screen.queryByText('main.Orders')).toBeNull();
+  });
+
+  it('clearing search shows all tables', () => {
+    render(<DbPanel {...defaultProps({ attachedDbs: [ATTACHED_READY] })} />);
+    const input = screen.getByPlaceholderText('Filter tables / columns…');
+
+    // Filter first
+    fireEvent.change(input, { target: { value: 'Users' } });
+    expect(screen.queryByText('main.Orders')).toBeNull();
+
+    // Clear the filter
+    fireEvent.change(input, { target: { value: '' } });
+    expect(screen.getByText('main.Users')).toBeInTheDocument();
+    expect(screen.getByText('main.Orders')).toBeInTheDocument();
+  });
 });

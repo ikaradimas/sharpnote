@@ -15,6 +15,7 @@ import {
   DOCS_TAB_ID,
   LIB_EDITOR_ID_PREFIX,
 } from '../../src/renderer.jsx';
+import { tableToTSV } from '../../src/utils.js';
 
 // ── formatLogTime ─────────────────────────────────────────────────────────────
 
@@ -211,6 +212,30 @@ describe('parseCsv / tableToCSV round-trip', () => {
     const csv = tableToCSV(original);
     const parsed = parseCsv(csv);
     expect(parsed).toEqual(original);
+  });
+});
+
+// ── tableToTSV ──────────────────────────────────────────────────────────────
+
+describe('tableToTSV', () => {
+  it('produces tab-separated output', () => {
+    const rows = [{ a: 1, b: 2 }, { a: 3, b: 4 }];
+    const tsv = tableToTSV(rows);
+    expect(tsv).toBe('a\tb\n1\t2\n3\t4');
+  });
+
+  it('escapes tabs and newlines in values', () => {
+    const rows = [{ val: 'has\ttab', other: 'has\nnewline' }];
+    const tsv = tableToTSV(rows);
+    // Tabs and newlines in values should be replaced with spaces
+    expect(tsv).not.toContain('\t\t'); // no double-tabs from an embedded tab
+    expect(tsv).toBe('val\tother\nhas tab\thas newline');
+  });
+
+  it('returns empty string for empty input', () => {
+    expect(tableToTSV([])).toBe('');
+    expect(tableToTSV(null)).toBe('');
+    expect(tableToTSV(undefined)).toBe('');
   });
 });
 

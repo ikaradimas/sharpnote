@@ -179,3 +179,34 @@ describe('CommandPalette — mouse interaction', () => {
     expect(props.onClose).toHaveBeenCalledOnce();
   });
 });
+
+// ── Categories ───────────────────────────────────────────────────────────────
+
+describe('CommandPalette — categories', () => {
+  it('when search is empty, renders category headers (File, Execution, Panels, Settings)', () => {
+    render(<CommandPalette {...makeProps()} />);
+    const headers = document.querySelectorAll('.cmd-palette-category');
+    const texts = [...headers].map((h) => h.textContent);
+    expect(texts).toContain('File');
+    expect(texts).toContain('Execution');
+    expect(texts).toContain('Panels');
+    expect(texts).toContain('Settings');
+  });
+
+  it('when searching, category headers are not shown', () => {
+    render(<CommandPalette {...makeProps()} />);
+    fireEvent.change(document.querySelector('.cmd-palette-input'), { target: { value: 'save' } });
+    const headers = document.querySelectorAll('.cmd-palette-category');
+    expect(headers.length).toBe(0);
+  });
+
+  it('panel commands show icons', () => {
+    render(<CommandPalette {...makeProps()} />);
+    // Find a panel command item (e.g. "Toggle Logs Panel")
+    const logsItem = [...document.querySelectorAll('.cmd-palette-item')].find(
+      (el) => el.querySelector('.cmd-palette-label')?.textContent?.includes('Toggle Logs Panel')
+    );
+    expect(logsItem).toBeTruthy();
+    expect(logsItem.querySelector('.cmd-palette-icon')).not.toBeNull();
+  });
+});
