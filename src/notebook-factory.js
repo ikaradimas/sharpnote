@@ -13,8 +13,6 @@ export function makeCell(type = 'code', content = '') {
     content,
     ...(type === 'code' ? { outputMode: 'auto', locked: false, scheduleInterval: null } : {}),
     ...(type === 'sql'  ? { db: '' } : {}),
-    ...(type === 'http'  ? {} : {}),
-    ...(type === 'shell' ? {} : {}),
   };
 }
 

@@ -3,36 +3,9 @@ import { marked } from 'marked';
 import mermaid from 'mermaid';
 import { applyMath } from '../../utils.js';
 import { CodeEditor } from './CodeEditor.jsx';
+import { CellControls } from './CellControls.jsx';
 
 mermaid.initialize({ startOnLoad: false, theme: 'dark', securityLevel: 'loose' });
-
-function CellControls({ onMoveUp, onMoveDown, onDelete }) {
-  const [confirming, setConfirming] = useState(false);
-
-  React.useEffect(() => {
-    if (!confirming) return;
-    const t = setTimeout(() => setConfirming(false), 3000);
-    return () => clearTimeout(t);
-  }, [confirming]);
-
-  if (confirming) {
-    return (
-      <>
-        <span className="delete-confirm-label">Delete?</span>
-        <button className="cell-ctrl-btn cell-ctrl-danger" title="Confirm delete" onClick={onDelete}>✓</button>
-        <button className="cell-ctrl-btn" title="Cancel" onClick={() => setConfirming(false)}>✕</button>
-      </>
-    );
-  }
-
-  return (
-    <>
-      <button className="cell-ctrl-btn" title="Move Up" onClick={onMoveUp}>↑</button>
-      <button className="cell-ctrl-btn" title="Move Down" onClick={onMoveDown}>↓</button>
-      <button className="cell-ctrl-btn" title="Delete" onClick={() => setConfirming(true)}>✕</button>
-    </>
-  );
-}
 
 export function MarkdownCell({
   cell, cellIndex, onUpdate, onDelete, onMoveUp, onMoveDown,

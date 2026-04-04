@@ -1,28 +1,7 @@
 import React, { useState } from 'react';
 import { CodeEditor } from './CodeEditor.jsx';
 import { CellOutput } from '../output/OutputBlock.jsx';
-
-function CellControls({ onMoveUp, onMoveDown, onDelete }) {
-  const [confirming, setConfirming] = useState(false);
-
-  if (confirming) {
-    return (
-      <>
-        <span className="delete-confirm-label">Delete?</span>
-        <button className="cell-ctrl-btn cell-ctrl-danger" title="Confirm delete" onClick={onDelete}>✓</button>
-        <button className="cell-ctrl-btn" title="Cancel" onClick={() => setConfirming(false)}>✕</button>
-      </>
-    );
-  }
-
-  return (
-    <>
-      <button className="cell-ctrl-btn" title="Move Up" onClick={onMoveUp}>↑</button>
-      <button className="cell-ctrl-btn" title="Move Down" onClick={onMoveDown}>↓</button>
-      <button className="cell-ctrl-btn" title="Delete" onClick={() => setConfirming(true)}>✕</button>
-    </>
-  );
-}
+import { CellControls } from './CellControls.jsx';
 
 export function ShellCell({
   cell,

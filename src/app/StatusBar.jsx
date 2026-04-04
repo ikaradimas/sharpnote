@@ -43,7 +43,7 @@ export function StatusBar({ notebooks, activeId }) {
   const current = history.length > 0 ? history[history.length - 1] : null;
   const peak    = history.length > 0 ? Math.max(...history) : null;
   const anyRunning = nb ? nb.running?.size > 0 : false;
-  const totalCells = nb ? nb.cells?.filter((c) => c.type === 'code' || c.type === 'sql').length : 0;
+  const totalCells = nb ? nb.cells?.length : 0;
 
   const [cursorPos, setCursorPos] = useState(null);
   useEffect(() => {

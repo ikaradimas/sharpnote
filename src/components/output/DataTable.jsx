@@ -1,13 +1,6 @@
 import React, { useState, useEffect, useMemo, useContext } from 'react';
 import { TablePageSizeContext } from '../../config/table-page-size-context.js';
-import { tableToCSV } from '../../utils.js';
-
-function tableToTSV(rows) {
-  if (!rows || rows.length === 0) return '';
-  const cols = Object.keys(rows[0]);
-  const escape = (v) => String(v ?? '').replace(/\t/g, ' ').replace(/\n/g, ' ');
-  return [cols.join('\t'), ...rows.map((r) => cols.map((c) => escape(r[c])).join('\t'))].join('\n');
-}
+import { tableToCSV, tableToTSV } from '../../utils.js';
 
 export function DataTable({ rows }) {
   if (!Array.isArray(rows) || rows.length === 0) {

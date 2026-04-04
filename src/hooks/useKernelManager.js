@@ -1,6 +1,35 @@
 import { useRef, useCallback, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 
+async function resolveConfig(nb) {
+  const configEntries = nb?.config || [];
+  const resolved = {};
+  for (const e of configEntries) resolved[e.key] = e.value;
+  const envEntries = configEntries.filter((e) => e.envVar);
+  if (envEntries.length > 0) {
+    const envVals = await Promise.all(envEntries.map((e) => window.electronAPI.getEnvVar(e.envVar)));
+    envEntries.forEach((e, i) => { if (envVals[i]) resolved[e.key] = envVals[i]; });
+  }
+  return resolved;
+}
+
+function prepareCellRun(setNb, pendingResolversRef, notebookId, cellId, resolve) {
+  setNb(notebookId, (n) => {
+    const prevOutputs = n.outputs[cellId];
+    const newOutputHistory = { ...(n.outputHistory || {}) };
+    if (prevOutputs?.length > 0) {
+      newOutputHistory[cellId] = [...(newOutputHistory[cellId] || []).slice(-4), prevOutputs];
+    }
+    return {
+      outputs: { ...n.outputs, [cellId]: [] },
+      outputHistory: newOutputHistory,
+      cellResults: { ...(n.cellResults || {}), [cellId]: null },
+      running: new Set([...n.running, cellId]),
+    };
+  });
+  pendingResolversRef.current[cellId] = resolve;
+}
+
 /**
  * Manages kernel communication: message routing, cell execution,
  * completions, lint, interrupt, and reset.
@@ -434,33 +463,14 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
     prevVarsSnapRef.current[cell.id] = [
       ...(notebooksRef.current.find((n) => n.id === notebookId)?.vars || []),
     ];
-    // Resolve config values before entering the promise: env var overrides take precedence
     const nb = notebooksRef.current.find((n) => n.id === notebookId);
-    const configEntries = nb ? nb.config.filter((e) => e.key.trim()) : [];
-    const resolvedConfig = {};
-    for (const e of configEntries) resolvedConfig[e.key] = e.value;
-    const envEntries = configEntries.filter((e) => e.envVar);
-    if (envEntries.length > 0) {
-      const envVals = await Promise.all(envEntries.map((e) => window.electronAPI.getEnvVar(e.envVar)));
-      envEntries.forEach((e, i) => { if (envVals[i]) resolvedConfig[e.key] = envVals[i]; });
-    }
+    const resolvedConfig = await resolveConfig(nb);
 
     return new Promise((resolve) => {
-      setNb(notebookId, (n) => {
-        const prevOutputs = n.outputs[cell.id];
-        const newOutputHistory = { ...(n.outputHistory || {}) };
-        if (prevOutputs?.length > 0) {
-          newOutputHistory[cell.id] = [...(newOutputHistory[cell.id] || []).slice(-4), prevOutputs];
-        }
-        return {
-          outputs: { ...n.outputs, [cell.id]: [] },
-          outputHistory: newOutputHistory,
-          cellResults: { ...(n.cellResults || {}), [cell.id]: null },
-          running: new Set([...n.running, cell.id]),
-          staleCellIds: (n.staleCellIds || []).filter((id) => id !== cell.id),
-        };
-      });
-      pendingResolversRef.current[cell.id] = resolve;
+      prepareCellRun(setNb, pendingResolversRef, notebookId, cell.id, resolve);
+      setNb(notebookId, (n) => ({
+        staleCellIds: (n.staleCellIds || []).filter((id) => id !== cell.id),
+      }));
       window.electronAPI.sendToKernel(notebookId, {
         type: 'execute',
         id: cell.id,
@@ -488,31 +498,10 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
     const attached = nb?.attachedDbs?.find((d) => d.connectionId === effectiveDb && d.status === 'ready');
     if (!attached) return;
 
-    // Resolve config (same as runCell) so SQL can use @ConfigKey parameters
-    const configEntries = nb?.config || [];
-    const resolvedConfig = {};
-    for (const e of configEntries) resolvedConfig[e.key] = e.value;
-    const envEntries = configEntries.filter((e) => e.envVar);
-    if (envEntries.length > 0) {
-      const envVals = await Promise.all(envEntries.map((e) => window.electronAPI.getEnvVar(e.envVar)));
-      envEntries.forEach((e, i) => { if (envVals[i]) resolvedConfig[e.key] = envVals[i]; });
-    }
+    const resolvedConfig = await resolveConfig(nb);
 
     return new Promise((resolve) => {
-      setNb(notebookId, (n) => {
-        const prevOutputs = n.outputs[cell.id];
-        const newOutputHistory = { ...(n.outputHistory || {}) };
-        if (prevOutputs?.length > 0) {
-          newOutputHistory[cell.id] = [...(newOutputHistory[cell.id] || []).slice(-4), prevOutputs];
-        }
-        return {
-          outputs: { ...n.outputs, [cell.id]: [] },
-          outputHistory: newOutputHistory,
-          cellResults: { ...(n.cellResults || {}), [cell.id]: null },
-          running: new Set([...n.running, cell.id]),
-        };
-      });
-      pendingResolversRef.current[cell.id] = resolve;
+      prepareCellRun(setNb, pendingResolversRef, notebookId, cell.id, resolve);
       window.electronAPI.sendToKernel(notebookId, {
         type: 'execute_sql',
         id: cell.id,
@@ -527,31 +516,10 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
     if (!window.electronAPI || cell.type !== 'http') return;
     const nb = notebooksRef.current.find((n) => n.id === notebookId);
 
-    // Resolve config (same as runCell/runSqlCell)
-    const configEntries = nb?.config || [];
-    const resolvedConfig = {};
-    for (const e of configEntries) resolvedConfig[e.key] = e.value;
-    const envEntries = configEntries.filter((e) => e.envVar);
-    if (envEntries.length > 0) {
-      const envVals = await Promise.all(envEntries.map((e) => window.electronAPI.getEnvVar(e.envVar)));
-      envEntries.forEach((e, i) => { if (envVals[i]) resolvedConfig[e.key] = envVals[i]; });
-    }
+    const resolvedConfig = await resolveConfig(nb);
 
     return new Promise((resolve) => {
-      setNb(notebookId, (n) => {
-        const prevOutputs = n.outputs[cell.id];
-        const newOutputHistory = { ...(n.outputHistory || {}) };
-        if (prevOutputs?.length > 0) {
-          newOutputHistory[cell.id] = [...(newOutputHistory[cell.id] || []).slice(-4), prevOutputs];
-        }
-        return {
-          outputs: { ...n.outputs, [cell.id]: [] },
-          outputHistory: newOutputHistory,
-          cellResults: { ...(n.cellResults || {}), [cell.id]: null },
-          running: new Set([...n.running, cell.id]),
-        };
-      });
-      pendingResolversRef.current[cell.id] = resolve;
+      prepareCellRun(setNb, pendingResolversRef, notebookId, cell.id, resolve);
       window.electronAPI.sendToKernel(notebookId, {
         type: 'execute_http',
         id: cell.id,
@@ -565,20 +533,7 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
     if (!window.electronAPI || cell.type !== 'shell') return Promise.resolve();
 
     return new Promise((resolve) => {
-      setNb(notebookId, (n) => {
-        const prevOutputs = n.outputs[cell.id];
-        const newOutputHistory = { ...(n.outputHistory || {}) };
-        if (prevOutputs?.length > 0) {
-          newOutputHistory[cell.id] = [...(newOutputHistory[cell.id] || []).slice(-4), prevOutputs];
-        }
-        return {
-          outputs: { ...n.outputs, [cell.id]: [] },
-          outputHistory: newOutputHistory,
-          cellResults: { ...(n.cellResults || {}), [cell.id]: null },
-          running: new Set([...n.running, cell.id]),
-        };
-      });
-      pendingResolversRef.current[cell.id] = resolve;
+      prepareCellRun(setNb, pendingResolversRef, notebookId, cell.id, resolve);
       window.electronAPI.sendToKernel(notebookId, {
         type: 'execute_shell',
         id: cell.id,

@@ -109,6 +109,14 @@ export function tableToCSV(rows) {
   return [cols.join(','), ...rows.map((r) => cols.map((c) => escape(r[c])).join(','))].join('\n');
 }
 
+// ── Table to TSV conversion ──────────────────────────────────────────────────
+export function tableToTSV(rows) {
+  if (!rows || rows.length === 0) return '';
+  const cols = Object.keys(rows[0]);
+  const escape = (v) => String(v ?? '').replace(/\t/g, ' ').replace(/\n/g, ' ');
+  return [cols.join('\t'), ...rows.map((r) => cols.map((c) => escape(r[c])).join('\t'))].join('\n');
+}
+
 // ── File size formatting ──────────────────────────────────────────────────────
 export function formatFileSize(bytes) {
   if (bytes < 1024) return `${bytes} B`;
