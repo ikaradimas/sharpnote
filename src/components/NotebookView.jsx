@@ -57,7 +57,7 @@ export function NotebookView({
 }) {
   const { cells, outputs, outputHistory, cellResults, running, kernelStatus,
           config, logPanelOpen, nugetPanelOpen, configPanelOpen,
-          dbPanelOpen, varsPanelOpen, tocPanelOpen, graphPanelOpen, todoPanelOpen, regexPanelOpen,
+          dbPanelOpen, varsPanelOpen, tocPanelOpen, graphPanelOpen, todoPanelOpen, regexPanelOpen, historyPanelOpen,
           path: notebookPath, staleCellIds, attachedDbs, autoRun } = nb;
 
   const [findOpen, setFindOpen] = useState(false);
@@ -179,6 +179,8 @@ export function NotebookView({
       onToggleTodo={() => { if (!todoPanelOpen) onFocusPanel?.('todo'); onSetNb((n) => ({ todoPanelOpen: !n.todoPanelOpen })); }}
       regexPanelOpen={regexPanelOpen}
       onToggleRegex={() => { if (!regexPanelOpen) onFocusPanel?.('regex'); onSetNb((n) => ({ regexPanelOpen: !n.regexPanelOpen })); }}
+      historyPanelOpen={historyPanelOpen}
+      onToggleHistory={() => { if (!historyPanelOpen) onFocusPanel?.('history'); onSetNb((n) => ({ historyPanelOpen: !n.historyPanelOpen })); }}
       onCloseAllPanels={onCloseAllPanels}
       theme={theme}
       onThemeChange={onThemeChange}

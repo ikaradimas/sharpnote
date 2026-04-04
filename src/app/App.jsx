@@ -136,7 +136,7 @@ export function App() {
     const nbFlagMap = {
       log: 'logPanelOpen', nuget: 'nugetPanelOpen', config: 'configPanelOpen',
       db: 'dbPanelOpen', vars: 'varsPanelOpen', toc: 'tocPanelOpen',
-      graph: 'graphPanelOpen', todo: 'todoPanelOpen', regex: 'regexPanelOpen',
+      graph: 'graphPanelOpen', todo: 'todoPanelOpen', regex: 'regexPanelOpen', history: 'historyPanelOpen',
     };
     if (globalSetters[panelId]) {
       globalSetters[panelId](open === null ? (v) => !v : open);
@@ -184,7 +184,7 @@ export function App() {
       setNb(nbId, () => ({
         logPanelOpen: false, nugetPanelOpen: false, configPanelOpen: false,
         dbPanelOpen: false, varsPanelOpen: false, tocPanelOpen: false,
-        graphPanelOpen: false, todoPanelOpen: false, regexPanelOpen: false,
+        graphPanelOpen: false, todoPanelOpen: false, regexPanelOpen: false, historyPanelOpen: false,
       }));
   }, [setNb, setLibraryPanelOpen, setFilesPanelOpen, setApiPanelOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -727,6 +727,7 @@ export function App() {
     'toggle-graph':    () => setPanelVisible('graph',   null),
     'toggle-todo':     () => setPanelVisible('todo',    null),
     'toggle-regex':    () => setPanelVisible('regex',   null),
+    'toggle-history':  () => setPanelVisible('history', null),
     about:             () => setAboutOpen(true),
     settings:          () => setSettingsOpen(true),
     'export-html':     handleExportHtml,
@@ -827,6 +828,7 @@ export function App() {
     graph:   isNotebookId(activeId) ? (activeNb?.graphPanelOpen  ?? false) : false,
     todo:    isNotebookId(activeId) ? (activeNb?.todoPanelOpen   ?? false) : false,
     regex:   isNotebookId(activeId) ? (activeNb?.regexPanelOpen  ?? false) : false,
+    history: isNotebookId(activeId) ? (activeNb?.historyPanelOpen ?? false) : false,
   }), [activeId, activeNb, libraryPanelOpen, filesPanelOpen, apiPanelOpen]);
 
   const panelPropsMap = useMemo(() => {
@@ -939,6 +941,22 @@ export function App() {
         onNavigateToCell: nbId ? (cellId) => handleNavigateToCell(nbId, cellId) : () => {},
       },
       regex: {},
+      history: {
+        onToggle: nbId ? () => setNb(nbId, (n) => ({ historyPanelOpen: !n.historyPanelOpen })) : () => {},
+        notebookPath: activeNb?.path ?? null,
+        onRestore: nbId ? (data) => {
+          setNbDirty(nbId, () => ({
+            cells: data.cells ?? [],
+            config: data.config ?? [],
+            title: data.title,
+          }));
+        } : () => {},
+      },
+      deps: {
+        onToggle: () => {},
+        notebook: activeNb,
+        onNavigateToCell: nbId ? (cellId) => handleNavigateToCell(nbId, cellId) : () => {},
+      },
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeNb, dbConnections, filesPanelOpen, filesCurrentDir, apiPanelOpen, favoriteFolders]);

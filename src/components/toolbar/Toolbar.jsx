@@ -49,6 +49,8 @@ export function Toolbar({
   onToggleRegex,
   kafkaPanelOpen,
   onToggleKafka,
+  historyPanelOpen,
+  onToggleHistory,
   theme,
   onThemeChange,
   lineAltEnabled,
@@ -138,6 +140,7 @@ export function Toolbar({
     todoPanelOpen, onToggleTodo,
     regexPanelOpen, onToggleRegex,
     kafkaPanelOpen, onToggleKafka,
+    historyPanelOpen, onToggleHistory,
     onCloseAllPanels,
     onImportData,
   };

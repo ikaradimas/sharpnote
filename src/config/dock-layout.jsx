@@ -3,8 +3,8 @@ import React from 'react';
 // ── Dock Layout System ────────────────────────────────────────────────────────
 
 export const DEFAULT_DOCK_LAYOUT = {
-  assignments: { log: 'right', nuget: 'bottom', config: 'bottom', db: 'bottom', library: 'left', vars: 'right', toc: 'left', files: 'left', api: 'right', graph: 'right', todo: 'bottom', regex: 'bottom' },
-  order:       { log: 0, nuget: 0, config: 1, db: 2, library: 0, vars: 1, toc: 1, files: 2, api: 2, graph: 3, todo: 3, regex: 4 },
+  assignments: { log: 'right', nuget: 'bottom', config: 'bottom', db: 'bottom', library: 'left', vars: 'right', toc: 'left', files: 'left', api: 'right', graph: 'right', todo: 'bottom', regex: 'bottom', history: 'right', deps: 'right' },
+  order:       { log: 0, nuget: 0, config: 1, db: 2, library: 0, vars: 1, toc: 1, files: 2, api: 2, graph: 3, todo: 3, regex: 4, history: 4, deps: 5 },
   sizes:       { left: 300, right: 320, bottom: 280 },
   floatPos:    {},
   zoneTab:     { left: 'library', right: 'log', bottom: 'nuget' },
@@ -117,6 +117,21 @@ function IconRegex() {
     <path d="M5 4 L6.5 2.5 L8 4" />
   </svg>;
 }
+function IconDeps() {
+  return <svg {..._ic} stroke="currentColor" strokeWidth="1.1" fill="none" strokeLinecap="round">
+    <circle cx="3" cy="3" r="1.8" />
+    <circle cx="10" cy="3" r="1.8" />
+    <circle cx="6.5" cy="10" r="1.8" />
+    <line x1="4.5" y1="4.2" x2="5.8" y2="8.5" />
+    <line x1="8.5" y1="4.2" x2="7.2" y2="8.5" />
+  </svg>;
+}
+function IconHistory() {
+  return <svg {..._ic} stroke="currentColor" strokeWidth="1.1" fill="none" strokeLinecap="round">
+    <circle cx="6.5" cy="6.5" r="5" />
+    <polyline points="6.5,3.5 6.5,6.5 9,8" />
+  </svg>;
+}
 export const PANEL_META = {
   log:     { label: 'Logs',       icon: <IconLogs /> },
   nuget:   { label: 'Packages',   icon: <IconPackages /> },
@@ -130,6 +145,8 @@ export const PANEL_META = {
   graph:   { label: 'Graph',      icon: <IconGraph /> },
   todo:    { label: 'To Do',      icon: <IconTodo /> },
   regex:   { label: 'Regex',      icon: <IconRegex /> },
+  history: { label: 'History',    icon: <IconHistory /> },
+  deps:    { label: 'Dependencies', icon: <IconDeps /> },
 };
 
 // ── Dock drop zones ───────────────────────────────────────────────────────────

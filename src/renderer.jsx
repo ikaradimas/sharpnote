@@ -29,6 +29,7 @@ export { TabBar } from './components/toolbar/TabBar.jsx';
 export { QuitDialog } from './components/dialogs/QuitDialog.jsx';
 export { GraphPanel } from './components/panels/GraphPanel.jsx';
 export { TodoPanel } from './components/panels/TodoPanel.jsx';
+export { HistoryPanel } from './components/panels/HistoryPanel.jsx';
 export { VarInspectDialog } from './components/dialogs/VarInspectDialog.jsx';
 
 // ── App bootstrap ─────────────────────────────────────────────────────────────

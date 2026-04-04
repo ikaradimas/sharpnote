@@ -143,6 +143,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     }
   },
 
+  // Notebook history (version snapshots)
+  getNotebookHistory: (filePath) => ipcRenderer.invoke('notebook-history-list', filePath),
+  restoreNotebookSnapshot: (filePath, index) => ipcRenderer.invoke('notebook-history-restore', { filePath, index }),
+  deleteNotebookHistory: (filePath) => ipcRenderer.invoke('notebook-history-delete', filePath),
+
   // Renderer-side logging (appears in Logs panel)
   rendererLog: (tag, message) => ipcRenderer.send('renderer-log', { tag, message }),
 

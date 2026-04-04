@@ -944,6 +944,7 @@ export const DOCS_SECTIONS = [
         'Ctrl+Shift+A — API Browser',
         'Ctrl+Shift+X — Regex editor',
         'Ctrl+Shift+K — Kafka Browser',
+        'Ctrl+Shift+H — History panel',
       ]},
     ],
   },
@@ -985,6 +986,32 @@ export const DOCS_SECTIONS = [
       { type: 'p', text: 'Each match is listed below the test area with its zero-based index, the matched text, and the start–end character positions. Capture groups (numbered and named) are shown indented beneath their parent match.' },
       { type: 'h3', text: 'Quick Reference' },
       { type: 'p', text: 'Click Quick Reference at the bottom of the panel to expand a two-column cheat sheet of the most commonly used regex tokens.' },
+    ],
+  },
+  {
+    id: 'history', title: 'Notebook History',
+    content: [
+      { type: 'p', text: 'The History panel (Tools → History, Ctrl+Shift+H) provides built-in version snapshots for your notebook without relying on external version control.' },
+      { type: 'h3', text: 'How It Works' },
+      { type: 'ul', items: [
+        'Every time you save a notebook, a snapshot is automatically stored in a sidecar .cnb.history file',
+        'Up to 50 snapshots are retained with oldest-first (FIFO) eviction',
+        'Snapshots include cell contents, configuration, and metadata',
+      ]},
+      { type: 'h3', text: 'Using the Panel' },
+      { type: 'ul', items: [
+        'Open the History panel from Tools → History or Ctrl+Shift+H',
+        'Browse the timeline of snapshots — most recent first',
+        'Click any snapshot to preview its cell summary',
+        'Click Restore to replace the current notebook content with the selected snapshot',
+        'Use Clear to delete all history for the current notebook',
+      ]},
+      { type: 'h3', text: 'Notes' },
+      { type: 'ul', items: [
+        'The history file is stored alongside the notebook as filename.cnb.history',
+        'History is only available for saved notebooks (unsaved notebooks show a prompt to save first)',
+        'Restoring a snapshot replaces the current cells and config but does not save — you can undo by reverting before saving',
+      ]},
     ],
   },
   {

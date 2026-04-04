@@ -158,6 +158,25 @@ export function IconData() {
     </svg>
   );
 }
+export function IconDeps() {
+  return (
+    <svg {..._ic} stroke="currentColor" strokeWidth="1.1" fill="none" strokeLinecap="round">
+      <circle cx="3" cy="3" r="1.8" />
+      <circle cx="10" cy="3" r="1.8" />
+      <circle cx="6.5" cy="10" r="1.8" />
+      <line x1="4.5" y1="4.2" x2="5.8" y2="8.5" />
+      <line x1="8.5" y1="4.2" x2="7.2" y2="8.5" />
+    </svg>
+  );
+}
+export function IconHistory() {
+  return (
+    <svg {..._ic} stroke="currentColor" strokeWidth="1.1" fill="none" strokeLinecap="round">
+      <circle cx="6.5" cy="6.5" r="5" />
+      <polyline points="6.5,3.5 6.5,6.5 9,8" />
+    </svg>
+  );
+}
 export function IconKafka() {
   return (
     <svg {..._ic} stroke="currentColor" strokeWidth="1.1" strokeLinecap="round">

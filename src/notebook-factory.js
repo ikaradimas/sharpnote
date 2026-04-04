@@ -1287,6 +1287,7 @@ export function createNotebook(templateKey = null) {
     graphPanelOpen: false,
     todoPanelOpen: false,
     regexPanelOpen: false,
+    historyPanelOpen: false,
     outputHistory: {},
     staleCellIds: [],
     autoRun: false,
