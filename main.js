@@ -7,6 +7,25 @@ const fs   = require('fs');
 
 app.name = 'SharpNote';
 
+// ── Crash handlers ───────────────────────────────────────────────────────────
+process.on('uncaughtException', (err) => {
+  console.error('[FATAL] uncaughtException:', err);
+  try {
+    const crashLog = require('path').join(app.getPath('userData'), 'crash.log');
+    require('fs').appendFileSync(crashLog,
+      `[${new Date().toISOString()}] uncaughtException: ${err.stack || err}\n`);
+  } catch (_) {}
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[FATAL] unhandledRejection:', reason);
+  try {
+    const crashLog = require('path').join(app.getPath('userData'), 'crash.log');
+    require('fs').appendFileSync(crashLog,
+      `[${new Date().toISOString()}] unhandledRejection: ${reason?.stack || reason}\n`);
+  } catch (_) {}
+});
+
 // ── Sub-modules ───────────────────────────────────────────────────────────────
 const recentFiles   = require('./src/main/recent-files');
 const dbConnections = require('./src/main/db-connections');
@@ -226,26 +245,61 @@ function registerAllHandlers() {
   // URL fetch — used by the API browser panel; proxied through the main process
   // so that http:// URLs (e.g. local dev servers) bypass the renderer CSP.
   ipcMain.handle('fetch-url', async (_event, url) => {
-    const res = await fetch(url, { headers: { Accept: 'application/json, application/yaml, text/yaml, text/plain, */*' } });
-    if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
-    return res.text();
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
+    try {
+      const res = await fetch(url, {
+        headers: { Accept: 'application/json, application/yaml, text/yaml, text/plain, */*' },
+        signal: controller.signal,
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+      return res.text();
+    } finally { clearTimeout(timeout); }
   });
 
   // API request execution — proxied through the main process so http:// URLs
   // bypass renderer CSP and custom auth headers can be forwarded freely.
   ipcMain.handle('api-request', async (_event, { method, url, headers, body }) => {
     const start = Date.now();
-    const opts = { method: (method || 'GET').toUpperCase(), headers: headers || {} };
-    if (body !== undefined && body !== null && body !== '') opts.body = body;
-    const res = await fetch(url, opts);
-    const bodyText = await res.text();
-    return {
-      status: res.status,
-      statusText: res.statusText,
-      headers: Object.fromEntries(res.headers.entries()),
-      body: bodyText,
-      duration: Date.now() - start,
-    };
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 60000);
+    try {
+      const opts = { method: (method || 'GET').toUpperCase(), headers: headers || {}, signal: controller.signal };
+      if (body !== undefined && body !== null && body !== '') opts.body = body;
+      const res = await fetch(url, opts);
+      const bodyText = await res.text();
+      return {
+        status: res.status,
+        statusText: res.statusText,
+        headers: Object.fromEntries(res.headers.entries()),
+        body: bodyText,
+        duration: Date.now() - start,
+      };
+    } finally { clearTimeout(timeout); }
+  });
+
+  // Auto-save backup
+  ipcMain.handle('auto-save-backup', async (_event, { filePath, data }) => {
+    if (!filePath) return { success: false };
+    try {
+      const bakPath = filePath + '.bak';
+      fs.writeFileSync(bakPath, JSON.stringify(data, null, 2), 'utf-8');
+      return { success: true };
+    } catch (err) {
+      console.error('[auto-save] backup failed:', err.message);
+      return { success: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('check-backups', async (_event, paths) => {
+    return paths.filter((p) => {
+      try { return fs.existsSync(p + '.bak'); } catch { return false; }
+    });
+  });
+
+  ipcMain.handle('delete-backup', async (_event, filePath) => {
+    try { fs.unlinkSync(filePath + '.bak'); } catch {}
+    return { success: true };
   });
 
   // Recent-files IPC (thin wrappers, not in a sub-module register fn).

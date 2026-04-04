@@ -75,6 +75,7 @@ export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef }) {
     if (nb.path) {
       await window.electronAPI.saveNotebookTo(nb.path, data);
       setNb(notebookId, { isDirty: false });
+      window.electronAPI.deleteBackup?.(nb.path);
     } else {
       const result = await window.electronAPI.saveNotebook(data);
       if (result.success) setNb(notebookId, { path: result.filePath, isDirty: false });
@@ -86,7 +87,10 @@ export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef }) {
     const data = buildNotebookData(notebookId);
     if (!data) return;
     const result = await window.electronAPI.saveNotebook(data);
-    if (result.success) setNb(notebookId, { path: result.filePath, isDirty: false });
+    if (result.success) {
+      setNb(notebookId, { path: result.filePath, isDirty: false });
+      window.electronAPI.deleteBackup?.(result.filePath);
+    }
   }, [buildNotebookData, setNb]);
 
   const handleLoad = useCallback(async () => {

@@ -185,7 +185,10 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
           break;
 
         case 'memory_mb':
-          setNb(notebookId, (n) => ({ memoryHistory: [...n.memoryHistory.slice(-59), msg.mb] }));
+          setNb(notebookId, (n) => ({
+            memoryHistory: [...n.memoryHistory.slice(-59), msg.mb],
+            memoryWarning: msg.mb > 1024 ? `Kernel memory: ${Math.round(msg.mb)}MB` : null,
+          }));
           break;
 
         case 'var_point':
@@ -342,6 +345,10 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
 
         case 'reset_complete':
           setNb(notebookId, { kernelStatus: 'ready', vars: [], varHistory: {}, outputHistory: {}, staleCellIds: [] });
+          break;
+
+        case 'kernel_status':
+          if (msg.status) setNb(notebookId, { kernelStatus: msg.status });
           break;
 
         case 'db_schema':

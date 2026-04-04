@@ -18,8 +18,10 @@ function saveApiSaved(list, userDataPath) {
   if (userDataPath) _path = path.join(userDataPath, 'api-saved.json');
   try {
     fs.mkdirSync(path.dirname(_path), { recursive: true });
-    fs.writeFileSync(_path, JSON.stringify(list, null, 2), 'utf-8');
-  } catch {}
+    const tmp = _path + '.tmp';
+    fs.writeFileSync(tmp, JSON.stringify(list, null, 2), 'utf-8');
+    fs.renameSync(tmp, _path);
+  } catch (err) { console.error('[api-saved] save failed:', err.message); }
 }
 
 function register(ipcMain, { app }) {

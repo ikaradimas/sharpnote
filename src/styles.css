@@ -3252,6 +3252,11 @@ body {
   color: #3a5060;
   font-size: 9px;
 }
+.status-mem-warning {
+  color: var(--status-error); font-size: 9px; font-weight: 600;
+  animation: pulse-warn 2s ease-in-out infinite;
+}
+@keyframes pulse-warn { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
 
 .status-cursor-pos {
   margin-left: auto;

@@ -39,6 +39,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // File operations
   saveNotebook: (data) => ipcRenderer.invoke('save-notebook', data),
   saveNotebookTo: (filePath, data) => ipcRenderer.invoke('save-notebook-to', { filePath, data }),
+  autoSaveBackup: (filePath, data) => ipcRenderer.invoke('auto-save-backup', { filePath, data }),
+  checkBackups: (paths) => ipcRenderer.invoke('check-backups', paths),
+  deleteBackup: (filePath) => ipcRenderer.invoke('delete-backup', filePath),
   loadNotebook: () => ipcRenderer.invoke('load-notebook'),
   importPolyglotNotebook: () => ipcRenderer.invoke('import-polyglot-notebook'),
   saveFile: (opts) => ipcRenderer.invoke('save-file', opts),

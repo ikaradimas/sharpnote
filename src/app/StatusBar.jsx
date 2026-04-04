@@ -59,6 +59,9 @@ export function StatusBar({ notebooks, activeId }) {
       {peak != null && (
         <span className="status-mem-peak">peak {peak.toFixed(1)}</span>
       )}
+      {nb?.memoryWarning && (
+        <span className="status-mem-warning" title="Kernel memory usage is high">⚠ {nb.memoryWarning}</span>
+      )}
       {cursorPos && (
         <span className="status-cursor-pos">
           {cursorPos.cellIndex != null ? `Cell ${cursorPos.cellIndex + 1}  ` : ''}Ln {cursorPos.line}  Col {cursorPos.col}

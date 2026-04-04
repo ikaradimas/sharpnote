@@ -21,7 +21,9 @@ function setMainWindow(win) {
 }
 
 function writeNotebookFile(filePath, data) {
-  fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
+  const tmp = filePath + '.tmp';
+  fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf-8');
+  fs.renameSync(tmp, filePath);
   if (_addRecentFile) _addRecentFile(filePath);
   return { success: true, filePath };
 }

@@ -270,6 +270,19 @@ export function App() {
     window.electronAPI?.saveDbConnections(dbConnections);
   }, [dbConnections]);
 
+  // ── Auto-save: write .bak for dirty notebooks every 60s ──────────────────
+  useEffect(() => {
+    const timer = setInterval(() => {
+      for (const nb of notebooksRef.current) {
+        if (nb.isDirty && nb.path) {
+          const data = buildNotebookData(nb);
+          window.electronAPI?.autoSaveBackup(nb.path, data);
+        }
+      }
+    }, 60000);
+    return () => clearInterval(timer);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Theme + lineAlt: apply to DOM, persist on change ─────────────────────
   useEffect(() => { document.documentElement.dataset.theme = theme; }, [theme]);
   useEffect(() => { document.documentElement.classList.toggle('line-alt-enabled', lineAltEnabled); }, [lineAltEnabled]);

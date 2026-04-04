@@ -163,6 +163,21 @@ function startKernelForId(notebookId) {
     entry.ready = false;
     console.log(`Kernel exited (${notebookId}) with code:`, code);
     _writeLog('KERNEL', `Stopped (exit code ${code})`);
+    // Auto-restart on abnormal exit with exponential backoff (max 3 retries)
+    if (code !== 0 && code !== null) {
+      const retries = (entry._restartCount || 0);
+      if (retries < 3) {
+        entry._restartCount = retries + 1;
+        const delay = Math.min(1000 * Math.pow(2, retries), 8000);
+        _writeLog('KERNEL', `Auto-restarting in ${delay}ms (attempt ${retries + 1}/3)`);
+        _notifyWindow(notebookId, { type: 'kernel_status', status: 'restarting' });
+        setTimeout(() => {
+          if (kernels.has(notebookId)) startKernelForId(notebookId);
+        }, delay);
+        return;
+      }
+      _writeLog('KERNEL', 'Max restart attempts reached, giving up');
+    }
     _notifyWindow(notebookId, { type: 'error', id: null, message: `Kernel process exited with code ${code}` });
   });
 

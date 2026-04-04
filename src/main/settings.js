@@ -76,8 +76,10 @@ function saveAppSettings(s, appSettingsPath) {
   const p = appSettingsPath || _appSettingsPath;
   try {
     fs.mkdirSync(path.dirname(p), { recursive: true });
-    fs.writeFileSync(p, JSON.stringify(s, null, 2), 'utf-8');
-  } catch {}
+    const tmp = p + '.tmp';
+    fs.writeFileSync(tmp, JSON.stringify(s, null, 2), 'utf-8');
+    fs.renameSync(tmp, p);
+  } catch (err) { console.error('[settings] save failed:', err.message); }
 }
 
 function register(ipcMain, { app, shell, mainWindow } = {}) {

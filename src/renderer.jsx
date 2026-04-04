@@ -33,9 +33,10 @@ export { VarInspectDialog } from './components/dialogs/VarInspectDialog.jsx';
 
 // ── App bootstrap ─────────────────────────────────────────────────────────────
 import { App } from './app/App.jsx';
+import { ErrorBoundary } from './components/ErrorBoundary.jsx';
 
 const rootEl = document.getElementById('root');
 if (rootEl) {
   const root = createRoot(rootEl);
-  root.render(<App />);
+  root.render(<ErrorBoundary><App /></ErrorBoundary>);
 }

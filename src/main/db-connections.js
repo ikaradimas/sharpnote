@@ -74,8 +74,10 @@ function saveDbConnections(list, userDataPath) {
       encrypted: true,
     }));
     fs.mkdirSync(path.dirname(_dbConnectionsPath), { recursive: true });
-    fs.writeFileSync(_dbConnectionsPath, JSON.stringify(encrypted, null, 2), 'utf-8');
-  } catch {}
+    const tmp = _dbConnectionsPath + '.tmp';
+    fs.writeFileSync(tmp, JSON.stringify(encrypted, null, 2), 'utf-8');
+    fs.renameSync(tmp, _dbConnectionsPath);
+  } catch (err) { console.error('[db-connections] save failed:', err.message); }
 }
 
 function register(ipcMain, { app }) {
