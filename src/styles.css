@@ -1089,6 +1089,26 @@ body {
 .table-pager-size:hover {
   border-color: #00e5cc;
 }
+.table-footer {
+  display: flex; flex-direction: column; gap: 0;
+}
+.table-export-bar {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 8px; border-top: 1px solid var(--border-subtle);
+}
+.table-row-count {
+  font-family: var(--font-ui); font-size: 10px; color: var(--text-muted);
+  margin-right: auto;
+}
+.table-export-btn {
+  font-family: var(--font-ui); font-size: 10px; padding: 2px 8px;
+  background: var(--bg-deep); border: 1px solid var(--border-default);
+  color: var(--text-secondary); border-radius: 3px; cursor: pointer;
+}
+.table-export-btn:hover {
+  background: var(--bg-elevated); color: var(--text-primary);
+  border-color: var(--accent-primary-dim);
+}
 
 /* ── Graph ───────────────────────────────────────────────────────────────── */
 

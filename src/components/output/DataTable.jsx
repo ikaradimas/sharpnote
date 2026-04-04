@@ -1,5 +1,13 @@
 import React, { useState, useEffect, useMemo, useContext } from 'react';
 import { TablePageSizeContext } from '../../config/table-page-size-context.js';
+import { tableToCSV } from '../../utils.js';
+
+function tableToTSV(rows) {
+  if (!rows || rows.length === 0) return '';
+  const cols = Object.keys(rows[0]);
+  const escape = (v) => String(v ?? '').replace(/\t/g, ' ').replace(/\n/g, ' ');
+  return [cols.join('\t'), ...rows.map((r) => cols.map((c) => escape(r[c])).join('\t'))].join('\n');
+}
 
 export function DataTable({ rows }) {
   if (!Array.isArray(rows) || rows.length === 0) {
@@ -104,26 +112,49 @@ export function DataTable({ rows }) {
           </tbody>
         </table>
       </div>
-      {pageCount > 1 && (
-        <div className="table-pager">
-          <span className="table-pager-info">
-            {start + 1}–{end} of <strong>{total}</strong> rows
-          </span>
-          <div className="table-pager-controls">
-            <button className="table-pager-btn" onClick={() => setPage(0)}        disabled={page === 0}>«</button>
-            <button className="table-pager-btn" onClick={() => setPage(p => p-1)} disabled={page === 0}>‹</button>
-            <span className="table-pager-page">page {page + 1} / {pageCount}</span>
-            <button className="table-pager-btn" onClick={() => setPage(p => p+1)} disabled={page >= pageCount - 1}>›</button>
-            <button className="table-pager-btn" onClick={() => setPage(pageCount-1)} disabled={page >= pageCount - 1}>»</button>
+      <div className="table-footer">
+        {pageCount > 1 && (
+          <div className="table-pager">
+            <span className="table-pager-info">
+              {start + 1}–{end} of <strong>{total}</strong> rows
+            </span>
+            <div className="table-pager-controls">
+              <button className="table-pager-btn" onClick={() => setPage(0)}        disabled={page === 0}>«</button>
+              <button className="table-pager-btn" onClick={() => setPage(p => p-1)} disabled={page === 0}>‹</button>
+              <span className="table-pager-page">page {page + 1} / {pageCount}</span>
+              <button className="table-pager-btn" onClick={() => setPage(p => p+1)} disabled={page >= pageCount - 1}>›</button>
+              <button className="table-pager-btn" onClick={() => setPage(pageCount-1)} disabled={page >= pageCount - 1}>»</button>
+            </div>
+            <select className="table-pager-size" value={pageSize} onChange={onPageSize}>
+              <option value={10}>10 / page</option>
+              <option value={20}>20 / page</option>
+              <option value={50}>50 / page</option>
+              <option value={100}>100 / page</option>
+            </select>
           </div>
-          <select className="table-pager-size" value={pageSize} onChange={onPageSize}>
-            <option value={10}>10 / page</option>
-            <option value={20}>20 / page</option>
-            <option value={50}>50 / page</option>
-            <option value={100}>100 / page</option>
-          </select>
+        )}
+        <div className="table-export-bar">
+          <span className="table-row-count">{total} row{total !== 1 ? 's' : ''} · {columns.length} col{columns.length !== 1 ? 's' : ''}</span>
+          <button className="table-export-btn" title="Copy as TSV (paste into Excel)"
+            onClick={() => { navigator.clipboard.writeText(tableToTSV(rows)); }}>
+            Copy
+          </button>
+          <button className="table-export-btn" title="Export as CSV"
+            onClick={() => window.electronAPI?.saveFile({
+              content: tableToCSV(rows), defaultName: 'table.csv',
+              filters: [{ name: 'CSV', extensions: ['csv'] }],
+            })}>
+            CSV
+          </button>
+          <button className="table-export-btn" title="Export as TSV (opens in Excel)"
+            onClick={() => window.electronAPI?.saveFile({
+              content: tableToTSV(rows), defaultName: 'table.tsv',
+              filters: [{ name: 'TSV', extensions: ['tsv'] }, { name: 'All Files', extensions: ['*'] }],
+            })}>
+            TSV
+          </button>
         </div>
-      )}
+      </div>
     </div>
   );
 }

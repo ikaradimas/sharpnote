@@ -46,7 +46,7 @@ describe('DataTable', () => {
 
   it('shows correct row count info', () => {
     renderTable(makeRows(11));
-    expect(screen.getByText(/11/)).toBeInTheDocument();
+    expect(screen.getByText(/11 rows/)).toBeInTheDocument();
   });
 
   it('next page button advances to page 2', () => {
@@ -130,5 +130,24 @@ describe('DataTable', () => {
     expect(cells[0].textContent).toBe('9');
     expect(cells[1].textContent).toBe('10');
     expect(cells[2].textContent).toBe('100');
+  });
+
+  // ── Export bar ──────────────────────────────────────────────────────────
+
+  it('renders export buttons (Copy, CSV, TSV)', () => {
+    renderTable([{ a: 1 }, { a: 2 }]);
+    expect(screen.getByTitle(/Copy as TSV/)).toBeInTheDocument();
+    expect(screen.getByTitle(/Export as CSV/)).toBeInTheDocument();
+    expect(screen.getByTitle(/Export as TSV/)).toBeInTheDocument();
+  });
+
+  it('shows row and column count', () => {
+    renderTable([{ x: 1, y: 2 }, { x: 3, y: 4 }]);
+    expect(screen.getByText(/2 rows · 2 cols/)).toBeInTheDocument();
+  });
+
+  it('shows singular "row" for single row', () => {
+    renderTable([{ a: 1 }]);
+    expect(screen.getByText(/1 row · 1 col$/)).toBeInTheDocument();
   });
 });
