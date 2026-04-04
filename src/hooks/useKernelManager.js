@@ -157,6 +157,14 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
           }
           break;
 
+        case 'check_result':
+          if (msg.id) {
+            setNb(notebookId, (n) => ({
+              checkResults: { ...(n.checkResults || {}), [msg.id]: { passed: msg.passed, message: msg.message } },
+            }));
+          }
+          break;
+
         case 'complete': {
           const resolve = pendingResolversRef.current[msg.id];
           if (resolve) {
@@ -542,6 +550,23 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
     });
   }, [setNb]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const runCheckCell = useCallback(async (notebookId, cell) => {
+    if (!window.electronAPI || cell.type !== 'check') return;
+    const nb = notebooksRef.current.find((n) => n.id === notebookId);
+    const resolvedConfig = await resolveConfig(nb);
+
+    return new Promise((resolve) => {
+      prepareCellRun(setNb, pendingResolversRef, notebookId, cell.id, resolve);
+      window.electronAPI.sendToKernel(notebookId, {
+        type: 'execute_check',
+        id: cell.id,
+        expression: cell.content,
+        label: cell.label || '',
+        config: resolvedConfig,
+      });
+    });
+  }, [setNb]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const runFrom = useCallback(async (notebookId, cellId) => {
     const nb = notebooksRef.current.find((n) => n.id === notebookId);
     if (!nb || nb.running.size > 0) return;
@@ -589,6 +614,7 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
     runSqlCell,
     runHttpCell,
     runShellCell,
+    runCheckCell,
     runAll,
     runFrom,
     runTo,

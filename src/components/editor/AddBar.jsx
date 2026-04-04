@@ -1,6 +1,6 @@
 import React from 'react';
 
-export function AddBar({ onAddMarkdown, onAddCode, onAddSql, onAddHttp, onAddShell }) {
+export function AddBar({ onAddMarkdown, onAddCode, onAddSql, onAddHttp, onAddShell, onAddCheck }) {
   return (
     <div className="cell-add-bar">
       <div className="cell-add-bar-inner">
@@ -9,6 +9,7 @@ export function AddBar({ onAddMarkdown, onAddCode, onAddSql, onAddHttp, onAddShe
         {onAddSql && <button className="cell-add-btn" onClick={onAddSql}>+ SQL</button>}
         {onAddHttp && <button className="cell-add-btn" onClick={onAddHttp}>+ HTTP</button>}
         {onAddShell && <button className="cell-add-btn" onClick={onAddShell}>+ Shell</button>}
+        {onAddCheck && <button className="cell-add-btn" onClick={onAddCheck}>+ Check</button>}
       </div>
     </div>
   );

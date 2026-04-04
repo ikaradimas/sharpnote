@@ -8,6 +8,7 @@ import { MarkdownCell } from './editor/MarkdownCell.jsx';
 import { SqlCell } from './editor/SqlCell.jsx';
 import { HttpCell } from './editor/HttpCell.jsx';
 import { ShellCell } from './editor/ShellCell.jsx';
+import { CheckCell } from './editor/CheckCell.jsx';
 import { AddBar } from './editor/AddBar.jsx';
 import { FindBar } from './FindBar.jsx';
 
@@ -20,6 +21,7 @@ export function NotebookView({
   onRunSqlCell,
   onRunHttpCell,
   onRunShellCell,
+  onRunCheckCell,
   onRunAll,
   onSave,
   onLoad,
@@ -144,6 +146,7 @@ export function NotebookView({
       onAddSql={() => addCell('sql')}
       onAddHttp={() => addCell('http')}
       onAddShell={() => addCell('shell')}
+      onAddCheck={() => addCell('check')}
       autoRun={autoRun || false}
       onToggleAutoRun={() => onSetNbDirty((n) => ({ autoRun: !n.autoRun }))}
       onSave={() => onSave(nb.id)}
@@ -214,6 +217,7 @@ export function NotebookView({
             onAddSql={() => addCell('sql', -1)}
             onAddHttp={() => addCell('http', -1)}
             onAddShell={() => addCell('shell', -1)}
+            onAddCheck={() => addCell('check', -1)}
           />
         )}
 
@@ -292,6 +296,22 @@ export function NotebookView({
                 onMoveUp={() => moveCell(cell.id, -1)}
                 onMoveDown={() => moveCell(cell.id, 1)}
               />
+            ) : cell.type === 'check' ? (
+              <CheckCell
+                cell={cell}
+                cellIndex={index}
+                checkResult={nb.checkResults?.[cell.id] ?? null}
+                notebookId={nb.id}
+                isRunning={running.has(cell.id)}
+                anyRunning={running.size > 0}
+                kernelReady={kernelStatus === 'ready'}
+                onUpdate={(val) => updateCell(cell.id, val)}
+                onLabelChange={(label) => updateCellProp(cell.id, 'label', label)}
+                onRun={() => onRunCheckCell(nb.id, cell)}
+                onDelete={() => deleteCell(cell.id)}
+                onMoveUp={() => moveCell(cell.id, -1)}
+                onMoveDown={() => moveCell(cell.id, 1)}
+              />
             ) : (
               <CodeCell
                 cell={cell}
@@ -327,6 +347,7 @@ export function NotebookView({
                 onAddSql={() => addCell('sql', index)}
                 onAddHttp={() => addCell('http', index)}
                 onAddShell={() => addCell('shell', index)}
+                onAddCheck={() => addCell('check', index)}
               />
             )}
           </div>
