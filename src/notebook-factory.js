@@ -12,7 +12,8 @@ export function makeCell(type = 'code', content = '') {
     type,
     content,
     ...(type === 'code' ? { outputMode: 'auto', locked: false, scheduleInterval: null } : {}),
-    ...(type === 'sql'  ? { db: '' } : {}),
+    ...(type === 'sql'   ? { db: '' } : {}),
+    ...(type === 'check' ? { label: '' } : {}),
   };
 }
 
@@ -1165,6 +1166,31 @@ $"Loaded {dataset.Count:N0} rows (cached after first run)".Display();`),
 // The result is also returned as a string for further processing.
 
 Util.Cmd("dotnet", "--version");`),
+
+    // ── Docker ────────────────────────────────────────────────────────────
+
+    md(`## Docker Integration
+
+The \`Docker\` global lets you manage containers from code cells. Requires Docker Desktop or Docker Engine to be installed.
+
+| Method | Description |
+|--------|-------------|
+| \`Docker.Run(image, name?, ports?, env?)\` | Start a container; returns container ID |
+| \`Docker.Stop(nameOrId)\` | Stop a running container |
+| \`Docker.Remove(nameOrId)\` | Remove a container |
+| \`Docker.Exec(nameOrId, cmd)\` | Run a command inside a container |
+| \`Docker.IsRunning(nameOrId)\` | Check if running |
+| \`Docker.List()\` | List all containers |`),
+
+    cs(`// ── Docker example (uncomment if Docker is available) ────────────────────────
+// var id = Docker.Run("redis:7", name: "demo-redis",
+//     ports: new() { ["6379"] = "6379" });
+// Console.WriteLine($"Started: {id[..12]}");
+// Docker.IsRunning("demo-redis").Display();
+// Docker.Stop("demo-redis");
+// Docker.Remove("demo-redis");
+
+Docker.List().DisplayTable();  // List running containers`),
   ];
 }
 

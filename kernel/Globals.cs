@@ -122,6 +122,7 @@ public class ScriptGlobals
     public PanelsHelper  Panels  { get; set; } = null!;
     public DbHelper      Db      { get; set; } = null!;
     public DataHelper    Data    { get; set; } = null!;
+    public DockerHelper  Docker  { get; set; } = null!;
     public ConfigHelper  Config  => ConfigContext.Current;
     public UtilHelper    Util    => UtilContext.Current;
     // Injected per-execution so loop-injection checks can cancel tight loops.

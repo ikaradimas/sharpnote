@@ -66,9 +66,10 @@ partial class Program
         var panels  = new PanelsHelper(realStdout);
         var db      = new DbHelper(realStdout);
         var data    = new DataHelper();
+        var docker  = new DockerHelper(realStdout);
         var util    = new UtilHelper(realStdout);
         UtilContext.Current = util;
-        var globals = new ScriptGlobals { Display = display, Panels = panels, Db = db, Data = data };
+        var globals = new ScriptGlobals { Display = display, Panels = panels, Db = db, Data = data, Docker = docker };
 
         var options = ScriptOptions.Default
             .AddImports(
@@ -289,6 +290,12 @@ partial class Program
                 case "execute_shell":
                 {
                     await HandleExecuteShell(msg, realStdout);
+                    break;
+                }
+
+                case "execute_check":
+                {
+                    await HandleExecuteCheck(msg, options, globals, realStdout);
                     break;
                 }
 
