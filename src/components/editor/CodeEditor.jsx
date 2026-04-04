@@ -302,7 +302,9 @@ export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
       ? markdown({ base: markdownLanguage })
       : language === 'sql'
         ? StreamLanguage.define(standardSQL)
-        : StreamLanguage.define(csharp);
+        : language === 'http'
+          ? [] // plain text — no syntax mode needed
+          : StreamLanguage.define(csharp);
 
     const ctrlEnterKey = keymap.of([{
       key: 'Ctrl-Enter',

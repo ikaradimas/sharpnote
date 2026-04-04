@@ -13,6 +13,7 @@ export function makeCell(type = 'code', content = '') {
     content,
     ...(type === 'code' ? { outputMode: 'auto', locked: false, scheduleInterval: null } : {}),
     ...(type === 'sql'  ? { db: '' } : {}),
+    ...(type === 'http' ? {} : {}),
   };
 }
 
@@ -27,6 +28,7 @@ export const DEFAULT_NUGET_SOURCES = [
 const md = (content) => makeCell('markdown', content);
 const cs = (content, outputMode = 'auto') =>
   ({ ...makeCell('code', content), outputMode });
+const http = (content) => makeCell('http', content);
 
 // ── Template registry ────────────────────────────────────────────────────────
 
@@ -84,6 +86,7 @@ An interactive C# notebook. Press **Ctrl+Enter** to run a cell, or click **▶ R
 | Logging | \`value.Log()\` · \`value.Log("label")\` |
 | Config | \`Config["Key"]\` · \`Config.Set("Key","val")\` · \`Config.Remove("Key")\` |
 | Data Import | \`Data.LoadCsv(path)\` · File → Import Data File (⇧⌘I) for Excel/Parquet |
+| HTTP Cell | \`GET url\` · headers · body — inline HTTP requests with \`{{Config}}\` + \`{{variable}}\` placeholders |
 | Database | Attach via **DB** panel or \`Db.Add\` / \`Db.Attach\` → \`mydb.Users.ToList()\` |
 | Panels | \`Panels.Open/Close/CloseAll(PanelId.*)\` · \`Panels.Dock/Float\` |
 | Util | \`obj.Dump()\` · \`Util.Time()\` · \`Util.Dif()\` · \`Util.HorizontalRun()\` · \`Util.Cache()\` · \`Util.ConfirmAsync()\` |
@@ -970,6 +973,15 @@ var rows = posts.EnumerateArray().Select(p => {
 });
 
 rows.DisplayTable();`),
+
+    md(`## HTTP Cells
+
+HTTP cells use **.http file syntax** — method + URL, headers, blank line, body.
+Use \`{{key}}\` to substitute Config values or C# variables from the session.
+Click **+ HTTP** in the toolbar or between cells to add one.`),
+
+    http(`GET https://jsonplaceholder.typicode.com/posts/1
+Accept: application/json`),
 
     // ── Modern C# ──────────────────────────────────────────────────────────
 

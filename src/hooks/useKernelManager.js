@@ -523,6 +523,44 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
     });
   }, [setNb]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const runHttpCell = useCallback(async (notebookId, cell) => {
+    if (!window.electronAPI || cell.type !== 'http') return;
+    const nb = notebooksRef.current.find((n) => n.id === notebookId);
+
+    // Resolve config (same as runCell/runSqlCell)
+    const configEntries = nb?.config || [];
+    const resolvedConfig = {};
+    for (const e of configEntries) resolvedConfig[e.key] = e.value;
+    const envEntries = configEntries.filter((e) => e.envVar);
+    if (envEntries.length > 0) {
+      const envVals = await Promise.all(envEntries.map((e) => window.electronAPI.getEnvVar(e.envVar)));
+      envEntries.forEach((e, i) => { if (envVals[i]) resolvedConfig[e.key] = envVals[i]; });
+    }
+
+    return new Promise((resolve) => {
+      setNb(notebookId, (n) => {
+        const prevOutputs = n.outputs[cell.id];
+        const newOutputHistory = { ...(n.outputHistory || {}) };
+        if (prevOutputs?.length > 0) {
+          newOutputHistory[cell.id] = [...(newOutputHistory[cell.id] || []).slice(-4), prevOutputs];
+        }
+        return {
+          outputs: { ...n.outputs, [cell.id]: [] },
+          outputHistory: newOutputHistory,
+          cellResults: { ...(n.cellResults || {}), [cell.id]: null },
+          running: new Set([...n.running, cell.id]),
+        };
+      });
+      pendingResolversRef.current[cell.id] = resolve;
+      window.electronAPI.sendToKernel(notebookId, {
+        type: 'execute_http',
+        id: cell.id,
+        content: cell.content,
+        config: resolvedConfig,
+      });
+    });
+  }, [setNb]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const runFrom = useCallback(async (notebookId, cellId) => {
     const nb = notebooksRef.current.find((n) => n.id === notebookId);
     if (!nb || nb.running.size > 0) return;
@@ -568,6 +606,7 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
   return {
     runCell,
     runSqlCell,
+    runHttpCell,
     runAll,
     runFrom,
     runTo,

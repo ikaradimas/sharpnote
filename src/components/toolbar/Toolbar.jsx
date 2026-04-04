@@ -14,6 +14,7 @@ export function Toolbar({
   onAddMarkdown,
   onAddCode,
   onAddSql,
+  onAddHttp,
   autoRun,
   onToggleAutoRun,
   onSave,
@@ -181,6 +182,7 @@ export function Toolbar({
                 <button onClick={() => { onAddCode(); setAddCellOpen(false); }}>+ Code</button>
                 <button onClick={() => { onAddMarkdown(); setAddCellOpen(false); }}>+ Markdown</button>
                 <button onClick={() => { onAddSql(); setAddCellOpen(false); }}>+ SQL</button>
+                <button onClick={() => { onAddHttp(); setAddCellOpen(false); }}>+ HTTP</button>
               </div>
             )}
           </div>
@@ -233,6 +235,7 @@ export function Toolbar({
               <button className="toolbar-overflow-item" onClick={() => { onAddMarkdown(); closeOverflow(); }}>+ Markdown</button>
               <button className="toolbar-overflow-item" onClick={() => { onAddCode();     closeOverflow(); }}>+ Code</button>
               <button className="toolbar-overflow-item" onClick={() => { onAddSql();      closeOverflow(); }}>+ SQL</button>
+              <button className="toolbar-overflow-item" onClick={() => { onAddHttp();     closeOverflow(); }}>+ HTTP</button>
               <div className="toolbar-overflow-sep" />
               <button
                 className={`toolbar-overflow-item${autoRun ? ' toolbar-overflow-item--on' : ''}`}

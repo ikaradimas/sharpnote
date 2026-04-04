@@ -280,6 +280,12 @@ partial class Program
                     break;
                 }
 
+                case "execute_http":
+                {
+                    await HandleExecuteHttp(msg, options, globals, realStdout);
+                    break;
+                }
+
                 case "db_test":
                 {
                     await HandleDbTest(msg, realStdout);
