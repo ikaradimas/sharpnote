@@ -77,14 +77,15 @@ export function ConfigPanel({ isOpen, onToggle, config, onAdd, onRemove, onUpdat
           <input ref={keyRef} className="nuget-input config-key-input" placeholder="Key"
             value={newKey} onChange={(e) => setNewKey(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleAdd()} spellCheck={false} />
+          <input className="nuget-input config-env-input" placeholder="ENV_VAR"
+            value={newEnvVar} onChange={(e) => setNewEnvVar(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleAdd()} spellCheck={false} />
           <select className="config-type-select" value={newType} onChange={(e) => setNewType(e.target.value)}>
             {CONFIG_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
           </select>
+          <span className="config-eq">=</span>
           <input className="nuget-input config-value-input-add" placeholder="Value"
             value={newValue} onChange={(e) => setNewValue(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleAdd()} spellCheck={false} />
-          <input className="nuget-input config-env-input" placeholder="ENV_VAR"
-            value={newEnvVar} onChange={(e) => setNewEnvVar(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleAdd()} spellCheck={false} />
           <button className="nuget-add-btn" onClick={handleAdd}>+ Add</button>
         </div>
