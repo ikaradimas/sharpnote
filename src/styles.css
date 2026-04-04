@@ -938,6 +938,27 @@ body {
   font-family: var(--font-code);
   font-size: calc((var(--base-font-size) - 1.5) * 1px);
 }
+.output-tabbed { margin-top: 2px; }
+.output-tab-bar {
+  display: flex; gap: 2px; padding: 0 0 4px;
+  border-bottom: 1px solid var(--border-subtle); margin-bottom: 4px;
+}
+.output-tab {
+  font-family: var(--font-ui); font-size: 11px; padding: 4px 10px;
+  background: none; border: 1px solid transparent; border-bottom: none;
+  border-radius: 4px 4px 0 0; color: var(--text-muted); cursor: pointer;
+  display: flex; align-items: center; gap: 5px;
+}
+.output-tab:hover { color: var(--text-secondary); background: var(--bg-elevated); }
+.output-tab.active {
+  color: var(--text-primary); background: var(--bg-elevated);
+  border-color: var(--border-default); border-bottom-color: var(--bg-elevated);
+  margin-bottom: -1px; padding-bottom: 5px;
+}
+.output-tab-count {
+  font-size: 9px; color: var(--text-muted); background: var(--bg-deep);
+  border-radius: 8px; padding: 1px 5px; min-width: 16px; text-align: center;
+}
 
 .output-stdout {
   white-space: pre;

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { parseCsv, tableToCSV } from '../../utils.js';
 import { DataTable } from './DataTable.jsx';
 import { GraphOutput } from './GraphOutput.jsx';
@@ -110,13 +110,56 @@ export function OutputBlock({ msg, index, notebookId }) {
   );
 }
 
+function isTableMsg(msg) {
+  return msg.type === 'display' && (msg.format === 'table' || msg.format === 'csv');
+}
+
+function TabbedResults({ tableMessages, notebookId }) {
+  const [activeTab, setActiveTab] = useState(0);
+  const msg = tableMessages[activeTab];
+  return (
+    <div className="output-tabbed">
+      <div className="output-tab-bar">
+        {tableMessages.map((m, i) => {
+          const rows = m.format === 'csv' ? parseCsv(m.content) : m.content;
+          const count = Array.isArray(rows) ? rows.length : 0;
+          return (
+            <button
+              key={i}
+              className={`output-tab${i === activeTab ? ' active' : ''}`}
+              onClick={() => setActiveTab(i)}
+            >
+              {m.title || `Result ${i + 1}`}
+              <span className="output-tab-count">{count}</span>
+            </button>
+          );
+        })}
+      </div>
+      <OutputBlock msg={msg} index={activeTab} notebookId={notebookId} />
+    </div>
+  );
+}
+
 export function CellOutput({ messages, notebookId }) {
   if (!messages || messages.length === 0) return null;
+
+  // If 2+ table outputs exist, group them into a tabbed view
+  const tableMessages = messages.filter(isTableMsg);
+  const nonTableMessages = messages.filter((m) => !isTableMsg(m));
+  const useTabs = tableMessages.length >= 2;
+
   return (
     <div className="cell-output">
-      {messages.map((msg, i) => (
-        <OutputBlock key={msg.handleId || i} msg={msg} index={i} notebookId={notebookId} />
+      {nonTableMessages.map((msg, i) => (
+        <OutputBlock key={msg.handleId || `nt-${i}`} msg={msg} index={i} notebookId={notebookId} />
       ))}
+      {useTabs ? (
+        <TabbedResults tableMessages={tableMessages} notebookId={notebookId} />
+      ) : (
+        tableMessages.map((msg, i) => (
+          <OutputBlock key={msg.handleId || `t-${i}`} msg={msg} index={i} notebookId={notebookId} />
+        ))
+      )}
     </div>
   );
 }
