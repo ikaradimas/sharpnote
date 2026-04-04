@@ -3628,6 +3628,23 @@ body {
 }
 .db-column-node:hover .db-key-copy { opacity: 1; }
 .db-key-copy:hover { color: var(--accent-primary); }
+.db-key-search {
+  display: flex; align-items: center; gap: 4px;
+  padding: 4px 6px; border-bottom: 1px solid var(--border-subtle); flex-shrink: 0;
+}
+.db-key-search-input {
+  flex: 1; min-width: 0; background: var(--bg-mid); border: 1px solid var(--border-subtle);
+  color: var(--text-primary); font-family: var(--font-code); font-size: 10px;
+  padding: 2px 5px; border-radius: 3px; outline: none;
+}
+.db-key-search-input:focus { border-color: var(--accent-primary); }
+.db-key-search-input::placeholder { color: var(--text-muted); }
+.db-key-search-btn {
+  background: var(--bg-mid); border: 1px solid var(--border-subtle);
+  color: var(--text-muted); border-radius: 3px; cursor: pointer;
+  font-size: 9px; padding: 2px 6px; flex-shrink: 0;
+}
+.db-key-search-btn:hover { color: var(--text-primary); border-color: var(--border-default); }
 .db-load-more-btn {
   display: block; width: 100%; padding: 5px 8px;
   background: none; border: none; border-top: 1px solid var(--border-subtle);

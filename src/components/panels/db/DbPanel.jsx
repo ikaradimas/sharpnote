@@ -21,24 +21,57 @@ function CopyBtn({ text }) {
 
 function DbSchemaTree({ schema, isRedis, onLoadMore }) {
   const [expanded, setExpanded] = useState({});
+  const [searchInput, setSearchInput] = useState('');
+  const [filter, setFilter] = useState('');
   if (!schema) return null;
   const toggle = (name) => setExpanded((prev) => ({ ...prev, [name]: !prev[name] }));
 
+  const applyFilter = () => setFilter(searchInput.trim().toLowerCase());
+  const clearFilter = () => { setFilter(''); setSearchInput(''); };
+
+  // Filter tables and columns when a Redis key search is active
+  const tables = isRedis && filter
+    ? schema.tables.map((t) => {
+        const fullPrefix = t.name === '(keys)' ? '' : t.name + ':';
+        const matchingCols = t.columns.filter((c) => {
+          const fullKey = fullPrefix + c.name;
+          return fullKey.toLowerCase().includes(filter);
+        });
+        return matchingCols.length > 0 ? { ...t, columns: matchingCols } : null;
+      }).filter(Boolean)
+    : schema.tables;
+
   return (
     <div className="db-schema-tree">
-      {schema.tables.map((table) => {
+      {isRedis && (
+        <div className="db-key-search">
+          <input
+            className="db-key-search-input"
+            type="text"
+            placeholder="Search keys…"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') applyFilter(); }}
+            spellCheck={false}
+          />
+          <button className="db-key-search-btn" onClick={applyFilter} title="Search">Search</button>
+          {filter && <button className="db-key-search-btn" onClick={clearFilter} title="Clear search">Clear</button>}
+        </div>
+      )}
+      {tables.map((table) => {
         const tableKey = `${table.schema}.${table.name}`;
         const depth = isRedis ? table.name.split(':').length - 1 : 0;
+        const isOpen = expanded[tableKey] || !!filter;
         return (
           <div key={tableKey} className="db-table-node">
             <div className="db-table-header" onClick={() => toggle(tableKey)}>
-              <span className="db-table-arrow">{expanded[tableKey] ? '▾' : '▸'}</span>
+              <span className="db-table-arrow">{isOpen ? '▾' : '▸'}</span>
               <span className="db-table-name" style={isRedis && depth > 0 ? { color: NS_COLORS[depth % NS_COLORS.length] } : undefined}>
                 {table.schema ? `${table.schema}.${table.name}` : table.name}
               </span>
               <span className="db-col-count">{table.columns.length}</span>
             </div>
-            {expanded[tableKey] && (
+            {isOpen && (
               <div className="db-columns-list">
                 {table.columns.map((col) => (
                   <div key={col.name} className={`db-column-node${col.isPrimaryKey ? ' db-col-pk' : ''}${isRedis ? ' db-redis-key' : ''}`}>
@@ -56,7 +89,7 @@ function DbSchemaTree({ schema, isRedis, onLoadMore }) {
           </div>
         );
       })}
-      {isRedis && schema.redisCursor !== 0 && onLoadMore && (
+      {isRedis && !filter && schema.redisCursor !== 0 && onLoadMore && (
         <button className="db-load-more-btn" onClick={onLoadMore}>Load more keys…</button>
       )}
     </div>
