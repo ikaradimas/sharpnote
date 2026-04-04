@@ -31,6 +31,7 @@ export const DOCS_SECTIONS = [
         'Display.Slider / Dropdown / DatePicker → interactive widgets in cell output',
         'Panels.Open/Close/Toggle/CloseAll(PanelId.*) → control workspace panel visibility from code',
         'Panels.Dock(PanelId.*, DockZone.*) / Panels.Float(PanelId.*) → move panels between dock zones or float them',
+        'Data.LoadCsv(path) → load a CSV file as a list of dictionaries (auto-displayed as table)',
         'Db.Add / Attach / Detach / ListAsync → manage database connections programmatically',
         'Config.Set(key, value) / Config.Remove(key) → upsert or delete Config entries from code',
       ]},
@@ -275,6 +276,25 @@ export const DOCS_SECTIONS = [
       { type: 'p', text: 'Compilation and runtime errors appear in red. Stack traces are shown in a dimmer colour below the main error message. An error in one cell does not prevent other cells from running.' },
       { type: 'h3', text: 'Exporting Output' },
       { type: 'p', text: 'Hover over any output block to reveal an export button in the top-right corner. Click it to save the output to a file.' },
+    ],
+  },
+  {
+    id: 'data-import', title: 'Data Import',
+    content: [
+      { type: 'p', text: 'Load CSV, Excel, and Parquet files into variables without boilerplate. CSV is built-in; Excel and Parquet use code-generated cells with NuGet packages.' },
+      { type: 'h3', text: 'CSV (Built-in)' },
+      { type: 'code', lang: 'csharp', text: 'var data = Data.LoadCsv(@"/path/to/file.csv");\ndata  // auto-displays as table' },
+      { type: 'p', text: 'Parameters: hasHeader (bool, default true), delimiter (char, default \',\').' },
+      { type: 'code', lang: 'csharp', text: '// Tab-separated\nvar tsv = Data.LoadCsv(@"/path/file.tsv", delimiter: \'\\t\');\n\n// No header row — columns are named Col1, Col2, …\nvar raw = Data.LoadCsv(@"/path/data.csv", hasHeader: false);' },
+      { type: 'p', text: 'Returns List<Dictionary<string, object>>. Values are type-inferred: integers, doubles, booleans, and strings. Use LINQ to filter and transform:' },
+      { type: 'code', lang: 'csharp', text: 'data.Where(r => (long)r["Age"] > 30).DisplayTable();' },
+      { type: 'h3', text: 'Excel & Parquet (Code-Generated)' },
+      { type: 'p', text: 'Use File → Import Data File (⇧⌘I) or Tools → Data → Import Data to pick a file. A code cell is generated with the appropriate #r NuGet directive and parsing code.' },
+      { type: 'ul', items: [
+        '.xlsx — uses ClosedXML (auto-downloaded via NuGet)',
+        '.parquet / .pqt — uses Parquet.Net (auto-downloaded via NuGet)',
+      ]},
+      { type: 'p', text: 'The generated code is editable — modify sheet names, column selections, or type casts as needed.' },
     ],
   },
   {

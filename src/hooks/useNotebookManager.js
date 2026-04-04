@@ -3,6 +3,7 @@ import { marked } from 'marked';
 import { DOCS_TAB_ID, KAFKA_TAB_ID } from '../constants.js';
 import { makeLibEditorId, isNotebookId, getNotebookDisplayName, scrollAndFlash } from '../utils.js';
 import { createNotebook, makeCell, DEFAULT_NUGET_SOURCES } from '../notebook-factory.js';
+import { generateImportCode } from '../data-import-templates.js';
 
 /**
  * Manages notebook tabs: CRUD, save/load, pinned tabs, docs tab,
@@ -332,6 +333,15 @@ export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef }) {
     }, 50);
   }, [setNbDirty]);
 
+  // ── Data file import ───────────────────────────────────────────────────────
+
+  const handleImportData = useCallback(async () => {
+    const result = await window.electronAPI.importDataFile();
+    if (!result?.success) return;
+    const code = generateImportCode(result.filePath, result.ext);
+    handleInsertLibraryFile(code);
+  }, [handleInsertLibraryFile]);
+
   // ── HTML export ────────────────────────────────────────────────────────────
 
   const handleExportHtml = useCallback(async () => {
@@ -487,6 +497,7 @@ ${cellsHtml}
     handleTogglePin,
     handleNavigateToCell,
     handleInsertLibraryFile,
+    handleImportData,
     openPinnedNotebooks,
   };
 }

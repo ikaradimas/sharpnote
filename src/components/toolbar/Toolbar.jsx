@@ -56,6 +56,7 @@ export function Toolbar({
   onLoadLayout,
   onDeleteLayout,
   onCloseAllPanels,
+  onImportData,
 }) {
   const [editing,      setEditing]      = useState(false);
   const [draft,        setDraft]        = useState('');
@@ -123,6 +124,7 @@ export function Toolbar({
     regexPanelOpen, onToggleRegex,
     kafkaPanelOpen, onToggleKafka,
     onCloseAllPanels,
+    onImportData,
   };
 
   return (

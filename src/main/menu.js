@@ -112,6 +112,7 @@ function buildMenu(customShortcuts = {}) {
       { label: 'Open…',          accelerator: accel('nb-open',    'Ctrl+O'),       click: () => send('open') },
       { label: 'Open Recent',    submenu: recentSubmenu },
       { label: 'Import Polyglot Notebook…',                                        click: () => send('import-polyglot') },
+      { label: 'Import Data File…', accelerator: accel('import-data', 'Ctrl+Shift+I'), click: () => send('import-data') },
       { type: 'separator' },
       { label: 'Save',           accelerator: accel('nb-save',    'Ctrl+S'),       click: () => send('save') },
       { label: 'Save As…',       accelerator: accel('nb-save-as', 'Ctrl+Shift+S'), click: () => send('save-as') },

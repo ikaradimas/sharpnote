@@ -123,6 +123,7 @@
 
 ### Data & Integration
 
+- **Data file import** — load CSV files with the built-in `Data.LoadCsv(path)` API (RFC 4180 parser with type inference); import Excel (.xlsx) and Parquet files via File → Import Data File (⇧⌘I) which generates a self-contained code cell with the appropriate NuGet directive
 - **NuGet integration** — add packages via `#r "nuget: PackageName, Version"` directives or through the Packages panel; multiple package sources supported
 - **Database integration** — connect to SQLite, SQLite (In-Memory), SQL Server, PostgreSQL, or Redis; for relational providers the schema is introspected and a typed `DbContext` + POCO classes are code-generated and injected; Redis injects a `StackExchange.Redis.IDatabase` variable
 - **SQL cells** — add a SQL cell (+ SQL button) to write and execute raw SQL queries directly against any attached database; SELECT results render as a data table; DDL / DML shows a "N rows affected" status; the database is selected from a dropdown showing all attached connections

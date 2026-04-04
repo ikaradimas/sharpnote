@@ -4,7 +4,7 @@ import { Wrench } from 'lucide-react';
 import {
   IconReset, IconConfig, IconPackages, IconLogs, IconDB,
   IconVars, IconToC, IconLibrary, IconFiles, IconApi,
-  IconGraph, IconTodo, IconRegex, IconKafka,
+  IconGraph, IconTodo, IconRegex, IconKafka, IconData,
 } from './Icons.jsx';
 
 export function ToolsMenu({
@@ -23,6 +23,7 @@ export function ToolsMenu({
   regexPanelOpen, onToggleRegex,
   kafkaPanelOpen, onToggleKafka,
   onCloseAllPanels,
+  onImportData,
 }) {
   const [open, setOpen] = useState(false);
   const btnRef = useRef(null);
@@ -59,6 +60,9 @@ export function ToolsMenu({
   const kernelItems = [
     { icon: <IconReset />, label: 'Reset Kernel', action: () => { onReset(); close(); } },
   ];
+  const dataItems = [
+    { icon: <IconData />, label: 'Import Data\u2026', action: () => { onImportData?.(); close(); } },
+  ];
   const panelItems = [
     { icon: <IconConfig />,    label: configCount > 0 ? `Config (${configCount})` : 'Config',
       action: onToggleConfig, active: configPanelOpen },
@@ -93,6 +97,14 @@ export function ToolsMenu({
         <div ref={popupRef} className="tools-menu-popup" style={popupStyle}>
           <div className="tools-menu-section-label">Kernel</div>
           {kernelItems.map(({ icon, label, action }) => (
+            <button key={label} className="tools-menu-item" onClick={action}>
+              <span className="tools-menu-icon">{icon}</span>
+              <span className="tools-menu-label">{label}</span>
+            </button>
+          ))}
+          <div className="tools-menu-separator" />
+          <div className="tools-menu-section-label">Data</div>
+          {dataItems.map(({ icon, label, action }) => (
             <button key={label} className="tools-menu-item" onClick={action}>
               <span className="tools-menu-icon">{icon}</span>
               <span className="tools-menu-label">{label}</span>

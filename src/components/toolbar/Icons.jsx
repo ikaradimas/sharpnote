@@ -148,6 +148,16 @@ export function IconRegex() {
     </svg>
   );
 }
+export function IconData() {
+  return (
+    <svg {..._ic} stroke="currentColor" strokeWidth="1.1" fill="none">
+      <rect x="1" y="1" width="11" height="11" rx="1.5" />
+      <line x1="1" y1="4.5" x2="12" y2="4.5" />
+      <line x1="1" y1="7.5" x2="12" y2="7.5" />
+      <line x1="5" y1="1" x2="5" y2="12" />
+    </svg>
+  );
+}
 export function IconKafka() {
   return (
     <svg {..._ic} stroke="currentColor" strokeWidth="1.1" strokeLinecap="round">

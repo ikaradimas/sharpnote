@@ -278,6 +278,24 @@ function registerAllHandlers() {
     } finally { clearTimeout(timeout); }
   });
 
+  // Import data file dialog
+  ipcMain.handle('import-data-dialog', async () => {
+    const { filePaths, canceled } = await dialog.showOpenDialog({
+      title: 'Import Data File',
+      filters: [
+        { name: 'All Data Files', extensions: ['csv', 'tsv', 'xlsx', 'parquet', 'pqt'] },
+        { name: 'CSV',     extensions: ['csv', 'tsv'] },
+        { name: 'Excel',   extensions: ['xlsx'] },
+        { name: 'Parquet', extensions: ['parquet', 'pqt'] },
+      ],
+      properties: ['openFile'],
+    });
+    if (canceled || !filePaths?.length) return { success: false };
+    const filePath = filePaths[0];
+    const ext = path.extname(filePath).toLowerCase();
+    return { success: true, filePath, ext };
+  });
+
   // Auto-save backup
   ipcMain.handle('auto-save-backup', async (_event, { filePath, data }) => {
     if (!filePath) return { success: false };

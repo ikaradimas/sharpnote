@@ -104,7 +104,7 @@ export function App() {
     handleOpenDocs, handleCloseDocs,
     kafkaTabOpen, handleOpenKafkaTab, handleCloseKafkaTab,
     handleTogglePin, handleNavigateToCell,
-    handleInsertLibraryFile, openPinnedNotebooks,
+    handleInsertLibraryFile, handleImportData, openPinnedNotebooks,
   } = useNotebookManager({ cancelPendingCellsRef, saveSettingsRef });
 
   const {
@@ -697,6 +697,7 @@ export function App() {
     new:              handleNew,
     open:             handleLoad,
     'import-polyglot': handleImportPolyglot,
+    'import-data':     handleImportData,
     save: () => {
       const id = activeIdRef.current;
       if (isLibEditorId(id)) handleSaveLibEditor(id);
@@ -1027,6 +1028,7 @@ export function App() {
                     onLoadLayout={handleLoadLayout}
                     onDeleteLayout={handleDeleteLayout}
                     onCloseAllPanels={setPanelCloseAll}
+                    onImportData={handleImportData}
                     scheduledCells={scheduledCells}
                     onScheduleStart={startSchedule}
                     onScheduleStop={stopSchedule}
