@@ -160,6 +160,39 @@ function registerAllHandlers() {
     }
   });
 
+  ipcMain.handle('db-connections-export', async (_event, connections) => {
+    const { filePath, canceled } = await dialog.showSaveDialog({
+      title: 'Export Database Connections',
+      defaultPath: `sharpnote-db-connections-${new Date().toISOString().slice(0, 10)}.json`,
+      filters: [{ name: 'JSON', extensions: ['json'] }],
+    });
+    if (canceled || !filePath) return { success: false };
+    try {
+      fs.mkdirSync(path.dirname(filePath), { recursive: true });
+      fs.writeFileSync(filePath, JSON.stringify(connections, null, 2), 'utf-8');
+      return { success: true, filePath };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('db-connections-import', async () => {
+    const { filePaths, canceled } = await dialog.showOpenDialog({
+      title: 'Import Database Connections',
+      filters: [{ name: 'JSON', extensions: ['json'] }],
+      properties: ['openFile'],
+    });
+    if (canceled || !filePaths?.length) return { success: false };
+    try {
+      const content = fs.readFileSync(filePaths[0], 'utf-8');
+      const data = JSON.parse(content);
+      if (!Array.isArray(data)) return { success: false, error: 'Expected a JSON array of connections' };
+      return { success: true, data };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
   // Export active notebook as PDF
   ipcMain.handle('export-pdf', async () => {
     const { filePath, canceled } = await dialog.showSaveDialog({

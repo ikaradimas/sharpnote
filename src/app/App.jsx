@@ -637,6 +637,28 @@ export function App() {
     return result;
   }, [setDockLayout, setSavedLayouts]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const handleExportDbConnections = useCallback(async () => {
+    // Export unencrypted — strip the encrypted flag so the file is plaintext
+    const plain = dbConnectionsRef.current.map(({ encrypted, ...c }) => c);
+    return window.electronAPI?.exportDbConnections(plain);
+  }, []);
+
+  const handleImportDbConnections = useCallback(async () => {
+    const result = await window.electronAPI?.importDbConnections();
+    if (!result?.success || !result?.data) return result;
+    // Merge: imported connections replace existing ones with the same id, others are appended
+    setDbConnections((prev) => {
+      const merged = [...prev];
+      for (const imported of result.data) {
+        const idx = merged.findIndex((c) => c.id === imported.id);
+        if (idx >= 0) merged[idx] = imported; else merged.push(imported);
+      }
+      window.electronAPI?.saveDbConnections(merged);
+      return merged;
+    });
+    return result;
+  }, []);
+
   // ── Quit handlers ──────────────────────────────────────────────────────────
 
   const handleQuitSave = useCallback(async (selectedIds) => {
@@ -1072,6 +1094,8 @@ export function App() {
           onUnpin={handleTogglePin}
           onExport={handleExportSettings}
           onImport={handleImportSettings}
+          onExportDb={handleExportDbConnections}
+          onImportDb={handleImportDbConnections}
           onClose={() => setSettingsOpen(false)}
         />
       )}
