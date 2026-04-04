@@ -872,7 +872,7 @@ body {
 
 .cell-run-dropdown {
   position: absolute; top: calc(100% + 2px); left: 0; z-index: 200;
-  background: var(--bg-elevated); border: 1px solid var(--border-default);
+  background: var(--bg-mid); border: 1px solid var(--border-default);
   border-radius: 3px; box-shadow: 0 4px 16px rgba(0,0,0,0.5);
   min-width: 150px; padding: 2px 0;
 }
@@ -6451,7 +6451,7 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 .toolbar-add-cell-wrap { position: relative; }
 .toolbar-add-cell-dropdown {
   position: absolute; top: 100%; left: 0; z-index: 100;
-  background: var(--bg-panel); border: 1px solid var(--border-default);
+  background: var(--bg-mid); border: 1px solid var(--border-default);
   border-radius: 4px; box-shadow: 0 4px 16px rgba(0,0,0,0.4);
   padding: 4px 0; min-width: 120px;
 }
