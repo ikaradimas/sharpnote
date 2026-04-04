@@ -29,39 +29,47 @@ function DbSchemaTree({ schema, isRedis, onLoadMore }) {
   const applyFilter = () => setFilter(searchInput.trim().toLowerCase());
   const clearFilter = () => { setFilter(''); setSearchInput(''); };
 
-  // Filter tables and columns when a Redis key search is active
-  const tables = isRedis && filter
-    ? schema.tables.map((t) => {
-        const fullPrefix = t.name === '(keys)' ? '' : t.name + ':';
-        const matchingCols = t.columns.filter((c) => {
-          const fullKey = fullPrefix + c.name;
-          return fullKey.toLowerCase().includes(filter);
-        });
-        return matchingCols.length > 0 ? { ...t, columns: matchingCols } : null;
-      }).filter(Boolean)
+  // For relational DBs: live filter as you type (no Search button needed)
+  const activeFilter = isRedis ? filter : searchInput.trim().toLowerCase();
+
+  const tables = activeFilter
+    ? isRedis
+      // Redis: filter by full key path
+      ? schema.tables.map((t) => {
+          const fullPrefix = t.name === '(keys)' ? '' : t.name + ':';
+          const matchingCols = t.columns.filter((c) => {
+            const fullKey = fullPrefix + c.name;
+            return fullKey.toLowerCase().includes(activeFilter);
+          });
+          return matchingCols.length > 0 ? { ...t, columns: matchingCols } : null;
+        }).filter(Boolean)
+      // Relational: match table name or any column name
+      : schema.tables.filter((t) => {
+          const tableName = (t.schema ? `${t.schema}.${t.name}` : t.name).toLowerCase();
+          if (tableName.includes(activeFilter)) return true;
+          return t.columns.some((c) => c.name.toLowerCase().includes(activeFilter));
+        })
     : schema.tables;
 
   return (
     <div className="db-schema-tree">
-      {isRedis && (
-        <div className="db-key-search">
-          <input
-            className="db-key-search-input"
-            type="text"
-            placeholder="Search keys…"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') applyFilter(); }}
-            spellCheck={false}
-          />
-          <button className="db-key-search-btn" onClick={applyFilter} title="Search">Search</button>
-          {filter && <button className="db-key-search-btn" onClick={clearFilter} title="Clear search">Clear</button>}
-        </div>
-      )}
+      <div className="db-key-search">
+        <input
+          className="db-key-search-input"
+          type="text"
+          placeholder={isRedis ? 'Search keys…' : 'Filter tables / columns…'}
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter' && isRedis) applyFilter(); if (e.key === 'Escape') clearFilter(); }}
+          spellCheck={false}
+        />
+        {isRedis && <button className="db-key-search-btn" onClick={applyFilter} title="Search">Search</button>}
+        {(isRedis ? filter : searchInput) && <button className="db-key-search-btn" onClick={clearFilter} title="Clear">✕</button>}
+      </div>
       {tables.map((table) => {
         const tableKey = `${table.schema}.${table.name}`;
         const depth = isRedis ? table.name.split(':').length - 1 : 0;
-        const isOpen = expanded[tableKey] || !!filter;
+        const isOpen = expanded[tableKey] || !!activeFilter;
         return (
           <div key={tableKey} className="db-table-node">
             <div className="db-table-header" onClick={() => toggle(tableKey)}>
