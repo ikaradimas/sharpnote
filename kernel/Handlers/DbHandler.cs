@@ -232,6 +232,52 @@ partial class Program
         }
     }
 
+    // ── db_test handler ──────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Tests a database connection without attaching. Opens a connection,
+    /// runs a lightweight check, closes it, and reports success or failure.
+    /// </summary>
+    internal static async Task HandleDbTest(JsonElement msg, TextWriter realStdout)
+    {
+        var providerKey = msg.GetProperty("provider").GetString()!;
+        var connString  = msg.GetProperty("connectionString").GetString()!;
+        var requestId   = msg.TryGetProperty("requestId", out var ridProp) ? ridProp.GetString() : null;
+
+        try
+        {
+            var provider    = DbProviders.Get(providerKey);
+            var effectiveCs = provider.NormalizeConnectionString("__test__", connString);
+
+            // For Redis, just try to connect the multiplexer
+            if (!provider.IsRelational)
+            {
+                var mux = await StackExchange.Redis.ConnectionMultiplexer.ConnectAsync(effectiveCs);
+                await mux.DisposeAsync();
+            }
+            else
+            {
+                // Use the provider's IntrospectAsync which opens and queries the DB.
+                // This is a thorough test — verifies both connectivity and permissions.
+                await provider.IntrospectAsync("__test__", effectiveCs);
+            }
+
+            lock (realStdout)
+            {
+                realStdout.WriteLine(JsonSerializer.Serialize(new
+                    { type = "db_test_result", success = true, requestId }));
+            }
+        }
+        catch (Exception ex)
+        {
+            lock (realStdout)
+            {
+                realStdout.WriteLine(JsonSerializer.Serialize(new
+                    { type = "db_test_result", success = false, message = ex.Message, requestId }));
+            }
+        }
+    }
+
     // ── db_redis_scan handler ────────────────────────────────────────────────
 
     internal static async Task HandleDbRedisScan(JsonElement msg, TextWriter realStdout)

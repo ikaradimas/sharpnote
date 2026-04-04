@@ -3570,6 +3570,24 @@ body {
   font-size: 11px;
   padding: 2px 0;
 }
+.db-test-result {
+  font-size: 11px; padding: 4px 8px; border-radius: 3px; margin-top: 4px;
+  display: flex; align-items: center; gap: 6px;
+}
+.db-test-testing { color: var(--text-muted); }
+.db-test-success { color: #4ec9b0; background: rgba(78,201,176,0.08); }
+.db-test-error { color: #f44747; background: rgba(244,71,71,0.08); }
+.db-test-spinner {
+  width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+  border: 1.5px solid transparent; border-top-color: var(--accent-primary);
+  animation: spin 0.8s linear infinite;
+}
+.db-test-btn {
+  background: var(--bg-deep); border: 1px solid var(--border-default);
+  color: var(--text-secondary);
+}
+.db-test-btn:hover { background: var(--bg-elevated); color: var(--text-primary); }
+.db-test-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .db-form-actions {
   display: flex;

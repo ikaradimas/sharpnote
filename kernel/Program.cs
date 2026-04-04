@@ -280,6 +280,12 @@ partial class Program
                     break;
                 }
 
+                case "db_test":
+                {
+                    await HandleDbTest(msg, realStdout);
+                    break;
+                }
+
                 case "db_redis_scan":
                 {
                     await HandleDbRedisScan(msg, realStdout);

@@ -1162,6 +1162,25 @@ export function App() {
             else handleUpdateDbConnection(conn.id, conn);
           }}
           onClose={() => setDbConnDialog(null)}
+          onTestConnection={(provider, connectionString) => {
+            const nbId = activeIdRef.current;
+            if (!nbId || !window.electronAPI) return Promise.resolve({ success: false, message: 'No active kernel' });
+            const requestId = Math.random().toString(36).slice(2);
+            return new Promise((resolve) => {
+              const timeout = setTimeout(() => { cleanup(); resolve({ success: false, message: 'Test timed out' }); }, 15000);
+              const handler = (payload) => {
+                if (payload.notebookId !== nbId) return;
+                const msg = payload.message;
+                if (msg.type === 'db_test_result' && msg.requestId === requestId) {
+                  cleanup();
+                  resolve(msg);
+                }
+              };
+              const cleanup = () => { clearTimeout(timeout); window.electronAPI.offKernelMessage(handler); };
+              window.electronAPI.onKernelMessage(handler);
+              window.electronAPI.sendToKernel(nbId, { type: 'db_test', provider, connectionString, requestId });
+            });
+          }}
         />
       )}
       {varInspectDialog && (
