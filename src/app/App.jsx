@@ -225,33 +225,28 @@ export function App() {
     });
   };
 
-  // ── DB connections: load on mount, persist on change ──────────────────────
+  // ── DB connections + app settings: load in parallel on mount ──────────────
   const dbLoadedRef = useRef(null);
   useEffect(() => {
-    window.electronAPI?.loadDbConnections().then((list) => {
-      if (Array.isArray(list)) {
-        dbLoadedRef.current = list;
-        setDbConnections(list);
+    const api = window.electronAPI;
+    if (!api) return;
+    Promise.all([
+      api.loadDbConnections().catch(() => null),
+      api.loadAppSettings().catch(() => null),
+    ]).then(([dbList, s]) => {
+      // DB connections
+      if (Array.isArray(dbList)) {
+        dbLoadedRef.current = dbList;
+        setDbConnections(dbList);
       }
-    }).catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    // Skip the initial empty state and the freshly-loaded data.
-    if (dbConnections === dbLoadedRef.current || dbConnections.length === 0) return;
-    window.electronAPI?.saveDbConnections(dbConnections);
-  }, [dbConnections]);
-
-  // ── App settings: load on mount ───────────────────────────────────────────
-  useEffect(() => {
-    window.electronAPI?.loadAppSettings().then((s) => {
+      // App settings
       if (s?.theme) setTheme(s.theme);
       if (typeof s?.lineAltEnabled === 'boolean') setLineAltEnabled(s.lineAltEnabled);
       if (typeof s?.lintEnabled === 'boolean') setLintEnabled(s.lintEnabled);
       if (typeof s?.tablePageSize === 'number') setTablePageSize(s.tablePageSize);
       if (s?.customShortcuts && typeof s.customShortcuts === 'object') {
         setCustomShortcuts(s.customShortcuts);
-        window.electronAPI?.rebuildMenu(s.customShortcuts);
+        api.rebuildMenu(s.customShortcuts);
       }
       if (s?.dockLayout) {
         setDockLayout({
@@ -266,8 +261,14 @@ export function App() {
       settingsLoadedRef.current = true;
       const pinned = Array.isArray(s?.pinnedTabs) ? s.pinnedTabs : [];
       if (pinned.length > 0) openPinnedNotebooks(pinned);
-    }).catch(() => {});
+    });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    // Skip the initial empty state and the freshly-loaded data.
+    if (dbConnections === dbLoadedRef.current || dbConnections.length === 0) return;
+    window.electronAPI?.saveDbConnections(dbConnections);
+  }, [dbConnections]);
 
   // ── Theme + lineAlt: apply to DOM, persist on change ─────────────────────
   useEffect(() => { document.documentElement.dataset.theme = theme; }, [theme]);

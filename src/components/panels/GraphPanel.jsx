@@ -93,9 +93,11 @@ export function GraphPanel({ varHistory, onClearGraph }) {
       const data = [];
       const values = [];
       for (let i = 0; i < raw.length; i++) {
-        const p = normPt(raw[i]);
-        data.push({ x: p.t, y: p.v });
-        values.push(p.v);
+        const r = raw[i];
+        const v = typeof r === 'number' ? r : r.v;
+        const t = typeof r === 'number' ? 0 : (r.t ?? 0);
+        data.push({ x: t, y: v });
+        values.push(v);
       }
       const color = colorForIndex(nameIndex[name] ?? 0);
       const fill = chartType === 'area';

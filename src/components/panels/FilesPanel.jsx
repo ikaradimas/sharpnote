@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { formatFileSize } from '../../utils.js';
 import { IconFolderSvg, IconFileSvg } from '../toolbar/Icons.jsx';
 
@@ -118,8 +118,7 @@ export function FilesPanel({ currentDir, onNavigate, onOpenNotebook, notebookDir
 
   const isFavorite = currentDir && favoriteFolders.includes(currentDir);
 
-  // Breadcrumb segments from currentDir
-  const crumbs = (() => {
+  const crumbs = useMemo(() => {
     if (!currentDir) return [];
     const normalized = currentDir.replace(/\\/g, '/');
     const isAbsolute = normalized.startsWith('/');
@@ -132,7 +131,7 @@ export function FilesPanel({ currentDir, onNavigate, onOpenNotebook, notebookDir
       });
     });
     return result;
-  })();
+  }, [currentDir]);
 
   return (
     <div className="files-panel"
