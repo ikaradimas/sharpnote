@@ -19,10 +19,10 @@ function mean(arr) {
   return arr.reduce((s, v) => s + v, 0) / arr.length;
 }
 
-/** Normalize a point to { v, t, axis }. Legacy number-only points get t=0 (no fake timestamp). */
+/** Normalize a point to { v, t, axis, chartType }. */
 function normPt(p) {
-  if (typeof p === 'number') return { v: p, t: 0, axis: 'y' };
-  return { v: p.v, t: p.t ?? 0, axis: p.axis ?? 'y' };
+  if (typeof p === 'number') return { v: p, t: 0, axis: 'y', chartType: null };
+  return { v: p.v, t: p.t ?? 0, axis: p.axis ?? 'y', chartType: p.chartType ?? null };
 }
 
 const timeFmt = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -31,10 +31,11 @@ export function GraphPanel({ varHistory, onClearGraph }) {
   const hist = varHistory || {};
   const varNames = Object.keys(hist);
 
-  const [selected, setSelected]   = useState(() => new Set(varNames.slice(0, 4)));
-  const [overlays, setOverlays]   = useState({});   // { [name]: Set<'avg'|'max'> }
-  const [chartType, setChartType] = useState('line');
-  const [showLegend, setShowLegend] = useState(true);
+  const [selected, setSelected]             = useState(() => new Set(varNames.slice(0, 4)));
+  const [overlays, setOverlays]             = useState({});       // { [name]: Set<'avg'|'max'> }
+  const [globalChartType, setGlobalChartType] = useState('line'); // panel-wide default
+  const [seriesTypes, setSeriesTypes]       = useState({});       // { [name]: 'line'|'area'|'column'|null }
+  const [showLegend, setShowLegend]         = useState(true);
   const canvasRef = useRef(null);
   const chartRef  = useRef(null);
 
@@ -45,6 +46,23 @@ export function GraphPanel({ varHistory, onClearGraph }) {
       const next = new Set(prev);
       for (const n of next) { if (!hist[n]) next.delete(n); }
       return next;
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [namesKey]);
+
+  // Auto-init seriesTypes from kernel-supplied chartType (first occurrence only)
+  useEffect(() => {
+    setSeriesTypes((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      for (const name of varNames) {
+        if (next[name] != null) continue;
+        const pts = hist[name] || [];
+        if (pts.length === 0) continue;
+        const ct = normPt(pts[pts.length - 1]).chartType;
+        if (ct) { next[name] = ct === 'bar' ? 'column' : ct; changed = true; }
+      }
+      return changed ? next : prev;
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [namesKey]);
@@ -64,6 +82,12 @@ export function GraphPanel({ varHistory, onClearGraph }) {
       if (cur.has(key)) cur.delete(key); else cur.add(key);
       return { ...prev, [name]: cur };
     });
+
+  const setSeriesType = (name, type) =>
+    setSeriesTypes((prev) => ({ ...prev, [name]: type || null }));
+
+  /** Effective chart type for a series: per-series override or global default. */
+  const effectiveType = (name) => seriesTypes[name] ?? globalChartType;
 
   // Derive axis per variable from most recent point
   const varAxis = useMemo(() => {
@@ -89,7 +113,6 @@ export function GraphPanel({ varHistory, onClearGraph }) {
     const result = [];
     for (const name of selected) {
       const raw = hist[name] || [];
-      // Single pass: build { x, y } data and collect numeric values
       const data = [];
       const values = [];
       for (let i = 0; i < raw.length; i++) {
@@ -100,17 +123,22 @@ export function GraphPanel({ varHistory, onClearGraph }) {
         values.push(v);
       }
       const color = colorForIndex(nameIndex[name] ?? 0);
-      const fill = chartType === 'area';
+      const et = effectiveType(name);
+      const isArea = et === 'area';
+      const isBar = et === 'column';
       const axisId = varAxis[name] || 'y';
       result.push({
+        type: isBar ? 'bar' : 'line',
         label: name,
         data,
         borderColor: color,
-        backgroundColor: fill ? color.replace(',1)', ',0.15)') : color.replace(',1)', ',0.7)'),
-        fill,
-        tension: 0.3,
-        pointRadius: data.length <= 20 ? 3 : 0,
-        pointHoverRadius: 4,
+        backgroundColor: isArea ? color.replace(',1)', ',0.15)')
+                        : isBar ? color.replace(',1)', ',0.7)')
+                        : color.replace(',1)', ',0.7)'),
+        fill: isArea,
+        tension: isBar ? 0 : 0.3,
+        pointRadius: isBar ? 0 : (data.length <= 20 ? 3 : 0),
+        pointHoverRadius: isBar ? 0 : 4,
         yAxisID: axisId,
       });
       const ov = overlays[name] || new Set();
@@ -118,6 +146,7 @@ export function GraphPanel({ varHistory, onClearGraph }) {
       if (ov.has('avg') && data.length > 0) {
         const avg = mean(values);
         result.push({
+          type: 'line',
           label: `${name} avg`,
           data: data.map((p) => ({ x: p.x, y: avg })),
           borderColor: dimColor,
@@ -133,6 +162,7 @@ export function GraphPanel({ varHistory, onClearGraph }) {
       if (ov.has('max') && data.length > 0) {
         const maxVal = Math.max(...values);
         result.push({
+          type: 'line',
           label: `${name} max`,
           data: data.map((p) => ({ x: p.x, y: maxVal })),
           borderColor: dimColor,
@@ -148,9 +178,9 @@ export function GraphPanel({ varHistory, onClearGraph }) {
     }
     return result;
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected, hist, chartType, overlays, namesKey, varAxis]);
+  }, [selected, hist, globalChartType, seriesTypes, overlays, namesKey, varAxis]);
 
-  // Build scales config (stable across data updates unless hasY2 or chartType changes)
+  // Build scales config
   const scales = useMemo(() => {
     const s = {
       x: {
@@ -181,7 +211,7 @@ export function GraphPanel({ varHistory, onClearGraph }) {
     return s;
   }, [hasY2]);
 
-  // Create chart once; update data in-place when only datasets change
+  // Mixed chart: base type is always 'line'; each dataset carries its own type
   useEffect(() => {
     if (!canvasRef.current) return;
 
@@ -192,10 +222,9 @@ export function GraphPanel({ varHistory, onClearGraph }) {
     }
 
     const chart = chartRef.current;
-    const wantType = chartType === 'column' ? 'bar' : 'line';
 
-    // If chart exists with same type, update in-place
-    if (chart && chart.config.type === wantType) {
+    // Always update in-place for mixed charts (base type is always 'line')
+    if (chart && chart.config.type === 'line') {
       chart.data.datasets = datasets;
       chart.options.plugins.legend.display = showLegend;
       chart.options.scales = scales;
@@ -203,10 +232,10 @@ export function GraphPanel({ varHistory, onClearGraph }) {
       return;
     }
 
-    // Otherwise destroy and recreate
+    // Create (or recreate if somehow type changed)
     chart?.destroy();
     chartRef.current = new Chart(canvasRef.current, {
-      type: wantType,
+      type: 'line',
       data: { datasets },
       options: {
         responsive: true,
@@ -228,17 +257,18 @@ export function GraphPanel({ varHistory, onClearGraph }) {
     });
     return () => { chartRef.current?.destroy(); chartRef.current = null; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [datasets, chartType, showLegend, scales]);
+  }, [datasets, showLegend, scales]);
 
   return (
     <div className="graph-panel">
       <div className="graph-panel-header">
         <span className="graph-panel-title">Graph</span>
         <div className="graph-panel-controls">
+          <label className="graph-default-label">Default:</label>
           <select
             className="graph-type-select"
-            value={chartType}
-            onChange={(e) => setChartType(e.target.value)}
+            value={globalChartType}
+            onChange={(e) => setGlobalChartType(e.target.value)}
           >
             <option value="line">Line</option>
             <option value="area">Area</option>
@@ -271,9 +301,10 @@ export function GraphPanel({ varHistory, onClearGraph }) {
             {varNames.map((name, i) => {
               const ov = overlays[name] || new Set();
               const axis = varAxis[name];
+              const et = effectiveType(name);
               return (
                 <div key={name} className="graph-var-row">
-                  <label className="graph-var-check-row">
+                  <div className="graph-var-line1">
                     <span
                       className="graph-var-dot"
                       style={{ background: colorForIndex(i), flexShrink: 0 }}
@@ -286,8 +317,19 @@ export function GraphPanel({ varHistory, onClearGraph }) {
                     />
                     <span className="graph-var-name">{name}</span>
                     {axis === 'y2' && <span className="graph-axis-badge" title="Right y-axis">R</span>}
-                  </label>
-                  <div className="graph-var-overlays">
+                  </div>
+                  <div className="graph-var-line2">
+                    <select
+                      className="graph-var-type"
+                      value={seriesTypes[name] ?? ''}
+                      onChange={(e) => setSeriesType(name, e.target.value)}
+                      title={`Chart type for ${name}`}
+                    >
+                      <option value="">Default ({globalChartType})</option>
+                      <option value="line">Line</option>
+                      <option value="area">Area</option>
+                      <option value="column">Bar</option>
+                    </select>
                     <label className="graph-overlay-label" title="Show average line">
                       <input
                         type="checkbox"

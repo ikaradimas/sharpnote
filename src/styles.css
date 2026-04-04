@@ -5478,16 +5478,21 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
   display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden;
 }
 .graph-panel-vars {
-  display: flex; flex-wrap: wrap; gap: 2px 8px;
+  display: flex; flex-wrap: wrap; gap: 4px 8px;
   padding: 6px 10px; border-bottom: 1px solid var(--border-subtle);
-  flex-shrink: 0; max-height: 80px; overflow-y: auto;
+  flex-shrink: 0; max-height: 120px; overflow-y: auto;
 }
 .graph-var-row {
-  display: flex; align-items: center; gap: 6px;
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 3px 0;
 }
-.graph-var-check-row {
+.graph-var-line1 {
   display: flex; align-items: center; gap: 4px;
-  cursor: pointer; user-select: none;
+  user-select: none;
+}
+.graph-var-line2 {
+  display: flex; align-items: center; gap: 6px;
+  padding-left: 20px;
 }
 .graph-var-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
 .graph-var-check { cursor: pointer; accent-color: var(--accent-primary); }
@@ -5497,12 +5502,19 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
   border: 1px solid var(--border); border-radius: 3px; padding: 0 3px; margin-left: 2px;
   line-height: 14px; flex-shrink: 0;
 }
-.graph-var-overlays { display: flex; gap: 4px; }
+.graph-var-type {
+  font-family: var(--font-ui); font-size: 9px; padding: 1px 4px;
+  background: var(--bg-deep); color: var(--text-secondary); border: 1px solid var(--border-default);
+  border-radius: 3px; cursor: pointer;
+}
 .graph-overlay-label {
   display: flex; align-items: center; gap: 2px;
   font-size: 9px; color: var(--text-muted); cursor: pointer; user-select: none;
 }
 .graph-overlay-label input { cursor: pointer; accent-color: var(--accent-primary); }
+.graph-default-label {
+  font-family: var(--font-ui); font-size: 10px; color: var(--text-muted);
+}
 .graph-canvas-wrap {
   flex: 1; min-height: 0; padding: 8px; position: relative;
 }

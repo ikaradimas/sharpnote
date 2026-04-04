@@ -300,8 +300,9 @@ public class DisplayHelper
     /// for the cell to finish. Useful for plotting loop variables in real time.
     /// Use <see cref="PlotMode.RateOfChange"/> to plot the delta from the previous call instead of the raw value.
     /// Use <paramref name="axis"/> to assign the series to the right y-axis (<c>"y2"</c>); defaults to left (<c>"y"</c>).
+    /// Use <paramref name="type"/> to set the chart type for this series (<c>"line"</c>, <c>"area"</c>, or <c>"bar"</c>); defaults to the panel's global setting.
     /// </summary>
-    public void Plot(string name, double value, PlotMode mode = PlotMode.Value, string axis = "y")
+    public void Plot(string name, double value, PlotMode mode = PlotMode.Value, string axis = "y", string? type = null)
     {
         double plotValue = value;
         if (mode == PlotMode.RateOfChange)
@@ -309,8 +310,12 @@ public class DisplayHelper
             plotValue = _plotLastValues.TryGetValue(name, out var prev) ? value - prev : 0;
         }
         _plotLastValues[name] = value;
-        Send(new { type = "var_point", name, value = plotValue,
-                   time = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), axis });
+        if (type != null)
+            Send(new { type = "var_point", name, value = plotValue,
+                       time = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), axis, chartType = type });
+        else
+            Send(new { type = "var_point", name, value = plotValue,
+                       time = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), axis });
     }
 
     /// <summary>

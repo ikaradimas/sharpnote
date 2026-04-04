@@ -740,12 +740,14 @@ flowchart LR
 
 \`Display.Plot(name, value)\` pushes a data point to the **Graph panel** immediately — no need to wait for the cell to finish.
 
-| Mode | Description |
-|------|-------------|
-| \`PlotMode.Value\` | Plot the raw value *(default)* |
-| \`PlotMode.RateOfChange\` | Plot the change since the last call |
+| Parameter | Description |
+|-----------|-------------|
+| \`mode: PlotMode.Value\` | Plot the raw value *(default)* |
+| \`mode: PlotMode.RateOfChange\` | Plot the delta since the previous call |
+| \`axis: "y2"\` | Assign the series to the right y-axis |
+| \`type: "line" \\| "area" \\| "bar"\` | Set the chart type for this series (default: use panel setting) |
 
-Open the **Graph panel** (Ctrl+Shift+R), then run the cell below to see both series update in real time.`),
+Open the **Graph panel** (Ctrl+Shift+R), then run the cells below.`),
 
     md('### Display.Plot — Raw Value and Rate of Change'),
 
@@ -764,6 +766,20 @@ for (int step = 0; step < 200; step++)
     Display.Plot("velocity", velocity, PlotMode.RateOfChange);     // Δ per tick
 
     await Task.Delay(30);
+}`),
+
+    md('### Mixed Chart Types — Line + Bars'),
+
+    cs(`// ── Per-series chart types: line for signal, bars for events ─────────────────
+// Open the Graph panel (Ctrl+Shift+R) before running.
+Display.ClearGraph();
+
+var rng = new Random(7);
+for (int i = 0; i < 60; i++)
+{
+    Display.Plot("signal", Math.Sin(i * 0.15) * 10 + 20);          // line (default)
+    Display.Plot("events", rng.Next(0, 5), type: "bar");            // bars
+    await Task.Delay(40);
 }`),
   ];
 }

@@ -4,8 +4,8 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { GraphPanel } from '../../src/renderer.jsx';
 
-// Helper: create point objects in the new { v, t, axis } format
-const pt = (v, axis = 'y') => ({ v, t: Date.now(), axis });
+// Helper: create point objects in the { v, t, axis, chartType } format
+const pt = (v, axis = 'y', chartType = undefined) => ({ v, t: Date.now(), axis, ...(chartType ? { chartType } : {}) });
 
 // ── Empty state ────────────────────────────────────────────────────────────────
 
@@ -219,5 +219,40 @@ describe('GraphPanel — dual y-axis', () => {
     const hist = { temp: [pt(22)], pressure: [pt(1013)] };
     render(<GraphPanel varHistory={hist} />);
     expect(document.querySelectorAll('.graph-axis-badge')).toHaveLength(0);
+  });
+});
+
+// ── Per-series chart type ────────────────────────────────────────────────────
+
+describe('GraphPanel — per-series chart type', () => {
+  it('renders a per-series type dropdown for each variable', () => {
+    render(<GraphPanel varHistory={{ a: [pt(1)], b: [pt(2)] }} />);
+    const selects = document.querySelectorAll('.graph-var-type');
+    expect(selects).toHaveLength(2);
+  });
+
+  it('per-series type defaults to empty (use global default)', () => {
+    render(<GraphPanel varHistory={{ a: [pt(1)] }} />);
+    const sel = document.querySelector('.graph-var-type');
+    expect(sel.value).toBe('');
+  });
+
+  it('changing per-series type updates the select value', () => {
+    render(<GraphPanel varHistory={{ a: [pt(1)] }} />);
+    const sel = document.querySelector('.graph-var-type');
+    fireEvent.change(sel, { target: { value: 'column' } });
+    expect(sel.value).toBe('column');
+  });
+
+  it('auto-initialises seriesType from kernel-supplied chartType', () => {
+    const hist = { events: [pt(1, 'y', 'bar')] };
+    render(<GraphPanel varHistory={hist} />);
+    const sel = document.querySelector('.graph-var-type');
+    expect(sel.value).toBe('column');
+  });
+
+  it('global default label shows current global type', () => {
+    render(<GraphPanel varHistory={{ a: [pt(1)] }} />);
+    expect(screen.getByText('Default:')).toBeInTheDocument();
   });
 });
