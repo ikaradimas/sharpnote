@@ -89,4 +89,4 @@ function register(ipcMain, { app }) {
   ipcMain.handle('db-connections-save', (_event, list) => saveDbConnections(list));
 }
 
-module.exports = { loadDbConnections, saveDbConnections, register };
+module.exports = { loadDbConnections, saveDbConnections, register, encryptField, decryptField, getKey };

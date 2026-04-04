@@ -3,6 +3,7 @@
 const path = require('path');
 const fs   = require('fs');
 const { parseDib, parseIpynb } = require('./polyglot-import');
+const { encryptField, decryptField } = require('./db-connections');
 
 let _mainWindow   = null;
 let _addRecentFile = null;
@@ -20,9 +21,33 @@ function setMainWindow(win) {
   _mainWindow = win;
 }
 
+function encryptConfigSecrets(config) {
+  if (!Array.isArray(config)) return config;
+  return config.map((e) => {
+    if (e.type === 'secret' && e.value) {
+      return { ...e, value: encryptField(e.value), encrypted: true };
+    }
+    // Strip encrypted flag from non-secret entries (in case type was changed)
+    const { encrypted, ...rest } = e;
+    return rest;
+  });
+}
+
+function decryptConfigSecrets(config) {
+  if (!Array.isArray(config)) return config;
+  return config.map((e) => {
+    if (e.encrypted && e.value) {
+      const { encrypted, ...rest } = e;
+      return { ...rest, value: decryptField(e.value, true) };
+    }
+    return e;
+  });
+}
+
 function writeNotebookFile(filePath, data) {
+  const encrypted = { ...data, config: encryptConfigSecrets(data.config) };
   const tmp = filePath + '.tmp';
-  fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf-8');
+  fs.writeFileSync(tmp, JSON.stringify(encrypted, null, 2), 'utf-8');
   fs.renameSync(tmp, filePath);
   if (_addRecentFile) _addRecentFile(filePath);
   return { success: true, filePath };
@@ -86,6 +111,7 @@ function register(ipcMain, { mainWindow, dialog, addRecentFile, writeLog } = {})
     try {
       const content = fs.readFileSync(filePaths[0], 'utf-8');
       const data    = JSON.parse(content);
+      data.config = decryptConfigSecrets(data.config);
       if (_addRecentFile) _addRecentFile(filePaths[0]);
       _writeLog('LOAD', `Notebook opened: ${path.basename(filePaths[0])}`);
       return { success: true, data, filePath: filePaths[0] };
@@ -157,6 +183,7 @@ function register(ipcMain, { mainWindow, dialog, addRecentFile, writeLog } = {})
     try {
       const content = fs.readFileSync(filePath, 'utf-8');
       const data    = JSON.parse(content);
+      data.config = decryptConfigSecrets(data.config);
       if (_addRecentFile) _addRecentFile(filePath);
       _writeLog('LOAD', `Opened: ${path.basename(filePath)}`);
       return { success: true, data, filePath };
