@@ -93,6 +93,9 @@
 - **Find in Notebook** — `Ctrl+F` opens a floating search bar that searches across all cell contents; ↑ / ↓ buttons (or Enter / Shift+Enter) navigate between matches; matched cells are highlighted; press Escape to close
 - **Auto-run on open** — the ⚡ toolbar button enables auto-run mode per notebook; when enabled, all code cells are run automatically when the notebook opens and the kernel becomes ready; state is saved in the `.cnb` file
 - **Scheduled execution** — click the ⏱ button in any code cell footer to run it on a repeating interval (5s, 10s, 30s, 1m, or 5m); skips ticks if the cell is still running; schedules stop on kernel reset or tab close and do not auto-start on load
+- **Cell naming and color palette** — every cell has an inline-editable name field in the header; assign one of 8 colors (blue, teal, green, orange, red, purple, pink, gray) via the palette icon; names and colors appear in the dependency graph, log entries, and pipeline groupings
+- **Decision cells** — boolean expression cells that branch execution into true/false paths to different downstream cells; appear as diamond-shaped nodes in the dependency graph; add via the + bar or toolbar dropdown
+- **Cell Orchestration panel** — the Dependencies panel (`Ctrl+Shift+Y`) is an interactive dependency graph with click-to-run nodes, right-click context menu (Run, Run with Dependencies, Run Downstream), zoom/pan navigation, and fit-to-view; supports named pipelines — groups of cells that execute in dependency order with a single click
 - **Dashboard mode** — View → Dashboard Mode (⌘⇧B) or the command palette hides all code editors, cell headers, and controls, showing only outputs and rendered markdown; ideal for presentations or wall-mounted monitors; an "Exit Dashboard" button appears in the top-right corner
 
 ### Output & Display
