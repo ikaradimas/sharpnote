@@ -1288,6 +1288,7 @@ export function createNotebook(templateKey = null) {
     todoPanelOpen: false,
     regexPanelOpen: false,
     historyPanelOpen: false,
+    depsPanelOpen: false,
     outputHistory: {},
     staleCellIds: [],
     autoRun: false,

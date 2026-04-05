@@ -172,6 +172,7 @@ function buildMenu(customShortcuts = {}) {
       { label: 'Regex',             accelerator: accel('panel-regex',    'Ctrl+Shift+X'), click: () => send('toggle-regex') },
       { label: 'Kafka',             accelerator: accel('panel-kafka',    'Ctrl+Shift+K'), click: () => send('toggle-kafka') },
       { label: 'History',            accelerator: accel('panel-history',  'Ctrl+Shift+H'), click: () => send('toggle-history') },
+      { label: 'Dependencies',      accelerator: accel('panel-deps',     'Ctrl+Shift+Y'), click: () => send('toggle-deps') },
       { type: 'separator' },
       { label: 'Command Palette',   accelerator: accel('app-palette',  'Ctrl+K'), click: () => send('command-palette') },
       { type: 'separator' },

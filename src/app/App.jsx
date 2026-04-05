@@ -136,7 +136,7 @@ export function App() {
     const nbFlagMap = {
       log: 'logPanelOpen', nuget: 'nugetPanelOpen', config: 'configPanelOpen',
       db: 'dbPanelOpen', vars: 'varsPanelOpen', toc: 'tocPanelOpen',
-      graph: 'graphPanelOpen', todo: 'todoPanelOpen', regex: 'regexPanelOpen', history: 'historyPanelOpen',
+      graph: 'graphPanelOpen', todo: 'todoPanelOpen', regex: 'regexPanelOpen', history: 'historyPanelOpen', deps: 'depsPanelOpen',
     };
     if (globalSetters[panelId]) {
       globalSetters[panelId](open === null ? (v) => !v : open);
@@ -184,7 +184,7 @@ export function App() {
       setNb(nbId, () => ({
         logPanelOpen: false, nugetPanelOpen: false, configPanelOpen: false,
         dbPanelOpen: false, varsPanelOpen: false, tocPanelOpen: false,
-        graphPanelOpen: false, todoPanelOpen: false, regexPanelOpen: false, historyPanelOpen: false,
+        graphPanelOpen: false, todoPanelOpen: false, regexPanelOpen: false, historyPanelOpen: false, depsPanelOpen: false,
       }));
   }, [setNb, setLibraryPanelOpen, setFilesPanelOpen, setApiPanelOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -729,6 +729,7 @@ export function App() {
     'toggle-todo':     () => setPanelVisible('todo',    null),
     'toggle-regex':    () => setPanelVisible('regex',   null),
     'toggle-history':  () => setPanelVisible('history', null),
+    'toggle-deps':     () => setPanelVisible('deps', null),
     about:             () => setAboutOpen(true),
     settings:          () => setSettingsOpen(true),
     'export-html':     handleExportHtml,
@@ -830,6 +831,7 @@ export function App() {
     todo:    isNotebookId(activeId) ? (activeNb?.todoPanelOpen   ?? false) : false,
     regex:   isNotebookId(activeId) ? (activeNb?.regexPanelOpen  ?? false) : false,
     history: isNotebookId(activeId) ? (activeNb?.historyPanelOpen ?? false) : false,
+    deps:    isNotebookId(activeId) ? (activeNb?.depsPanelOpen    ?? false) : false,
   }), [activeId, activeNb, libraryPanelOpen, filesPanelOpen, apiPanelOpen]);
 
   const panelPropsMap = useMemo(() => {
@@ -954,7 +956,7 @@ export function App() {
         } : () => {},
       },
       deps: {
-        onToggle: () => {},
+        onToggle: nbId ? () => setNb(nbId, (n) => ({ depsPanelOpen: !n.depsPanelOpen })) : () => {},
         notebook: activeNb,
         onNavigateToCell: nbId ? (cellId) => handleNavigateToCell(nbId, cellId) : () => {},
       },
