@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { CodeEditor } from './CodeEditor.jsx';
 import { CellOutput } from '../output/OutputBlock.jsx';
 import { CellControls } from './CellControls.jsx';
+import { CellNameColor } from './CellNameColor.jsx';
 
 export function SqlCell({
   cell,
@@ -18,6 +19,8 @@ export function SqlCell({
   onDelete,
   onMoveUp,
   onMoveDown,
+  onNameChange,
+  onColorChange,
 }) {
   const readyDbs = (attachedDbs || []).filter((d) => d.status === 'ready');
   const selectedDb = cell.db || (readyDbs[0]?.connectionId ?? '');
@@ -27,6 +30,7 @@ export function SqlCell({
     <div className={`cell sql-cell${isRunning ? ' running' : ''}`}>
       {cellIndex != null && <span className="cell-index-badge">{cellIndex + 1}</span>}
       <div className="code-cell-header">
+        <CellNameColor name={cell.name} color={cell.color} onNameChange={onNameChange} onColorChange={onColorChange} />
         <span className="cell-lang-label sql-label">SQL</span>
         <span className="cell-id-label" title={`Cell ID: ${cell.id}`}>{cell.id}</span>
         <select

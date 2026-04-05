@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { CellControls } from './CellControls.jsx';
+import { CellNameColor } from './CellNameColor.jsx';
 
 export function CheckCell({
   cell,
@@ -15,6 +16,8 @@ export function CheckCell({
   onDelete,
   onMoveUp,
   onMoveDown,
+  onNameChange,
+  onColorChange,
 }) {
   const passed = checkResult?.passed;
   const message = checkResult?.message;
@@ -38,6 +41,7 @@ export function CheckCell({
           )}
         </div>
         <div className="check-cell-content">
+          <CellNameColor name={cell.name} color={cell.color} onNameChange={onNameChange} onColorChange={onColorChange} />
           <input
             className="check-label-input"
             placeholder="Check label (optional)"

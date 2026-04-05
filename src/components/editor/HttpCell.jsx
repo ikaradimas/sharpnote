@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { CodeEditor } from './CodeEditor.jsx';
 import { CellOutput } from '../output/OutputBlock.jsx';
 import { CellControls } from './CellControls.jsx';
+import { CellNameColor } from './CellNameColor.jsx';
 
 export function HttpCell({
   cell,
@@ -16,11 +17,14 @@ export function HttpCell({
   onDelete,
   onMoveUp,
   onMoveDown,
+  onNameChange,
+  onColorChange,
 }) {
   return (
     <div className={`cell http-cell${isRunning ? ' running' : ''}`}>
       {cellIndex != null && <span className="cell-index-badge">{cellIndex + 1}</span>}
       <div className="code-cell-header">
+        <CellNameColor name={cell.name} color={cell.color} onNameChange={onNameChange} onColorChange={onColorChange} />
         <span className="cell-lang-label http-label">HTTP</span>
         <span className="cell-id-label" title={`Cell ID: ${cell.id}`}>{cell.id}</span>
         <div className="cell-run-group">

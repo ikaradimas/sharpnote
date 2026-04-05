@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { CodeEditor } from './CodeEditor.jsx';
 import { CellOutput } from '../output/OutputBlock.jsx';
 import { CellControls } from './CellControls.jsx';
+import { CellNameColor } from './CellNameColor.jsx';
 
 function formatElapsed(ms) {
   if (ms < 60_000) {
@@ -55,6 +56,8 @@ export function CodeCell({
   onToggleFold,
   onScheduleStart,
   onScheduleStop,
+  onNameChange,
+  onColorChange,
 }) {
   const outputMode = cell.outputMode || 'auto';
   const locked = cell.locked || false;
@@ -133,6 +136,7 @@ export function CodeCell({
         >
           {codeFolded ? '▸' : '▾'}
         </button>
+        <CellNameColor name={cell.name} color={cell.color} onNameChange={onNameChange} onColorChange={onColorChange} />
         <span className="cell-lang-label">C#</span>
         <span className="cell-id-label" title={`Cell ID: ${cell.id}`}>{cell.id}</span>
         <div className="cell-run-group" ref={dropdownRef}>

@@ -9,6 +9,7 @@ import { SqlCell } from './editor/SqlCell.jsx';
 import { HttpCell } from './editor/HttpCell.jsx';
 import { ShellCell } from './editor/ShellCell.jsx';
 import { CheckCell } from './editor/CheckCell.jsx';
+import { DecisionCell } from './editor/DecisionCell.jsx';
 import { AddBar } from './editor/AddBar.jsx';
 import { FindBar } from './FindBar.jsx';
 
@@ -22,6 +23,7 @@ export function NotebookView({
   onRunHttpCell,
   onRunShellCell,
   onRunCheckCell,
+  onRunDecisionCell,
   onRunAll,
   onSave,
   onLoad,
@@ -150,6 +152,7 @@ export function NotebookView({
       onAddHttp={() => addCell('http')}
       onAddShell={() => addCell('shell')}
       onAddCheck={() => addCell('check')}
+      onAddDecision={() => addCell('decision')}
       autoRun={autoRun || false}
       onToggleAutoRun={() => onSetNbDirty((n) => ({ autoRun: !n.autoRun }))}
       onSave={() => onSave(nb.id)}
@@ -229,6 +232,7 @@ export function NotebookView({
             onAddHttp={() => addCell('http', -1)}
             onAddShell={() => addCell('shell', -1)}
             onAddCheck={() => addCell('check', -1)}
+            onAddDecision={() => addCell('decision', -1)}
           />
         )}
 
@@ -259,6 +263,8 @@ export function NotebookView({
                 onDelete={() => deleteCell(cell.id)}
                 onMoveUp={() => moveCell(cell.id, -1)}
                 onMoveDown={() => moveCell(cell.id, 1)}
+                onNameChange={(name) => updateCellProp(cell.id, 'name', name)}
+                onColorChange={(color) => updateCellProp(cell.id, 'color', color)}
               />
             ) : cell.type === 'sql' ? (
               <SqlCell
@@ -276,6 +282,8 @@ export function NotebookView({
                 onDelete={() => deleteCell(cell.id)}
                 onMoveUp={() => moveCell(cell.id, -1)}
                 onMoveDown={() => moveCell(cell.id, 1)}
+                onNameChange={(name) => updateCellProp(cell.id, 'name', name)}
+                onColorChange={(color) => updateCellProp(cell.id, 'color', color)}
               />
             ) : cell.type === 'http' ? (
               <HttpCell
@@ -291,6 +299,8 @@ export function NotebookView({
                 onDelete={() => deleteCell(cell.id)}
                 onMoveUp={() => moveCell(cell.id, -1)}
                 onMoveDown={() => moveCell(cell.id, 1)}
+                onNameChange={(name) => updateCellProp(cell.id, 'name', name)}
+                onColorChange={(color) => updateCellProp(cell.id, 'color', color)}
               />
             ) : cell.type === 'shell' ? (
               <ShellCell
@@ -306,6 +316,8 @@ export function NotebookView({
                 onDelete={() => deleteCell(cell.id)}
                 onMoveUp={() => moveCell(cell.id, -1)}
                 onMoveDown={() => moveCell(cell.id, 1)}
+                onNameChange={(name) => updateCellProp(cell.id, 'name', name)}
+                onColorChange={(color) => updateCellProp(cell.id, 'color', color)}
               />
             ) : cell.type === 'check' ? (
               <CheckCell
@@ -319,6 +331,29 @@ export function NotebookView({
                 onUpdate={(val) => updateCell(cell.id, val)}
                 onLabelChange={(label) => updateCellProp(cell.id, 'label', label)}
                 onRun={() => onRunCheckCell(nb.id, cell)}
+                onDelete={() => deleteCell(cell.id)}
+                onMoveUp={() => moveCell(cell.id, -1)}
+                onMoveDown={() => moveCell(cell.id, 1)}
+                onNameChange={(name) => updateCellProp(cell.id, 'name', name)}
+                onColorChange={(color) => updateCellProp(cell.id, 'color', color)}
+              />
+            ) : cell.type === 'decision' ? (
+              <DecisionCell
+                cell={cell}
+                cellIndex={index}
+                decisionResult={nb.decisionResults?.[cell.id] ?? null}
+                notebookId={nb.id}
+                isRunning={running.has(cell.id)}
+                anyRunning={running.size > 0}
+                kernelReady={kernelStatus === 'ready'}
+                allCells={cells}
+                onUpdate={(val) => updateCell(cell.id, val)}
+                onLabelChange={(label) => updateCellProp(cell.id, 'label', label)}
+                onNameChange={(name) => updateCellProp(cell.id, 'name', name)}
+                onColorChange={(color) => updateCellProp(cell.id, 'color', color)}
+                onTruePathChange={(ids) => updateCellProp(cell.id, 'truePath', ids)}
+                onFalsePathChange={(ids) => updateCellProp(cell.id, 'falsePath', ids)}
+                onRun={() => onRunDecisionCell(nb.id, cell)}
                 onDelete={() => deleteCell(cell.id)}
                 onMoveUp={() => moveCell(cell.id, -1)}
                 onMoveDown={() => moveCell(cell.id, 1)}
@@ -349,6 +384,8 @@ export function NotebookView({
                 onToggleFold={() => toggleFold(cell.id)}
                 onScheduleStart={(ms) => { updateCellProp(cell.id, 'scheduleInterval', ms); onScheduleStart?.(nb.id, cell.id, ms); }}
                 onScheduleStop={() => onScheduleStop?.(cell.id)}
+                onNameChange={(name) => updateCellProp(cell.id, 'name', name)}
+                onColorChange={(color) => updateCellProp(cell.id, 'color', color)}
               />
             )}
             {!dashboardMode && (
@@ -359,6 +396,7 @@ export function NotebookView({
                 onAddHttp={() => addCell('http', index)}
                 onAddShell={() => addCell('shell', index)}
                 onAddCheck={() => addCell('check', index)}
+                onAddDecision={() => addCell('decision', index)}
               />
             )}
           </div>

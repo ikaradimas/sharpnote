@@ -58,11 +58,16 @@ export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef }) {
       config: nb.config.filter((e) => e.key.trim()),
       attachedDbIds: nb.attachedDbs.filter((d) => d.status === 'ready').map((d) => d.connectionId),
       autoRun: nb.autoRun || false,
-      cells: nb.cells.map(({ id, type, content, outputMode, locked, codeFolded, db }) => ({
+      cells: nb.cells.map(({ id, type, content, name, color, outputMode, locked, codeFolded, db, label, truePath, falsePath }) => ({
         id, type, content,
+        ...(name ? { name } : {}),
+        ...(color ? { color } : {}),
         ...(type === 'code' ? { outputMode: outputMode || 'auto', locked: locked || false, ...(codeFolded ? { codeFolded: true } : {}) } : {}),
         ...(type === 'sql'  ? { db: db || '' } : {}),
+        ...(type === 'check' || type === 'decision' ? { label: label || '' } : {}),
+        ...(type === 'decision' ? { truePath: truePath || [], falsePath: falsePath || [] } : {}),
       })),
+      pipelines: (nb.pipelines || []).map(({ id, name, cellIds, color }) => ({ id, name, cellIds, color: color || null })),
     };
   }, []);
 
@@ -105,6 +110,7 @@ export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef }) {
       color: result.data.color || null,
       autoRun: result.data.autoRun || false,
       cells: result.data.cells || [],
+      pipelines: result.data.pipelines || [],
       nugetPackages: (result.data.packages || []).map((p) => ({ ...p, status: 'pending' })),
       nugetSources: result.data.sources || [...DEFAULT_NUGET_SOURCES],
       config: result.data.config || [],
@@ -131,6 +137,7 @@ export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef }) {
       color: result.data.color || null,
       autoRun: result.data.autoRun || false,
       cells: result.data.cells || [],
+      pipelines: result.data.pipelines || [],
       nugetPackages: (result.data.packages || []).map((p) => ({ ...p, status: 'pending' })),
       nugetSources: result.data.sources || [...DEFAULT_NUGET_SOURCES],
       config: result.data.config || [],
@@ -432,6 +439,7 @@ ${cellsHtml}
           path: r.value.filePath,
           color: r.value.data.color || null,
           cells: r.value.data.cells || [],
+          pipelines: r.value.data.pipelines || [],
           nugetPackages: (r.value.data.packages || []).map((p) => ({ ...p, status: 'pending' })),
           nugetSources: r.value.data.sources || [...DEFAULT_NUGET_SOURCES],
           config: r.value.data.config || [],

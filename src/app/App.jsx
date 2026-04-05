@@ -14,6 +14,9 @@ import { TablePageSizeContext } from '../config/table-page-size-context.js';
 import { useNotebookManager } from '../hooks/useNotebookManager.js';
 import { useKernelManager } from '../hooks/useKernelManager.js';
 import { useCellScheduler } from '../hooks/useCellScheduler.js';
+import { useCellOrchestrator } from '../hooks/useCellOrchestrator.js';
+import { useCellDependencies } from '../hooks/useCellDependencies.js';
+import { usePipelineManager } from '../hooks/usePipelineManager.js';
 import { useDockLayout } from '../hooks/useDockLayout.js';
 import { TabBar } from '../components/toolbar/TabBar.jsx';
 import { NotebookView } from '../components/NotebookView.jsx';
@@ -188,7 +191,7 @@ export function App() {
       }));
   }, [setNb, setLibraryPanelOpen, setFilesPanelOpen, setApiPanelOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const { runCell, runSqlCell, runHttpCell, runShellCell, runCheckCell, runAll, runFrom, runTo, handleInterrupt, handleReset,
+  const { runCell, runSqlCell, runHttpCell, runShellCell, runCheckCell, runDecisionCell, runAll, runFrom, runTo, handleInterrupt, handleReset,
           cancelPendingCells } =
     useKernelManager({
       setNb, notebooksRef, dbConnectionsRef, setVarInspectDialog,
@@ -203,6 +206,9 @@ export function App() {
   const { scheduledCells, startSchedule, stopSchedule, stopAllSchedules,
           scheduledNotebooks, startNotebookSchedule, stopNotebookSchedule } =
     useCellScheduler({ notebooksRef, runCell, runAll });
+
+  // ── Pipeline manager ─────────────────────────────────────────────────────
+  const pipelineManager = usePipelineManager({ setNbDirty });
 
   const handleResetWithSchedules = useCallback((notebookId) => {
     stopAllSchedules(notebookId);
@@ -817,6 +823,13 @@ export function App() {
 
   const activeNb = notebooks.find((n) => n.id === activeId) ?? null;
 
+  // ── Orchestration ──────────────────────────────────────────────────────────
+  const depGraph = useCellDependencies(activeNb);
+  const orchestrator = useCellOrchestrator({
+    notebooksRef, nodes: depGraph.nodes, edges: depGraph.edges,
+    runCell, runSqlCell, runHttpCell, runShellCell, runCheckCell, runDecisionCell,
+  });
+
   const openFlags = useMemo(() => ({
     log:     isNotebookId(activeId) ? (activeNb?.logPanelOpen    ?? false) : false,
     nuget:   isNotebookId(activeId) ? (activeNb?.nugetPanelOpen  ?? false) : false,
@@ -958,7 +971,20 @@ export function App() {
       deps: {
         onToggle: nbId ? () => setNb(nbId, (n) => ({ depsPanelOpen: !n.depsPanelOpen })) : () => {},
         notebook: activeNb,
+        notebookId: nbId,
         onNavigateToCell: nbId ? (cellId) => handleNavigateToCell(nbId, cellId) : () => {},
+        onRunWithDeps: orchestrator.runWithDeps,
+        onRunDownstream: orchestrator.runDownstream,
+        onRunPipeline: orchestrator.runPipeline,
+        executionProgress: orchestrator.executionProgress,
+        onCancelOrchestration: orchestrator.cancelOrchestration,
+        dispatchRun: orchestrator.dispatchRun,
+        pipelines: activeNb?.pipelines || [],
+        onCreatePipeline: pipelineManager.createPipeline,
+        onRenamePipeline: pipelineManager.renamePipeline,
+        onDeletePipeline: pipelineManager.deletePipeline,
+        onSetPipelineCells: pipelineManager.setPipelineCells,
+        scheduledCells,
       },
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1024,6 +1050,7 @@ export function App() {
                     onRunHttpCell={runHttpCell}
                     onRunShellCell={runShellCell}
                     onRunCheckCell={runCheckCell}
+                    onRunDecisionCell={runDecisionCell}
                     onRunAll={runAll}
                     onInterrupt={handleInterrupt}
                     onRunFrom={runFrom}

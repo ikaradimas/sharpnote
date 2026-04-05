@@ -1,22 +1,26 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useRef, useCallback } from 'react';
 import { useCellDependencies } from '../../hooks/useCellDependencies.js';
+import { CELL_COLORS } from '../../notebook-factory.js';
+import { CellNodeContextMenu } from './dep/CellNodeContextMenu.jsx';
+import { PipelineToolbar } from './dep/PipelineToolbar.jsx';
 
 const TYPE_COLORS = {
-  code:  '#569cd6',
-  sql:   '#56b6c2',
-  check: '#4ec9b0',
-  http:  '#e0a040',
-  shell: '#4ec9b0',
+  code:     '#569cd6',
+  sql:      '#56b6c2',
+  check:    '#4ec9b0',
+  http:     '#e0a040',
+  shell:    '#4ec9b0',
+  decision: '#c586c0',
 };
 
 const NODE_W = 140;
-const NODE_H = 32;
-const H_GAP = 40;
-const V_GAP = 20;
-const PAD = 20;
+const NODE_H = 36;
+const DIAMOND_SIZE = 38;
+const H_GAP = 50;
+const V_GAP = 24;
+const PAD = 24;
 
 function layerNodes(nodes, edges) {
-  // Assign layers via topological sort (longest path from root)
   const inDegree = {};
   const adj = {};
   for (const n of nodes) { inDegree[n.id] = 0; adj[n.id] = []; }
@@ -24,26 +28,19 @@ function layerNodes(nodes, edges) {
 
   const layers = {};
   const queue = nodes.filter((n) => inDegree[n.id] === 0).map((n) => n.id);
-  const visited = new Set();
   for (const id of queue) layers[id] = 0;
 
   let head = 0;
   while (head < queue.length) {
     const id = queue[head++];
-    visited.add(id);
     for (const to of adj[id] || []) {
       layers[to] = Math.max(layers[to] || 0, (layers[id] || 0) + 1);
       inDegree[to]--;
       if (inDegree[to] === 0) queue.push(to);
     }
   }
+  for (const n of nodes) { if (!(n.id in layers)) layers[n.id] = 0; }
 
-  // Assign positions to unvisited nodes (cycles or isolated)
-  for (const n of nodes) {
-    if (!(n.id in layers)) layers[n.id] = 0;
-  }
-
-  // Group by layer
   const byLayer = {};
   for (const n of nodes) {
     const l = layers[n.id];
@@ -51,7 +48,6 @@ function layerNodes(nodes, edges) {
     byLayer[l].push(n);
   }
 
-  // Assign x, y positions
   const positions = {};
   const maxLayer = Math.max(0, ...Object.keys(byLayer).map(Number));
   for (let l = 0; l <= maxLayer; l++) {
@@ -71,13 +67,127 @@ function layerNodes(nodes, edges) {
   return { positions, totalW, totalH };
 }
 
-export function DependencyPanel({ notebook, onNavigateToCell }) {
+function getNodeColor(node) {
+  if (node.color) {
+    const c = CELL_COLORS.find((cc) => cc.id === node.color);
+    if (c) return c.value;
+  }
+  return TYPE_COLORS[node.type] || '#569cd6';
+}
+
+function getStatusClass(cellId, notebook, executionProgress, scheduledCells) {
+  if (executionProgress?.activeCellId === cellId) return 'dep-status-running';
+  if (executionProgress?.queue?.includes(cellId)) return 'dep-status-queued';
+  if (notebook?.running?.has(cellId)) return 'dep-status-running';
+  if (notebook?.cellResults?.[cellId] === 'error') return 'dep-status-error';
+  if (notebook?.cellResults?.[cellId] === 'success') return 'dep-status-success';
+  if ((notebook?.staleCellIds || []).includes(cellId)) return 'dep-status-stale';
+  if (scheduledCells?.has(cellId)) return 'dep-status-scheduled';
+  return '';
+}
+
+const STATUS_FILLS = {
+  'dep-status-running':   '#569cd6',
+  'dep-status-queued':    '#569cd680',
+  'dep-status-success':   '#4ec9b0',
+  'dep-status-error':     '#e05050',
+  'dep-status-stale':     '#e0a040',
+  'dep-status-scheduled': '#c586c0',
+};
+
+export function DependencyPanel({
+  notebook,
+  onNavigateToCell,
+  notebookId,
+  onRunWithDeps,
+  onRunDownstream,
+  onRunPipeline,
+  executionProgress,
+  onCancelOrchestration,
+  pipelines,
+  onCreatePipeline,
+  onRenamePipeline,
+  onDeletePipeline,
+  onSetPipelineCells,
+  scheduledCells,
+  dispatchRun,
+}) {
   const { nodes, edges } = useCellDependencies(notebook);
 
   const { positions, totalW, totalH } = useMemo(
     () => layerNodes(nodes, edges),
     [nodes, edges]
   );
+
+  // Zoom/pan state
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const isPanningRef = useRef(false);
+  const panStartRef = useRef({ x: 0, y: 0, px: 0, py: 0 });
+
+  // Context menu
+  const [ctxMenu, setCtxMenu] = useState(null);
+
+  // Tooltip
+  const [tooltip, setTooltip] = useState(null);
+
+  // Pipeline selection
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedCellIds, setSelectedCellIds] = useState(new Set());
+  const [selectedPipelineId, setSelectedPipelineId] = useState(null);
+
+  const selectedPipeline = (pipelines || []).find((p) => p.id === selectedPipelineId);
+
+  const handleWheel = useCallback((e) => {
+    e.preventDefault();
+    setZoom((z) => Math.min(3, Math.max(0.3, z - e.deltaY * 0.001)));
+  }, []);
+
+  const handleMouseDown = useCallback((e) => {
+    if (e.target.closest('.dep-node-group')) return;
+    isPanningRef.current = true;
+    panStartRef.current = { x: e.clientX, y: e.clientY, px: pan.x, py: pan.y };
+  }, [pan]);
+
+  const handleMouseMove = useCallback((e) => {
+    if (!isPanningRef.current) return;
+    const dx = e.clientX - panStartRef.current.x;
+    const dy = e.clientY - panStartRef.current.y;
+    setPan({ x: panStartRef.current.px + dx, y: panStartRef.current.py + dy });
+  }, []);
+
+  const handleMouseUp = useCallback(() => { isPanningRef.current = false; }, []);
+
+  const handleNodeClick = useCallback((e, node) => {
+    if (selectionMode) {
+      setSelectedCellIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(node.id)) next.delete(node.id);
+        else next.add(node.id);
+        return next;
+      });
+      return;
+    }
+    // Single click runs the cell
+    const cell = notebook?.cells.find((c) => c.id === node.id);
+    if (cell && notebookId) dispatchRun?.(notebookId, cell);
+  }, [selectionMode, notebook, notebookId, dispatchRun]);
+
+  const handleNodeDblClick = useCallback((e, node) => {
+    onNavigateToCell?.(node.id);
+  }, [onNavigateToCell]);
+
+  const handleContextMenu = useCallback((e, node) => {
+    e.preventDefault();
+    const rect = e.currentTarget.closest('.dependency-panel-scroll')?.getBoundingClientRect();
+    setCtxMenu({
+      node,
+      x: e.clientX - (rect?.left || 0),
+      y: e.clientY - (rect?.top || 0),
+    });
+  }, []);
+
+  const fitAll = useCallback(() => { setZoom(1); setPan({ x: 0, y: 0 }); }, []);
 
   if (nodes.length === 0) {
     return (
@@ -88,70 +198,207 @@ export function DependencyPanel({ notebook, onNavigateToCell }) {
     );
   }
 
+  const completedSet = new Set(executionProgress?.completed || []);
+
   return (
     <div className="dependency-panel">
       <div className="dependency-panel-header">
-        <span className="dependency-panel-title">Cell Dependencies</span>
+        <span className="dependency-panel-title">Orchestration</span>
         <span className="dependency-panel-info">{nodes.length} cells · {edges.length} edges</span>
+        <div className="dep-zoom-controls">
+          <button className="dep-zoom-btn" onClick={() => setZoom((z) => Math.min(3, z + 0.2))} title="Zoom in">+</button>
+          <span className="dep-zoom-label">{Math.round(zoom * 100)}%</span>
+          <button className="dep-zoom-btn" onClick={() => setZoom((z) => Math.max(0.3, z - 0.2))} title="Zoom out">−</button>
+          <button className="dep-zoom-btn" onClick={fitAll} title="Fit to view">⊞</button>
+          {executionProgress && (
+            <button className="dep-cancel-btn" onClick={onCancelOrchestration} title="Cancel orchestration">⏹</button>
+          )}
+        </div>
       </div>
-      <div className="dependency-panel-scroll">
-        <svg width={totalW} height={totalH} className="dependency-svg">
-          {/* Edges */}
-          {edges.map((e, i) => {
-            const from = positions[e.from];
-            const to = positions[e.to];
-            if (!from || !to) return null;
-            const x1 = from.x + NODE_W;
-            const y1 = from.y + NODE_H / 2;
-            const x2 = to.x;
-            const y2 = to.y + NODE_H / 2;
-            const mx = (x1 + x2) / 2;
-            return (
-              <g key={`e-${i}`}>
-                <path
-                  d={`M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`}
-                  fill="none"
-                  stroke="#3a5068"
-                  strokeWidth="1.5"
-                  markerEnd="url(#arrow)"
-                />
-                {e.vars.length > 0 && (
-                  <text x={mx} y={(y1 + y2) / 2 - 6} textAnchor="middle" className="dep-edge-label">
-                    {e.vars.slice(0, 3).join(', ')}{e.vars.length > 3 ? '…' : ''}
+      <div
+        className="dependency-panel-scroll"
+        onWheel={handleWheel}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+      >
+        <svg
+          width={totalW * zoom + Math.abs(pan.x)}
+          height={totalH * zoom + Math.abs(pan.y)}
+          className="dependency-svg"
+        >
+          <g transform={`translate(${pan.x},${pan.y}) scale(${zoom})`}>
+            {/* Defs */}
+            <defs>
+              <marker id="dep-arrow" viewBox="0 0 10 10" refX="9" refY="5"
+                      markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#3a5068" />
+              </marker>
+              <marker id="dep-arrow-true" viewBox="0 0 10 10" refX="9" refY="5"
+                      markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#4ec9b0" />
+              </marker>
+              <marker id="dep-arrow-false" viewBox="0 0 10 10" refX="9" refY="5"
+                      markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#e05050" />
+              </marker>
+            </defs>
+
+            {/* Edges */}
+            {edges.map((e, i) => {
+              const from = positions[e.from];
+              const to = positions[e.to];
+              if (!from || !to) return null;
+              const x1 = from.x + NODE_W;
+              const y1 = from.y + NODE_H / 2;
+              const x2 = to.x;
+              const y2 = to.y + NODE_H / 2;
+              const mx = (x1 + x2) / 2;
+
+              const isFlowing = executionProgress && completedSet.has(e.from) &&
+                (executionProgress.activeCellId === e.to || executionProgress.queue?.includes(e.to));
+              const isComplete = completedSet.has(e.from) && completedSet.has(e.to);
+              const isBranch = e.branch === 'true' || e.branch === 'false';
+              const branchColor = e.branch === 'true' ? '#4ec9b0' : e.branch === 'false' ? '#e05050' : '#3a5068';
+              const marker = e.branch === 'true' ? 'url(#dep-arrow-true)' : e.branch === 'false' ? 'url(#dep-arrow-false)' : 'url(#dep-arrow)';
+
+              return (
+                <g key={`e-${i}`}>
+                  <path
+                    d={`M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`}
+                    fill="none"
+                    stroke={isComplete ? '#4ec9b0' : branchColor}
+                    strokeWidth={isFlowing ? 2.5 : 1.5}
+                    strokeDasharray={isBranch && e.branch === 'false' ? '4 3' : isFlowing ? '6 4' : 'none'}
+                    className={isFlowing ? 'dep-edge-flowing' : ''}
+                    markerEnd={marker}
+                  />
+                  {e.vars.length > 0 && (
+                    <text x={mx} y={(y1 + y2) / 2 - 6} textAnchor="middle" className="dep-edge-label">
+                      {e.vars.slice(0, 3).join(', ')}{e.vars.length > 3 ? '…' : ''}
+                    </text>
+                  )}
+                </g>
+              );
+            })}
+
+            {/* Nodes */}
+            {nodes.map((n) => {
+              const pos = positions[n.id];
+              if (!pos) return null;
+              const color = getNodeColor(n);
+              const statusClass = getStatusClass(n.id, notebook, executionProgress, scheduledCells);
+              const statusFill = STATUS_FILLS[statusClass];
+              const isInPipeline = selectedPipeline?.cellIds.includes(n.id);
+              const isSelected = selectionMode && selectedCellIds.has(n.id);
+              const isDecision = n.type === 'decision';
+
+              return (
+                <g
+                  key={n.id}
+                  className="dep-node-group"
+                  onClick={(e) => handleNodeClick(e, n)}
+                  onDoubleClick={(e) => handleNodeDblClick(e, n)}
+                  onContextMenu={(e) => handleContextMenu(e, n)}
+                  onMouseEnter={(e) => setTooltip({ node: n, x: e.clientX, y: e.clientY })}
+                  onMouseLeave={() => setTooltip(null)}
+                  style={{ cursor: selectionMode ? 'crosshair' : 'pointer' }}
+                >
+                  {isDecision ? (
+                    <rect
+                      x={pos.x + NODE_W / 2 - DIAMOND_SIZE / 2}
+                      y={pos.y + NODE_H / 2 - DIAMOND_SIZE / 2}
+                      width={DIAMOND_SIZE} height={DIAMOND_SIZE}
+                      rx="4"
+                      transform={`rotate(45 ${pos.x + NODE_W / 2} ${pos.y + NODE_H / 2})`}
+                      fill="#1a1a24" stroke={color}
+                      strokeWidth={isInPipeline || isSelected ? 2.5 : 1.5}
+                      strokeDasharray={isSelected ? '4 2' : 'none'}
+                    />
+                  ) : (
+                    <rect
+                      x={pos.x} y={pos.y} width={NODE_W} height={NODE_H}
+                      rx="4" fill="#1a1a24" stroke={color}
+                      strokeWidth={isInPipeline || isSelected ? 2.5 : 1.5}
+                      strokeDasharray={isSelected ? '4 2' : 'none'}
+                    />
+                  )}
+                  <text x={pos.x + 8} y={pos.y + NODE_H / 2 + 4} className="dep-node-label">
+                    {n.label.length > 16 ? n.label.slice(0, 16) + '…' : n.label}
                   </text>
-                )}
-              </g>
-            );
-          })}
-          {/* Arrow marker */}
-          <defs>
-            <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5"
-                    markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-              <path d="M 0 0 L 10 5 L 0 10 z" fill="#3a5068" />
-            </marker>
-          </defs>
-          {/* Nodes */}
-          {nodes.map((n) => {
-            const pos = positions[n.id];
-            if (!pos) return null;
-            const color = TYPE_COLORS[n.type] || '#569cd6';
-            return (
-              <g key={n.id} onClick={() => onNavigateToCell?.(n.id)} style={{ cursor: 'pointer' }}>
-                <rect
-                  x={pos.x} y={pos.y} width={NODE_W} height={NODE_H}
-                  rx="4" fill="#1a1a24" stroke={color} strokeWidth="1.5"
-                />
-                <text x={pos.x + 8} y={pos.y + NODE_H / 2 + 4} className="dep-node-label">
-                  {n.label.length > 18 ? n.label.slice(0, 18) + '…' : n.label}
-                </text>
-                <text x={pos.x + NODE_W - 6} y={pos.y + 12} textAnchor="end" className="dep-node-type">
-                  {n.type}
-                </text>
-              </g>
-            );
-          })}
+                  <text x={pos.x + NODE_W - 6} y={pos.y + 12} textAnchor="end" className="dep-node-type">
+                    {n.type}
+                  </text>
+                  {statusFill && (
+                    <circle
+                      cx={pos.x + NODE_W - 4} cy={pos.y + 4} r={4}
+                      fill={statusFill}
+                      className={statusClass}
+                    />
+                  )}
+                </g>
+              );
+            })}
+          </g>
         </svg>
+
+        {/* Context menu */}
+        {ctxMenu && (
+          <CellNodeContextMenu
+            x={ctxMenu.x} y={ctxMenu.y}
+            node={ctxMenu.node}
+            pipelines={pipelines}
+            onClose={() => setCtxMenu(null)}
+            actions={{
+              onRun: () => {
+                const cell = notebook?.cells.find((c) => c.id === ctxMenu.node.id);
+                if (cell && notebookId) dispatchRun?.(notebookId, cell);
+              },
+              onRunWithDeps: () => onRunWithDeps?.(notebookId, ctxMenu.node.id),
+              onRunDownstream: () => onRunDownstream?.(notebookId, ctxMenu.node.id),
+              onNavigate: () => onNavigateToCell?.(ctxMenu.node.id),
+              onAddToPipeline: (pipelineId) => {
+                const p = (pipelines || []).find((pp) => pp.id === pipelineId);
+                if (p && !p.cellIds.includes(ctxMenu.node.id)) {
+                  onSetPipelineCells?.(notebookId, pipelineId, [...p.cellIds, ctxMenu.node.id]);
+                }
+              },
+              onNewPipelineWith: () => {
+                onCreatePipeline?.(notebookId, `Pipeline ${(pipelines || []).length + 1}`, [ctxMenu.node.id]);
+              },
+            }}
+          />
+        )}
+
+        {/* Tooltip */}
+        {tooltip && (
+          <div className="dep-tooltip" style={{ left: tooltip.x + 12, top: tooltip.y - 60, position: 'fixed' }}>
+            <div className="dep-tooltip-type">{tooltip.node.type}</div>
+            <div className="dep-tooltip-label">{tooltip.node.label}</div>
+            {tooltip.node.produces.length > 0 && (
+              <div className="dep-tooltip-vars">produces: {tooltip.node.produces.join(', ')}</div>
+            )}
+            {tooltip.node.consumes.length > 0 && (
+              <div className="dep-tooltip-vars">consumes: {tooltip.node.consumes.join(', ')}</div>
+            )}
+          </div>
+        )}
       </div>
+
+      {/* Pipeline management */}
+      <PipelineToolbar
+        pipelines={pipelines}
+        selectedPipelineId={selectedPipelineId}
+        onSelectPipeline={setSelectedPipelineId}
+        onCreatePipeline={(name, cellIds) => onCreatePipeline?.(notebookId, name, cellIds)}
+        onRenamePipeline={(id, name) => onRenamePipeline?.(notebookId, id, name)}
+        onDeletePipeline={(id) => onDeletePipeline?.(notebookId, id)}
+        onRunPipeline={(id) => onRunPipeline?.(notebookId, id)}
+        selectionMode={selectionMode}
+        onToggleSelectionMode={() => { setSelectionMode((v) => !v); if (selectionMode) setSelectedCellIds(new Set()); }}
+        selectedCellIds={selectedCellIds}
+      />
     </div>
   );
 }

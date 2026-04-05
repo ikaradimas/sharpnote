@@ -12,7 +12,10 @@ export function useCellDependencies(notebook) {
   return useMemo(() => {
     if (!notebook?.cells || !notebook?.vars) return { nodes: [], edges: [] };
 
-    const cells = notebook.cells.filter((c) => c.type === 'code' || c.type === 'sql' || c.type === 'check');
+    const cells = notebook.cells.filter((c) =>
+      c.type === 'code' || c.type === 'sql' || c.type === 'check' ||
+      c.type === 'http' || c.type === 'shell' || c.type === 'decision'
+    );
     const vars = notebook.vars || [];
     const varNames = vars.map((v) => v.name);
 
@@ -65,7 +68,8 @@ export function useCellDependencies(notebook) {
       id: cell.id,
       index: i,
       type: cell.type,
-      label: cell.label || (cell.content || '').split('\n')[0].slice(0, 40) || `Cell ${i + 1}`,
+      label: cell.name || cell.label || (cell.content || '').split('\n')[0].slice(0, 40) || `Cell ${i + 1}`,
+      color: cell.color || null,
       produces: [...(cellProduces[cell.id] || [])],
       consumes: [...(cellConsumes[cell.id] || [])],
     }));
@@ -87,6 +91,28 @@ export function useCellDependencies(notebook) {
             });
           }
           edges.find((e) => e.from === producerId && e.to === cell.id)?.vars.push(varName);
+        }
+      }
+    }
+
+    // Add decision cell path edges (true/false branches)
+    const cellIdSet = new Set(cells.map((c) => c.id));
+    for (const cell of cells) {
+      if (cell.type !== 'decision') continue;
+      for (const targetId of cell.truePath || []) {
+        if (!cellIdSet.has(targetId)) continue;
+        const key = `${cell.id}->${targetId}`;
+        if (!edgeSet.has(key)) {
+          edgeSet.add(key);
+          edges.push({ from: cell.id, to: targetId, vars: [], branch: 'true' });
+        }
+      }
+      for (const targetId of cell.falsePath || []) {
+        if (!cellIdSet.has(targetId)) continue;
+        const key = `${cell.id}->${targetId}`;
+        if (!edgeSet.has(key)) {
+          edgeSet.add(key);
+          edges.push({ from: cell.id, to: targetId, vars: [], branch: 'false' });
         }
       }
     }

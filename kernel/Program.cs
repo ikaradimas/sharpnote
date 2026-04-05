@@ -299,6 +299,12 @@ partial class Program
                     break;
                 }
 
+                case "execute_decision":
+                {
+                    await HandleExecuteDecision(msg, options, globals, realStdout);
+                    break;
+                }
+
                 case "db_test":
                 {
                     await HandleDbTest(msg, realStdout);

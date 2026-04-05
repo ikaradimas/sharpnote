@@ -6,14 +6,26 @@ function shortId() {
   return Math.random().toString(36).slice(2, 10); // 8-char base-36
 }
 
+export const CELL_COLORS = [
+  { id: 'blue',   value: '#569cd6' },
+  { id: 'teal',   value: '#4ec9b0' },
+  { id: 'green',  value: '#6a9955' },
+  { id: 'orange', value: '#e0a040' },
+  { id: 'red',    value: '#d16969' },
+  { id: 'purple', value: '#c586c0' },
+  { id: 'pink',   value: '#d2658e' },
+  { id: 'gray',   value: '#808080' },
+];
+
 export function makeCell(type = 'code', content = '') {
   return {
     id: shortId(),
     type,
     content,
-    ...(type === 'code' ? { outputMode: 'auto', locked: false, scheduleInterval: null } : {}),
-    ...(type === 'sql'   ? { db: '' } : {}),
-    ...(type === 'check' ? { label: '' } : {}),
+    ...(type === 'code'     ? { outputMode: 'auto', locked: false, scheduleInterval: null } : {}),
+    ...(type === 'sql'      ? { db: '' } : {}),
+    ...(type === 'check'    ? { label: '' } : {}),
+    ...(type === 'decision' ? { label: '', truePath: [], falsePath: [] } : {}),
   };
 }
 
@@ -1292,5 +1304,6 @@ export function createNotebook(templateKey = null) {
     outputHistory: {},
     staleCellIds: [],
     autoRun: false,
+    pipelines: [],
   };
 }
