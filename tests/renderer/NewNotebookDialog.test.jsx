@@ -11,13 +11,14 @@ const defaultProps = (overrides = {}) => ({
 describe('NewNotebookDialog', () => {
   it('renders all template options plus Blank Notebook', () => {
     render(<NewNotebookDialog {...defaultProps()} />);
-    // 6 templates + Blank Notebook = 7 items
+    // 7 templates + Blank Notebook = 8 items
     expect(screen.getByText('Getting Started')).toBeInTheDocument();
     expect(screen.getByText('Data & Charts')).toBeInTheDocument();
     expect(screen.getByText('Databases')).toBeInTheDocument();
     expect(screen.getByText('Display & Rich Output')).toBeInTheDocument();
     expect(screen.getByText('Scripting & Utilities')).toBeInTheDocument();
     expect(screen.getByText('Workspace & Panels')).toBeInTheDocument();
+    expect(screen.getByText('Cell Orchestration')).toBeInTheDocument();
     expect(screen.getByText('Blank Notebook')).toBeInTheDocument();
   });
 

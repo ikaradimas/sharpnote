@@ -51,6 +51,7 @@ export const NOTEBOOK_TEMPLATES = [
   { key: 'display-output',   label: 'Display & Rich Output',   description: 'Live updates, Mermaid, KaTeX, widgets' },
   { key: 'scripting-utils',  label: 'Scripting & Utilities',   description: 'Logging, config, async, Util helpers' },
   { key: 'workspace-panels', label: 'Workspace & Panels',      description: 'Panels API, dock/float, layout scripting' },
+  { key: 'orchestration',    label: 'Cell Orchestration',      description: 'Decision cells, naming, colors, pipelines' },
 ];
 
 function cellsForTemplate(key) {
@@ -61,6 +62,7 @@ function cellsForTemplate(key) {
     case 'display-output':   return makeDisplayOutputCells();
     case 'scripting-utils':  return makeScriptingUtilsCells();
     case 'workspace-panels': return makeWorkspacePanelsCells();
+    case 'orchestration':    return makeOrchestrationCells();
     default:                 return [];
   }
 }
@@ -73,6 +75,12 @@ function configForTemplate(key) {
       { key: 'MaxRetries',  value: '5', type: 'number' },
       { key: 'Verbose',     value: 'true', type: 'boolean' },
       { key: 'ApiKey',      value: '', type: 'secret', envVar: 'API_KEY' },
+    ];
+  }
+  if (key === 'orchestration') {
+    return [
+      { key: 'Environment', value: 'production', type: 'string' },
+      { key: 'Threshold',   value: '100',        type: 'number' },
     ];
   }
   return [];
@@ -1266,6 +1274,157 @@ Panels.Open(PanelId.Graph);
 Panels.Dock(PanelId.Graph, DockZone.Right, 0.42);
 
 Display.Html("<p style='color:#4ec9b0'>Focused layout: Graph panel only.</p>");`),
+  ];
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Template 7 — Cell Orchestration
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function makeOrchestrationCells() {
+  // Pre-create cells with known IDs so decision paths can reference them
+  const loadCell     = { ...makeCell('code', [
+    '// Load raw data',
+    'var orders = new[] {',
+    '    new { Id = 1, Product = "Widget A", Qty = 120, Price = 9.99 },',
+    '    new { Id = 2, Product = "Widget B", Qty = 45,  Price = 24.50 },',
+    '    new { Id = 3, Product = "Widget C", Qty = 200, Price = 4.75 },',
+    '    new { Id = 4, Product = "Widget D", Qty = 8,   Price = 149.00 },',
+    '};',
+    'Display.Html($"<p>Loaded {orders.Length} orders</p>");',
+  ].join('\n')), name: 'Load Orders', color: 'blue' };
+
+  const statsCell    = { ...makeCell('code', [
+    '// Compute summary statistics from the orders',
+    'var totalRevenue = orders.Sum(o => o.Qty * o.Price);',
+    'var avgQty       = orders.Average(o => (double)o.Qty);',
+    'var topProduct   = orders.OrderByDescending(o => o.Qty * o.Price).First().Product;',
+    '',
+    'Display.Html($@"',
+    '<table>',
+    '  <tr><td><b>Total Revenue</b></td><td>${totalRevenue:N2}</td></tr>',
+    '  <tr><td><b>Avg Quantity</b></td><td>{avgQty:N1}</td></tr>',
+    '  <tr><td><b>Top Product</b></td><td>{topProduct}</td></tr>',
+    '</table>");',
+  ].join('\n')), name: 'Compute Stats', color: 'teal' };
+
+  const thresholdVal = 'totalRevenue > double.Parse(Config["Threshold"])';
+  const decisionCell = { ...makeCell('decision', thresholdVal), label: 'Revenue threshold met?', name: 'Revenue Gate', color: 'purple' };
+
+  const passCell     = { ...makeCell('code', [
+    '// Revenue above threshold — generate a success report',
+    'Display.Html(@"<div style=\'padding:8px;background:rgba(78,201,176,0.1);border-left:3px solid #4ec9b0;border-radius:4px\'>',
+    '  <b style=\'color:#4ec9b0\'>✓ Revenue Target Met</b>',
+    '  <p style=\'margin:4px 0 0;color:#ccc\'>Total revenue of $" + totalRevenue.ToString("N2") + " exceeds the configured threshold.</p>',
+    '</div>");',
+  ].join('\n')), name: 'Success Report', color: 'green' };
+
+  const failCell     = { ...makeCell('code', [
+    '// Revenue below threshold — flag for review',
+    'Display.Html(@"<div style=\'padding:8px;background:rgba(224,80,80,0.1);border-left:3px solid #e05050;border-radius:4px\'>',
+    '  <b style=\'color:#e05050\'>✗ Below Target</b>',
+    '  <p style=\'margin:4px 0 0;color:#ccc\'>Total revenue of $" + totalRevenue.ToString("N2") + " is below the threshold. Review pricing or inventory.</p>',
+    '</div>");',
+  ].join('\n')), name: 'Alert Report', color: 'red' };
+
+  const checkCell    = { ...makeCell('check', 'orders.Length > 0'), label: 'Orders loaded', name: 'Data Check', color: 'green' };
+
+  const chartCell    = { ...makeCell('code', [
+    '// Plot revenue per product',
+    'foreach (var o in orders)',
+    '    Display.Plot(o.Product, o.Qty * o.Price);',
+  ].join('\n')), name: 'Revenue Chart', color: 'orange' };
+
+  // Wire decision paths
+  decisionCell.truePath  = [passCell.id];
+  decisionCell.falsePath = [failCell.id];
+
+  return [
+    md(`# Cell Orchestration
+
+This template demonstrates the **cell orchestration** features — named cells, colors,
+decision branching, and the interactive dependency graph.
+
+## How to use
+
+1. Open the **Dependencies** panel (Tools → Dependencies, or **Ctrl+Shift+Y**)
+2. Run the cells below — the graph will light up with execution status
+3. **Click a node** in the graph to run it, **double-click** to navigate
+4. **Right-click** a node for: *Run with deps*, *Run downstream*, *Add to pipeline*
+5. Use **zoom** (scroll) and **pan** (drag empty space) to navigate the graph
+6. Create **pipelines** in the bottom section to group and re-run cells`),
+
+    md(`## 1. Cell Naming & Colors
+
+Every cell has an optional **name** and **color** — visible in the cell header and in the
+orchestration graph. Click the small dot to pick a color, click "unnamed" to set a name.
+
+The cells below are pre-named and colored to show the feature.`),
+
+    loadCell,
+
+    md(`## 2. Data Validation
+
+**Check cells** assert a boolean condition. They render green (pass) or red (fail).
+They appear as nodes in the dependency graph.`),
+
+    checkCell,
+
+    md(`## 3. Computed Dependencies
+
+This cell references \`orders\` from the Load cell — creating a dependency edge in the graph.
+Open the Dependencies panel to see the edge from *Load Orders* → *Compute Stats*.`),
+
+    statsCell,
+
+    md(`## 4. Decision Cell — Branching
+
+**Decision cells** evaluate a boolean expression and branch execution.
+The cell below checks if total revenue exceeds the \`Threshold\` config value (set to 100).
+
+- **True path** → runs *Success Report* (green)
+- **False path** → runs *Alert Report* (red)
+
+In the graph, true edges are solid green, false edges are dashed red.`),
+
+    decisionCell,
+    passCell,
+    failCell,
+
+    md(`## 5. Visualization
+
+This cell also depends on \`orders\`, creating another edge in the graph.`),
+
+    chartCell,
+
+    md(`## 6. Pipelines
+
+Open the Dependencies panel and use the **Pipelines** section at the bottom:
+
+1. Click **+ Select** to enter selection mode
+2. Click nodes in the graph to add them to the pipeline
+3. Name it and click **✓** to save
+4. Click **▶** to run the pipeline — cells execute in dependency order
+
+### Orchestration Execution Modes
+
+| Mode | What it does |
+|------|-------------|
+| **Click node** | Runs that single cell |
+| **Run with deps** | Runs all upstream cells first, then the target |
+| **Run downstream** | Runs the target, then everything that depends on it |
+| **Run pipeline** | Runs a named group of cells in topological order |
+
+Decision cells dynamically choose which branch to follow during pipeline execution.`),
+
+    md(`## Tips
+
+- **Zoom** the graph with scroll wheel (0.3× to 3×)
+- **Pan** by dragging on empty space in the graph
+- **Fit** resets zoom and pan to default
+- **Cancel** (⏹) stops a running orchestration mid-flight
+- Nodes pulse when running, show ✓/✗ when done, and turn amber when stale
+- Variable names appear as edge labels to show data flow`),
   ];
 }
 
