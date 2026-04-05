@@ -71,7 +71,10 @@ describe('OutputBlock – display/table', () => {
     const rows = Array.from({ length: 25 }, (_, i) => ({ id: i, val: `v${i}` }));
     const m = msg({ type: 'display', format: 'table', content: rows });
     render(<OutputBlock msg={m} index={0} />);
-    // Pagination controls appear for > 20 rows
+    // Table starts collapsed for >5 rows — expand first
+    const toggle = document.querySelector('.table-collapse-toggle');
+    if (toggle) fireEvent.click(toggle);
+    // Pagination controls appear for > 10 rows (default page size)
     expect(document.querySelector('.table-pager')).not.toBeNull();
     expect(document.querySelector('.export-btn')).not.toBeNull();
   });

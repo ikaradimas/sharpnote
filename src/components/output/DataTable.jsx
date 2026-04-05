@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo, useContext } from 'react';
 import { TablePageSizeContext } from '../../config/table-page-size-context.js';
 import { tableToCSV, tableToTSV } from '../../utils.js';
 
+const PREVIEW_ROWS = 5;
+
 export function DataTable({ rows }) {
   if (!Array.isArray(rows) || rows.length === 0) {
     return <div className="output-stdout">(empty table)</div>;
@@ -12,6 +14,7 @@ export function DataTable({ rows }) {
   const [sortCol, setSortCol]   = useState(null);
   const [sortDir, setSortDir]   = useState('asc');
   const [colWidths, setColWidths] = useState(null);
+  const [collapsed, setCollapsed] = useState(rows.length > PREVIEW_ROWS);
 
   useEffect(() => setColWidths(null), [rows]);
 
@@ -43,9 +46,10 @@ export function DataTable({ rows }) {
   };
 
   const total     = sortedRows.length;
-  const pageCount = Math.ceil(total / pageSize);
-  const start     = page * pageSize;
-  const end       = Math.min(start + pageSize, total);
+  const canCollapse = total > PREVIEW_ROWS;
+  const pageCount = collapsed ? 1 : Math.ceil(total / pageSize);
+  const start     = collapsed ? 0 : page * pageSize;
+  const end       = collapsed ? Math.min(PREVIEW_ROWS, total) : Math.min(start + pageSize, total);
   const pageRows  = sortedRows.slice(start, end);
 
   const onPageSize = (e) => { setPageSize(Number(e.target.value)); setPage(0); };
@@ -81,8 +85,23 @@ export function DataTable({ rows }) {
     document.addEventListener('mouseup', onMouseUp);
   };
 
+  const collapseToggle = canCollapse ? (
+    <button
+      className="table-collapse-toggle"
+      onClick={() => { setCollapsed((v) => !v); setPage(0); }}
+    >
+      {collapsed
+        ? `▸ Show all ${total} rows`
+        : `▾ Collapse (show first ${PREVIEW_ROWS})`
+      }
+    </button>
+  ) : null;
+
   return (
     <div className="data-table-wrap">
+      {canCollapse && !collapsed && (
+        <div className="table-collapse-bar">{collapseToggle}</div>
+      )}
       <div className="data-table-scroll">
         <table className="data-table" style={colWidths ? { tableLayout: 'fixed' } : undefined}>
           <thead>
@@ -105,8 +124,11 @@ export function DataTable({ rows }) {
           </tbody>
         </table>
       </div>
+      {canCollapse && collapsed && (
+        <div className="table-collapse-bar table-collapse-bar-bottom">{collapseToggle}</div>
+      )}
       <div className="table-footer">
-        {pageCount > 1 && (
+        {!collapsed && pageCount > 1 && (
           <div className="table-pager">
             <span className="table-pager-info">
               {start + 1}–{end} of <strong>{total}</strong> rows
@@ -128,6 +150,7 @@ export function DataTable({ rows }) {
         )}
         <div className="table-export-bar">
           <span className="table-row-count">{total} row{total !== 1 ? 's' : ''} · {columns.length} col{columns.length !== 1 ? 's' : ''}</span>
+          {canCollapse && !collapsed && collapseToggle}
           <button className="table-export-btn" title="Copy as TSV (paste into Excel)"
             onClick={() => { navigator.clipboard.writeText(tableToTSV(rows)); }}>
             Copy

@@ -17,6 +17,12 @@ function renderTable(rows, pageSize) {
 
 const makeRows = (n) => Array.from({ length: n }, (_, i) => ({ id: i, name: `item-${i}` }));
 
+// Tables with >5 rows start collapsed. Expand them for pagination tests.
+function expandTable() {
+  const toggle = document.querySelector('.table-collapse-toggle');
+  if (toggle) fireEvent.click(toggle);
+}
+
 describe('DataTable', () => {
   it('renders empty state for empty rows', () => {
     renderTable([]);
@@ -36,6 +42,7 @@ describe('DataTable', () => {
 
   it('shows pagination controls for > default page size rows', () => {
     renderTable(makeRows(11)); // 11 > 10 default — pageCount = 2
+    expandTable(); // expand collapsed table first
     expect(document.querySelector('.table-pager')).not.toBeNull();
   });
 
@@ -46,11 +53,12 @@ describe('DataTable', () => {
 
   it('shows correct row count info', () => {
     renderTable(makeRows(11));
-    expect(screen.getByText(/11 rows/)).toBeInTheDocument();
+    expect(document.querySelector('.table-row-count').textContent).toMatch(/11 rows/);
   });
 
   it('next page button advances to page 2', () => {
     renderTable(makeRows(11));
+    expandTable();
     const nextBtn = screen.getByText('›');
     fireEvent.click(nextBtn);
     expect(screen.getByText(/page 2/)).toBeInTheDocument();
@@ -58,12 +66,14 @@ describe('DataTable', () => {
 
   it('prev page button is disabled on first page', () => {
     renderTable(makeRows(11));
+    expandTable();
     const prevBtn = screen.getByText('‹');
     expect(prevBtn).toBeDisabled();
   });
 
   it('last page button advances to last page', () => {
     renderTable(makeRows(11));
+    expandTable();
     const lastBtn = screen.getByText('»');
     fireEvent.click(lastBtn);
     expect(screen.getByText(/page 2/)).toBeInTheDocument();
@@ -71,6 +81,7 @@ describe('DataTable', () => {
 
   it('page size select changes rows per page', () => {
     renderTable(makeRows(60));
+    expandTable();
     const select = document.querySelector('.table-pager-size');
     fireEvent.change(select, { target: { value: '50' } });
     // With 50 per page, page 1 of 2 is visible
@@ -149,5 +160,41 @@ describe('DataTable', () => {
   it('shows singular "row" for single row', () => {
     renderTable([{ a: 1 }]);
     expect(screen.getByText(/1 row · 1 col$/)).toBeInTheDocument();
+  });
+
+  // ── Collapse / expand ──────────────────────────────────────────────────
+
+  it('tables with >5 rows start collapsed showing only 5 rows', () => {
+    renderTable(makeRows(20));
+    const visibleRows = document.querySelectorAll('tbody tr');
+    expect(visibleRows).toHaveLength(5);
+  });
+
+  it('tables with ≤5 rows are NOT collapsed', () => {
+    renderTable(makeRows(4));
+    expect(document.querySelector('.table-collapse-toggle')).toBeNull();
+    expect(document.querySelectorAll('tbody tr')).toHaveLength(4);
+  });
+
+  it('shows "Show all N rows" toggle when collapsed', () => {
+    renderTable(makeRows(20));
+    expect(screen.getByText(/Show all 20 rows/)).toBeInTheDocument();
+  });
+
+  it('clicking toggle expands to show all rows (paginated)', () => {
+    renderTable(makeRows(20));
+    expandTable();
+    // Now expanded — should show first page (10 rows default)
+    expect(document.querySelectorAll('tbody tr')).toHaveLength(10);
+    expect(document.querySelector('.table-pager')).not.toBeNull();
+  });
+
+  it('clicking collapse toggle hides rows back to preview', () => {
+    renderTable(makeRows(20));
+    expandTable(); // expand
+    // Find first collapse button and click
+    const collapseBtns = document.querySelectorAll('.table-collapse-toggle');
+    fireEvent.click(collapseBtns[0]);
+    expect(document.querySelectorAll('tbody tr')).toHaveLength(5);
   });
 });
