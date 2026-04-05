@@ -1313,18 +1313,20 @@ function makeOrchestrationCells() {
 
   const passCell     = { ...makeCell('code', [
     '// Revenue above threshold — generate a success report',
-    'Display.Html(@"<div style=\'padding:8px;background:rgba(78,201,176,0.1);border-left:3px solid #4ec9b0;border-radius:4px\'>',
-    '  <b style=\'color:#4ec9b0\'>✓ Revenue Target Met</b>',
-    '  <p style=\'margin:4px 0 0;color:#ccc\'>Total revenue of $" + totalRevenue.ToString("N2") + " exceeds the configured threshold.</p>',
-    '</div>");',
+    "var html = \"<div style='padding:8px;background:rgba(78,201,176,0.1);border-left:3px solid #4ec9b0;border-radius:4px'>\"",
+    "  + \"<b style='color:#4ec9b0'>✓ Revenue Target Met</b>\"",
+    "  + \"<p style='margin:4px 0 0;color:#ccc'>Revenue of $\" + totalRevenue.ToString(\"N2\") + \" exceeds threshold.</p>\"",
+    '  + "</div>";',
+    'Display.Html(html);',
   ].join('\n')), name: 'Success Report', color: 'green' };
 
   const failCell     = { ...makeCell('code', [
     '// Revenue below threshold — flag for review',
-    'Display.Html(@"<div style=\'padding:8px;background:rgba(224,80,80,0.1);border-left:3px solid #e05050;border-radius:4px\'>',
-    '  <b style=\'color:#e05050\'>✗ Below Target</b>',
-    '  <p style=\'margin:4px 0 0;color:#ccc\'>Total revenue of $" + totalRevenue.ToString("N2") + " is below the threshold. Review pricing or inventory.</p>',
-    '</div>");',
+    "var html = \"<div style='padding:8px;background:rgba(224,80,80,0.1);border-left:3px solid #e05050;border-radius:4px'>\"",
+    "  + \"<b style='color:#e05050'>✗ Below Target</b>\"",
+    "  + \"<p style='margin:4px 0 0;color:#ccc'>Revenue of $\" + totalRevenue.ToString(\"N2\") + \" is below threshold.</p>\"",
+    '  + "</div>";',
+    'Display.Html(html);',
   ].join('\n')), name: 'Alert Report', color: 'red' };
 
   const checkCell    = { ...makeCell('check', 'orders.Length > 0'), label: 'Orders loaded', name: 'Data Check', color: 'green' };
