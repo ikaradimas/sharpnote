@@ -17,8 +17,10 @@ const defaultProps = (overrides = {}) => ({
   onLabelChange: vi.fn(),
   onNameChange: vi.fn(),
   onColorChange: vi.fn(),
+  onModeChange: vi.fn(),
   onTruePathChange: vi.fn(),
   onFalsePathChange: vi.fn(),
+  onSwitchPathsChange: vi.fn(),
   onRun: vi.fn(),
   onDelete: vi.fn(),
   onMoveUp: vi.fn(),
@@ -131,5 +133,46 @@ describe('DecisionCell', () => {
     fireEvent.click(toggles[0]);
     // Should see the other cells (not self)
     expect(screen.getByText('Logger')).toBeInTheDocument();
+  });
+
+  // ── Switch mode ──────────────────────────────────────────────────────────
+
+  it('renders mode selector', () => {
+    render(<DecisionCell {...defaultProps()} />);
+    expect(document.querySelector('.decision-mode-select')).toBeInTheDocument();
+  });
+
+  it('in switch mode, shows switch path editor instead of true/false', () => {
+    render(<DecisionCell {...defaultProps({
+      cell: { id: 'd1', type: 'decision', content: 'status', label: '', mode: 'switch', truePath: [], falsePath: [], switchPaths: { 'ok': ['c1'], 'error': [] } },
+    })} />);
+    expect(screen.queryByText('True →')).not.toBeInTheDocument();
+    expect(screen.getByText('"ok" →')).toBeInTheDocument();
+    expect(screen.getByText('"error" →')).toBeInTheDocument();
+  });
+
+  it('switch mode shows matched result with arrow prefix', () => {
+    render(<DecisionCell {...defaultProps({
+      cell: { id: 'd1', type: 'decision', content: 'status', label: '', mode: 'switch', truePath: [], falsePath: [], switchPaths: {} },
+      decisionResult: { result: 'active', message: 'active' },
+    })} />);
+    expect(screen.getByText('→ "active"')).toBeInTheDocument();
+  });
+
+  it('switch mode applies decision-cell-matched class', () => {
+    render(<DecisionCell {...defaultProps({
+      cell: { id: 'd1', type: 'decision', content: 'x', label: '', mode: 'switch', truePath: [], falsePath: [], switchPaths: {} },
+      decisionResult: { result: 'a', message: 'a' },
+    })} />);
+    expect(document.querySelector('.decision-cell-matched')).toBeInTheDocument();
+  });
+
+  it('switch mode has add case input and button', () => {
+    render(<DecisionCell {...defaultProps({
+      cell: { id: 'd1', type: 'decision', content: 'x', label: '', mode: 'switch', truePath: [], falsePath: [], switchPaths: {} },
+    })} />);
+    expect(screen.getByPlaceholderText('Case value…')).toBeInTheDocument();
+    expect(screen.getByText('+ Case')).toBeInTheDocument();
+    expect(screen.getByText('+ Default')).toBeInTheDocument();
   });
 });

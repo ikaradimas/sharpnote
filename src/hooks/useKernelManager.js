@@ -587,6 +587,7 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
         id: cell.id,
         expression: cell.content,
         label: cell.label || '',
+        mode: cell.mode || 'bool',
         config: resolvedConfig,
       });
     });

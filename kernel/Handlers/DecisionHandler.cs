@@ -17,9 +17,10 @@ partial class Program
         ScriptGlobals globals,
         TextWriter realStdout)
     {
-        var cellId     = msg.TryGetProperty("id",         out var cid) ? cid.GetString()  : null;
-        var expression = msg.TryGetProperty("expression",  out var exp) ? exp.GetString()  : "";
-        var label      = msg.TryGetProperty("label",       out var lbl) ? lbl.GetString()  : "";
+        var cellId     = msg.TryGetProperty("id",         out var cid)  ? cid.GetString()  : null;
+        var expression = msg.TryGetProperty("expression",  out var exp)  ? exp.GetString()  : "";
+        var label      = msg.TryGetProperty("label",       out var lbl)  ? lbl.GetString()  : "";
+        var mode       = msg.TryGetProperty("mode",        out var md)   ? md.GetString()   : "bool";
 
         // Apply notebook config
         var configDict = new Dictionary<string, string>();
@@ -38,28 +39,51 @@ partial class Program
             {
                 realStdout.WriteLine(JsonSerializer.Serialize(new
                 {
-                    type = "decision_result", id = cellId,
-                    result = false, label, message = "No expression provided",
+                    type = "decision_result", id = cellId, mode,
+                    result = (object)false, label, message = "No expression provided",
                 }));
                 realStdout.WriteLine(JsonSerializer.Serialize(new { type = "complete", id = cellId, success = true }));
                 return;
             }
 
-            var code = $"(bool)({expression})";
             var opts = options.AddReferences(dbMetaRefs);
 
-            if (script == null)
-                script = await CSharpScript.RunAsync<object?>(code, opts, globals, typeof(ScriptGlobals));
-            else
-                script = await script.ContinueWithAsync<object?>(code, opts);
-
-            var result = script.ReturnValue is true;
-
-            realStdout.WriteLine(JsonSerializer.Serialize(new
+            if (mode == "switch")
             {
-                type = "decision_result", id = cellId,
-                result, label, message = result ? "true" : "false",
-            }));
+                // Switch mode: evaluate as object, return stringified value
+                var code = $"(object)({expression})";
+                if (script == null)
+                    script = await CSharpScript.RunAsync<object?>(code, opts, globals, typeof(ScriptGlobals));
+                else
+                    script = await script.ContinueWithAsync<object?>(code, opts);
+
+                var rawValue = script.ReturnValue;
+                var strValue = rawValue?.ToString() ?? "";
+
+                realStdout.WriteLine(JsonSerializer.Serialize(new
+                {
+                    type = "decision_result", id = cellId, mode,
+                    result = strValue, label, message = strValue,
+                }));
+            }
+            else
+            {
+                // Bool mode: evaluate as boolean
+                var code = $"(bool)({expression})";
+                if (script == null)
+                    script = await CSharpScript.RunAsync<object?>(code, opts, globals, typeof(ScriptGlobals));
+                else
+                    script = await script.ContinueWithAsync<object?>(code, opts);
+
+                var result = script.ReturnValue is true;
+
+                realStdout.WriteLine(JsonSerializer.Serialize(new
+                {
+                    type = "decision_result", id = cellId, mode,
+                    result = (object)result, label, message = result ? "true" : "false",
+                }));
+            }
+
             realStdout.WriteLine(JsonSerializer.Serialize(new { type = "complete", id = cellId, success = true }));
         }
         catch (Exception ex)
@@ -67,8 +91,8 @@ partial class Program
             var inner = ex is AggregateException agg ? agg.InnerException ?? ex : ex;
             realStdout.WriteLine(JsonSerializer.Serialize(new
             {
-                type = "decision_result", id = cellId,
-                result = false, label,
+                type = "decision_result", id = cellId, mode,
+                result = mode == "switch" ? (object)"" : (object)false, label,
                 message = inner.Message,
             }));
             realStdout.WriteLine(JsonSerializer.Serialize(new { type = "complete", id = cellId, success = true }));

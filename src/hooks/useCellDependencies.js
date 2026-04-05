@@ -95,24 +95,39 @@ export function useCellDependencies(notebook) {
       }
     }
 
-    // Add decision cell path edges (true/false branches)
+    // Add decision cell path edges (bool: true/false, switch: case keys)
     const cellIdSet = new Set(cells.map((c) => c.id));
     for (const cell of cells) {
       if (cell.type !== 'decision') continue;
-      for (const targetId of cell.truePath || []) {
-        if (!cellIdSet.has(targetId)) continue;
-        const key = `${cell.id}->${targetId}`;
-        if (!edgeSet.has(key)) {
-          edgeSet.add(key);
-          edges.push({ from: cell.id, to: targetId, vars: [], branch: 'true' });
+      if ((cell.mode || 'bool') === 'switch') {
+        // Switch mode: edges for each case key
+        for (const [caseKey, targetIds] of Object.entries(cell.switchPaths || {})) {
+          for (const targetId of targetIds) {
+            if (!cellIdSet.has(targetId)) continue;
+            const key = `${cell.id}->${targetId}`;
+            if (!edgeSet.has(key)) {
+              edgeSet.add(key);
+              edges.push({ from: cell.id, to: targetId, vars: [], branch: caseKey });
+            }
+          }
         }
-      }
-      for (const targetId of cell.falsePath || []) {
-        if (!cellIdSet.has(targetId)) continue;
-        const key = `${cell.id}->${targetId}`;
-        if (!edgeSet.has(key)) {
-          edgeSet.add(key);
-          edges.push({ from: cell.id, to: targetId, vars: [], branch: 'false' });
+      } else {
+        // Bool mode: true/false edges
+        for (const targetId of cell.truePath || []) {
+          if (!cellIdSet.has(targetId)) continue;
+          const key = `${cell.id}->${targetId}`;
+          if (!edgeSet.has(key)) {
+            edgeSet.add(key);
+            edges.push({ from: cell.id, to: targetId, vars: [], branch: 'true' });
+          }
+        }
+        for (const targetId of cell.falsePath || []) {
+          if (!cellIdSet.has(targetId)) continue;
+          const key = `${cell.id}->${targetId}`;
+          if (!edgeSet.has(key)) {
+            edgeSet.add(key);
+            edges.push({ from: cell.id, to: targetId, vars: [], branch: 'false' });
+          }
         }
       }
     }

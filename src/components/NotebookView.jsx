@@ -351,8 +351,10 @@ export function NotebookView({
                 onLabelChange={(label) => updateCellProp(cell.id, 'label', label)}
                 onNameChange={(name) => updateCellProp(cell.id, 'name', name)}
                 onColorChange={(color) => updateCellProp(cell.id, 'color', color)}
+                onModeChange={(mode) => updateCellProp(cell.id, 'mode', mode)}
                 onTruePathChange={(ids) => updateCellProp(cell.id, 'truePath', ids)}
                 onFalsePathChange={(ids) => updateCellProp(cell.id, 'falsePath', ids)}
+                onSwitchPathsChange={(paths) => updateCellProp(cell.id, 'switchPaths', paths)}
                 onRun={() => onRunDecisionCell(nb.id, cell)}
                 onDelete={() => deleteCell(cell.id)}
                 onMoveUp={() => moveCell(cell.id, -1)}

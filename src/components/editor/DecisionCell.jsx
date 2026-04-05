@@ -15,8 +15,10 @@ export function DecisionCell({
   onLabelChange,
   onNameChange,
   onColorChange,
+  onModeChange,
   onTruePathChange,
   onFalsePathChange,
+  onSwitchPathsChange,
   onRun,
   onDelete,
   onMoveUp,
@@ -25,10 +27,12 @@ export function DecisionCell({
   const result = decisionResult?.result;
   const message = decisionResult?.message;
   const hasResult = decisionResult != null;
+  const mode = cell.mode || 'bool';
 
-  const statusClass = !hasResult ? '' : result ? ' decision-cell-true' : ' decision-cell-false';
+  const statusClass = !hasResult ? '' :
+    mode === 'switch' ? ' decision-cell-matched' :
+    result ? ' decision-cell-true' : ' decision-cell-false';
 
-  // Build cell options for path dropdowns (exclude self)
   const cellOptions = useMemo(() =>
     (allCells || [])
       .filter((c) => c.id !== cell.id && c.type !== 'markdown')
@@ -38,6 +42,7 @@ export function DecisionCell({
 
   const truePath = cell.truePath || [];
   const falsePath = cell.falsePath || [];
+  const switchPaths = cell.switchPaths || {};
 
   const togglePath = (cellId, path, setter) => {
     if (path.includes(cellId)) setter(path.filter((id) => id !== cellId));
@@ -52,7 +57,9 @@ export function DecisionCell({
           {isRunning ? (
             <span className="check-spinner" />
           ) : hasResult ? (
-            <span className={`decision-diamond ${result ? 'decision-diamond-true' : 'decision-diamond-false'}`}>◆</span>
+            mode === 'switch'
+              ? <span className="decision-diamond decision-diamond-switch">◆</span>
+              : <span className={`decision-diamond ${result ? 'decision-diamond-true' : 'decision-diamond-false'}`}>◆</span>
           ) : (
             <span className="decision-diamond decision-diamond-pending">◇</span>
           )}
@@ -67,34 +74,56 @@ export function DecisionCell({
               onChange={(e) => onLabelChange(e.target.value)}
               spellCheck={false}
             />
+            <select
+              className="decision-mode-select"
+              value={mode}
+              onChange={(e) => onModeChange(e.target.value)}
+              title="Decision mode"
+            >
+              <option value="bool">bool</option>
+              <option value="switch">switch</option>
+            </select>
           </div>
           <input
             className="check-expr-input"
-            placeholder="C# boolean expression, e.g. environment == &quot;prod&quot;"
+            placeholder={mode === 'switch'
+              ? 'C# expression returning a value, e.g. environment'
+              : 'C# boolean expression, e.g. environment == "prod"'}
             value={cell.content}
             onChange={(e) => onUpdate(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && kernelReady && !anyRunning) { e.preventDefault(); onRun(); } }}
             spellCheck={false}
           />
           {hasResult && !isRunning && message && (
-            <span className="check-message">{message}</span>
+            <span className="check-message">
+              {mode === 'switch' ? `→ "${message}"` : message}
+            </span>
           )}
-          <div className="decision-paths">
-            <PathSelector
-              label="True →"
-              className="decision-path-true"
-              selected={truePath}
-              options={cellOptions}
-              onToggle={(id) => togglePath(id, truePath, (v) => onTruePathChange(v))}
+          {mode === 'bool' ? (
+            <div className="decision-paths">
+              <PathSelector
+                label="True →"
+                className="decision-path-true"
+                selected={truePath}
+                options={cellOptions}
+                onToggle={(id) => togglePath(id, truePath, (v) => onTruePathChange(v))}
+              />
+              <PathSelector
+                label="False →"
+                className="decision-path-false"
+                selected={falsePath}
+                options={cellOptions}
+                onToggle={(id) => togglePath(id, falsePath, (v) => onFalsePathChange(v))}
+              />
+            </div>
+          ) : (
+            <SwitchPathEditor
+              switchPaths={switchPaths}
+              cellOptions={cellOptions}
+              onChange={onSwitchPathsChange}
+              matchedKey={hasResult ? String(result) : null}
             />
-            <PathSelector
-              label="False →"
-              className="decision-path-false"
-              selected={falsePath}
-              options={cellOptions}
-              onToggle={(id) => togglePath(id, falsePath, (v) => onFalsePathChange(v))}
-            />
-          </div>
+          )}
         </div>
         <div className="decision-cell-actions">
           <button
@@ -135,6 +164,85 @@ function PathSelector({ label, className, selected, options, onToggle }) {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function SwitchPathEditor({ switchPaths, cellOptions, onChange, matchedKey }) {
+  const [newCase, setNewCase] = useState('');
+  const [openCase, setOpenCase] = useState(null);
+
+  const cases = Object.keys(switchPaths);
+
+  const addCase = () => {
+    const key = newCase.trim();
+    if (!key || switchPaths[key]) return;
+    onChange({ ...switchPaths, [key]: [] });
+    setNewCase('');
+  };
+
+  const removeCase = (key) => {
+    const next = { ...switchPaths };
+    delete next[key];
+    onChange(next);
+  };
+
+  const toggleCell = (caseKey, cellId) => {
+    const current = switchPaths[caseKey] || [];
+    const next = current.includes(cellId)
+      ? current.filter((id) => id !== cellId)
+      : [...current, cellId];
+    onChange({ ...switchPaths, [caseKey]: next });
+  };
+
+  return (
+    <div className="decision-switch-paths">
+      {cases.map((caseKey) => {
+        const cells = switchPaths[caseKey] || [];
+        const isMatched = matchedKey === caseKey;
+        const isOpen = openCase === caseKey;
+        return (
+          <div key={caseKey} className={`decision-switch-case${isMatched ? ' matched' : ''}`}>
+            <div className="decision-switch-case-header">
+              <span className={`decision-switch-key${isMatched ? ' matched' : ''}`}>
+                {caseKey === 'default' ? 'default' : `"${caseKey}"`} →
+              </span>
+              <button className="decision-path-toggle" onClick={() => setOpenCase(isOpen ? null : caseKey)}>
+                {cells.length === 0 ? 'none' : `${cells.length} cell${cells.length !== 1 ? 's' : ''}`} ▾
+              </button>
+              <button className="decision-switch-remove" onClick={() => removeCase(caseKey)} title="Remove case">✕</button>
+            </div>
+            {isOpen && (
+              <div className="decision-path-dropdown decision-switch-dropdown">
+                {cellOptions.length === 0 && <span className="decision-path-empty">No cells available</span>}
+                {cellOptions.map((opt) => (
+                  <label key={opt.id} className="decision-path-option">
+                    <input
+                      type="checkbox"
+                      checked={cells.includes(opt.id)}
+                      onChange={() => toggleCell(caseKey, opt.id)}
+                    />
+                    <span className="decision-path-option-label">{opt.label}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+      <div className="decision-switch-add">
+        <input
+          className="decision-switch-add-input"
+          placeholder="Case value…"
+          value={newCase}
+          onChange={(e) => setNewCase(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') addCase(); }}
+        />
+        <button className="decision-switch-add-btn" onClick={addCase} disabled={!newCase.trim()}>+ Case</button>
+        {!switchPaths.default && (
+          <button className="decision-switch-add-btn" onClick={() => onChange({ ...switchPaths, default: [] })}>+ Default</button>
+        )}
+      </div>
     </div>
   );
 }

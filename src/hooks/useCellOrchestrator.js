@@ -68,7 +68,15 @@ export function useCellOrchestrator({
       if (cell.type === 'decision') {
         const freshNb2 = notebooksRef.current.find((n) => n.id === notebookId);
         const decisionResult = freshNb2?.decisionResults?.[cellId];
-        const pathCells = decisionResult?.result ? (cell.truePath || []) : (cell.falsePath || []);
+        let pathCells;
+        if ((cell.mode || 'bool') === 'switch') {
+          // Switch mode: look up result string in switchPaths
+          const key = String(decisionResult?.result ?? '');
+          pathCells = cell.switchPaths?.[key] || cell.switchPaths?.['default'] || [];
+        } else {
+          // Bool mode: true/false paths
+          pathCells = decisionResult?.result ? (cell.truePath || []) : (cell.falsePath || []);
+        }
         // Insert path cells right after current position, in topo order
         const sorted = topoSort(pathCells, edges);
         // Only insert cells not already in the queue

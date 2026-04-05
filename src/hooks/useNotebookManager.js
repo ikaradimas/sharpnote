@@ -58,14 +58,14 @@ export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef }) {
       config: nb.config.filter((e) => e.key.trim()),
       attachedDbIds: nb.attachedDbs.filter((d) => d.status === 'ready').map((d) => d.connectionId),
       autoRun: nb.autoRun || false,
-      cells: nb.cells.map(({ id, type, content, name, color, outputMode, locked, codeFolded, db, label, truePath, falsePath }) => ({
+      cells: nb.cells.map(({ id, type, content, name, color, outputMode, locked, codeFolded, db, label, mode, truePath, falsePath, switchPaths }) => ({
         id, type, content,
         ...(name ? { name } : {}),
         ...(color ? { color } : {}),
         ...(type === 'code' ? { outputMode: outputMode || 'auto', locked: locked || false, ...(codeFolded ? { codeFolded: true } : {}) } : {}),
         ...(type === 'sql'  ? { db: db || '' } : {}),
         ...(type === 'check' || type === 'decision' ? { label: label || '' } : {}),
-        ...(type === 'decision' ? { truePath: truePath || [], falsePath: falsePath || [] } : {}),
+        ...(type === 'decision' ? { mode: mode || 'bool', truePath: truePath || [], falsePath: falsePath || [], switchPaths: switchPaths || {} } : {}),
       })),
       pipelines: (nb.pipelines || []).map(({ id, name, cellIds, color }) => ({ id, name, cellIds, color: color || null })),
     };

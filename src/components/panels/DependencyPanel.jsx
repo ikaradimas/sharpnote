@@ -259,9 +259,16 @@ export function DependencyPanel({
               const isFlowing = executionProgress && completedSet.has(e.from) &&
                 (executionProgress.activeCellId === e.to || executionProgress.queue?.includes(e.to));
               const isComplete = completedSet.has(e.from) && completedSet.has(e.to);
-              const isBranch = e.branch === 'true' || e.branch === 'false';
-              const branchColor = e.branch === 'true' ? '#4ec9b0' : e.branch === 'false' ? '#e05050' : '#3a5068';
-              const marker = e.branch === 'true' ? 'url(#dep-arrow-true)' : e.branch === 'false' ? 'url(#dep-arrow-false)' : 'url(#dep-arrow)';
+              const isBranch = !!e.branch;
+              const branchColor = e.branch === 'true' ? '#4ec9b0'
+                : e.branch === 'false' ? '#e05050'
+                : e.branch === 'default' ? '#808080'
+                : isBranch ? '#c586c0'
+                : '#3a5068';
+              const marker = e.branch === 'true' ? 'url(#dep-arrow-true)'
+                : e.branch === 'false' ? 'url(#dep-arrow-false)'
+                : 'url(#dep-arrow)';
+              const isDashed = e.branch === 'false' || (isBranch && e.branch !== 'true' && e.branch !== 'default');
 
               return (
                 <g key={`e-${i}`}>
@@ -270,12 +277,17 @@ export function DependencyPanel({
                     fill="none"
                     stroke={isComplete ? '#4ec9b0' : branchColor}
                     strokeWidth={isFlowing ? 2.5 : 1.5}
-                    strokeDasharray={isBranch && e.branch === 'false' ? '4 3' : isFlowing ? '6 4' : 'none'}
+                    strokeDasharray={isDashed ? '4 3' : isFlowing ? '6 4' : 'none'}
                     className={isFlowing ? 'dep-edge-flowing' : ''}
                     markerEnd={marker}
                   />
+                  {isBranch && (
+                    <text x={mx} y={(y1 + y2) / 2 - 6} textAnchor="middle" className="dep-edge-label dep-edge-branch-label">
+                      {e.branch}
+                    </text>
+                  )}
                   {e.vars.length > 0 && (
-                    <text x={mx} y={(y1 + y2) / 2 - 6} textAnchor="middle" className="dep-edge-label">
+                    <text x={mx} y={(y1 + y2) / 2 + (isBranch ? 6 : -6)} textAnchor="middle" className="dep-edge-label">
                       {e.vars.slice(0, 3).join(', ')}{e.vars.length > 3 ? '…' : ''}
                     </text>
                   )}

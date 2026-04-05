@@ -25,7 +25,7 @@ export function makeCell(type = 'code', content = '') {
     ...(type === 'code'     ? { outputMode: 'auto', locked: false, scheduleInterval: null } : {}),
     ...(type === 'sql'      ? { db: '' } : {}),
     ...(type === 'check'    ? { label: '' } : {}),
-    ...(type === 'decision' ? { label: '', truePath: [], falsePath: [] } : {}),
+    ...(type === 'decision' ? { label: '', mode: 'bool', truePath: [], falsePath: [], switchPaths: {} } : {}),
   };
 }
 
@@ -1335,9 +1335,32 @@ function makeOrchestrationCells() {
     '    Display.Plot(o.Product, o.Qty * o.Price);',
   ].join('\n')), name: 'Revenue Chart', color: 'orange' };
 
+  // Switch decision: route by top product name
+  const switchCell = { ...makeCell('decision', 'topProduct'), label: 'Route by top product', name: 'Product Router', color: 'purple', mode: 'switch' };
+
+  const widgetACell = { ...makeCell('code', [
+    '// Widget A special handling',
+    'Display.Html("<p style=\'color:#569cd6\'><b>Widget A</b> is the top seller — running A-specific analytics.</p>");',
+  ].join('\n')), name: 'Widget A Path', color: 'blue' };
+
+  const widgetCCell = { ...makeCell('code', [
+    '// Widget C special handling',
+    'Display.Html("<p style=\'color:#4ec9b0\'><b>Widget C</b> leads — bulk pricing analysis triggered.</p>");',
+  ].join('\n')), name: 'Widget C Path', color: 'teal' };
+
+  const defaultRouteCell = { ...makeCell('code', [
+    '// Default route for other products',
+    'Display.Html($"<p style=\'color:#808080\'>Top product <b>{topProduct}</b> has no special handler — using default pipeline.</p>");',
+  ].join('\n')), name: 'Default Path', color: 'gray' };
+
   // Wire decision paths
   decisionCell.truePath  = [passCell.id];
   decisionCell.falsePath = [failCell.id];
+  switchCell.switchPaths = {
+    'Widget A': [widgetACell.id],
+    'Widget C': [widgetCCell.id],
+    'default':  [defaultRouteCell.id],
+  };
 
   return [
     md(`# Cell Orchestration
@@ -1391,13 +1414,30 @@ In the graph, true edges are solid green, false edges are dashed red.`),
     passCell,
     failCell,
 
-    md(`## 5. Visualization
+    md(`## 5. Switch Decision — Multi-Path Branching
+
+Decision cells also support **switch mode** — the expression returns a value and execution
+routes to the matching case. Set the mode to "switch" using the dropdown in the cell header.
+
+The cell below evaluates \`topProduct\` (from *Compute Stats*) and routes to:
+- **"Widget A"** → Widget A analytics
+- **"Widget C"** → Widget C bulk pricing
+- **default** → generic handler (any unmatched value)
+
+In the graph, switch edges are labeled with their case values and colored purple.`),
+
+    switchCell,
+    widgetACell,
+    widgetCCell,
+    defaultRouteCell,
+
+    md(`## 6. Visualization
 
 This cell also depends on \`orders\`, creating another edge in the graph.`),
 
     chartCell,
 
-    md(`## 6. Pipelines
+    md(`## 7. Pipelines
 
 Open the Dependencies panel and use the **Pipelines** section at the bottom:
 
