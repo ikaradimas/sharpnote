@@ -24,6 +24,7 @@ export function NotebookView({
   onRunShellCell,
   onRunCheckCell,
   onRunDecisionCell,
+  onRunCellByName,
   onRunAll,
   onSave,
   onLoad,
@@ -396,6 +397,8 @@ export function NotebookView({
                 onScheduleStop={() => onScheduleStop?.(cell.id)}
                 onNameChange={(name) => updateCellProp(cell.id, 'name', name)}
                 onColorChange={(color) => updateCellProp(cell.id, 'color', color)}
+                allCells={cells}
+                onRunCellByName={onRunCellByName}
               />
             )}
             {!dashboardMode && (

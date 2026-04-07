@@ -194,7 +194,7 @@ export function App() {
       }));
   }, [setNb, setLibraryPanelOpen, setFilesPanelOpen, setApiPanelOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const { runCell, runSqlCell, runHttpCell, runShellCell, runCheckCell, runDecisionCell, runAll, runFrom, runTo, handleInterrupt, handleReset,
+  const { runCell, runCellWithFormData, runSqlCell, runHttpCell, runShellCell, runCheckCell, runDecisionCell, runAll, runFrom, runTo, handleInterrupt, handleReset,
           cancelPendingCells } =
     useKernelManager({
       setNb, notebooksRef, dbConnectionsRef, setVarInspectDialog,
@@ -212,6 +212,13 @@ export function App() {
 
   // ── Pipeline manager ─────────────────────────────────────────────────────
   const pipelineManager = usePipelineManager({ setNbDirty });
+
+  const handleRunCellByName = useCallback((notebookId, targetName, formData) => {
+    const nb = notebooksRef.current.find((n) => n.id === notebookId);
+    if (!nb) return;
+    const cell = nb.cells.find((c) => c.name === targetName || c.id === targetName);
+    if (cell && cell.type === 'code') runCellWithFormData(notebookId, cell, formData);
+  }, [runCellWithFormData]);
 
   const handleResetWithSchedules = useCallback((notebookId) => {
     stopAllSchedules(notebookId);
@@ -1078,6 +1085,7 @@ export function App() {
                     onRunShellCell={runShellCell}
                     onRunCheckCell={runCheckCell}
                     onRunDecisionCell={runDecisionCell}
+                    onRunCellByName={handleRunCellByName}
                     onRunAll={runAll}
                     onInterrupt={handleInterrupt}
                     onRunFrom={runFrom}

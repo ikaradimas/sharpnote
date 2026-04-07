@@ -58,6 +58,8 @@ export function CodeCell({
   onScheduleStop,
   onNameChange,
   onColorChange,
+  allCells,
+  onRunCellByName,
 }) {
   const outputMode = cell.outputMode || 'auto';
   const locked = cell.locked || false;
@@ -216,7 +218,7 @@ export function CodeCell({
           </button>
         </div>
       )}
-      {!outputCollapsed && <CellOutput messages={displayedOutputs} notebookId={notebookId} />}
+      {!outputCollapsed && <CellOutput messages={displayedOutputs} notebookId={notebookId} allCells={allCells} onRunCellByName={onRunCellByName} />}
       <div className="code-cell-footer">
         {(isRunning || lastDuration !== null) && (
           <span className="cell-execution-timer">

@@ -498,6 +498,25 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
     });
   }, [setNb]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const runCellWithFormData = useCallback(async (notebookId, cell, formData) => {
+    if (!window.electronAPI || cell.type !== 'code') return;
+    const nb = notebooksRef.current.find((n) => n.id === notebookId);
+    const resolvedConfig = await resolveConfig(nb);
+
+    return new Promise((resolve) => {
+      prepareCellRun(setNb, pendingResolversRef, notebookId, cell.id, resolve);
+      window.electronAPI.sendToKernel(notebookId, {
+        type: 'execute',
+        id: cell.id,
+        code: cell.content,
+        outputMode: cell.outputMode || 'auto',
+        sources: nb ? nb.nugetSources.filter((s) => s.enabled).map((s) => s.url) : [],
+        config: resolvedConfig,
+        formData,
+      });
+    });
+  }, [setNb]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const runAll = useCallback(async (notebookId) => {
     const nb = notebooksRef.current.find((n) => n.id === notebookId);
     if (!nb) return;
@@ -637,6 +656,7 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
 
   return {
     runCell,
+    runCellWithFormData,
     runSqlCell,
     runHttpCell,
     runShellCell,

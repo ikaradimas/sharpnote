@@ -71,6 +71,33 @@ public class WidgetHandle
     public override string ToString() => _stringValue;
 }
 
+// ── FormField ────────────────────────────────────────────────────────────────
+
+public record FormField(
+    string Key, string Label, string Type,
+    object? DefaultValue = null, bool Required = false,
+    string? Placeholder = null, double? Min = null, double? Max = null,
+    double? Step = null, string[]? Options = null)
+{
+    public static FormField Text(string key, string label, string defaultValue = "", bool required = false, string? placeholder = null)
+        => new(key, label, "text", defaultValue, required, placeholder);
+
+    public static FormField Number(string key, string label, double defaultValue = 0, bool required = false, double? min = null, double? max = null, double? step = null)
+        => new(key, label, "number", defaultValue, required, Min: min, Max: max, Step: step);
+
+    public static FormField Select(string key, string label, string[] options, string? defaultValue = null, bool required = false)
+        => new(key, label, "select", defaultValue ?? (options.Length > 0 ? options[0] : ""), required, Options: options);
+
+    public static FormField Checkbox(string key, string label, bool defaultValue = false)
+        => new(key, label, "checkbox", defaultValue);
+
+    public static FormField TextArea(string key, string label, string defaultValue = "", string? placeholder = null, bool required = false)
+        => new(key, label, "textarea", defaultValue, required, placeholder);
+
+    public static FormField Date(string key, string label, string? defaultValue = null)
+        => new(key, label, "date", defaultValue ?? DateTime.Today.ToString("yyyy-MM-dd"));
+}
+
 // ── LayoutCell ────────────────────────────────────────────────────────────────
 
 /// <summary>A titled cell for use with <see cref="DisplayHelper.Layout"/>.</summary>
@@ -149,6 +176,7 @@ public class DisplayHelper
     private readonly Dictionary<string, double> _plotLastValues = new();
     private string? _currentId;
     private int _widgetCounter;
+    private int _formCounter;
 
     public DisplayHelper(TextWriter output, Dictionary<string, JsonElement>? widgetValues = null)
     {
@@ -160,6 +188,7 @@ public class DisplayHelper
     {
         _currentId = id;
         _widgetCounter = 0;
+        _formCounter = 0;
     }
 
     private void Send(object payload)
@@ -289,6 +318,60 @@ public class DisplayHelper
         Send(new { type = "display", id = _currentId, format = "widget",
                    content = new { widgetType = "datepicker", widgetKey, label, value = currentValue } });
         return new WidgetHandle(widgetKey, currentValue);
+    }
+
+    // ── Forms ─────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Renders a form with fields inferred from an anonymous object's properties.
+    /// On submit, the target cell executes with FormData dictionary.
+    /// </summary>
+    public void Form(string title, object model, string targetCell)
+    {
+        var fields = new List<object>();
+        foreach (var prop in model.GetType().GetProperties())
+        {
+            var val = prop.GetValue(model);
+            var type = val switch
+            {
+                bool   => "checkbox",
+                int    => "number",
+                long   => "number",
+                float  => "number",
+                double => "number",
+                decimal => "number",
+                DateTime dt => "date",
+                _ => "text",
+            };
+            var defaultValue = val switch
+            {
+                DateTime dt => dt.ToString("yyyy-MM-dd"),
+                _ => val,
+            };
+            var label = System.Text.RegularExpressions.Regex.Replace(prop.Name, "([a-z])([A-Z])", "$1 $2");
+            fields.Add(new { key = prop.Name, label, type, defaultValue, required = false });
+        }
+
+        var formKey = $"{_currentId}_f{_formCounter++}";
+        Send(new { type = "display", id = _currentId, format = "form",
+                   content = new { formKey, title, targetCell, fields } });
+    }
+
+    /// <summary>
+    /// Renders a form with explicit field descriptors.
+    /// On submit, the target cell executes with FormData dictionary.
+    /// </summary>
+    public void Form(string title, FormField[] fields, string targetCell)
+    {
+        var formKey = $"{_currentId}_f{_formCounter++}";
+        var fieldSpecs = fields.Select(f => new {
+            key = f.Key, label = f.Label, type = f.Type,
+            defaultValue = f.DefaultValue, required = f.Required,
+            placeholder = f.Placeholder, min = f.Min, max = f.Max,
+            step = f.Step, options = f.Options,
+        }).ToArray();
+        Send(new { type = "display", id = _currentId, format = "form",
+                   content = new { formKey, title, targetCell, fields = fieldSpecs } });
     }
 
     /// <summary>

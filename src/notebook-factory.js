@@ -52,6 +52,7 @@ export const NOTEBOOK_TEMPLATES = [
   { key: 'scripting-utils',  label: 'Scripting & Utilities',   description: 'Logging, config, async, Util helpers' },
   { key: 'workspace-panels', label: 'Workspace & Panels',      description: 'Panels API, dock/float, layout scripting' },
   { key: 'orchestration',    label: 'Cell Orchestration',      description: 'Decision cells, naming, colors, pipelines' },
+  { key: 'forms',            label: 'Forms',                   description: 'Interactive forms, submit-to-cell, dashboard mode' },
 ];
 
 function cellsForTemplate(key) {
@@ -63,6 +64,7 @@ function cellsForTemplate(key) {
     case 'scripting-utils':  return makeScriptingUtilsCells();
     case 'workspace-panels': return makeWorkspacePanelsCells();
     case 'orchestration':    return makeOrchestrationCells();
+    case 'forms':            return makeFormsCells();
     default:                 return [];
   }
 }
@@ -1467,6 +1469,162 @@ Decision cells dynamically choose which branch to follow during pipeline executi
 - **Cancel** (⏹) stops a running orchestration mid-flight
 - Nodes pulse when running, show ✓/✗ when done, and turn amber when stale
 - Variable names appear as edge labels to show data flow`),
+  ];
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Template 8 — Forms
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function makeFormsCells() {
+  // Pre-create named cells so forms can reference them as targets
+  const searchHandler = { ...makeCell('code', [
+    '// Process the search form submission',
+    'var query = (string)FormData["Query"];',
+    'var maxResults = Convert.ToInt32(FormData["MaxResults"]);',
+    'var includeArchived = (bool)FormData["IncludeArchived"];',
+    '',
+    'var results = new[] { "Alpha", "Beta", "Gamma", "Delta", "Epsilon" }',
+    '    .Where(s => string.IsNullOrEmpty(query) || s.Contains(query, StringComparison.OrdinalIgnoreCase))',
+    '    .Take(maxResults);',
+    '',
+    'Display.Html($"<h4>Search Results</h4><p>Query: <b>{query}</b> | Max: {maxResults} | Archived: {includeArchived}</p>");',
+    'Display.Table(results.Select(r => new { Name = r, Status = "Active" }));',
+  ].join('\n')), name: 'Process Search' };
+
+  const orderHandler = { ...makeCell('code', [
+    '// Process the order form submission',
+    'var name = (string)FormData["name"];',
+    'var quantity = Convert.ToInt32(FormData["quantity"]);',
+    'var priority = (string)FormData["priority"];',
+    'var rush = (bool)FormData["rush"];',
+    'var notes = (string)FormData["notes"];',
+    'var date = (string)FormData["deliveryDate"];',
+    '',
+    'var unitPrice = 24.99;',
+    'var total = quantity * unitPrice * (rush ? 1.5 : 1.0);',
+    '',
+    'Display.Html($@"',
+    '<div style=""padding:12px;border:1px solid #4ec9b0;border-radius:6px"">',
+    '  <h4 style=""color:#4ec9b0;margin:0 0 8px"">Order Confirmed</h4>',
+    '  <table>',
+    '    <tr><td><b>Customer</b></td><td>{name}</td></tr>',
+    '    <tr><td><b>Quantity</b></td><td>{quantity}</td></tr>',
+    '    <tr><td><b>Priority</b></td><td>{priority}</td></tr>',
+    '    <tr><td><b>Rush</b></td><td>{(rush ? "Yes (+50%)" : "No")}</td></tr>',
+    '    <tr><td><b>Delivery</b></td><td>{date}</td></tr>',
+    '    <tr><td><b>Total</b></td><td>${total:N2}</td></tr>',
+    '  </table>',
+    '  {(string.IsNullOrEmpty(notes) ? "" : $"<p><i>{notes}</i></p>")}',
+    '</div>");',
+  ].join('\n')), name: 'Submit Order' };
+
+  const surveyHandler = { ...makeCell('code', [
+    '// Process the survey form submission',
+    'var rating = Convert.ToInt32(FormData["rating"]);',
+    'var feature = (string)FormData["feature"];',
+    'var feedback = (string)FormData["feedback"];',
+    'var recommend = (bool)FormData["recommend"];',
+    '',
+    'Display.Html($@"',
+    '<div style=""padding:12px;border:1px solid #569cd6;border-radius:6px"">',
+    '  <h4 style=""color:#569cd6;margin:0 0 8px"">Survey Response Recorded</h4>',
+    '  <p>Rating: {new string(\'★\', rating)}{new string(\'☆\', 5 - rating)} ({rating}/5)</p>',
+    '  <p>Favorite feature: <b>{feature}</b></p>',
+    '  <p>Would recommend: {(recommend ? "Yes" : "No")}</p>',
+    '  {(string.IsNullOrEmpty(feedback) ? "" : $"<p>Feedback: <i>{feedback}</i></p>")}',
+    '</div>");',
+    '',
+    'Display.Plot("Rating", rating);',
+  ].join('\n')), name: 'Process Survey' };
+
+  return [
+    md(`# Forms
+
+This template demonstrates **Display.Form()** — interactive forms that submit to a target cell.
+Forms work in **dashboard mode**, making them ideal for data-entry applications.
+
+Toggle dashboard mode with **Ctrl+Shift+B** to see forms without code.`),
+
+    md(`## 1. Simple Search Form
+
+The simplest form uses an **anonymous object** — field types are inferred automatically:
+- \`string\` → text input
+- \`int\`/\`double\` → number input
+- \`bool\` → checkbox`),
+
+    cs([
+      '// Simple form: types inferred from anonymous object properties',
+      'Display.Form("Search", new {',
+      '    Query = "",',
+      '    MaxResults = 10,',
+      '    IncludeArchived = false,',
+      '}, targetCell: "Process Search");',
+    ].join('\n')),
+
+    searchHandler,
+
+    md(`## 2. Order Entry Form
+
+For full control, use **FormField** descriptors with explicit types, validation,
+placeholders, and options:`),
+
+    cs([
+      '// Detailed form with explicit field types and validation',
+      'Display.Form("Place Order", new FormField[] {',
+      '    FormField.Text("name", "Customer Name", required: true, placeholder: "Full name"),',
+      '    FormField.Number("quantity", "Quantity", min: 1, max: 100, defaultValue: 1),',
+      '    FormField.Select("priority", "Priority",',
+      '        options: new[] { "Low", "Medium", "High" }, defaultValue: "Medium"),',
+      '    FormField.Checkbox("rush", "Rush Delivery (+50%)"),',
+      '    FormField.TextArea("notes", "Order Notes", placeholder: "Special instructions..."),',
+      '    FormField.Date("deliveryDate", "Delivery Date"),',
+      '}, targetCell: "Submit Order");',
+    ].join('\n')),
+
+    orderHandler,
+
+    md(`## 3. Dynamic Survey Form
+
+Forms can be **generated from data**. This example builds a survey dynamically
+and the handler cell processes the response:`),
+
+    cs([
+      '// Build form fields dynamically from data',
+      'var features = new[] { "Code Editor", "Panels", "Charts", "SQL", "Forms" };',
+      '',
+      'var fields = new[] {',
+      '    FormField.Number("rating", "Overall Rating (1-5)", min: 1, max: 5, defaultValue: 4),',
+      '    FormField.Select("feature", "Favorite Feature", options: features),',
+      '    FormField.TextArea("feedback", "Additional Feedback", placeholder: "What could be better?"),',
+      '    FormField.Checkbox("recommend", "Would you recommend this app?", defaultValue: true),',
+      '};',
+      '',
+      'Display.Form("User Satisfaction Survey", fields, targetCell: "Process Survey");',
+    ].join('\n')),
+
+    surveyHandler,
+
+    md(`## How It Works
+
+| Concept | Details |
+|---------|---------|
+| **Display.Form(title, model, targetCell)** | Anonymous object → inferred field types |
+| **Display.Form(title, fields[], targetCell)** | FormField array → explicit control |
+| **FormData dictionary** | Target cell receives \`FormData["key"]\` with submitted values |
+| **targetCell** | Cell name or ID — executed on submit with FormData injected |
+| **Dashboard mode** | Forms render without code — Ctrl+Shift+B to toggle |
+
+### FormField Types
+
+| Factory | HTML Input | C# Type |
+|---------|-----------|---------|
+| \`FormField.Text()\` | text input | string |
+| \`FormField.Number()\` | number input (min/max/step) | double |
+| \`FormField.Select()\` | dropdown | string |
+| \`FormField.Checkbox()\` | checkbox | bool |
+| \`FormField.TextArea()\` | multi-line text | string |
+| \`FormField.Date()\` | date picker | string (ISO-8601) |`),
   ];
 }
 

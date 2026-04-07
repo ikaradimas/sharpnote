@@ -11,6 +11,7 @@ import { PromptWidget } from './PromptWidget.jsx';
 import { ProgressOutput } from './ProgressOutput.jsx';
 import { ObjectTree } from './ObjectTree.jsx';
 import { LayoutOutput } from './LayoutOutput.jsx';
+import { FormOutput } from './FormOutput.jsx';
 
 async function exportMsg(msg) {
   if (!window.electronAPI?.saveFile) return;
@@ -45,7 +46,7 @@ async function exportMsg(msg) {
   }
 }
 
-export function OutputBlock({ msg, index, notebookId }) {
+export function OutputBlock({ msg, index, notebookId, allCells, onRunCellByName }) {
   const canExport = msg.type === 'stdout' ||
     (msg.type === 'display' && ['html', 'table', 'csv', 'graph'].includes(msg.format));
 
@@ -68,6 +69,8 @@ export function OutputBlock({ msg, index, notebookId }) {
       inner = <DataTable rows={parseCsv(msg.content)} />;
     } else if (msg.format === 'graph') {
       inner = <GraphOutput config={msg.content} />;
+    } else if (msg.format === 'form') {
+      inner = <FormOutput spec={msg.content} notebookId={notebookId} allCells={allCells} onRunCellByName={onRunCellByName} />;
     } else if (msg.format === 'widget') {
       inner = <WidgetOutput spec={msg.content} notebookId={notebookId} />;
     } else if (msg.format === 'markdown') {
@@ -114,7 +117,7 @@ function isTableMsg(msg) {
   return msg.type === 'display' && (msg.format === 'table' || msg.format === 'csv');
 }
 
-function TabbedResults({ tableMessages, notebookId }) {
+function TabbedResults({ tableMessages, notebookId, allCells, onRunCellByName }) {
   const [activeTab, setActiveTab] = useState(0);
   const msg = tableMessages[activeTab];
   return (
@@ -135,12 +138,12 @@ function TabbedResults({ tableMessages, notebookId }) {
           );
         })}
       </div>
-      <OutputBlock msg={msg} index={activeTab} notebookId={notebookId} />
+      <OutputBlock msg={msg} index={activeTab} notebookId={notebookId} allCells={allCells} onRunCellByName={onRunCellByName} />
     </div>
   );
 }
 
-export function CellOutput({ messages, notebookId }) {
+export function CellOutput({ messages, notebookId, allCells, onRunCellByName }) {
   if (!messages || messages.length === 0) return null;
 
   // If 2+ table outputs exist, group them into a tabbed view
@@ -151,13 +154,13 @@ export function CellOutput({ messages, notebookId }) {
   return (
     <div className="cell-output">
       {nonTableMessages.map((msg, i) => (
-        <OutputBlock key={msg.handleId || `nt-${i}`} msg={msg} index={i} notebookId={notebookId} />
+        <OutputBlock key={msg.handleId || `nt-${i}`} msg={msg} index={i} notebookId={notebookId} allCells={allCells} onRunCellByName={onRunCellByName} />
       ))}
       {useTabs ? (
-        <TabbedResults tableMessages={tableMessages} notebookId={notebookId} />
+        <TabbedResults tableMessages={tableMessages} notebookId={notebookId} allCells={allCells} onRunCellByName={onRunCellByName} />
       ) : (
         tableMessages.map((msg, i) => (
-          <OutputBlock key={msg.handleId || `t-${i}`} msg={msg} index={i} notebookId={notebookId} />
+          <OutputBlock key={msg.handleId || `t-${i}`} msg={msg} index={i} notebookId={notebookId} allCells={allCells} onRunCellByName={onRunCellByName} />
         ))
       )}
     </div>

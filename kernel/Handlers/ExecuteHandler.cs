@@ -111,6 +111,27 @@ partial class Program
         UtilContext.Current.SetCancellationToken(execToken);
         var interrupted = false;
 
+        // Inject FormData variable when the execute message contains form submission data.
+        if (msg.TryGetProperty("formData", out var formDataProp) && formDataProp.ValueKind == JsonValueKind.Object)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("var FormData = new System.Collections.Generic.Dictionary<string, object> {");
+            foreach (var entry in formDataProp.EnumerateObject())
+            {
+                var val = entry.Value.ValueKind switch
+                {
+                    JsonValueKind.String => $"\"{entry.Value.GetString()!.Replace("\\", "\\\\").Replace("\"", "\\\"")}\"",
+                    JsonValueKind.Number => entry.Value.GetRawText(),
+                    JsonValueKind.True   => "true",
+                    JsonValueKind.False  => "false",
+                    _                    => $"\"{entry.Value.GetRawText().Replace("\\", "\\\\").Replace("\"", "\\\"")}\"",
+                };
+                sb.AppendLine($"    [\"{entry.Name}\"] = (object){val},");
+            }
+            sb.AppendLine("};");
+            cleanCode = sb.ToString() + cleanCode;
+        }
+
         // Strip trailing semicolon from the final expression statement so Roslyn
         // captures its return value (e.g. `DateTime.Compare(a,b);` → displays the int).
         cleanCode = TrimFinalExprSemicolon(cleanCode);
