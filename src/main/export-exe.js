@@ -11,6 +11,33 @@
 
 const NUGET_DIRECTIVE_RE = /^\s*#r\s+"nuget:\s*[^"]+"\s*$/gm;
 
+/**
+ * In Roslyn scripting, a cell's last line without a trailing semicolon is an
+ * auto-displayed return expression. In compiled C# that's invalid — wrap it
+ * in Console.WriteLine() so the value prints and the code compiles.
+ */
+function wrapTrailingExpression(code) {
+  const codeLines = code.split('\n');
+  // Find last non-empty, non-comment line
+  let lastIdx = -1;
+  for (let i = codeLines.length - 1; i >= 0; i--) {
+    const trimmed = codeLines[i].trim();
+    if (trimmed && !trimmed.startsWith('//')) { lastIdx = i; break; }
+  }
+  if (lastIdx < 0) return code;
+
+  const lastLine = codeLines[lastIdx].trimEnd();
+  // If the line already ends with ; { } it's a normal statement — leave it
+  if (/[;{}]\s*$/.test(lastLine)) return code;
+  // If it's blank or a preprocessor directive, leave it
+  if (!lastLine.trim() || lastLine.trim().startsWith('#')) return code;
+
+  // It's a trailing expression — wrap in Console.WriteLine
+  const indent = lastLine.match(/^(\s*)/)[1];
+  codeLines[lastIdx] = `${indent}Console.WriteLine(${lastLine.trim()});`;
+  return codeLines.join('\n');
+}
+
 function slugify(name) {
   return name
     .replace(/[^a-zA-Z0-9_\- ]/g, '')
@@ -54,7 +81,7 @@ function generateProgramCs(cells, config, title) {
     lines.push(`// ── ${label} ${'─'.repeat(Math.max(1, 68 - label.length))}──`);
     // Strip #r "nuget: ..." directives (handled by .csproj)
     const code = (cell.content || '').replace(NUGET_DIRECTIVE_RE, '').trim();
-    if (code) lines.push(code);
+    if (code) lines.push(wrapTrailingExpression(code));
     lines.push('');
   }
 
@@ -157,10 +184,10 @@ public static class DisplayExtensions
     }
 
     public static void DisplayTable<T>(this IEnumerable<T> items, string? title = null)
-        => Display.Table(items, title);
+        => global::Display.Table(items, title);
 
     public static void DumpTable<T>(this IEnumerable<T> items, string? title = null)
-        => Display.Table(items, title);
+        => global::Display.Table(items, title);
 }
 `;
 }

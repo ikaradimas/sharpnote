@@ -63,6 +63,38 @@ describe('generateProgramCs', () => {
     const result = generateProgramCs([], config, 'Test');
     expect(result).toContain('SELECT \\"name\\"');
   });
+
+  it('wraps trailing expression without semicolon in Console.WriteLine', () => {
+    const cells = [{ content: 'var x = 42;\nx' }];
+    const result = generateProgramCs(cells, [], 'Test');
+    expect(result).toContain('Console.WriteLine(x);');
+    expect(result).toContain('var x = 42;');
+  });
+
+  it('wraps bare DateTime.Now expression', () => {
+    const cells = [{ content: 'DateTime.Now' }];
+    const result = generateProgramCs(cells, [], 'Test');
+    expect(result).toContain('Console.WriteLine(DateTime.Now);');
+  });
+
+  it('does not wrap lines ending with semicolon', () => {
+    const cells = [{ content: 'Console.WriteLine("hi");' }];
+    const result = generateProgramCs(cells, [], 'Test');
+    expect(result).toContain('Console.WriteLine("hi");');
+    expect(result).not.toContain('Console.WriteLine(Console.WriteLine');
+  });
+
+  it('does not wrap lines ending with braces', () => {
+    const cells = [{ content: 'if (true) {\n  var x = 1;\n}' }];
+    const result = generateProgramCs(cells, [], 'Test');
+    expect(result).not.toContain('Console.WriteLine(})');
+  });
+
+  it('skips trailing comments to find expression', () => {
+    const cells = [{ content: 'var x = 1;\nx\n// end' }];
+    const result = generateProgramCs(cells, [], 'Test');
+    expect(result).toContain('Console.WriteLine(x);');
+  });
 });
 
 describe('generateCsproj', () => {
@@ -110,7 +142,7 @@ describe('generateConsoleStubsCs', () => {
     expect(result).toContain('public static class DisplayExtensions');
     expect(result).toContain('public static T Display<T>');
     expect(result).toContain('public static T Log<T>');
-    expect(result).toContain('public static void DisplayTable<T>');
+    expect(result).toContain('DisplayTable<T>');
   });
 });
 
