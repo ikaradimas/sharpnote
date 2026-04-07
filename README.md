@@ -108,6 +108,7 @@
 - **Display.Markdown** — `Display.Markdown(text)` renders markdown from C# code with Mermaid diagram and KaTeX math support, enabling dynamic reports and documentation generation
 - **Graph panel** — live time-series chart driven by `Display.Plot(name, value)` calls; per-variable avg / max overlay lines; Clear button and `Display.ClearGraph()` API; chart type, legend toggle (`Ctrl+Shift+R`)
 - **Interactive Widgets** — `Display.Slider()`, `Display.Dropdown()`, and `Display.DatePicker()` render live controls in cell output; widget values persist between cell executions and are sent back to the kernel on change
+- **Interactive forms** — `Display.Form()` renders data-entry forms in cell output with text, number, select, checkbox, textarea, date fields; submitting executes a target cell with `FormData` dictionary; works in dashboard mode for data-entry applications
 - **Table column sorting** — click any column header to sort ascending; click again for descending; third click restores original order; numeric columns sort numerically, not lexically
 - **Notebook Export** — File → Export as HTML… generates a self-contained dark-themed HTML file containing all cell sources, markdown renders, and outputs; no external dependencies required to view it
 - **Export as Executable** — File → Export as Executable… generates a standalone .NET console project (Program.cs + ConsoleStubs.cs + .csproj) from notebook code cells; NuGet packages and config values are included; run with `dotnet run` or publish as a native binary
