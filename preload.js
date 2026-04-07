@@ -116,6 +116,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // PDF export
   exportPdf: () => ipcRenderer.invoke('export-pdf'),
 
+  // Executable export
+  exportExecutable: (data) => ipcRenderer.invoke('export-executable', data),
+
   // URL fetch (proxied through main to bypass renderer CSP for http:// URLs)
   fetchUrl: (url) => ipcRenderer.invoke('fetch-url', url),
 

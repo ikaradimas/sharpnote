@@ -740,6 +740,18 @@ export function App() {
     settings:          () => setSettingsOpen(true),
     'export-html':     handleExportHtml,
     'export-pdf':      () => window.electronAPI?.exportPdf(),
+    'export-exe':      () => {
+      const nb = notebooksRef.current.find((n) => n.id === activeIdRef.current);
+      if (!nb) return;
+      const codeCells = nb.cells.filter((c) => c.type === 'code');
+      if (codeCells.length === 0) return;
+      window.electronAPI?.exportExecutable({
+        cells: codeCells.map((c) => ({ name: c.name, content: c.content })),
+        packages: (nb.nugetPackages || []).filter((p) => p.status === 'loaded').map((p) => ({ id: p.id, version: p.version })),
+        config: (nb.config || []).filter((e) => e.key.trim()).map((e) => ({ key: e.key, value: e.value })),
+        title: getNotebookDisplayName(nb.path, nb.title, 'notebook'),
+      });
+    },
     'command-palette': () => setCommandPaletteOpen(true),
     dashboard:         () => setDashboardMode((v) => !v),
   };

@@ -1046,6 +1046,34 @@ export const DOCS_SECTIONS = [
     ],
   },
   {
+    id: 'export-executable', title: 'Export as Executable',
+    content: [
+      { type: 'p', text: 'Export notebook code cells as a standalone .NET console application. The exported project can be run with `dotnet run` or published as a native executable with `dotnet publish`.' },
+      { type: 'p', text: 'Use File → Export as Executable… or the Command Palette (Ctrl+K → "Export as Executable").' },
+      { type: 'h3', text: 'What Gets Exported' },
+      { type: 'ul', items: [
+        'All code cells merged into Program.cs as top-level statements (C# 9+)',
+        'NuGet packages added as <PackageReference> entries in the .csproj',
+        'Notebook config values hardcoded as a Dictionary<string, string>',
+        'ConsoleStubs.cs provides Display.Html, Display.Table, .Log(), .Display() targeting Console output',
+        '#r "nuget: ..." directives are stripped (handled by .csproj instead)',
+        'Non-code cells (markdown, SQL, HTTP, shell, check, decision) are skipped',
+      ]},
+      { type: 'h3', text: 'Running the Export' },
+      { type: 'code', text: '# Run directly\ncd my-notebook-export\ndotnet run\n\n# Publish as self-contained executable\ndotnet publish -c Release --self-contained -r osx-arm64\n# or: -r win-x64, -r linux-x64' },
+      { type: 'h3', text: 'Console Stubs' },
+      { type: 'p', text: 'The exported ConsoleStubs.cs replaces notebook-specific APIs with console-friendly equivalents:' },
+      { type: 'ul', items: [
+        'Display.Html(html) → strips HTML tags, prints as plain text',
+        'Display.Table(rows) → prints formatted ASCII table with headers',
+        'Display.Plot(name, value) → prints "name: value" lines',
+        '.Display() / .Dump() → Console.WriteLine',
+        '.Log(label) → Console.Error.WriteLine (preserves chainability)',
+        'Display.Graph() → prints placeholder message',
+      ]},
+    ],
+  },
+  {
     id: 'cell-orchestration', title: 'Cell Orchestration',
     content: [
       { type: 'p', text: 'Cell Orchestration lets you build execution pipelines by naming cells, assigning colors, defining boolean decision branches, and wiring everything together in an interactive dependency graph.' },

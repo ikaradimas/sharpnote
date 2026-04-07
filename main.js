@@ -215,6 +215,28 @@ function registerAllHandlers() {
     }
   });
 
+  // Export notebook as standalone .NET console project
+  ipcMain.handle('export-executable', async (_ev, { cells, packages, config, title }) => {
+    const { generateExecutableProject, slugify } = require('./src/main/export-exe.js');
+    const result = await dialog.showOpenDialog(mainWindow, {
+      title: 'Export as Executable — Choose Folder',
+      properties: ['openDirectory', 'createDirectory'],
+    });
+    if (result.canceled || !result.filePaths[0]) return { success: false };
+    try {
+      const dirName = slugify(title);
+      const dir = path.join(result.filePaths[0], dirName);
+      const files = generateExecutableProject({ cells, packages, config, title });
+      fs.mkdirSync(dir, { recursive: true });
+      for (const [name, content] of Object.entries(files)) {
+        fs.writeFileSync(path.join(dir, name), content, 'utf-8');
+      }
+      return { success: true, filePath: dir };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
   // Export active notebook as PDF
   ipcMain.handle('export-pdf', async () => {
     const { filePath, canceled } = await dialog.showSaveDialog({

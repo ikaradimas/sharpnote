@@ -110,6 +110,7 @@
 - **Interactive Widgets** — `Display.Slider()`, `Display.Dropdown()`, and `Display.DatePicker()` render live controls in cell output; widget values persist between cell executions and are sent back to the kernel on change
 - **Table column sorting** — click any column header to sort ascending; click again for descending; third click restores original order; numeric columns sort numerically, not lexically
 - **Notebook Export** — File → Export as HTML… generates a self-contained dark-themed HTML file containing all cell sources, markdown renders, and outputs; no external dependencies required to view it
+- **Export as Executable** — File → Export as Executable… generates a standalone .NET console project (Program.cs + ConsoleStubs.cs + .csproj) from notebook code cells; NuGet packages and config values are included; run with `dotnet run` or publish as a native binary
 - **Memory sparkline** — kernel reports heap usage every 3 s; rendered as an SVG bar chart in the status bar
 
 ### Panels
