@@ -6,6 +6,7 @@ const { spawn } = require('child_process');
 const readline = require('readline');
 const { decryptConfigSecrets } = require('./notebook-io');
 const { getKernelSpawnArgs } = require('./kernel-manager');
+const logOps = require('./log-ops');
 
 /**
  * Parse CLI arguments after the `run` subcommand.
@@ -69,11 +70,32 @@ function applyConfigOverrides(config, overrides) {
 
 const EXECUTABLE_TYPES = new Set(['code', 'sql', 'http', 'shell', 'check']);
 
+function log(tag, message) {
+  logOps.writeLog(tag, message);
+}
+
+/** Summarise a kernel message for the log — keeps entries readable. */
+function summariseMsg(msg) {
+  switch (msg.type) {
+    case 'stdout':   return msg.content ? msg.content.slice(0, 500) : '(empty)';
+    case 'display':  return `format=${msg.format || 'html'} content=${(msg.text || msg.data || JSON.stringify(msg.content || '')).slice(0, 200)}`;
+    case 'error':    return msg.message || '(no message)';
+    case 'vars_update': return `${(msg.vars || []).length} variables`;
+    case 'nuget_status': return `${msg.id} ${msg.status}${msg.message ? ` — ${msg.message}` : ''}`;
+    case 'check_result': return `${msg.passed ? 'PASS' : 'FAIL'} ${msg.message || ''}`;
+    case 'decision_result': return `result=${msg.result} ${msg.message || ''}`;
+    case 'memory_mb': return `${msg.mb} MB`;
+    case 'log':       return `[${msg.tag}] ${msg.message}`;
+    case 'complete':  return `success=${msg.success}${msg.cancelled ? ' (cancelled)' : ''}`;
+    default:          return JSON.stringify(msg).slice(0, 300);
+  }
+}
+
 /**
  * Execute a single cell against a running kernel and collect outputs.
  * Returns { outputs, success } where success is from the `complete` message.
  */
-function executeCell(kernelProcess, rl, cell) {
+function executeCell(kernelProcess, rl, cell, cellLabel) {
   return new Promise((resolve) => {
     const id = cell.id;
     const outputs = [];
@@ -84,6 +106,11 @@ function executeCell(kernelProcess, rl, cell) {
       let msg;
       try { msg = JSON.parse(line); } catch { return; }
 
+      // Log every kernel message for this cell
+      if (msg.id === id || !msg.id) {
+        log('KERNEL', `${cellLabel} ${msg.type}: ${summariseMsg(msg)}`);
+      }
+
       if (msg.id !== id) return;
 
       if (msg.type === 'complete') {
@@ -93,6 +120,8 @@ function executeCell(kernelProcess, rl, cell) {
       } else if (msg.type === 'error') {
         outputs.push({ type: 'error', message: msg.message });
       } else if (msg.type === 'output' || msg.type === 'display') {
+        outputs.push(msg);
+      } else if (msg.type === 'stdout') {
         outputs.push(msg);
       } else {
         outputs.push(msg);
@@ -131,14 +160,17 @@ function formatOutputs(cellIndex, cell, outputs, format) {
   for (const out of outputs) {
     if (out.type === 'error') {
       lines.push(`[${label}] ERROR: ${out.message}`);
+    } else if (out.type === 'stdout') {
+      const text = out.content || out.text || '';
+      if (text) lines.push(`[${label}] ${text}`);
     } else if (out.type === 'output') {
       const text = out.text || out.data || out.message || '';
       if (text) lines.push(`[${label}] ${text}`);
     } else if (out.type === 'display') {
       const text = out.text || out.data || JSON.stringify(out);
       lines.push(`[${label}] ${text}`);
-    } else if (out.text || out.data || out.message) {
-      lines.push(`[${label}] ${out.text || out.data || out.message}`);
+    } else if (out.text || out.data || out.message || out.content) {
+      lines.push(`[${label}] ${out.text || out.data || out.message || out.content}`);
     }
   }
   return lines;
@@ -159,11 +191,18 @@ async function run(app, args) {
     return 1;
   }
 
+  // Initialise logging — write to the standard app log directory
+  const logDir = path.join(app.getPath('userData'), 'logs');
+  logOps.init({ logDir, mainWindow: null });
+  log('HEADLESS', `Starting headless run: ${opts.notebook}`);
+
   // 1. Load notebook
   let notebook;
   try {
     notebook = loadNotebook(opts.notebook);
+    log('HEADLESS', `Loaded notebook: ${notebook.cells?.length || 0} cells`);
   } catch (err) {
+    log('HEADLESS', `Failed to load notebook: ${err.message}`);
     console.error(`Failed to load notebook: ${err.message}`);
     return 1;
   }
@@ -180,6 +219,7 @@ async function run(app, args) {
       stdio: ['pipe', 'pipe', 'pipe'],
     });
   } catch (err) {
+    log('HEADLESS', `Failed to start kernel: ${err.message}`);
     console.error(`Failed to start kernel: ${err.message}`);
     return 1;
   }
@@ -200,6 +240,7 @@ async function run(app, args) {
           if (msg.type === 'ready') {
             clearTimeout(timeout);
             rl.off('line', handler);
+            log('HEADLESS', 'Kernel ready');
             resolve();
           }
         } catch { /* ignore non-JSON lines */ }
@@ -212,6 +253,7 @@ async function run(app, args) {
       });
     });
   } catch (err) {
+    log('HEADLESS', `Kernel startup failed: ${err.message}`);
     console.error(err.message);
     return 1;
   }
@@ -229,7 +271,13 @@ async function run(app, args) {
 
   for (let i = 0; i < cells.length; i++) {
     const cell = cells[i];
-    const { outputs, success } = await executeCell(kernelProcess, rl, cell);
+    const label = cell.name || cell.title || cell.id || `Cell ${i + 1}`;
+    const cellType = cell.cellType || cell.type || 'code';
+    log('HEADLESS', `Executing cell ${i + 1}/${cells.length}: ${label} (${cellType})`);
+    const start = Date.now();
+    const { outputs, success } = await executeCell(kernelProcess, rl, cell, label);
+    const elapsed = Date.now() - start;
+    log('HEADLESS', `Cell ${label} ${success ? 'succeeded' : 'FAILED'} in ${elapsed}ms — ${outputs.length} output(s)`);
     const formatted = formatOutputs(i, cell, outputs, opts.format);
     allOutputs.push(...(Array.isArray(formatted) ? formatted : [formatted]));
     if (!success) allPassed = false;
@@ -256,6 +304,7 @@ async function run(app, args) {
     process.stdout.write(output + '\n');
   }
 
+  log('HEADLESS', `Run complete: ${allPassed ? 'ALL PASSED' : 'SOME FAILED'} — ${cells.length} cells, ${allOutputs.length} output lines`);
   return allPassed ? 0 : 1;
 }
 
