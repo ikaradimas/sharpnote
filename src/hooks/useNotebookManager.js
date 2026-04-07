@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { marked } from 'marked';
 import { DOCS_TAB_ID, KAFKA_TAB_ID } from '../constants.js';
-import { makeLibEditorId, isNotebookId, getNotebookDisplayName, scrollAndFlash } from '../utils.js';
+import { makeLibEditorId, isNotebookId, getNotebookDisplayName, scrollAndFlash, escHtml } from '../utils.js';
 import { createNotebook, makeCell, DEFAULT_NUGET_SOURCES } from '../notebook-factory.js';
 import { generateImportCode } from '../data-import-templates.js';
 
@@ -348,40 +348,58 @@ export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef }) {
 
   // ── HTML export ────────────────────────────────────────────────────────────
 
+  // ── Shared export helpers ──────────────────────────────────────────────────
+
+  function renderOutputMsg(msg, style) {
+    if (msg.type === 'stdout') return `<pre ${style.stdout}>${escHtml(msg.content)}</pre>`;
+    if (msg.type === 'error')  return `<pre ${style.error}>${escHtml(msg.message)}</pre>`;
+    if (msg.type === 'display') {
+      if (msg.format === 'html') return `<div ${style.html}>${msg.content}</div>`;
+      if (msg.format === 'table' && Array.isArray(msg.content) && msg.content.length > 0) {
+        const cols = Object.keys(msg.content[0]);
+        const head = cols.map((c) => `<th ${style.th}>${escHtml(c)}</th>`).join('');
+        const rows = msg.content.map((r) =>
+          `<tr>${cols.map((c) => `<td ${style.td}>${escHtml(r[c])}</td>`).join('')}</tr>`
+        ).join('');
+        return `<table ${style.table}><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table>`;
+      }
+      if (msg.format === 'csv') return `<pre ${style.stdout}>${escHtml(msg.content)}</pre>`;
+    }
+    if (msg.type === 'interrupted') return `<p ${style.error}>⏹ Interrupted</p>`;
+    return '';
+  }
+
+  function getCellLang(cell) {
+    return cell.type === 'sql' ? 'SQL' : cell.type === 'http' ? 'HTTP' : cell.type === 'shell' ? 'Shell' : 'C#';
+  }
+
+  const DARK_STYLE = {
+    stdout: 'class="out-stdout"', error: 'class="out-error"', html: 'class="out-html"',
+    table: '', th: '', td: '',
+  };
+  const LIGHT_STYLE = {
+    stdout: 'style="font-family:Consolas,monospace;font-size:11px;color:#333;background:#f5f5f5;padding:8px;border-radius:4px;white-space:pre-wrap"',
+    error:  'style="font-family:Consolas,monospace;font-size:11px;color:#c00;background:#fff5f5;padding:8px;border-radius:4px;white-space:pre-wrap"',
+    html: '', table: 'style="border-collapse:collapse;width:100%"',
+    th: 'style="background:#e8e8e8;padding:4px 8px;text-align:left;font-size:11px"',
+    td: 'style="padding:4px 8px;border-bottom:1px solid #ddd;font-size:11px"',
+  };
+
+  // ── Export as HTML (dark theme, embedded CSS) ─────────────────────────────
+
   const handleExportHtml = useCallback(async () => {
     const nbId = activeIdRef.current;
     if (!isNotebookId(nbId)) return;
     const nb = notebooksRef.current.find((n) => n.id === nbId);
     if (!nb) return;
 
-    const title  = getNotebookDisplayName(nb.path, nb.title, 'notebook');
-    const escHtml = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-
-    const renderOutput = (msg) => {
-      if (msg.type === 'stdout') return `<pre class="out-stdout">${escHtml(msg.content)}</pre>`;
-      if (msg.type === 'error')  return `<pre class="out-error">${escHtml(msg.message)}</pre>`;
-      if (msg.type === 'display') {
-        if (msg.format === 'html') return `<div class="out-html">${msg.content}</div>`;
-        if (msg.format === 'table' && Array.isArray(msg.content) && msg.content.length > 0) {
-          const cols = Object.keys(msg.content[0]);
-          const head = cols.map((c) => `<th>${escHtml(c)}</th>`).join('');
-          const rows = msg.content.map((r) =>
-            `<tr>${cols.map((c) => `<td>${escHtml(r[c])}</td>`).join('')}</tr>`
-          ).join('');
-          return `<table><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table>`;
-        }
-        if (msg.format === 'csv') return `<pre class="out-stdout">${escHtml(msg.content)}</pre>`;
-      }
-      if (msg.type === 'interrupted') return '<p class="out-error">⏹ Interrupted</p>';
-      return '';
-    };
+    const title = getNotebookDisplayName(nb.path, nb.title, 'notebook');
 
     const cellsHtml = nb.cells.map((cell, i) => {
       if (cell.type === 'markdown') return `<div class="md-cell">${marked.parse(cell.content || '')}</div>`;
-      const outs = (nb.outputs[cell.id] || []).map(renderOutput).join('');
+      const outs = (nb.outputs[cell.id] || []).map((m) => renderOutputMsg(m, DARK_STYLE)).join('');
       return `<div class="code-cell">
-  <div class="cell-hdr"><span class="cell-num">[${i + 1}]</span><span class="cell-lang">C#</span></div>
+  <div class="cell-hdr"><span class="cell-num">[${i + 1}]</span><span class="cell-lang">${getCellLang(cell)}</span></div>
   <pre class="cell-src">${escHtml(cell.content)}</pre>
   ${outs ? `<div class="cell-out">${outs}</div>` : ''}
 </div>`;
@@ -420,6 +438,48 @@ ${cellsHtml}
       content: html,
       defaultName: `${title}.html`,
       filters: [{ name: 'HTML File', extensions: ['html'] }],
+    });
+  }, []);
+
+  // ── Export for Google Docs (light theme, inline styles) ───────────────────
+
+  const handleExportGoogleDoc = useCallback(async ({ includeCode, includeResults }) => {
+    const nbId = activeIdRef.current;
+    if (!isNotebookId(nbId)) return;
+    const nb = notebooksRef.current.find((n) => n.id === nbId);
+    if (!nb) return;
+
+    const title = getNotebookDisplayName(nb.path, nb.title, 'notebook');
+
+    const cellsHtml = nb.cells.map((cell, i) => {
+      if (cell.type === 'markdown') return `<div>${marked.parse(cell.content || '')}</div>`;
+      const parts = [];
+      if (includeCode) {
+        parts.push(`<p style="font-size:10px;color:#888;margin:4px 0 2px">[${i + 1}] ${getCellLang(cell)}</p>`);
+        parts.push(`<pre style="font-family:Consolas,monospace;font-size:11px;background:#f8f8f8;padding:10px;border:1px solid #e0e0e0;border-radius:4px;white-space:pre-wrap">${escHtml(cell.content)}</pre>`);
+      }
+      if (includeResults) {
+        const outs = (nb.outputs[cell.id] || []).map((m) => renderOutputMsg(m, LIGHT_STYLE)).filter(Boolean).join('');
+        if (outs) parts.push(outs);
+      }
+      return parts.length > 0 ? `<div style="margin:8px 0">${parts.join('')}</div>` : '';
+    }).filter(Boolean).join('\n');
+
+    const html = `<!DOCTYPE html>
+<html><head>
+<meta charset="utf-8">
+<title>${escHtml(title)}</title>
+<style>body{font-family:Arial,sans-serif;max-width:800px;margin:32px auto;padding:0 16px;color:#222}
+h1,h2,h3{color:#111}table{margin:8px 0}pre{overflow-x:auto;margin:4px 0}</style>
+</head><body>
+<h1>${escHtml(title)}</h1>
+${cellsHtml}
+</body></html>`;
+
+    await window.electronAPI?.saveFile({
+      content: html,
+      defaultName: `${title}.html`,
+      filters: [{ name: 'HTML Document (Google Docs compatible)', extensions: ['html'] }],
     });
   }, []);
 
@@ -495,6 +555,7 @@ ${cellsHtml}
     handleSave,
     handleSaveAs,
     handleExportHtml,
+    handleExportGoogleDoc,
     handleOpenDocs,
     handleCloseDocs,
     handleOpenKafkaTab,

@@ -1130,6 +1130,8 @@ export const DOCS_SECTIONS = [
       { type: 'p', text: 'Click Export OpenAPI to save the API definition as a JSON or YAML file conforming to the OpenAPI 3.0.3 specification. The export includes info, servers, tags, paths with parameters/requestBody/responses, and components/schemas.' },
       { type: 'h3', text: 'Mock HTTP Server' },
       { type: 'p', text: 'Click Mock Server to start a local HTTP server that serves mock responses for defined endpoints. The server binds to the port from the base URL, returns 404 for unknown routes and 501 for endpoints without a mock response. Path parameters are substituted into the response body using {{param}} placeholders.' },
+      { type: 'h3', text: 'Custom Mock Handlers' },
+      { type: 'p', text: 'Each endpoint can use a custom JavaScript handler instead of a static mock response. Toggle from Static to Handler in the Mock Response section to write dynamic logic. The handler receives a req object with { params, query, body, headers, method } and should return a value (serialised as JSON), or an object with { status, headers, body } for full control. Returning an object body is auto-serialised; errors in the handler return a 500 with the error message.' },
       { type: 'h3', text: 'Saved APIs' },
       { type: 'p', text: 'API definitions created in the editor are saved to the shared api-saved.json store and appear in the API Browser panel. Use Save to persist, the dropdown to reload, and the delete button to remove.' },
     ],

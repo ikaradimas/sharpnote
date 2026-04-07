@@ -50,8 +50,11 @@ export function App() {
   useEffect(() => { lineAltEnabledRef.current = lineAltEnabled; }, [lineAltEnabled]);
 
   const [lintEnabled, setLintEnabled] = useState(true);
+  const [strongCuesEnabled, setStrongCuesEnabled] = useState(false);
   const lintEnabledRef = useRef(true);
   useEffect(() => { lintEnabledRef.current = lintEnabled; }, [lintEnabled]);
+  const strongCuesRef = useRef(false);
+  useEffect(() => { strongCuesRef.current = strongCuesEnabled; }, [strongCuesEnabled]);
 
   const [tablePageSize, setTablePageSize] = useState(10);
   const tablePageSizeRef = useRef(10);
@@ -112,7 +115,7 @@ export function App() {
     pinnedPaths, setPinnedPaths, notebooksRef, activeIdRef, pinnedPathsRef,
     setNb, setNbDirty, buildNotebookData,
     handleNew, handleLoad, handleImportPolyglot, handleOpenRecent, handleCloseTab, handleReorder,
-    handleRenameTab, handleSetTabColor, handleSave, handleSaveAs, handleExportHtml,
+    handleRenameTab, handleSetTabColor, handleSave, handleSaveAs, handleExportHtml, handleExportGoogleDoc,
     handleOpenDocs, handleCloseDocs,
     kafkaTabOpen, handleOpenKafkaTab, handleCloseKafkaTab,
     handleTogglePin, handleNavigateToCell,
@@ -239,6 +242,7 @@ export function App() {
       theme: themeRef.current,
       lineAltEnabled: lineAltEnabledRef.current,
       lintEnabled: lintEnabledRef.current,
+      strongCuesEnabled: strongCuesRef.current,
       tablePageSize: tablePageSizeRef.current,
       customShortcuts: customShortcutsRef.current,
       pinnedTabs: [...pinnedPathsRef.current],
@@ -266,6 +270,7 @@ export function App() {
       if (s?.theme) setTheme(s.theme);
       if (typeof s?.lineAltEnabled === 'boolean') setLineAltEnabled(s.lineAltEnabled);
       if (typeof s?.lintEnabled === 'boolean') setLintEnabled(s.lintEnabled);
+      if (typeof s?.strongCuesEnabled === 'boolean') setStrongCuesEnabled(s.strongCuesEnabled);
       if (typeof s?.tablePageSize === 'number') setTablePageSize(s.tablePageSize);
       if (s?.customShortcuts && typeof s.customShortcuts === 'object') {
         setCustomShortcuts(s.customShortcuts);
@@ -309,6 +314,7 @@ export function App() {
   // ── Theme + lineAlt: apply to DOM, persist on change ─────────────────────
   useEffect(() => { document.documentElement.dataset.theme = theme; }, [theme]);
   useEffect(() => { document.documentElement.classList.toggle('line-alt-enabled', lineAltEnabled); }, [lineAltEnabled]);
+  useEffect(() => { document.documentElement.classList.toggle('strong-cues', strongCuesEnabled); }, [strongCuesEnabled]);
 
   // Faster toolbar tooltips: swap title→data-title on enter so the native ~500ms
   // browser tooltip is suppressed; CSS pseudo-element shows at 250ms instead.
@@ -751,6 +757,9 @@ export function App() {
     about:             () => setAboutOpen(true),
     settings:          () => setSettingsOpen(true),
     'export-html':     handleExportHtml,
+    'export-gdoc-all':    () => handleExportGoogleDoc({ includeCode: true, includeResults: true }),
+    'export-gdoc-code':   () => handleExportGoogleDoc({ includeCode: true, includeResults: false }),
+    'export-gdoc-results': () => handleExportGoogleDoc({ includeCode: false, includeResults: true }),
     'export-pdf':      () => window.electronAPI?.exportPdf(),
     'export-exe':      () => {
       const nb = notebooksRef.current.find((n) => n.id === activeIdRef.current);
@@ -1222,6 +1231,8 @@ export function App() {
           onLineAltChange={setLineAltEnabled}
           lintEnabled={lintEnabled}
           onLintEnabledChange={setLintEnabled}
+          strongCuesEnabled={strongCuesEnabled}
+          onStrongCuesChange={setStrongCuesEnabled}
           tablePageSize={tablePageSize}
           onTablePageSizeChange={setTablePageSize}
           customShortcuts={customShortcuts}

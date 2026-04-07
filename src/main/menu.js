@@ -120,6 +120,11 @@ function buildMenu(customShortcuts = {}) {
       { label: 'Export as HTML…', click: () => send('export-html') },
       { label: 'Export as PDF…',        click: () => send('export-pdf') },
       { label: 'Export as Executable…', click: () => send('export-exe') },
+      { label: 'Export for Google Docs…', submenu: [
+        { label: 'Code + Results', click: () => send('export-gdoc-all') },
+        { label: 'Code Only',     click: () => send('export-gdoc-code') },
+        { label: 'Results Only',  click: () => send('export-gdoc-results') },
+      ]},
       ...(process.platform !== 'darwin' ? [
         { type: 'separator' },
         { role: 'quit' },

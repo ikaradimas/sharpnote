@@ -110,6 +110,11 @@ export function tableToCSV(rows) {
 }
 
 // ── Table to TSV conversion ──────────────────────────────────────────────────
+export function escHtml(s) {
+  return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 export function tableToTSV(rows) {
   if (!rows || rows.length === 0) return '';
   const cols = Object.keys(rows[0]);

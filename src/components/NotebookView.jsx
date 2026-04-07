@@ -272,8 +272,6 @@ export function NotebookView({
                 onDelete={() => deleteCell(cell.id)}
                 onMoveUp={() => moveCell(cell.id, -1)}
                 onMoveDown={() => moveCell(cell.id, 1)}
-                onNameChange={(name) => updateCellProp(cell.id, 'name', name)}
-                onColorChange={(color) => updateCellProp(cell.id, 'color', color)}
               />
             ) : cell.type === 'sql' ? (
               <SqlCell

@@ -4,14 +4,12 @@ import mermaid from 'mermaid';
 import { applyMath } from '../../utils.js';
 import { CodeEditor } from './CodeEditor.jsx';
 import { CellControls } from './CellControls.jsx';
-import { CellNameColor } from './CellNameColor.jsx';
 
 mermaid.initialize({ startOnLoad: false, theme: 'dark', securityLevel: 'loose' });
 
 export function MarkdownCell({
   cell, cellIndex, onUpdate, onDelete, onMoveUp, onMoveDown,
   isSectionHeader, onToggleCollapse, collapsedCount,
-  onNameChange, onColorChange,
 }) {
   const [editing, setEditing] = useState(!cell.content);
   const [draft, setDraft] = useState(cell.content);
@@ -73,7 +71,6 @@ export function MarkdownCell({
     <div className={`cell markdown-cell${collapsed ? ' cell-section-collapsed' : ''}`}>
       {cellIndex != null && <span className="cell-index-badge">{cellIndex + 1}</span>}
       <div className="cell-controls">
-        <CellNameColor name={cell.name} color={cell.color} onNameChange={onNameChange} onColorChange={onColorChange} />
         {isSectionHeader && (
           <button
             className="cell-ctrl-btn cell-collapse-btn"

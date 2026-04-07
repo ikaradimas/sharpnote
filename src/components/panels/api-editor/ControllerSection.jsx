@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Plus, X } from 'lucide-react';
 import { EndpointEditor } from './EndpointEditor.jsx';
 
 function shortId() { return Math.random().toString(36).slice(2, 10); }
@@ -46,8 +47,8 @@ export function ControllerSection({ controller, modelNames, onUpdate, onDelete }
           spellCheck={false}
         />
         <span className="api-ed-ep-count">{controller.endpoints.length} endpoints</span>
-        <button className="api-ed-add-btn-inline" onClick={(e) => { e.stopPropagation(); addEndpoint(); }} title="Add endpoint">+ Endpoint</button>
-        <button className="api-ed-remove-btn" onClick={(e) => { e.stopPropagation(); onDelete(); }} title="Delete controller">✕</button>
+        <button className="api-ed-add-btn-inline" onClick={(e) => { e.stopPropagation(); addEndpoint(); }} title="Add endpoint"><Plus size={12} /> Endpoint</button>
+        <button className="api-ed-remove-btn" onClick={(e) => { e.stopPropagation(); onDelete(); }} title="Delete controller"><X size={14} /></button>
       </div>
       {expanded && (
         <div className="api-ed-controller-body">
