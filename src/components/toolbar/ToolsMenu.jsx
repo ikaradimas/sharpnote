@@ -4,7 +4,7 @@ import { Wrench } from 'lucide-react';
 import {
   IconReset, IconConfig, IconPackages, IconLogs, IconDB,
   IconVars, IconToC, IconLibrary, IconFiles, IconApi,
-  IconGraph, IconTodo, IconRegex, IconKafka, IconData, IconDeps, IconHistory, IconApiEditor,
+  IconGraph, IconTodo, IconRegex, IconKafka, IconData, IconDeps, IconHistory, IconApiEditor, IconGit,
 } from './Icons.jsx';
 
 export function ToolsMenu({
@@ -17,6 +17,7 @@ export function ToolsMenu({
   tocPanelOpen, onToggleToC,
   libraryPanelOpen, onToggleLibrary,
   filesPanelOpen, onToggleFiles,
+  gitPanelOpen, onToggleGit,
   apiPanelOpen, onToggleApi,
   apiEditorPanelOpen, onToggleApiEditor,
   graphPanelOpen, onToggleGraph,
@@ -76,6 +77,7 @@ export function ToolsMenu({
     { icon: <IconToC />,       label: 'Table of Contents', action: onToggleToC,      active: tocPanelOpen },
     { icon: <IconLibrary />,   label: 'Library',           action: onToggleLibrary,  active: libraryPanelOpen },
     { icon: <IconFiles />,     label: 'File Explorer',     action: onToggleFiles,    active: filesPanelOpen },
+    { icon: <IconGit />,       label: 'Git',               action: onToggleGit,      active: gitPanelOpen },
     { icon: <IconApi />,       label: 'API Browser',       action: onToggleApi,      active: apiPanelOpen },
     { icon: <IconApiEditor />, label: 'API Editor',        action: onToggleApiEditor, active: apiEditorPanelOpen },
     { icon: <IconGraph />,     label: 'Graph',             action: onToggleGraph,    active: graphPanelOpen },

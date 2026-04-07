@@ -12,6 +12,7 @@ export const PALETTE_COMMANDS = [
   { id: 'export-html',      label: 'Export as HTML…',                          category: 'File' },
   { id: 'export-exe',       label: 'Export as Executable…',                    category: 'File' },
   { id: 'toggle-api-editor', label: 'API Editor',            keys: '⌘⇧Q',  category: 'Panels' },
+  { id: 'toggle-git',       label: 'Git',                   keys: '⌘⇧J',  category: 'Panels' },
   { id: 'import-data',      label: 'Import Data File…',         keys: '⌘⇧I',  category: 'File' },
   // Execution
   { id: 'run-all',          label: 'Run All Cells',             keys: '⌘⇧↩',  category: 'Execution' },

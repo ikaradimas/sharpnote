@@ -111,6 +111,17 @@ export function IconApi() {
     </svg>
   );
 }
+export function IconGit() {
+  return (
+    <svg {..._ic} stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" fill="none">
+      <circle cx="4" cy="3.5" r="1.5" />
+      <circle cx="9" cy="6.5" r="1.5" />
+      <circle cx="4" cy="9.5" r="1.5" />
+      <line x1="4" y1="5" x2="4" y2="8" />
+      <path d="M5.5 4.2L7.5 5.8" />
+    </svg>
+  );
+}
 export function IconApiEditor() {
   return (
     <svg {..._ic} stroke="currentColor" strokeWidth="1.1" strokeLinecap="round">

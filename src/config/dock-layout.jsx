@@ -3,8 +3,8 @@ import React from 'react';
 // ── Dock Layout System ────────────────────────────────────────────────────────
 
 export const DEFAULT_DOCK_LAYOUT = {
-  assignments: { log: 'right', nuget: 'bottom', config: 'bottom', db: 'bottom', library: 'left', vars: 'right', toc: 'left', files: 'left', api: 'right', 'api-editor': 'right', graph: 'right', todo: 'bottom', regex: 'bottom', history: 'right', deps: 'right' },
-  order:       { log: 0, nuget: 0, config: 1, db: 2, library: 0, vars: 1, toc: 1, files: 2, api: 2, 'api-editor': 3, graph: 4, todo: 3, regex: 4, history: 5, deps: 6 },
+  assignments: { log: 'right', nuget: 'bottom', config: 'bottom', db: 'bottom', library: 'left', vars: 'right', toc: 'left', files: 'left', git: 'left', api: 'right', 'api-editor': 'right', graph: 'right', todo: 'bottom', regex: 'bottom', history: 'right', deps: 'right' },
+  order:       { log: 0, nuget: 0, config: 1, db: 2, library: 0, vars: 1, toc: 1, files: 2, git: 3, api: 2, 'api-editor': 3, graph: 4, todo: 3, regex: 4, history: 5, deps: 6 },
   sizes:       { left: 300, right: 320, bottom: 280 },
   floatPos:    {},
   zoneTab:     { left: 'library', right: 'log', bottom: 'nuget' },
@@ -93,6 +93,18 @@ function IconApi() {
   );
 }
 
+function IconGit() {
+  return (
+    <svg {..._ic} stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" fill="none">
+      <circle cx="4" cy="3.5" r="1.5" />
+      <circle cx="9" cy="6.5" r="1.5" />
+      <circle cx="4" cy="9.5" r="1.5" />
+      <line x1="4" y1="5" x2="4" y2="8" />
+      <path d="M5.5 4.2L7.5 5.8" />
+    </svg>
+  );
+}
+
 function IconApiEditor() {
   return (
     <svg {..._ic} stroke="currentColor" strokeWidth="1.1" strokeLinecap="round">
@@ -157,6 +169,7 @@ export const PANEL_META = {
   regex:   { label: 'Regex',      icon: <IconRegex /> },
   history: { label: 'History',    icon: <IconHistory /> },
   deps:    { label: 'Dependencies', icon: <IconDeps /> },
+  git:  { label: 'Git', icon: <IconGit /> },
   'api-editor': { label: 'API Editor', icon: <IconApiEditor /> },
 };
 

@@ -261,6 +261,7 @@ function registerAllHandlers() {
 
   // Mock server
   require('./src/main/mock-server.js').register(ipcMain);
+  require('./src/main/git-ops.js').register(ipcMain);
 
   // Export active notebook as PDF
   ipcMain.handle('export-pdf', async () => {

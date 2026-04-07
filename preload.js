@@ -124,6 +124,20 @@ contextBridge.exposeInMainWorld('electronAPI', {
   startMockServer: (data) => ipcRenderer.invoke('mock-server-start', data),
   stopMockServer: () => ipcRenderer.invoke('mock-server-stop'),
 
+  // Git
+  gitIsRepo:     (cwd) => ipcRenderer.invoke('git-is-repo', cwd),
+  gitStatus:     (cwd) => ipcRenderer.invoke('git-status', cwd),
+  gitDiff:       (cwd, file, staged) => ipcRenderer.invoke('git-diff', cwd, file, staged),
+  gitDiffCommit: (cwd, hash) => ipcRenderer.invoke('git-diff-commit', cwd, hash),
+  gitLog:        (cwd, count) => ipcRenderer.invoke('git-log', cwd, count),
+  gitStage:      (cwd, files) => ipcRenderer.invoke('git-stage', cwd, files),
+  gitUnstage:    (cwd, files) => ipcRenderer.invoke('git-unstage', cwd, files),
+  gitDiscard:    (cwd, files) => ipcRenderer.invoke('git-discard', cwd, files),
+  gitCommit:     (cwd, msg) => ipcRenderer.invoke('git-commit', cwd, msg),
+  gitBranches:   (cwd) => ipcRenderer.invoke('git-branches', cwd),
+  gitCheckout:   (cwd, branch) => ipcRenderer.invoke('git-checkout', cwd, branch),
+  gitInit:       (cwd) => ipcRenderer.invoke('git-init', cwd),
+
   // URL fetch (proxied through main to bypass renderer CSP for http:// URLs)
   fetchUrl: (url) => ipcRenderer.invoke('fetch-url', url),
 
