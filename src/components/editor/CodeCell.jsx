@@ -60,6 +60,11 @@ export function CodeCell({
   onColorChange,
   allCells,
   onRunCellByName,
+  breakpoints,
+  onToggleBreakpoint,
+  debugState,
+  onDebugResume,
+  onDebugStep,
 }) {
   const outputMode = cell.outputMode || 'auto';
   const locked = cell.locked || false;
@@ -123,11 +128,18 @@ export function CodeCell({
     : outputs;
 
   return (
-    <div className={`cell code-cell${isRunning ? ' running' : ''}${locked ? ' cell-locked' : ''}${isStale ? ' cell-stale' : ''}${codeFolded ? ' cell-folded' : ''}${isScheduled ? ' cell-scheduled' : ''}`}>
+    <div className={`cell code-cell${isRunning ? ' running' : ''}${locked ? ' cell-locked' : ''}${isStale ? ' cell-stale' : ''}${codeFolded ? ' cell-folded' : ''}${isScheduled ? ' cell-scheduled' : ''}${debugState?.cellId === cell.id && debugState.paused ? ' debug-paused' : ''}`}>
       {cellIndex != null && <span className="cell-index-badge">{cellIndex + 1}</span>}
       {isStale && (
         <div className="cell-stale-banner" title="Variables used in this cell may have changed — consider re-running">
           ↺ upstream variables changed
+        </div>
+      )}
+      {debugState?.cellId === cell.id && debugState.paused && (
+        <div className="cell-debug-controls">
+          <button className="debug-resume-btn" onClick={onDebugResume} title="Resume execution">▶ Resume</button>
+          <button className="debug-step-btn" onClick={onDebugStep} title="Step to next statement">⏭ Step</button>
+          <span className="debug-paused-label">Paused at line {debugState.line}</span>
         </div>
       )}
       <div className="code-cell-header">
@@ -205,6 +217,9 @@ export function CodeCell({
           onCtrlEnter={kernelReady && !anyRunning ? onRun : undefined}
           readOnly={locked}
           cellIndex={cellIndex}
+          breakpoints={breakpoints}
+          onToggleBreakpoint={onToggleBreakpoint}
+          pausedLine={debugState?.cellId === cell.id ? debugState.line : null}
         />
       )}
       {displayedOutputs && displayedOutputs.length > 0 && (

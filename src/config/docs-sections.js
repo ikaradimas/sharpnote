@@ -1137,6 +1137,22 @@ export const DOCS_SECTIONS = [
     ],
   },
   {
+    id: 'debugging', title: 'Debugging',
+    content: [
+      { type: 'p', text: 'SharpNote includes a built-in debugger for code cells. Set breakpoints, pause execution, step through statements, and inspect variables at each pause point — all without leaving the notebook.' },
+      { type: 'h3', text: 'Breakpoints' },
+      { type: 'p', text: 'Click the gutter area (left of line numbers) in any code cell to toggle a breakpoint (red circle). When the cell runs, execution pauses before the statement on that line. Breakpoints persist across runs until removed.' },
+      { type: 'h3', text: 'Pause & Resume' },
+      { type: 'p', text: 'When execution hits a breakpoint, a gold highlight marks the paused line and debug controls appear at the top of the cell. Click Resume (▶) to continue running until the next breakpoint or completion.' },
+      { type: 'h3', text: 'Stepping' },
+      { type: 'p', text: 'Click Step (⏭) to advance execution by one statement. The debugger pauses again at the next statement, regardless of whether it has a breakpoint. Use stepping to trace control flow line by line.' },
+      { type: 'h3', text: 'Variable Inspection' },
+      { type: 'p', text: 'While paused, the Variables panel shows the current state of all script-level variables accumulated from previous cells and earlier statements in the current cell.' },
+      { type: 'h3', text: 'Interrupting During Pause' },
+      { type: 'p', text: 'Clicking Stop while paused cancels execution immediately, just like stopping a normally running cell. The cell reports as interrupted.' },
+    ],
+  },
+  {
     id: 'cell-orchestration', title: 'Cell Orchestration',
     content: [
       { type: 'p', text: 'Cell Orchestration lets you build execution pipelines by naming cells, assigning colors, defining boolean decision branches, and wiring everything together in an interactive dependency graph.' },

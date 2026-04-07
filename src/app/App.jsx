@@ -198,7 +198,7 @@ export function App() {
   }, [setNb, setLibraryPanelOpen, setFilesPanelOpen, setApiPanelOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { runCell, runCellWithFormData, runSqlCell, runHttpCell, runShellCell, runCheckCell, runDecisionCell, runAll, runFrom, runTo, handleInterrupt, handleReset,
-          cancelPendingCells } =
+          cancelPendingCells, debugResume, debugStep, toggleBreakpoint } =
     useKernelManager({
       setNb, notebooksRef, dbConnectionsRef, setVarInspectDialog,
       onPanelVisible: setPanelVisible,
@@ -1153,6 +1153,9 @@ export function App() {
                     onNotebookScheduleStop={stopNotebookSchedule}
                     dashboardMode={dashboardMode}
                     onToggleDashboard={() => setDashboardMode((v) => !v)}
+                    onDebugResume={debugResume}
+                    onDebugStep={debugStep}
+                    onToggleBreakpoint={toggleBreakpoint}
                   />
                 </div>
               ))}
