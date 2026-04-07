@@ -11,7 +11,7 @@ const PANEL_FONT_SIZE_DEFAULT = 11.5;
 
 // ── Appearance section ────────────────────────────────────────────────────────
 
-function AppearanceSection({ theme, fontSize, onThemeChange, onFontSizeChange, panelFontSize, onPanelFontSizeChange, lineAltEnabled, onLineAltChange, lintEnabled, onLintEnabledChange, tablePageSize = 10, onTablePageSizeChange }) {
+function AppearanceSection({ theme, fontSize, onThemeChange, onFontSizeChange, panelFontSize, onPanelFontSizeChange, lineAltEnabled, onLineAltChange, lintEnabled, onLintEnabledChange, strongCuesEnabled, onStrongCuesChange, tablePageSize = 10, onTablePageSizeChange }) {
   return (
     <div className="settings-section">
       <div className="settings-group">
@@ -80,6 +80,14 @@ function AppearanceSection({ theme, fontSize, onThemeChange, onFontSizeChange, p
             onChange={(e) => onLintEnabledChange(e.target.checked)}
           />
           <span>Code diagnostics (shows errors and warnings while typing)</span>
+        </label>
+        <label className="settings-toggle-row">
+          <input
+            type="checkbox"
+            checked={!!strongCuesEnabled}
+            onChange={(e) => onStrongCuesChange(e.target.checked)}
+          />
+          <span>Stronger visual cues (higher contrast borders, accents, and status indicators)</span>
         </label>
       </div>
 
@@ -391,6 +399,8 @@ export function SettingsDialog({
   onLineAltChange,
   lintEnabled,
   onLintEnabledChange,
+  strongCuesEnabled,
+  onStrongCuesChange,
   tablePageSize = 10,
   onTablePageSizeChange,
   customShortcuts,
@@ -500,6 +510,8 @@ export function SettingsDialog({
                 onLineAltChange={onLineAltChange}
                 lintEnabled={lintEnabled}
                 onLintEnabledChange={onLintEnabledChange}
+                strongCuesEnabled={strongCuesEnabled}
+                onStrongCuesChange={onStrongCuesChange}
                 tablePageSize={tablePageSize}
                 onTablePageSizeChange={onTablePageSizeChange}
               />

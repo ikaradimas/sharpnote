@@ -423,6 +423,71 @@ ${cellsHtml}
     });
   }, []);
 
+  const handleExportGoogleDoc = useCallback(async ({ includeCode, includeResults }) => {
+    const nbId = activeIdRef.current;
+    if (!isNotebookId(nbId)) return;
+    const nb = notebooksRef.current.find((n) => n.id === nbId);
+    if (!nb) return;
+
+    const title = getNotebookDisplayName(nb.path, nb.title, 'notebook');
+    const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+    const renderOutput = (msg) => {
+      if (msg.type === 'stdout') return `<pre style="font-family:Consolas,monospace;font-size:11px;color:#333;background:#f5f5f5;padding:8px;border-radius:4px;white-space:pre-wrap">${esc(msg.content)}</pre>`;
+      if (msg.type === 'error')  return `<pre style="font-family:Consolas,monospace;font-size:11px;color:#c00;background:#fff5f5;padding:8px;border-radius:4px;white-space:pre-wrap">${esc(msg.message)}</pre>`;
+      if (msg.type === 'display') {
+        if (msg.format === 'html') return `<div>${msg.content}</div>`;
+        if (msg.format === 'table' && Array.isArray(msg.content) && msg.content.length > 0) {
+          const cols = Object.keys(msg.content[0]);
+          const head = cols.map((c) => `<th style="background:#e8e8e8;padding:4px 8px;text-align:left;font-size:11px">${esc(c)}</th>`).join('');
+          const rows = msg.content.map((r) =>
+            `<tr>${cols.map((c) => `<td style="padding:4px 8px;border-bottom:1px solid #ddd;font-size:11px">${esc(r[c])}</td>`).join('')}</tr>`
+          ).join('');
+          return `<table style="border-collapse:collapse;width:100%"><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table>`;
+        }
+        if (msg.format === 'csv') return `<pre style="font-size:11px;white-space:pre-wrap">${esc(msg.content)}</pre>`;
+      }
+      if (msg.type === 'interrupted') return '<p style="color:#c00">⏹ Interrupted</p>';
+      return '';
+    };
+
+    const cellsHtml = nb.cells.map((cell, i) => {
+      if (cell.type === 'markdown') return `<div>${marked.parse(cell.content || '')}</div>`;
+
+      const parts = [];
+      if (includeCode) {
+        const lang = cell.type === 'sql' ? 'SQL' : cell.type === 'http' ? 'HTTP' : cell.type === 'shell' ? 'Shell' : 'C#';
+        parts.push(`<p style="font-size:10px;color:#888;margin:4px 0 2px">[${i + 1}] ${lang}</p>`);
+        parts.push(`<pre style="font-family:Consolas,monospace;font-size:11px;background:#f8f8f8;padding:10px;border:1px solid #e0e0e0;border-radius:4px;white-space:pre-wrap">${esc(cell.content)}</pre>`);
+      }
+      if (includeResults) {
+        const outs = (nb.outputs[cell.id] || []).map(renderOutput).filter(Boolean).join('');
+        if (outs) parts.push(outs);
+      }
+      return parts.length > 0 ? `<div style="margin:8px 0">${parts.join('')}</div>` : '';
+    }).filter(Boolean).join('\n');
+
+    const html = `<!DOCTYPE html>
+<html><head>
+<meta charset="utf-8">
+<title>${esc(title)}</title>
+<style>body{font-family:Arial,sans-serif;max-width:800px;margin:32px auto;padding:0 16px;color:#222}
+h1,h2,h3{color:#111}table{margin:8px 0}pre{overflow-x:auto;margin:4px 0}</style>
+</head><body>
+<h1>${esc(title)}</h1>
+${cellsHtml}
+</body></html>`;
+
+    await window.electronAPI?.saveFile({
+      content: html,
+      defaultName: `${title}.html`,
+      filters: [
+        { name: 'HTML Document (Google Docs compatible)', extensions: ['html'] },
+      ],
+    });
+  }, []);
+
   // ── Pinned tab restore (called by App after settings load) ────────────────
 
   const openPinnedNotebooks = useCallback(async (pinned) => {
@@ -495,6 +560,7 @@ ${cellsHtml}
     handleSave,
     handleSaveAs,
     handleExportHtml,
+    handleExportGoogleDoc,
     handleOpenDocs,
     handleCloseDocs,
     handleOpenKafkaTab,

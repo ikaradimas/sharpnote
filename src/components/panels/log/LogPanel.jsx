@@ -87,6 +87,7 @@ export function LogPanel({ isOpen, onToggle, currentMemoryMb = null, cells, onNa
   const [selectedFile, setSelectedFile] = useState('live');
   const [fileEntries, setFileEntries] = useState([]);
   const [liveEntries, setLiveEntries] = useState([]);
+  const [tagFilter, setTagFilter] = useState('');
   const scrollRef = useRef(null);
   const memoryRef = useRef(currentMemoryMb);
   useEffect(() => { memoryRef.current = currentMemoryMb; }, [currentMemoryMb]);
@@ -124,7 +125,17 @@ export function LogPanel({ isOpen, onToggle, currentMemoryMb = null, cells, onNa
     }
   }, [liveEntries, fileEntries, isOpen]);
 
-  const entries = selectedFile === 'live' ? liveEntries : fileEntries;
+  const rawEntries = selectedFile === 'live' ? liveEntries : fileEntries;
+
+  const allTags = useMemo(() => {
+    const tags = new Set();
+    for (const e of rawEntries) { if (e.tag) tags.add(e.tag); }
+    return [...tags].sort();
+  }, [rawEntries]);
+
+  const entries = tagFilter
+    ? rawEntries.filter((e) => e.tag === tagFilter)
+    : rawEntries;
 
   const handleDelete = async () => {
     if (selectedFile === 'live' || !window.electronAPI) return;
@@ -166,6 +177,15 @@ export function LogPanel({ isOpen, onToggle, currentMemoryMb = null, cells, onNa
           {logFiles.map((f) => <option key={f} value={f}>{f}</option>)}
         </select>
         {selectedFile === 'live' && <span className="log-live-dot" title="Live" />}
+        <select
+          className="log-tag-filter"
+          value={tagFilter}
+          onChange={(e) => setTagFilter(e.target.value)}
+          title="Filter by tag"
+        >
+          <option value="">All tags</option>
+          {allTags.map((t) => <option key={t} value={t}>{t}</option>)}
+        </select>
         <button className="log-header-btn" title="Export log" onClick={handleExport}>⬇</button>
         {selectedFile === 'live'
           ? <button className="log-header-btn" title="Clear live log" onClick={() => setLiveEntries([])}>⌫</button>
