@@ -6727,7 +6727,7 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 }
 .git-diff-line.diff-add .git-diff-prefix { color: #98c379; }
 .git-diff-line.diff-del .git-diff-prefix { color: #e06c75; }
-.git-diff-text { flex: 1; white-space: pre; overflow-x: auto; color: var(--text-secondary); }
+.git-diff-text { flex: 1; white-space: pre-wrap; word-break: break-all; color: var(--text-secondary); }
 .git-diff-line.diff-add .git-diff-text { color: #98c379; }
 .git-diff-line.diff-del .git-diff-text { color: #e06c75; }
 
@@ -6741,7 +6741,7 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 .git-diff-split-cell.diff-add { background: rgba(152,195,121,0.1); }
 .git-diff-split-cell.diff-del { background: rgba(224,108,117,0.1); }
 .git-diff-split-cell .git-diff-ln { width: 28px; }
-.git-diff-split-cell .git-diff-text { flex: 1; white-space: pre; overflow: hidden; text-overflow: ellipsis; }
+.git-diff-split-cell .git-diff-text { flex: 1; white-space: pre-wrap; word-break: break-all; }
 .git-diff-hunk-header-split { display: flex; }
 .git-diff-hunk-header-split span { flex: 1; }
 
