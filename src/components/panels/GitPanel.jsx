@@ -10,6 +10,7 @@ export function GitPanel({ onToggle, notebookDir }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [selectedStaged, setSelectedStaged] = useState(false);
   const [diffText, setDiffText] = useState('');
+  const [newBranchName, setNewBranchName] = useState('');
   const [commitMsg, setCommitMsg] = useState('');
   const [branchDropdown, setBranchDropdown] = useState(false);
   const [error, setError] = useState(null);
@@ -85,6 +86,19 @@ export function GitPanel({ onToggle, notebookDir }) {
     refresh();
   }, [cwd, refresh]);
 
+  const handleCreateBranch = useCallback(async () => {
+    const name = newBranchName.trim();
+    if (!name) return;
+    const result = await window.electronAPI?.gitCreateBranch(cwd, name);
+    if (result?.success) {
+      setNewBranchName('');
+      setBranchDropdown(false);
+      refresh();
+    } else {
+      setError(result?.error);
+    }
+  }, [cwd, newBranchName, refresh]);
+
   const handleInit = useCallback(async () => {
     await window.electronAPI?.gitInit(cwd);
     refresh();
@@ -147,6 +161,22 @@ export function GitPanel({ onToggle, notebookDir }) {
                   {b === branches.current ? `● ${b}` : `  ${b}`}
                 </button>
               ))}
+              <div className="git-new-branch-row">
+                <input
+                  className="git-new-branch-input"
+                  value={newBranchName}
+                  onChange={(e) => setNewBranchName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleCreateBranch(); e.stopPropagation(); }}
+                  placeholder="New branch…"
+                  spellCheck={false}
+                />
+                <button
+                  className="git-new-branch-btn"
+                  onClick={handleCreateBranch}
+                  disabled={!newBranchName.trim()}
+                  title="Create and switch to new branch"
+                >+</button>
+              </div>
             </div>
           )}
         </div>

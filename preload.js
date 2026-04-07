@@ -135,8 +135,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   gitDiscard:    (cwd, files) => ipcRenderer.invoke('git-discard', cwd, files),
   gitCommit:     (cwd, msg) => ipcRenderer.invoke('git-commit', cwd, msg),
   gitBranches:   (cwd) => ipcRenderer.invoke('git-branches', cwd),
-  gitCheckout:   (cwd, branch) => ipcRenderer.invoke('git-checkout', cwd, branch),
-  gitInit:       (cwd) => ipcRenderer.invoke('git-init', cwd),
+  gitCheckout:      (cwd, branch) => ipcRenderer.invoke('git-checkout', cwd, branch),
+  gitCreateBranch:  (cwd, branch) => ipcRenderer.invoke('git-create-branch', cwd, branch),
+  gitInit:          (cwd) => ipcRenderer.invoke('git-init', cwd),
 
   // URL fetch (proxied through main to bypass renderer CSP for http:// URLs)
   fetchUrl: (url) => ipcRenderer.invoke('fetch-url', url),

@@ -115,6 +115,10 @@ async function gitCheckout(cwd, branch) {
   return gitExec(cwd, ['checkout', branch]);
 }
 
+async function gitCreateBranch(cwd, branch) {
+  return gitExec(cwd, ['checkout', '-b', branch]);
+}
+
 async function gitInit(cwd) {
   return gitExec(cwd, ['init']);
 }
@@ -130,8 +134,9 @@ function register(ipcMain) {
   ipcMain.handle('git-discard',    (_ev, cwd, files) => gitDiscard(cwd, files));
   ipcMain.handle('git-commit',     (_ev, cwd, msg) => gitCommit(cwd, msg));
   ipcMain.handle('git-branches',   (_ev, cwd) => gitBranches(cwd));
-  ipcMain.handle('git-checkout',   (_ev, cwd, branch) => gitCheckout(cwd, branch));
-  ipcMain.handle('git-init',       (_ev, cwd) => gitInit(cwd));
+  ipcMain.handle('git-checkout',      (_ev, cwd, branch) => gitCheckout(cwd, branch));
+  ipcMain.handle('git-create-branch', (_ev, cwd, branch) => gitCreateBranch(cwd, branch));
+  ipcMain.handle('git-init',          (_ev, cwd) => gitInit(cwd));
 }
 
-module.exports = { gitExec, gitIsRepo, gitStatus, gitDiff, gitDiffCommit, gitLog, gitStage, gitUnstage, gitDiscard, gitCommit, gitBranches, gitCheckout, gitInit, register };
+module.exports = { gitExec, gitIsRepo, gitStatus, gitDiff, gitDiffCommit, gitLog, gitStage, gitUnstage, gitDiscard, gitCommit, gitBranches, gitCheckout, gitCreateBranch, gitInit, register };

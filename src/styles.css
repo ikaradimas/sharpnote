@@ -6578,6 +6578,22 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 }
 .git-branch-option:hover { background: var(--bg-hover); color: var(--text-primary); }
 .git-branch-option.current { color: #98c379; font-weight: 600; }
+.git-new-branch-row {
+  display: flex; gap: 2px; padding: 4px 6px; border-top: 1px solid var(--border-subtle);
+}
+.git-new-branch-input {
+  flex: 1; font-family: var(--font-code); font-size: 10px;
+  background: var(--bg-deepest); border: 1px solid var(--border-subtle);
+  border-radius: 3px; color: var(--text-primary); padding: 2px 6px; outline: none;
+}
+.git-new-branch-input:focus { border-color: var(--accent-primary); }
+.git-new-branch-input::placeholder { color: var(--text-dim); }
+.git-new-branch-btn {
+  font-size: 12px; font-weight: 700; background: none; border: 1px solid var(--border-subtle);
+  border-radius: 3px; color: var(--text-muted); cursor: pointer; padding: 1px 6px;
+}
+.git-new-branch-btn:not(:disabled):hover { color: #98c379; border-color: #98c379; }
+.git-new-branch-btn:disabled { opacity: 0.3; cursor: default; }
 .git-refresh-btn {
   font-size: 14px; background: none; border: none; color: var(--text-muted);
   cursor: pointer; padding: 0 2px;
