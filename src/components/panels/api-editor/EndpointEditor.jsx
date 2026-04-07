@@ -1,8 +1,14 @@
 import React, { useState } from 'react';
+import { Plus, X } from 'lucide-react';
 
 const METHOD_COLORS = {
   get: '#61afef', post: '#98c379', put: '#e5c07b',
   delete: '#e06c75', patch: '#c678dd',
+};
+
+const METHOD_BG = {
+  get: 'rgba(97,175,239,0.12)', post: 'rgba(152,195,121,0.12)', put: 'rgba(229,192,123,0.12)',
+  delete: 'rgba(224,108,117,0.12)', patch: 'rgba(198,120,221,0.12)',
 };
 
 export function EndpointEditor({ endpoint, modelNames, onUpdate, onDelete }) {
@@ -35,10 +41,10 @@ export function EndpointEditor({ endpoint, modelNames, onUpdate, onDelete }) {
   const color = METHOD_COLORS[method] || '#888';
 
   return (
-    <div className="api-ed-endpoint">
+    <div className="api-ed-endpoint" style={{ borderLeftColor: color }}>
       <div className="api-ed-endpoint-header" onClick={() => setExpanded(v => !v)}>
         <span className="api-ed-expand">{expanded ? '▾' : '▸'}</span>
-        <span className="api-ed-method" style={{ color }}>{method.toUpperCase()}</span>
+        <span className="api-ed-method" style={{ color, background: METHOD_BG[method] }}>{method.toUpperCase()}</span>
         <input
           className="api-ed-endpoint-path"
           value={endpoint.path || ''}
@@ -54,7 +60,7 @@ export function EndpointEditor({ endpoint, modelNames, onUpdate, onDelete }) {
           onClick={(e) => e.stopPropagation()}
           placeholder="Summary"
         />
-        <button className="api-ed-remove-btn" onClick={(e) => { e.stopPropagation(); onDelete(); }} title="Delete endpoint">✕</button>
+        <button className="api-ed-remove-btn" onClick={(e) => { e.stopPropagation(); onDelete(); }} title="Delete endpoint"><X size={12} /></button>
       </div>
       {expanded && (
         <div className="api-ed-endpoint-body">
@@ -67,7 +73,7 @@ export function EndpointEditor({ endpoint, modelNames, onUpdate, onDelete }) {
           </div>
 
           {/* Parameters */}
-          <div className="api-ed-section-label">Parameters <button className="api-ed-add-btn-inline" onClick={addParam}>+</button></div>
+          <div className="api-ed-section-label">Parameters <button className="api-ed-add-btn-inline" onClick={addParam}><Plus size={12} /></button></div>
           {(endpoint.parameters || []).map((p, i) => (
             <div key={i} className="api-ed-param-row">
               <input className="api-ed-param-name" value={p.name} onChange={(e) => updateParam(i, 'name', e.target.value)} placeholder="name" spellCheck={false} />
@@ -78,18 +84,18 @@ export function EndpointEditor({ endpoint, modelNames, onUpdate, onDelete }) {
               <input className="api-ed-param-schema" value={p.schema || ''} onChange={(e) => updateParam(i, 'schema', e.target.value)} placeholder="type" />
               <input type="checkbox" checked={p.required} onChange={(e) => updateParam(i, 'required', e.target.checked)} title="Required" />
               <input className="api-ed-param-desc" value={p.description || ''} onChange={(e) => updateParam(i, 'description', e.target.value)} placeholder="description" />
-              <button className="api-ed-remove-btn" onClick={() => removeParam(i)}>✕</button>
+              <button className="api-ed-remove-btn" onClick={() => removeParam(i)}><X size={12} /></button>
             </div>
           ))}
 
           {/* Headers */}
-          <div className="api-ed-section-label">Headers <button className="api-ed-add-btn-inline" onClick={addHeader}>+</button></div>
+          <div className="api-ed-section-label">Headers <button className="api-ed-add-btn-inline" onClick={addHeader}><Plus size={12} /></button></div>
           {(endpoint.headers || []).map((h, i) => (
             <div key={i} className="api-ed-param-row">
               <input className="api-ed-param-name" value={h.name} onChange={(e) => updateHeader(i, 'name', e.target.value)} placeholder="Header-Name" spellCheck={false} />
               <input type="checkbox" checked={h.required} onChange={(e) => updateHeader(i, 'required', e.target.checked)} title="Required" />
               <input className="api-ed-param-desc api-ed-flex" value={h.description || ''} onChange={(e) => updateHeader(i, 'description', e.target.value)} placeholder="description" />
-              <button className="api-ed-remove-btn" onClick={() => removeHeader(i)}>✕</button>
+              <button className="api-ed-remove-btn" onClick={() => removeHeader(i)}><X size={12} /></button>
             </div>
           ))}
 
@@ -104,7 +110,7 @@ export function EndpointEditor({ endpoint, modelNames, onUpdate, onDelete }) {
           </div>
 
           {/* Responses */}
-          <div className="api-ed-section-label">Responses <button className="api-ed-add-btn-inline" onClick={addResponse}>+</button></div>
+          <div className="api-ed-section-label">Responses <button className="api-ed-add-btn-inline" onClick={addResponse}><Plus size={12} /></button></div>
           {(endpoint.responses || []).map((r, i) => (
             <div key={i} className="api-ed-param-row">
               <input className="api-ed-resp-status" value={r.status} onChange={(e) => updateResponse(i, 'status', e.target.value)} placeholder="200" />
@@ -113,7 +119,7 @@ export function EndpointEditor({ endpoint, modelNames, onUpdate, onDelete }) {
                 {modelNames.map(n => <option key={n} value={n}>{n}</option>)}
               </select>
               <input className="api-ed-param-desc api-ed-flex" value={r.description || ''} onChange={(e) => updateResponse(i, 'description', e.target.value)} placeholder="description" />
-              <button className="api-ed-remove-btn" onClick={() => removeResponse(i)}>✕</button>
+              <button className="api-ed-remove-btn" onClick={() => removeResponse(i)}><X size={12} /></button>
             </div>
           ))}
 

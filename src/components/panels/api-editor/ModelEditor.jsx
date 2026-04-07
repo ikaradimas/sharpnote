@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Plus, X } from 'lucide-react';
 
 const TYPE_OPTIONS = ['string', 'int', 'long', 'float', 'double', 'bool', 'date', 'datetime', 'uuid', 'object'];
 
@@ -31,7 +32,7 @@ export function ModelEditor({ model, modelNames, onUpdate, onDelete }) {
           spellCheck={false}
         />
         <span className="api-ed-model-count">{model.fields.length} fields</span>
-        <button className="api-ed-remove-btn" onClick={(e) => { e.stopPropagation(); onDelete(); }} title="Delete model">✕</button>
+        <button className="api-ed-remove-btn" onClick={(e) => { e.stopPropagation(); onDelete(); }} title="Delete model"><X size={12} /></button>
       </div>
       {expanded && (
         <div className="api-ed-model-body">
@@ -59,11 +60,11 @@ export function ModelEditor({ model, modelNames, onUpdate, onDelete }) {
                 </select>
                 <input type="checkbox" className="api-ed-field-col-req" checked={f.required} onChange={(e) => updateField(i, 'required', e.target.checked)} />
                 <input className="api-ed-field-col-desc" value={f.description || ''} onChange={(e) => updateField(i, 'description', e.target.value)} placeholder="description" />
-                <button className="api-ed-remove-btn api-ed-field-col-act" onClick={() => removeField(i)}>✕</button>
+                <button className="api-ed-remove-btn api-ed-field-col-act" onClick={() => removeField(i)}><X size={12} /></button>
               </div>
             ))}
           </div>
-          <button className="api-ed-add-btn" onClick={addField}>+ Field</button>
+          <button className="api-ed-add-btn" onClick={addField}><Plus size={12} /> Field</button>
         </div>
       )}
     </div>

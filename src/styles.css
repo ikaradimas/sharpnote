@@ -67,6 +67,11 @@
 .strong-cues .toolbar { border-bottom-width: 2px; }
 .strong-cues .dock-zone-tabbar { border-bottom-width: 2px; }
 .strong-cues .cell-stale-banner { font-weight: 600; }
+.strong-cues .api-ed-model { border-left-width: 4px; }
+.strong-cues .api-ed-controller { border-left-width: 4px; }
+.strong-cues .api-ed-endpoint { border-left-width: 4px; }
+.strong-cues .api-ed-section-header { font-size: 12px; font-weight: 700; }
+.strong-cues .api-ed-method { font-size: 11px; padding: 2px 6px; }
 
 *, *::before, *::after {
   box-sizing: border-box;
@@ -6421,15 +6426,16 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 /* ── API Editor Panel ────────────────────────────────────────────────────── */
 .api-ed-panel { display: flex; flex-direction: column; height: 100%; }
 .api-ed-toolbar {
-  display: flex; align-items: center; gap: 4px; padding: 4px 8px;
+  display: flex; align-items: center; gap: 4px; padding: 6px 8px;
   border-bottom: 1px solid var(--border-subtle);
 }
 .api-ed-toolbar-btn {
-  font-family: var(--font-ui); font-size: 10px; padding: 2px 8px;
-  background: none; border: 1px solid var(--border-subtle); border-radius: 3px;
-  color: var(--text-muted); cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 4px 6px; background: none; border: 1px solid var(--border-subtle);
+  border-radius: 4px; color: var(--text-muted); cursor: pointer;
 }
 .api-ed-toolbar-btn:hover { color: var(--text-primary); border-color: var(--border-default); }
+.api-ed-save-btn:hover { color: #98c379; border-color: #98c379; }
 .api-ed-del-btn:hover { color: #e05050; border-color: #e05050; }
 .api-ed-saved-select {
   flex: 1; font-family: var(--font-ui); font-size: 10px;
@@ -6460,41 +6466,48 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
   padding: 2px 0; outline: none; width: 100%;
 }
 .api-ed-desc-input::placeholder, .api-ed-title::placeholder, .api-ed-base-url::placeholder { color: var(--text-dim); }
-.api-ed-section { margin-bottom: 8px; }
+.api-ed-section { margin-bottom: 10px; }
 .api-ed-section-header {
-  display: flex; align-items: center; justify-content: space-between;
-  font-family: var(--font-heading); font-size: 10px; letter-spacing: 0.06em;
-  color: var(--text-muted); padding: 4px 0; border-bottom: 1px solid var(--border-subtle);
+  display: flex; align-items: center; gap: 6px;
+  font-family: var(--font-heading); font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
+  color: var(--text-muted); padding: 6px 0; border-bottom: 1px solid var(--border-subtle);
 }
+.api-ed-section-header .api-ed-add-btn-inline { margin-left: auto; }
+.api-ed-section-icon { flex-shrink: 0; }
+.api-ed-section-models .api-ed-section-icon { color: #e5c07b; }
+.api-ed-section-controllers .api-ed-section-icon { color: #61afef; }
 .api-ed-section-label {
   font-family: var(--font-ui); font-size: 9px; font-weight: 600;
   color: var(--text-dim); letter-spacing: 0.04em; margin: 6px 0 2px;
   display: flex; align-items: center; gap: 4px;
 }
 .api-ed-empty { font-family: var(--font-ui); font-size: 10px; color: var(--text-dim); font-style: italic; padding: 4px 0; }
-.api-ed-expand { font-size: 10px; color: var(--text-dim); width: 12px; flex-shrink: 0; }
+.api-ed-expand { font-size: 12px; color: var(--text-dim); width: 14px; flex-shrink: 0; }
 .api-ed-add-btn {
-  font-family: var(--font-ui); font-size: 9px; color: var(--text-muted);
-  background: none; border: 1px solid var(--border-subtle); border-radius: 3px;
-  padding: 1px 8px; cursor: pointer; margin-top: 4px;
+  display: inline-flex; align-items: center; gap: 3px;
+  font-family: var(--font-ui); font-size: 10px; color: var(--text-muted);
+  background: none; border: 1px solid var(--border-subtle); border-radius: 4px;
+  padding: 2px 8px; cursor: pointer; margin-top: 4px;
 }
-.api-ed-add-btn:hover { color: var(--text-primary); border-color: var(--border-default); }
+.api-ed-add-btn:hover { color: var(--accent-primary); border-color: var(--accent-primary); }
 .api-ed-add-btn-inline {
-  font-family: var(--font-ui); font-size: 9px; color: var(--text-muted);
+  display: inline-flex; align-items: center; gap: 2px;
+  font-family: var(--font-ui); font-size: 10px; color: var(--text-muted);
   background: none; border: none; cursor: pointer; padding: 0 4px;
 }
 .api-ed-add-btn-inline:hover { color: var(--accent-primary); }
 .api-ed-remove-btn {
-  font-size: 9px; color: var(--text-dim); background: none; border: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--text-dim); background: none; border: none;
   cursor: pointer; padding: 0 2px; opacity: 0; transition: opacity 0.15s;
 }
 *:hover > .api-ed-remove-btn { opacity: 1; }
 .api-ed-remove-btn:hover { color: #e05050; }
 
 /* Model editor */
-.api-ed-model { border: 1px solid var(--border-subtle); border-radius: 4px; margin: 4px 0; }
+.api-ed-model { border: 1px solid var(--border-subtle); border-left: 3px solid #e5c07b; border-radius: 4px; margin: 4px 0; }
 .api-ed-model-header {
-  display: flex; align-items: center; gap: 4px; padding: 3px 6px; cursor: pointer;
+  display: flex; align-items: center; gap: 6px; padding: 4px 8px; cursor: pointer;
 }
 .api-ed-model-header:hover { background: var(--bg-hover); }
 .api-ed-model-name {
@@ -6522,9 +6535,9 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 .api-ed-field-row input[type="checkbox"] { width: 12px; height: 12px; margin: 0; }
 
 /* Controller section */
-.api-ed-controller { border: 1px solid var(--border-subtle); border-radius: 4px; margin: 4px 0; }
+.api-ed-controller { border: 1px solid var(--border-subtle); border-left: 3px solid #61afef; border-radius: 4px; margin: 4px 0; }
 .api-ed-controller-header {
-  display: flex; align-items: center; gap: 4px; padding: 3px 6px; cursor: pointer;
+  display: flex; align-items: center; gap: 6px; padding: 4px 8px; cursor: pointer;
 }
 .api-ed-controller-header:hover { background: var(--bg-hover); }
 .api-ed-controller-name {
@@ -6539,12 +6552,16 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 .api-ed-controller-body { padding: 4px 8px; border-top: 1px solid var(--border-subtle); }
 
 /* Endpoint editor */
-.api-ed-endpoint { border-left: 2px solid var(--border-subtle); margin: 3px 0; padding-left: 6px; }
+.api-ed-endpoint { border-left: 3px solid var(--border-subtle); margin: 4px 0; padding-left: 8px; }
 .api-ed-endpoint-header {
   display: flex; align-items: center; gap: 4px; padding: 2px 0; cursor: pointer;
 }
 .api-ed-endpoint-header:hover { background: var(--bg-hover); }
-.api-ed-method { font-family: var(--font-code); font-size: 10px; font-weight: 700; width: 40px; }
+.api-ed-method {
+  font-family: var(--font-code); font-size: 10px; font-weight: 700;
+  width: 48px; text-align: center; padding: 1px 4px; border-radius: 3px;
+  flex-shrink: 0;
+}
 .api-ed-endpoint-path {
   font-family: var(--font-code); font-size: 10px; color: var(--text-secondary);
   background: none; border: none; padding: 0; outline: none; width: 80px;
@@ -6557,9 +6574,9 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 .api-ed-row { display: flex; gap: 4px; margin-bottom: 4px; }
 .api-ed-flex { flex: 1; }
 .api-ed-method-select {
-  font-family: var(--font-code); font-size: 10px; font-weight: 700;
+  font-family: var(--font-code); font-size: 11px; font-weight: 700;
   background: var(--bg-deepest); border: 1px solid var(--border-subtle);
-  border-radius: 3px; color: var(--text-primary); padding: 1px 4px;
+  border-radius: 4px; color: var(--text-primary); padding: 2px 6px;
 }
 .api-ed-param-row { display: flex; align-items: center; gap: 4px; margin: 1px 0; }
 .api-ed-param-name {
@@ -6598,16 +6615,20 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 
 /* Bottom actions */
 .api-ed-actions {
-  display: flex; align-items: center; gap: 6px; padding: 4px 8px;
+  display: flex; align-items: center; gap: 8px; padding: 6px 8px;
   border-top: 1px solid var(--border-subtle);
 }
 .api-ed-action-btn {
-  font-family: var(--font-ui); font-size: 10px; padding: 3px 10px;
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: var(--font-ui); font-size: 11px; padding: 4px 12px;
   background: none; border: 1px solid var(--border-subtle); border-radius: 4px;
   color: var(--text-muted); cursor: pointer;
 }
 .api-ed-action-btn:hover { color: var(--text-primary); border-color: var(--border-default); }
+.api-ed-export-btn:hover { color: #61afef; border-color: #61afef; }
+.api-ed-mock-btn:hover { color: #98c379; border-color: #98c379; }
 .api-ed-mock-active { background: rgba(78,201,176,0.15); border-color: #4ec9b0; color: #4ec9b0; }
+.api-ed-mock-active:hover { color: #e06c75; border-color: #e06c75; background: rgba(224,108,117,0.1); }
 .api-ed-export-wrap { position: relative; }
 .api-ed-export-menu {
   position: absolute; bottom: 28px; left: 0; z-index: 50;

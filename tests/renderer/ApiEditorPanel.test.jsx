@@ -55,7 +55,10 @@ describe('ApiEditorPanel', () => {
     // Initially shows empty state
     expect(screen.getByText('No models defined')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByText('+ Model'));
+    // Button text is now "Model" with a Plus icon (SVG) — match text content
+    const addModelBtns = screen.getAllByText(/Model/);
+    const addModelBtn = addModelBtns.find(el => el.classList.contains('api-ed-add-btn-inline'));
+    fireEvent.click(addModelBtn);
 
     // Empty state should be gone
     expect(screen.queryByText('No models defined')).not.toBeInTheDocument();
@@ -66,7 +69,9 @@ describe('ApiEditorPanel', () => {
 
     expect(screen.getByText(/No controllers/)).toBeInTheDocument();
 
-    fireEvent.click(screen.getByText('+ Controller'));
+    const addCtrlBtns = screen.getAllByText(/Controller/);
+    const addCtrlBtn = addCtrlBtns.find(el => el.classList.contains('api-ed-add-btn-inline'));
+    fireEvent.click(addCtrlBtn);
 
     expect(screen.queryByText(/No controllers/)).not.toBeInTheDocument();
   });
@@ -82,7 +87,7 @@ describe('ApiEditorPanel', () => {
   it('renders export and mock server buttons', () => {
     render(<ApiEditorPanel onToggle={vi.fn()} />);
 
-    expect(screen.getByText(/Export OpenAPI/)).toBeInTheDocument();
+    expect(screen.getByText(/Export/)).toBeInTheDocument();
     expect(screen.getByText(/Mock Server/)).toBeInTheDocument();
   });
 
@@ -100,7 +105,7 @@ describe('ApiEditorPanel', () => {
   it('export menu shows JSON and YAML options when clicked', async () => {
     render(<ApiEditorPanel onToggle={vi.fn()} />);
 
-    fireEvent.click(screen.getByText(/Export OpenAPI/));
+    fireEvent.click(screen.getByText(/Export ▾/));
 
     await waitFor(() => {
       expect(screen.getByText('JSON')).toBeInTheDocument();

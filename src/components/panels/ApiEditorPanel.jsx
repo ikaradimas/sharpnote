@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { FilePlus, Save, Trash2, Database, FolderTree, Download, Play, Square, Plus } from 'lucide-react';
 import { ModelEditor } from './api-editor/ModelEditor.jsx';
 import { ControllerSection } from './api-editor/ControllerSection.jsx';
 
@@ -107,7 +108,7 @@ export function ApiEditorPanel({ onToggle }) {
     <div className="api-ed-panel">
       {/* Header bar with save/load */}
       <div className="api-ed-toolbar">
-        <button className="api-ed-toolbar-btn" onClick={newApi} title="New API">New</button>
+        <button className="api-ed-toolbar-btn" onClick={newApi} title="New API"><FilePlus size={14} /></button>
         <select
           className="api-ed-saved-select"
           value={selectedId || ''}
@@ -116,8 +117,8 @@ export function ApiEditorPanel({ onToggle }) {
           <option value="">— select saved —</option>
           {editorApis.map(a => <option key={a.id} value={a.id}>{a.title || 'Untitled'}</option>)}
         </select>
-        <button className="api-ed-toolbar-btn" onClick={saveApi} title="Save">Save</button>
-        <button className="api-ed-toolbar-btn api-ed-del-btn" onClick={deleteApi} disabled={!selectedId} title="Delete">✕</button>
+        <button className="api-ed-toolbar-btn api-ed-save-btn" onClick={saveApi} title="Save"><Save size={14} /></button>
+        <button className="api-ed-toolbar-btn api-ed-del-btn" onClick={deleteApi} disabled={!selectedId} title="Delete"><Trash2 size={14} /></button>
       </div>
 
       <div className="api-ed-scroll">
@@ -133,9 +134,10 @@ export function ApiEditorPanel({ onToggle }) {
 
         {/* Models section */}
         <div className="api-ed-section">
-          <div className="api-ed-section-header">
+          <div className="api-ed-section-header api-ed-section-models">
+            <Database size={14} className="api-ed-section-icon" />
             <span>Models</span>
-            <button className="api-ed-add-btn-inline" onClick={addModel}>+ Model</button>
+            <button className="api-ed-add-btn-inline" onClick={addModel}><Plus size={12} /> Model</button>
           </div>
           {apiDef.models.map((model, i) => (
             <ModelEditor
@@ -151,9 +153,10 @@ export function ApiEditorPanel({ onToggle }) {
 
         {/* Controllers section */}
         <div className="api-ed-section">
-          <div className="api-ed-section-header">
+          <div className="api-ed-section-header api-ed-section-controllers">
+            <FolderTree size={14} className="api-ed-section-icon" />
             <span>Controllers</span>
-            <button className="api-ed-add-btn-inline" onClick={addController}>+ Controller</button>
+            <button className="api-ed-add-btn-inline" onClick={addController}><Plus size={12} /> Controller</button>
           </div>
           {apiDef.controllers.map((ctrl, i) => (
             <ControllerSection
@@ -171,7 +174,7 @@ export function ApiEditorPanel({ onToggle }) {
       {/* Bottom action bar */}
       <div className="api-ed-actions">
         <div className="api-ed-export-wrap">
-          <button className="api-ed-action-btn" onClick={() => setExportMenuOpen(v => !v)}>Export OpenAPI ▾</button>
+          <button className="api-ed-action-btn api-ed-export-btn" onClick={() => setExportMenuOpen(v => !v)}><Download size={14} /> Export ▾</button>
           {exportMenuOpen && (
             <div className="api-ed-export-menu">
               <button onClick={() => exportSpec('json')}>JSON</button>
@@ -180,10 +183,13 @@ export function ApiEditorPanel({ onToggle }) {
           )}
         </div>
         <button
-          className={`api-ed-action-btn${mockStatus?.running ? ' api-ed-mock-active' : ''}`}
+          className={`api-ed-action-btn api-ed-mock-btn${mockStatus?.running ? ' api-ed-mock-active' : ''}`}
           onClick={toggleMock}
         >
-          {mockStatus?.running ? `Mock ■ :${mockStatus.port}` : 'Mock Server ▶'}
+          {mockStatus?.running
+            ? <><Square size={14} /> Mock :{mockStatus.port}</>
+            : <><Play size={14} /> Mock Server</>
+          }
         </button>
       </div>
     </div>
