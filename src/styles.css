@@ -6446,9 +6446,9 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 .api-ed-meta { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
 .api-ed-meta-row { display: flex; gap: 4px; }
 .api-ed-title {
-  flex: 1; font-family: var(--font-ui); font-size: 12px; font-weight: 600;
+  flex: 1; min-width: 0; max-width: 600px; font-family: var(--font-ui); font-size: 12px; font-weight: 600;
   color: var(--text-primary); background: none; border: none; border-bottom: 1px solid var(--border-subtle);
-  padding: 2px 0; outline: none;
+  padding: 2px 0; outline: none; text-overflow: ellipsis; overflow: hidden;
 }
 .api-ed-version {
   width: 50px; font-family: var(--font-code); font-size: 10px;
@@ -6512,9 +6512,10 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 .api-ed-model-header:hover { background: var(--bg-hover); }
 .api-ed-model-name {
   font-family: var(--font-code); font-size: 11px; font-weight: 600;
-  color: var(--text-primary); background: none; border: none; padding: 0; outline: none; width: 100px;
+  color: var(--text-primary); background: none; border: none; padding: 0; outline: none;
+  flex: 1; min-width: 0; max-width: 600px; text-overflow: ellipsis; overflow: hidden;
 }
-.api-ed-model-count { font-size: 9px; color: var(--text-dim); margin-left: auto; }
+.api-ed-model-count { font-size: 9px; color: var(--text-dim); flex-shrink: 0; }
 .api-ed-model-body { padding: 4px 8px; border-top: 1px solid var(--border-subtle); }
 .api-ed-fields { display: flex; flex-direction: column; gap: 1px; }
 .api-ed-field-header {
@@ -6542,13 +6543,15 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 .api-ed-controller-header:hover { background: var(--bg-hover); }
 .api-ed-controller-name {
   font-family: var(--font-code); font-size: 11px; font-weight: 600;
-  color: var(--text-primary); background: none; border: none; padding: 0; outline: none; width: 80px;
+  color: var(--text-primary); background: none; border: none; padding: 0; outline: none;
+  flex: 1; min-width: 0; max-width: 600px; text-overflow: ellipsis; overflow: hidden;
 }
 .api-ed-controller-path {
   font-family: var(--font-code); font-size: 10px; color: var(--text-muted);
-  background: none; border: none; padding: 0; outline: none; width: 80px;
+  background: none; border: none; padding: 0; outline: none;
+  flex: 1; min-width: 0; max-width: 600px; text-overflow: ellipsis; overflow: hidden;
 }
-.api-ed-ep-count { font-size: 9px; color: var(--text-dim); margin-left: auto; }
+.api-ed-ep-count { font-size: 9px; color: var(--text-dim); flex-shrink: 0; }
 .api-ed-controller-body { padding: 4px 8px; border-top: 1px solid var(--border-subtle); }
 
 /* Endpoint editor */
@@ -6564,11 +6567,13 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 }
 .api-ed-endpoint-path {
   font-family: var(--font-code); font-size: 10px; color: var(--text-secondary);
-  background: none; border: none; padding: 0; outline: none; width: 80px;
+  background: none; border: none; padding: 0; outline: none;
+  flex: 1; min-width: 0; max-width: 600px; text-overflow: ellipsis; overflow: hidden;
 }
 .api-ed-endpoint-summary {
   font-family: var(--font-ui); font-size: 10px; color: var(--text-muted);
-  background: none; border: none; padding: 0; outline: none; flex: 1;
+  background: none; border: none; padding: 0; outline: none;
+  flex: 1; min-width: 0; max-width: 600px; text-overflow: ellipsis; overflow: hidden;
 }
 .api-ed-endpoint-body { padding: 4px 0 4px 8px; }
 .api-ed-row { display: flex; gap: 4px; margin-bottom: 4px; }
