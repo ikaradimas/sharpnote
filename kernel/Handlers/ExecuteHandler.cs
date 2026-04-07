@@ -136,14 +136,49 @@ partial class Program
         // captures its return value (e.g. `DateTime.Compare(a,b);` → displays the int).
         cleanCode = TrimFinalExprSemicolon(cleanCode);
 
+        // ── Parse optional breakpoints for debugging ─────────────────────────
+        var breakpointLines = new System.Collections.Generic.List<int>();
+        if (msg.TryGetProperty("breakpoints", out var bpProp) && bpProp.ValueKind == JsonValueKind.Array)
+            foreach (var bp in bpProp.EnumerateArray())
+                if (bp.TryGetInt32(out var bpLine))
+                    breakpointLines.Add(bpLine);
+
+        var debugActive = breakpointLines.Count > 0;
+
+        // Create DebugContext — provides __dbg__.Check(line) for pause/resume/step.
+        // Always assigned so injected code compiles, but Check() is a no-op when no
+        // breakpoints are set and not stepping.
+        var debugCtx = new DebugContext(
+            realStdout, id, execToken, breakpointLines,
+            () => script?.Variables
+                .Where(v => !v.Name.StartsWith("<"))
+                .Select(v => (object)new {
+                    name = v.Name,
+                    typeName = v.Type.Name,
+                    value = SafeToString(v.Value, v.Type.Name),
+                })
+                .ToList() ?? new System.Collections.Generic.List<object>());
+        globals.__dbg__ = debugCtx;
+        _currentDebugCtx = debugCtx;
+
         // Inject __ct__.ThrowIfCancellationRequested() into every loop body so
         // tight synchronous loops respond to Stop without killing the kernel.
         globals.__ct__ = execToken;
+        var parseOpts = new CSharpParseOptions(LanguageVersion.Latest,
+            Microsoft.CodeAnalysis.DocumentationMode.None, Microsoft.CodeAnalysis.SourceCodeKind.Script);
         var injectedCode = new CancellationCheckInjector()
-            .Visit(CSharpSyntaxTree.ParseText(cleanCode,
-                new CSharpParseOptions(LanguageVersion.Latest,
-                    Microsoft.CodeAnalysis.DocumentationMode.None, Microsoft.CodeAnalysis.SourceCodeKind.Script))
-                .GetRoot())!.ToFullString();
+            .Visit(CSharpSyntaxTree.ParseText(cleanCode, parseOpts).GetRoot())!
+            .ToFullString();
+
+        // When breakpoints are set, also inject __dbg__.Check(line) before every
+        // statement so DebugContext can pause execution at breakpoints.
+        if (debugActive)
+        {
+            var debugTree = CSharpSyntaxTree.ParseText(injectedCode, parseOpts);
+            var debugRoot = (Microsoft.CodeAnalysis.CSharp.Syntax.CompilationUnitSyntax)debugTree.GetRoot();
+            injectedCode = new DebugCheckInjector(lineOffset: 0)
+                .Rewrite(debugRoot).ToFullString();
+        }
 
         try
         {
@@ -179,6 +214,7 @@ partial class Program
             Console.SetOut(interrupted ? TextWriter.Null : realStdout);
             DisplayContext.Current = null;
             _execCts = null;
+            _currentDebugCtx = null;
         }
 
         var captured = captureBuffer.ToString();

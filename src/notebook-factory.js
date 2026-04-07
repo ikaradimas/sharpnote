@@ -1664,5 +1664,7 @@ export function createNotebook(templateKey = null) {
     staleCellIds: [],
     autoRun: false,
     pipelines: [],
+    breakpoints: {},
+    debugState: null,
   };
 }

@@ -209,7 +209,7 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
               }
             }
 
-            return { running: next, cellResults: { ...(n.cellResults || {}), [msg.id]: result }, staleCellIds, ...extra };
+            return { running: next, cellResults: { ...(n.cellResults || {}), [msg.id]: result }, staleCellIds, debugState: null, ...extra };
           });
           break;
         }
@@ -242,6 +242,12 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
             const pt = { v: msg.value, t: msg.time ?? Date.now(), axis: msg.axis ?? 'y', ...(msg.chartType ? { chartType: msg.chartType } : {}) };
             hist[msg.name] = [...(hist[msg.name] || []).slice(-49), pt];
             return { varHistory: hist };
+          });
+          break;
+
+        case 'paused':
+          setNb(notebookId, {
+            debugState: { cellId: msg.id, line: msg.line, variables: msg.variables, paused: true },
           });
           break;
 
@@ -487,6 +493,7 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
       setNb(notebookId, (n) => ({
         staleCellIds: (n.staleCellIds || []).filter((id) => id !== cell.id),
       }));
+      const breakpoints = nb?.breakpoints?.[cell.id] || [];
       window.electronAPI.sendToKernel(notebookId, {
         type: 'execute',
         id: cell.id,
@@ -494,6 +501,7 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
         outputMode: cell.outputMode || 'auto',
         sources: nb ? nb.nugetSources.filter((s) => s.enabled).map((s) => s.url) : [],
         config: resolvedConfig,
+        ...(breakpoints.length > 0 ? { breakpoints } : {}),
       });
     });
   }, [setNb]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -654,6 +662,28 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
     window.electronAPI.resetKernel(notebookId);
   }, [setNb, cancelPendingCells]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Debug actions ──────────────────────────────────────────────────────────
+
+  const debugResume = useCallback((notebookId) => {
+    window.electronAPI?.sendToKernel(notebookId, { type: 'debug_resume' });
+    setNb(notebookId, { debugState: null });
+  }, [setNb]);
+
+  const debugStep = useCallback((notebookId) => {
+    window.electronAPI?.sendToKernel(notebookId, { type: 'debug_step' });
+    setNb(notebookId, { debugState: null }); // cleared; will be re-set on next 'paused' message
+  }, [setNb]);
+
+  const toggleBreakpoint = useCallback((notebookId, cellId, line) => {
+    setNb(notebookId, (n) => {
+      const current = n.breakpoints?.[cellId] || [];
+      const updated = current.includes(line)
+        ? current.filter((l) => l !== line)
+        : [...current, line];
+      return { breakpoints: { ...(n.breakpoints || {}), [cellId]: updated } };
+    });
+  }, [setNb]);
+
   return {
     runCell,
     runCellWithFormData,
@@ -668,5 +698,8 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
     handleInterrupt,
     handleReset,
     cancelPendingCells,
+    debugResume,
+    debugStep,
+    toggleBreakpoint,
   };
 }

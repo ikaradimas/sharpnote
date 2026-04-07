@@ -46,6 +46,10 @@ partial class Program
     internal static string? CurrentCellId;
     private static readonly Dictionary<string, JsonElement> _widgetValues = new();
 
+    // Debug context for the currently executing cell — set by HandleExecute, used
+    // by inline debug message handlers (resume/step/set_breakpoints).
+    internal static DebugContext? _currentDebugCtx;
+
     // ── Entry point ───────────────────────────────────────────────────────────
 
     static async Task Main()
@@ -157,6 +161,23 @@ partial class Program
                             if (msgType == "interrupt")
                             {
                                 _execCts?.Cancel();
+                            }
+                            else if (msgType == "debug_resume")
+                            {
+                                _currentDebugCtx?.Resume();
+                            }
+                            else if (msgType == "debug_step")
+                            {
+                                _currentDebugCtx?.Step();
+                            }
+                            else if (msgType == "set_breakpoints")
+                            {
+                                var lines = root.TryGetProperty("lines", out var linesProp)
+                                    ? linesProp.EnumerateArray()
+                                        .Where(l => l.TryGetInt32(out _))
+                                        .Select(l => l.GetInt32())
+                                    : Array.Empty<int>();
+                                _currentDebugCtx?.SetBreakpoints(lines);
                             }
                             else if (msgType == "db_list_response"
                                 && root.TryGetProperty("requestId", out var ridProp))

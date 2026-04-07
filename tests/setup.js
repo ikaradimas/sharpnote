@@ -62,9 +62,13 @@ vi.mock('@codemirror/view', () => ({
   highlightActiveLineGutter: () => ({ highlightActiveLineGutter: true }),
   showTooltip: { from: (f) => ({ showTooltip: f }) },
   tooltips: () => ({ tooltips: true }),
+  hoverTooltip: () => ({ hoverTooltip: true }),
+  GutterMarker: class GutterMarker { range(from) { return { from, value: this }; } },
+  gutter: () => ({ gutter: true }),
+  Decoration: { none: {}, line: () => ({ line: true }), set: (a) => a },
 }));
 
-const mockStateEffect = { define: () => { const e = (v) => ({ effect: v }); e.is = () => false; return e; } };
+const mockStateEffect = { define: () => { const e = (v) => ({ effect: v }); e.of = (v) => ({ effect: v }); e.is = () => false; return e; } };
 const mockStateField = {
   define: ({ create, update, provide }) => ({
     stateField: true,
@@ -83,6 +87,7 @@ vi.mock('@codemirror/state', () => ({
   Prec: { highest: (ext) => ext },
   StateEffect: mockStateEffect,
   StateField: mockStateField,
+  RangeSet: { empty: {}, of: (a) => a },
 }));
 
 vi.mock('@codemirror/commands', () => ({

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import { EditorState, StateEffect, StateField, Prec, Compartment } from '@codemirror/state';
-import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter, hoverTooltip, showTooltip } from '@codemirror/view';
+import { EditorState, StateEffect, StateField, RangeSet, Prec, Compartment } from '@codemirror/state';
+import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter, hoverTooltip, showTooltip, gutter, GutterMarker, Decoration } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
@@ -274,8 +274,117 @@ function buildSqlCompletionSource(schema) {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
+// ── Breakpoint gutter ────────────────────────────────────────────────────────
+
+const toggleBreakpointEffect = StateEffect.define();
+const setBreakpointsEffect = StateEffect.define();
+
+class BreakpointMarker extends GutterMarker {
+  toDOM() {
+    const el = document.createElement('div');
+    el.className = 'cm-breakpoint-marker';
+    return el;
+  }
+}
+const breakpointMarkerInstance = new BreakpointMarker();
+
+const breakpointState = StateField.define({
+  create() { return RangeSet.empty; },
+  update(set, tr) {
+    set = set.map(tr.changes);
+    for (const e of tr.effects) {
+      if (e.is(setBreakpointsEffect)) {
+        // Replace all breakpoints from external source (lines array, 1-based)
+        const builders = [];
+        for (const lineNum of e.value) {
+          if (lineNum >= 1 && lineNum <= tr.state.doc.lines) {
+            builders.push(breakpointMarkerInstance.range(tr.state.doc.line(lineNum).from));
+          }
+        }
+        return RangeSet.of(builders, true);
+      }
+      if (e.is(toggleBreakpointEffect)) {
+        const line = tr.state.doc.lineAt(e.value);
+        let found = false;
+        const filtered = [];
+        const iter = set.iter();
+        while (iter.value) {
+          if (iter.from === line.from) { found = true; }
+          else { filtered.push(iter.value.range(iter.from)); }
+          iter.next();
+        }
+        if (!found) filtered.push(breakpointMarkerInstance.range(line.from));
+        return RangeSet.of(filtered, true);
+      }
+    }
+    return set;
+  },
+});
+
+const breakpointLineDeco = Decoration.line({ class: 'cm-breakpoint-line' });
+
+const breakpointLineDecoField = StateField.define({
+  create() { return Decoration.none; },
+  update(_, tr) {
+    const bpSet = tr.state.field(breakpointState);
+    const decos = [];
+    const iter = bpSet.iter();
+    while (iter.value) {
+      decos.push(breakpointLineDeco.range(iter.from));
+      iter.next();
+    }
+    return Decoration.set(decos, true);
+  },
+  provide: (f) => EditorView.decorations.from(f),
+});
+
+function breakpointGutter(onToggle) {
+  return [
+    breakpointState,
+    breakpointLineDecoField,
+    gutter({
+      class: 'cm-breakpoint-gutter',
+      markers: (v) => v.state.field(breakpointState),
+      initialSpacer: () => breakpointMarkerInstance,
+      domEventHandlers: {
+        mousedown(view, line) {
+          view.dispatch({ effects: toggleBreakpointEffect.of(line.from) });
+          // Compute 1-based line number and notify parent
+          const lineNum = view.state.doc.lineAt(line.from).number;
+          onToggle?.(lineNum);
+          return true;
+        },
+      },
+    }),
+  ];
+}
+
+// ── Paused-line highlight ────────────────────────────────────────────────────
+
+const setPausedLineEffect = StateEffect.define();
+
+const pausedLineDeco = Decoration.line({ class: 'cm-debug-paused-line' });
+
+const pausedLineField = StateField.define({
+  create() { return Decoration.none; },
+  update(value, tr) {
+    for (const e of tr.effects) {
+      if (e.is(setPausedLineEffect)) {
+        if (e.value == null) return Decoration.none;
+        if (e.value >= 1 && e.value <= tr.state.doc.lines) {
+          return Decoration.set([pausedLineDeco.range(tr.state.doc.line(e.value).from)]);
+        }
+        return Decoration.none;
+      }
+    }
+    return value.map(tr.changes);
+  },
+  provide: (f) => EditorView.decorations.from(f),
+});
+
 export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
-                      notebookId, readOnly = false, cellIndex = null, sqlSchema = null }) {
+                      notebookId, readOnly = false, cellIndex = null, sqlSchema = null,
+                      breakpoints = null, onToggleBreakpoint = null, pausedLine = null }) {
   const containerRef = useRef(null);
   const viewRef = useRef(null);
   const onChangeRef = useRef(onChange);
@@ -283,6 +392,8 @@ export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
   const readOnlyCompartmentRef = useRef(null);
   const sqlCompletionCompartmentRef = useRef(null);
   const cellIndexRef = useRef(cellIndex);
+  const onToggleBreakpointRef = useRef(onToggleBreakpoint);
+  useEffect(() => { onToggleBreakpointRef.current = onToggleBreakpoint; }, [onToggleBreakpoint]);
 
   useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
   useEffect(() => { onCtrlEnterRef.current = onCtrlEnter; }, [onCtrlEnter]);
@@ -354,6 +465,8 @@ export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
       blurHandler,
       EditorView.lineWrapping,
       readOnlyCompartment.of(EditorState.readOnly.of(readOnly)),
+      breakpointGutter((lineNum) => onToggleBreakpointRef.current?.(lineNum)),
+      pausedLineField,
     ];
 
     if (language === 'csharp' && notebookId) {
@@ -402,6 +515,25 @@ export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
       });
     }
   }, [value]);
+
+  // Sync breakpoints from external state
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view || !breakpoints) return;
+    view.dispatch({ effects: setBreakpointsEffect.of(breakpoints) });
+  }, [breakpoints]);
+
+  // Sync paused line from external state
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) return;
+    view.dispatch({ effects: setPausedLineEffect.of(pausedLine) });
+    // Scroll paused line into view
+    if (pausedLine != null && pausedLine >= 1 && pausedLine <= view.state.doc.lines) {
+      const linePos = view.state.doc.line(pausedLine).from;
+      view.dispatch({ effects: EditorView.scrollIntoView(linePos, { y: 'center' }) });
+    }
+  }, [pausedLine]);
 
   return <div ref={containerRef} className="code-editor-wrap" />;
 }

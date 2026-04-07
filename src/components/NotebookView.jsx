@@ -64,11 +64,14 @@ export function NotebookView({
   onNotebookScheduleStop,
   dashboardMode,
   onToggleDashboard,
+  onDebugResume,
+  onDebugStep,
+  onToggleBreakpoint,
 }) {
   const { cells, outputs, outputHistory, cellResults, running, kernelStatus,
           config, logPanelOpen, nugetPanelOpen, configPanelOpen,
           dbPanelOpen, varsPanelOpen, tocPanelOpen, graphPanelOpen, todoPanelOpen, regexPanelOpen, historyPanelOpen, depsPanelOpen,
-          path: notebookPath, staleCellIds, attachedDbs, autoRun } = nb;
+          path: notebookPath, staleCellIds, attachedDbs, autoRun, breakpoints, debugState } = nb;
 
   const [findOpen, setFindOpen] = useState(false);
   const [findHighlighted, setFindHighlighted] = useState(new Set());
@@ -397,6 +400,11 @@ export function NotebookView({
                 onColorChange={(color) => updateCellProp(cell.id, 'color', color)}
                 allCells={cells}
                 onRunCellByName={onRunCellByName}
+                breakpoints={breakpoints?.[cell.id] || []}
+                onToggleBreakpoint={(line) => onToggleBreakpoint?.(nb.id, cell.id, line)}
+                debugState={debugState}
+                onDebugResume={() => onDebugResume?.(nb.id)}
+                onDebugStep={() => onDebugStep?.(nb.id)}
               />
             )}
             {!dashboardMode && (

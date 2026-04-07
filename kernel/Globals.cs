@@ -128,4 +128,7 @@ public class ScriptGlobals
     // Injected per-execution so loop-injection checks can cancel tight loops.
     // Named with underscores to discourage accidental use in user code.
     public CancellationToken __ct__ { get; set; }
+    // Injected per-execution when breakpoints are active; provides Check(line)
+    // for pause/resume/step debugging.
+    public DebugContext __dbg__ { get; set; } = null!;
 }
