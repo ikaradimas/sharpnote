@@ -7509,6 +7509,7 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
   width: 10px; height: 10px; border-radius: 50%;
   background: #e06c75; margin: 3px auto; box-shadow: 0 0 4px rgba(224,108,117,0.4);
 }
+.cm-breakpoint-line { background: rgba(224,108,117,0.12) !important; }
 .cm-debug-paused-line { background: rgba(218,168,78,0.18) !important; }
 .cell.debug-paused { border-left-color: #daa84e; }
 .cell-debug-controls {

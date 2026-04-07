@@ -321,9 +321,27 @@ const breakpointState = StateField.define({
   },
 });
 
+const breakpointLineDeco = Decoration.line({ class: 'cm-breakpoint-line' });
+
+const breakpointLineDecoField = StateField.define({
+  create() { return Decoration.none; },
+  update(_, tr) {
+    const bpSet = tr.state.field(breakpointState);
+    const decos = [];
+    const iter = bpSet.iter();
+    while (iter.value) {
+      decos.push(breakpointLineDeco.range(iter.from));
+      iter.next();
+    }
+    return Decoration.set(decos, true);
+  },
+  provide: (f) => EditorView.decorations.from(f),
+});
+
 function breakpointGutter(onToggle) {
   return [
     breakpointState,
+    breakpointLineDecoField,
     gutter({
       class: 'cm-breakpoint-gutter',
       markers: (v) => v.state.field(breakpointState),
