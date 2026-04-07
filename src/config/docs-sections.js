@@ -1074,6 +1074,38 @@ export const DOCS_SECTIONS = [
     ],
   },
   {
+    id: 'api-editor', title: 'API Editor',
+    content: [
+      { type: 'p', text: 'The API Editor is a visual tool for designing REST APIs directly inside SharpNote. Define controllers, endpoints, typed models, and export the result as an OpenAPI 3.0 specification or spin up a built-in mock HTTP server for testing.' },
+      { type: 'h3', text: 'Controllers & Endpoints' },
+      { type: 'ul', items: [
+        'Add controllers with a name, description, and base path (e.g. /api)',
+        'Each controller holds one or more endpoints with an HTTP method (GET, POST, PUT, DELETE, PATCH), path, summary, and description',
+        'Path parameters use {param} syntax (e.g. /users/{id})',
+        'Add query parameters and headers with name, type, required flag, and description',
+      ]},
+      { type: 'h3', text: 'Models' },
+      { type: 'ul', items: [
+        'Define reusable data models with named, typed fields (string, int, bool, date, uuid, etc.)',
+        'Fields can be marked required and given descriptions',
+        'Models are referenced in request bodies and response schemas by name',
+        'Array types supported via bracket syntax (string[]) or List<T> generics',
+      ]},
+      { type: 'h3', text: 'Request & Response Bodies' },
+      { type: 'ul', items: [
+        'Endpoints can specify a request body referencing a model name — generates a $ref in the spec',
+        'Responses are defined per status code (200, 404, etc.) with a description and optional schema',
+        'Content type defaults to application/json',
+      ]},
+      { type: 'h3', text: 'OpenAPI 3.0 Export' },
+      { type: 'p', text: 'Click Export OpenAPI to save the API definition as a JSON or YAML file conforming to the OpenAPI 3.0.3 specification. The export includes info, servers, tags, paths with parameters/requestBody/responses, and components/schemas.' },
+      { type: 'h3', text: 'Mock HTTP Server' },
+      { type: 'p', text: 'Click Mock Server to start a local HTTP server that serves mock responses for defined endpoints. The server binds to the port from the base URL, returns 404 for unknown routes and 501 for endpoints without a mock response. Path parameters are substituted into the response body using {{param}} placeholders.' },
+      { type: 'h3', text: 'Saved APIs' },
+      { type: 'p', text: 'API definitions created in the editor are saved to the shared api-saved.json store and appear in the API Browser panel. Use Save to persist, the dropdown to reload, and the delete button to remove.' },
+    ],
+  },
+  {
     id: 'cell-orchestration', title: 'Cell Orchestration',
     content: [
       { type: 'p', text: 'Cell Orchestration lets you build execution pipelines by naming cells, assigning colors, defining boolean decision branches, and wiring everything together in an interactive dependency graph.' },
