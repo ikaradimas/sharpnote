@@ -127,15 +127,19 @@ export function LogPanel({ isOpen, onToggle, currentMemoryMb = null, cells, onNa
 
   const rawEntries = selectedFile === 'live' ? liveEntries : fileEntries;
 
+  // Reset tag filter when switching between live/file views
+  useEffect(() => { setTagFilter(''); }, [selectedFile]);
+
   const allTags = useMemo(() => {
     const tags = new Set();
     for (const e of rawEntries) { if (e.tag) tags.add(e.tag); }
     return [...tags].sort();
   }, [rawEntries]);
 
-  const entries = tagFilter
-    ? rawEntries.filter((e) => e.tag === tagFilter)
-    : rawEntries;
+  const entries = useMemo(
+    () => tagFilter ? rawEntries.filter((e) => e.tag === tagFilter) : rawEntries,
+    [rawEntries, tagFilter]
+  );
 
   const handleDelete = async () => {
     if (selectedFile === 'live' || !window.electronAPI) return;
