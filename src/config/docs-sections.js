@@ -1156,4 +1156,53 @@ export const DOCS_SECTIONS = [
       ]},
     ],
   },
+  {
+    id: 'git', title: 'Git Integration',
+    content: [
+      { type: 'h3', text: 'Overview' },
+      { type: 'p', text: 'The Git panel provides a built-in source control interface for the directory containing the active notebook. Open it from the toolbar or dock to view repository status, stage changes, commit, switch branches, and browse history — all without leaving SharpNote.' },
+      { type: 'h3', text: 'Status View' },
+      { type: 'ul', items: [
+        'Staged changes — files added to the index, ready to commit',
+        'Unstaged changes — tracked files with working-tree modifications',
+        'Untracked files — new files not yet tracked by Git',
+        'The current branch name and ahead/behind indicators are shown in the branch bar',
+      ]},
+      { type: 'h3', text: 'Staging & Unstaging' },
+      { type: 'ul', items: [
+        'Click "+ Stage" on individual files or the section header to stage all',
+        'Click "− Unstage" on staged files or the section header to unstage all',
+        'Staged and unstaged file lists update automatically after each action',
+      ]},
+      { type: 'h3', text: 'Discard Changes' },
+      { type: 'p', text: 'Unstaged files show a discard action that restores the file to its last committed state using git checkout.' },
+      { type: 'h3', text: 'Committing' },
+      { type: 'ul', items: [
+        'Type a commit message in the input box at the bottom of the file lists',
+        'The Commit button is enabled only when staged files exist and a message is entered',
+        'Press Enter in the message input to commit (when enabled)',
+        'After a successful commit the file lists and history refresh automatically',
+      ]},
+      { type: 'h3', text: 'Branch Switching' },
+      { type: 'ul', items: [
+        'Click "Branch ▾" in the branch bar to open the branch dropdown',
+        'Select any local branch to check it out',
+        'The current branch is marked with ● in the dropdown',
+      ]},
+      { type: 'h3', text: 'Commit History' },
+      { type: 'ul', items: [
+        'The History section shows the most recent commits with hash, message, and relative date',
+        'Click any commit to view its full diff in the diff viewer below',
+      ]},
+      { type: 'h3', text: 'Visual Diff Viewer' },
+      { type: 'ul', items: [
+        'Click any file in the staged or unstaged lists to view its diff',
+        'Supports unified and split (side-by-side) display modes',
+        'Line numbers are shown for both old and new versions',
+        'Additions are color-coded green, deletions red, and context lines remain neutral',
+      ]},
+      { type: 'h3', text: 'Initialize Repository' },
+      { type: 'p', text: 'If the notebook directory is not a Git repository, the panel shows an "Initialize Repository" button that runs git init and refreshes the panel.' },
+    ],
+  },
 ];

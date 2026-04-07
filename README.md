@@ -138,6 +138,7 @@
 - **API Browser** — enter any OpenAPI 3.x or Swagger 2.0 spec URL (JSON or YAML) to explore endpoints grouped by tag; expandable detail shows parameters, request body, and response schema types; **Try it** form sends live requests with path/query/body inputs; supports Bearer, API Key, and Basic auth applied to every request; save and recall multiple APIs with their auth config; all requests proxied through the main process for http:// local dev servers
 - **Kafka Browser** — save named broker connections (with SSL and SASL-PLAIN/SCRAM support); click → to list all topics via the admin API; click ▶ per topic to start a live consumer feed (multiple topics simultaneously); configurable max-messages cap; click C# to copy a ready-to-run `Confluent.Kafka` consumer snippet to the clipboard (Ctrl+Shift+K)
 - **Docker integration** — the `Docker` kernel global manages containers from code cells via `Docker.Run()`, `Docker.Stop()`, `Docker.Remove()`, `Docker.Exec()`, `Docker.IsRunning()`, and `Docker.List()`; requires Docker to be installed
+- **Git integration** — built-in Git panel with status view, staging, commit, branch switching, commit history, and visual diff viewer (unified + split mode)
 
 ### Developer Experience
 
