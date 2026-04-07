@@ -11,6 +11,15 @@ const METHOD_BG = {
   delete: 'rgba(224,108,117,0.12)', patch: 'rgba(198,120,221,0.12)',
 };
 
+const HANDLER_PLACEHOLDER = [
+  '// req: { params, query, body, headers, method }',
+  'const id = req.params.id || 1;',
+  'return {',
+  '  status: 200,',
+  '  body: { id, message: "Hello from handler" }',
+  '};',
+].join('\n');
+
 export function EndpointEditor({ endpoint, modelNames, onUpdate, onDelete }) {
   const [expanded, setExpanded] = useState(false);
 
@@ -124,18 +133,41 @@ export function EndpointEditor({ endpoint, modelNames, onUpdate, onDelete }) {
           ))}
 
           {/* Mock Response */}
-          <div className="api-ed-section-label">Mock Response</div>
-          <div className="api-ed-mock-row">
-            <input className="api-ed-resp-status" value={endpoint.mockResponse?.status ?? 200} onChange={(e) => set('mockResponse', { ...(endpoint.mockResponse || { headers: {}, body: '{}' }), status: parseInt(e.target.value) || 200 })} placeholder="200" type="number" />
+          <div className="api-ed-section-label">
+            Mock Response
+            <div className="api-ed-mock-mode-toggle">
+              <button
+                className={`api-ed-mock-mode-btn${!endpoint.mockHandler ? ' active' : ''}`}
+                onClick={() => set('mockHandler', null)}
+              >Static</button>
+              <button
+                className={`api-ed-mock-mode-btn${endpoint.mockHandler != null ? ' active' : ''}`}
+                onClick={() => { if (endpoint.mockHandler == null) set('mockHandler', HANDLER_PLACEHOLDER); }}
+              >Handler</button>
+            </div>
+          </div>
+          {endpoint.mockHandler != null ? (
             <textarea
-              className="api-ed-mock-body"
-              value={endpoint.mockResponse?.body || ''}
-              onChange={(e) => set('mockResponse', { ...(endpoint.mockResponse || { status: 200, headers: {} }), body: e.target.value })}
-              placeholder='{"id": 1, "name": "Example"}'
-              rows={3}
+              className="api-ed-mock-handler"
+              value={endpoint.mockHandler}
+              onChange={(e) => set('mockHandler', e.target.value)}
+              placeholder={'// req: { params, query, body, headers, method }\n// Return object or { status, headers, body }\nreturn { status: 200, body: { message: "hello" } };'}
+              rows={6}
               spellCheck={false}
             />
-          </div>
+          ) : (
+            <div className="api-ed-mock-row">
+              <input className="api-ed-resp-status" value={endpoint.mockResponse?.status ?? 200} onChange={(e) => set('mockResponse', { ...(endpoint.mockResponse || { headers: {}, body: '{}' }), status: parseInt(e.target.value) || 200 })} placeholder="200" type="number" />
+              <textarea
+                className="api-ed-mock-body"
+                value={endpoint.mockResponse?.body || ''}
+                onChange={(e) => set('mockResponse', { ...(endpoint.mockResponse || { status: 200, headers: {} }), body: e.target.value })}
+                placeholder='{"id": 1, "name": "Example"}'
+                rows={3}
+                spellCheck={false}
+              />
+            </div>
+          )}
         </div>
       )}
     </div>

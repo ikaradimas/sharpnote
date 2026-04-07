@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterEach } from 'vitest';
 
-let buildRoutes, matchRoute, startMockServer, stopMockServer;
+let buildRoutes, matchRoute, startMockServer, stopMockServer, executeHandler;
 
 beforeAll(async () => {
   const mod = await import('../../src/main/mock-server.js');
@@ -8,6 +8,7 @@ beforeAll(async () => {
   matchRoute = mod.matchRoute;
   startMockServer = mod.startMockServer;
   stopMockServer = mod.stopMockServer;
+  executeHandler = mod.executeHandler;
 });
 
 afterEach(() => {
@@ -190,5 +191,128 @@ describe('mock server', () => {
     const { port } = await startMockServer(apiDef, 0);
     const res = await fetch(`http://127.0.0.1:${port}/api/hello`, { method: 'OPTIONS' });
     expect(res.status).toBe(204);
+  });
+});
+
+// ── executeHandler ──────────────────────────────────────────────────────────
+
+describe('executeHandler', () => {
+  const reqCtx = { params: { id: '42' }, query: { q: 'test' }, body: {}, headers: {}, method: 'GET' };
+
+  it('returns structured { status, body } when handler returns them', () => {
+    const code = 'return { status: 201, body: { created: true } };';
+    const result = executeHandler(code, reqCtx);
+    expect(result.status).toBe(201);
+    expect(JSON.parse(result.body)).toEqual({ created: true });
+  });
+
+  it('returns 200 with serialised JSON when handler returns a plain value', () => {
+    const code = 'return [1, 2, 3];';
+    const result = executeHandler(code, reqCtx);
+    expect(result.status).toBe(200);
+    expect(JSON.parse(result.body)).toEqual([1, 2, 3]);
+  });
+
+  it('provides req.params, req.query, req.method to the handler', () => {
+    const code = 'return { id: req.params.id, q: req.query.q, m: req.method };';
+    const result = executeHandler(code, reqCtx);
+    expect(JSON.parse(result.body)).toEqual({ id: '42', q: 'test', m: 'GET' });
+  });
+
+  it('returns empty object for null/undefined return', () => {
+    const result = executeHandler('// nothing', reqCtx);
+    expect(result.status).toBe(200);
+    expect(result.body).toBe('{}');
+  });
+
+  it('returns string body as-is when handler returns a string', () => {
+    const result = executeHandler('return "hello";', reqCtx);
+    expect(result.body).toBe('hello');
+  });
+
+  it('passes custom headers through from structured response', () => {
+    const code = 'return { status: 200, headers: { "X-Custom": "yes" }, body: {} };';
+    const result = executeHandler(code, reqCtx);
+    expect(result.headers['X-Custom']).toBe('yes');
+  });
+});
+
+// ── mock handler integration ────────────────────────────────────────────────
+
+describe('mock handler integration', () => {
+  const apiDef = {
+    controllers: [{
+      basePath: '/api',
+      endpoints: [
+        {
+          method: 'get',
+          path: '/greet/{name}',
+          mockHandler: 'return { status: 200, body: { greeting: "Hello " + req.params.name } };',
+        },
+        {
+          method: 'post',
+          path: '/echo',
+          mockHandler: 'return req.body;',
+        },
+        {
+          method: 'get',
+          path: '/error',
+          mockHandler: 'throw new Error("broken");',
+        },
+        {
+          method: 'get',
+          path: '/static',
+          mockResponse: { status: 200, body: '{"source":"static"}' },
+        },
+        {
+          method: 'get',
+          path: '/both',
+          mockHandler: 'return { body: { source: "handler" } };',
+          mockResponse: { status: 200, body: '{"source":"static"}' },
+        },
+      ],
+    }],
+  };
+
+  it('executes handler with path params', async () => {
+    const { port } = await startMockServer(apiDef, 0);
+    const res = await fetch(`http://127.0.0.1:${port}/api/greet/World`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.greeting).toBe('Hello World');
+  });
+
+  it('passes parsed request body to handler', async () => {
+    const { port } = await startMockServer(apiDef, 0);
+    const res = await fetch(`http://127.0.0.1:${port}/api/echo`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: 'hi' }),
+    });
+    const body = await res.json();
+    expect(body.message).toBe('hi');
+  });
+
+  it('returns 500 when handler throws', async () => {
+    const { port } = await startMockServer(apiDef, 0);
+    const res = await fetch(`http://127.0.0.1:${port}/api/error`);
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body.error).toBe('Handler error');
+    expect(body.message).toBe('broken');
+  });
+
+  it('falls back to static mockResponse when no handler', async () => {
+    const { port } = await startMockServer(apiDef, 0);
+    const res = await fetch(`http://127.0.0.1:${port}/api/static`);
+    const body = await res.json();
+    expect(body.source).toBe('static');
+  });
+
+  it('handler takes priority over static mockResponse', async () => {
+    const { port } = await startMockServer(apiDef, 0);
+    const res = await fetch(`http://127.0.0.1:${port}/api/both`);
+    const body = await res.json();
+    expect(body.source).toBe('handler');
   });
 });

@@ -6610,6 +6610,15 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
   color: var(--text-secondary); background: none; border: none;
   border-bottom: 1px solid var(--border-subtle); padding: 1px 2px; outline: none; text-align: center;
 }
+.api-ed-mock-mode-toggle {
+  display: inline-flex; margin-left: auto; border: 1px solid var(--border-subtle); border-radius: 4px; overflow: hidden;
+}
+.api-ed-mock-mode-btn {
+  font-family: var(--font-ui); font-size: 9px; padding: 1px 8px;
+  background: none; border: none; color: var(--text-dim); cursor: pointer;
+}
+.api-ed-mock-mode-btn.active { background: var(--bg-hover); color: var(--text-primary); font-weight: 600; }
+.api-ed-mock-mode-btn:not(.active):hover { color: var(--text-muted); }
 .api-ed-mock-row { display: flex; gap: 4px; align-items: flex-start; }
 .api-ed-mock-body {
   flex: 1; font-family: var(--font-code); font-size: 10px;
@@ -6617,6 +6626,15 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
   border: 1px solid var(--border-subtle); border-radius: 3px;
   padding: 4px; resize: vertical; min-height: 40px; outline: none;
 }
+.api-ed-mock-handler {
+  width: 100%; box-sizing: border-box; font-family: var(--font-code); font-size: 10px;
+  color: #dcdcaa; background: var(--bg-deepest);
+  border: 1px solid rgba(198,120,221,0.3); border-radius: 4px;
+  padding: 6px; resize: vertical; min-height: 60px; outline: none;
+  tab-size: 2; line-height: 1.5;
+}
+.api-ed-mock-handler:focus { border-color: #c678dd; }
+.api-ed-mock-handler::placeholder { color: var(--text-dim); }
 
 /* Bottom actions */
 .api-ed-actions {
