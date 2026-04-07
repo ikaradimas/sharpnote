@@ -13,6 +13,7 @@ import { TodoPanel } from '../panels/TodoPanel.jsx';
 import { RegexPanel } from '../panels/RegexPanel.jsx';
 import { HistoryPanel } from '../panels/HistoryPanel.jsx';
 import { DependencyPanel } from '../panels/DependencyPanel.jsx';
+import { ApiEditorPanel } from '../panels/ApiEditorPanel.jsx';
 
 export function renderPanelContent(panelId, p) {
   if (!p) return null;
@@ -26,6 +27,7 @@ export function renderPanelContent(panelId, p) {
     case 'library': return <LibraryPanel {...p} />;
     case 'files':   return <FilesPanel {...p} />;
     case 'api':     return <ApiPanel {...p} />;
+    case 'api-editor': return <ApiEditorPanel {...p} />;
     case 'graph':   return <GraphPanel {...p} />;
     case 'todo':    return <TodoPanel {...p} />;
     case 'regex':   return <RegexPanel {...p} />;

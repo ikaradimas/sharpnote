@@ -3,8 +3,8 @@ import React from 'react';
 // ── Dock Layout System ────────────────────────────────────────────────────────
 
 export const DEFAULT_DOCK_LAYOUT = {
-  assignments: { log: 'right', nuget: 'bottom', config: 'bottom', db: 'bottom', library: 'left', vars: 'right', toc: 'left', files: 'left', api: 'right', graph: 'right', todo: 'bottom', regex: 'bottom', history: 'right', deps: 'right' },
-  order:       { log: 0, nuget: 0, config: 1, db: 2, library: 0, vars: 1, toc: 1, files: 2, api: 2, graph: 3, todo: 3, regex: 4, history: 4, deps: 5 },
+  assignments: { log: 'right', nuget: 'bottom', config: 'bottom', db: 'bottom', library: 'left', vars: 'right', toc: 'left', files: 'left', api: 'right', 'api-editor': 'right', graph: 'right', todo: 'bottom', regex: 'bottom', history: 'right', deps: 'right' },
+  order:       { log: 0, nuget: 0, config: 1, db: 2, library: 0, vars: 1, toc: 1, files: 2, api: 2, 'api-editor': 3, graph: 4, todo: 3, regex: 4, history: 5, deps: 6 },
   sizes:       { left: 300, right: 320, bottom: 280 },
   floatPos:    {},
   zoneTab:     { left: 'library', right: 'log', bottom: 'nuget' },
@@ -93,6 +93,16 @@ function IconApi() {
   );
 }
 
+function IconApiEditor() {
+  return (
+    <svg {..._ic} stroke="currentColor" strokeWidth="1.1" strokeLinecap="round">
+      <rect x="1.5" y="3" width="10" height="7.5" rx="1" />
+      <path d="M4 6h5M4 8h3" />
+      <circle cx="10" cy="3" r="1.5" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
 function IconGraph() {
   return <svg {..._ic} stroke="currentColor" strokeWidth="1.1" strokeLinecap="round">
     <polyline points="1.5,10 4,6 6.5,8 9,3.5 11.5,5" />
@@ -147,6 +157,7 @@ export const PANEL_META = {
   regex:   { label: 'Regex',      icon: <IconRegex /> },
   history: { label: 'History',    icon: <IconHistory /> },
   deps:    { label: 'Dependencies', icon: <IconDeps /> },
+  'api-editor': { label: 'API Editor', icon: <IconApiEditor /> },
 };
 
 // ── Dock drop zones ───────────────────────────────────────────────────────────

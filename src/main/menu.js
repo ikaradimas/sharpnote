@@ -168,6 +168,7 @@ function buildMenu(customShortcuts = {}) {
       { label: 'Library',           accelerator: accel('panel-library',  'Ctrl+Shift+L'), click: () => send('toggle-library') },
       { label: 'File Explorer',     accelerator: accel('panel-files',    'Ctrl+Shift+E'), click: () => send('toggle-files') },
       { label: 'API Browser',       accelerator: accel('panel-api',      'Ctrl+Shift+A'), click: () => send('toggle-api') },
+      { label: 'API Editor',        accelerator: accel('panel-api-editor', 'Ctrl+Shift+Q'), click: () => send('toggle-api-editor') },
       { label: 'Graph',             accelerator: accel('panel-graph',    'Ctrl+Shift+R'), click: () => send('toggle-graph') },
       { label: 'To Do',             accelerator: accel('panel-todo',     'Ctrl+Shift+O'), click: () => send('toggle-todo') },
       { label: 'Regex',             accelerator: accel('panel-regex',    'Ctrl+Shift+X'), click: () => send('toggle-regex') },

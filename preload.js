@@ -119,6 +119,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Executable export
   exportExecutable: (data) => ipcRenderer.invoke('export-executable', data),
 
+  // API Editor — OpenAPI export + mock server
+  exportOpenApi: (data) => ipcRenderer.invoke('export-openapi', data),
+  startMockServer: (data) => ipcRenderer.invoke('mock-server-start', data),
+  stopMockServer: () => ipcRenderer.invoke('mock-server-stop'),
+
   // URL fetch (proxied through main to bypass renderer CSP for http:// URLs)
   fetchUrl: (url) => ipcRenderer.invoke('fetch-url', url),
 

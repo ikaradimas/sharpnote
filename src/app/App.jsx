@@ -85,6 +85,7 @@ export function App() {
   const [libraryPanelOpen, setLibraryPanelOpen] = useState(false);
   const [filesPanelOpen, setFilesPanelOpen]     = useState(false);
   const [apiPanelOpen, setApiPanelOpen]         = useState(false);
+  const [apiEditorPanelOpen, setApiEditorPanelOpen] = useState(false);
   const [filesCurrentDir, setFilesCurrentDir]   = useState(null);
   const [favoriteFolders, setFavoriteFolders]   = useState([]);
   const favoriteFoldersRef = useRef([]);
@@ -135,7 +136,7 @@ export function App() {
       if (shouldOpen) handleOpenKafkaTab(); else handleCloseKafkaTab();
       return;
     }
-    const globalSetters = { library: setLibraryPanelOpen, files: setFilesPanelOpen, api: setApiPanelOpen };
+    const globalSetters = { library: setLibraryPanelOpen, files: setFilesPanelOpen, api: setApiPanelOpen, 'api-editor': setApiEditorPanelOpen };
     const nbFlagMap = {
       log: 'logPanelOpen', nuget: 'nugetPanelOpen', config: 'configPanelOpen',
       db: 'dbPanelOpen', vars: 'varsPanelOpen', toc: 'tocPanelOpen',
@@ -730,6 +731,7 @@ export function App() {
     'toggle-toc':      () => setPanelVisible('toc',     null),
     'toggle-files':    () => setPanelVisible('files',   null),
     'toggle-api':      () => setPanelVisible('api',     null),
+    'toggle-api-editor': () => setPanelVisible('api-editor', null),
     'toggle-kafka':    () => setPanelVisible('kafka',   null),
     'toggle-graph':    () => setPanelVisible('graph',   null),
     'toggle-todo':     () => setPanelVisible('todo',    null),
@@ -852,12 +854,13 @@ export function App() {
     toc:     isNotebookId(activeId) ? (activeNb?.tocPanelOpen    ?? false) : false,
     files:   filesPanelOpen,
     api:     apiPanelOpen,
+    'api-editor': apiEditorPanelOpen,
     graph:   isNotebookId(activeId) ? (activeNb?.graphPanelOpen  ?? false) : false,
     todo:    isNotebookId(activeId) ? (activeNb?.todoPanelOpen   ?? false) : false,
     regex:   isNotebookId(activeId) ? (activeNb?.regexPanelOpen  ?? false) : false,
     history: isNotebookId(activeId) ? (activeNb?.historyPanelOpen ?? false) : false,
     deps:    isNotebookId(activeId) ? (activeNb?.depsPanelOpen    ?? false) : false,
-  }), [activeId, activeNb, libraryPanelOpen, filesPanelOpen, apiPanelOpen]);
+  }), [activeId, activeNb, libraryPanelOpen, filesPanelOpen, apiPanelOpen, apiEditorPanelOpen]);
 
   const panelPropsMap = useMemo(() => {
     const nbId = activeNb?.id ?? null;
@@ -957,6 +960,9 @@ export function App() {
       },
       api: {
         onToggle: () => setApiPanelOpen((v) => !v),
+      },
+      'api-editor': {
+        onToggle: () => setApiEditorPanelOpen((v) => !v),
       },
       graph: {
         onToggle: nbId ? () => setNb(nbId, (n) => ({ graphPanelOpen: !n.graphPanelOpen })) : () => {},
@@ -1085,6 +1091,11 @@ export function App() {
                     onToggleApi={() => {
                       if (!apiPanelOpen) handleFocusPanel('api');
                       setApiPanelOpen((v) => !v);
+                    }}
+                    apiEditorPanelOpen={apiEditorPanelOpen}
+                    onToggleApiEditor={() => {
+                      if (!apiEditorPanelOpen) handleFocusPanel('api-editor');
+                      setApiEditorPanelOpen((v) => !v);
                     }}
                     kafkaPanelOpen={kafkaTabOpen}
                     onToggleKafka={() => {

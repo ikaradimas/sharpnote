@@ -111,6 +111,15 @@ export function IconApi() {
     </svg>
   );
 }
+export function IconApiEditor() {
+  return (
+    <svg {..._ic} stroke="currentColor" strokeWidth="1.1" strokeLinecap="round">
+      <rect x="1.5" y="3" width="10" height="7.5" rx="1" />
+      <path d="M4 6h5M4 8h3" />
+      <circle cx="10" cy="3" r="1.5" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
 export function IconFolderSvg() {
   return (
     <svg width="13" height="13" viewBox="0 0 13 13" fill="currentColor" style={{ opacity: 0.75 }}>

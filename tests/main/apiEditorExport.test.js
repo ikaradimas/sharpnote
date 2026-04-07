@@ -73,12 +73,9 @@ describe('fieldTypeToSchema', () => {
     });
   });
 
-  it('handles array bracket syntax with model (user[] lowercased by parser)', () => {
-    // Note: the function lowercases before regex matching, so inner type
-    // becomes lowercase — model refs only match if the model name is also lowercase
-    const lcModels = new Set(['user']);
-    expect(fieldTypeToSchema('user[]', lcModels)).toEqual({
-      type: 'array', items: { $ref: '#/components/schemas/user' },
+  it('handles array bracket syntax with model reference', () => {
+    expect(fieldTypeToSchema('User[]', models)).toEqual({
+      type: 'array', items: { $ref: '#/components/schemas/User' },
     });
   });
 
@@ -88,11 +85,9 @@ describe('fieldTypeToSchema', () => {
     });
   });
 
-  it('handles List<Model> with model reference (lowercased inner type)', () => {
-    // Inner type is lowercased by the parser, so model name must match lowercase
-    const lcModels = new Set(['user']);
-    expect(fieldTypeToSchema('List<user>', lcModels)).toEqual({
-      type: 'array', items: { $ref: '#/components/schemas/user' },
+  it('handles List<Model> with model reference preserving case', () => {
+    expect(fieldTypeToSchema('List<User>', models)).toEqual({
+      type: 'array', items: { $ref: '#/components/schemas/User' },
     });
   });
 

@@ -4,7 +4,7 @@ import { Wrench } from 'lucide-react';
 import {
   IconReset, IconConfig, IconPackages, IconLogs, IconDB,
   IconVars, IconToC, IconLibrary, IconFiles, IconApi,
-  IconGraph, IconTodo, IconRegex, IconKafka, IconData, IconDeps, IconHistory,
+  IconGraph, IconTodo, IconRegex, IconKafka, IconData, IconDeps, IconHistory, IconApiEditor,
 } from './Icons.jsx';
 
 export function ToolsMenu({
@@ -18,6 +18,7 @@ export function ToolsMenu({
   libraryPanelOpen, onToggleLibrary,
   filesPanelOpen, onToggleFiles,
   apiPanelOpen, onToggleApi,
+  apiEditorPanelOpen, onToggleApiEditor,
   graphPanelOpen, onToggleGraph,
   todoPanelOpen, onToggleTodo,
   regexPanelOpen, onToggleRegex,
@@ -76,6 +77,7 @@ export function ToolsMenu({
     { icon: <IconLibrary />,   label: 'Library',           action: onToggleLibrary,  active: libraryPanelOpen },
     { icon: <IconFiles />,     label: 'File Explorer',     action: onToggleFiles,    active: filesPanelOpen },
     { icon: <IconApi />,       label: 'API Browser',       action: onToggleApi,      active: apiPanelOpen },
+    { icon: <IconApiEditor />, label: 'API Editor',        action: onToggleApiEditor, active: apiEditorPanelOpen },
     { icon: <IconGraph />,     label: 'Graph',             action: onToggleGraph,    active: graphPanelOpen },
     { icon: <IconTodo />,      label: 'To Do',             action: onToggleTodo,     active: todoPanelOpen },
     { icon: <IconRegex />,     label: 'Regex',             action: onToggleRegex,    active: regexPanelOpen },

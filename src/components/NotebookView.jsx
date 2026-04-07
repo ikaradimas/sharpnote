@@ -38,6 +38,8 @@ export function NotebookView({
   onToggleFiles,
   apiPanelOpen,
   onToggleApi,
+  apiEditorPanelOpen,
+  onToggleApiEditor,
   kafkaPanelOpen,
   onToggleKafka,
   onFocusPanel,
@@ -177,6 +179,8 @@ export function NotebookView({
       onToggleFiles={onToggleFiles}
       apiPanelOpen={apiPanelOpen}
       onToggleApi={onToggleApi}
+      apiEditorPanelOpen={apiEditorPanelOpen}
+      onToggleApiEditor={onToggleApiEditor}
       kafkaPanelOpen={kafkaPanelOpen}
       onToggleKafka={onToggleKafka}
       graphPanelOpen={graphPanelOpen}

@@ -237,6 +237,31 @@ function registerAllHandlers() {
     }
   });
 
+  // Export OpenAPI spec from API Editor
+  ipcMain.handle('export-openapi', async (_ev, { apiDef, format }) => {
+    const { toOpenApiSpec } = require('./src/main/api-editor-export.js');
+    const ext = format === 'yaml' ? 'yaml' : 'json';
+    const { filePath, canceled } = await dialog.showSaveDialog(mainWindow, {
+      title: 'Export OpenAPI Specification',
+      defaultPath: `${(apiDef.title || 'api').replace(/[^a-zA-Z0-9_-]/g, '-')}.${ext}`,
+      filters: [{ name: `OpenAPI ${ext.toUpperCase()}`, extensions: [ext] }],
+    });
+    if (canceled || !filePath) return { success: false };
+    try {
+      const spec = toOpenApiSpec(apiDef);
+      const content = format === 'yaml'
+        ? require('js-yaml').dump(spec, { indent: 2, lineWidth: 120 })
+        : JSON.stringify(spec, null, 2);
+      fs.writeFileSync(filePath, content, 'utf-8');
+      return { success: true, filePath };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // Mock server
+  require('./src/main/mock-server.js').register(ipcMain);
+
   // Export active notebook as PDF
   ipcMain.handle('export-pdf', async () => {
     const { filePath, canceled } = await dialog.showSaveDialog({
