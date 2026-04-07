@@ -58,6 +58,10 @@ async function gitDiff(cwd, filePath, staged = false) {
   return gitExec(cwd, args);
 }
 
+async function gitDiffHead(cwd, filePath) {
+  return gitExec(cwd, ['diff', 'HEAD', '--', filePath]);
+}
+
 async function gitDiffCommit(cwd, hash) {
   return gitExec(cwd, ['diff', `${hash}~1`, hash]);
 }
@@ -126,7 +130,8 @@ async function gitInit(cwd) {
 function register(ipcMain) {
   ipcMain.handle('git-is-repo',    (_ev, cwd) => gitIsRepo(cwd));
   ipcMain.handle('git-status',     (_ev, cwd) => gitStatus(cwd));
-  ipcMain.handle('git-diff',       (_ev, cwd, file, staged) => gitDiff(cwd, file, staged));
+  ipcMain.handle('git-diff',        (_ev, cwd, file, staged) => gitDiff(cwd, file, staged));
+  ipcMain.handle('git-diff-head',   (_ev, cwd, file) => gitDiffHead(cwd, file));
   ipcMain.handle('git-diff-commit', (_ev, cwd, hash) => gitDiffCommit(cwd, hash));
   ipcMain.handle('git-log',        (_ev, cwd, count) => gitLog(cwd, count));
   ipcMain.handle('git-stage',      (_ev, cwd, files) => gitStage(cwd, files));
@@ -139,4 +144,4 @@ function register(ipcMain) {
   ipcMain.handle('git-init',          (_ev, cwd) => gitInit(cwd));
 }
 
-module.exports = { gitExec, gitIsRepo, gitStatus, gitDiff, gitDiffCommit, gitLog, gitStage, gitUnstage, gitDiscard, gitCommit, gitBranches, gitCheckout, gitCreateBranch, gitInit, register };
+module.exports = { gitExec, gitIsRepo, gitStatus, gitDiff, gitDiffHead, gitDiffCommit, gitLog, gitStage, gitUnstage, gitDiscard, gitCommit, gitBranches, gitCheckout, gitCreateBranch, gitInit, register };

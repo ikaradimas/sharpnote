@@ -6686,6 +6686,13 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
   padding: 4px 10px; border-bottom: 1px solid var(--border-subtle);
 }
 .git-diff-filename { font-family: var(--font-code); font-size: 10px; color: var(--text-primary); font-weight: 500; }
+.git-diff-head-btn {
+  font-family: var(--font-ui); font-size: 9px; padding: 1px 6px;
+  background: none; border: 1px solid var(--border-subtle); border-radius: 3px;
+  color: var(--text-dim); cursor: pointer; margin-right: 4px;
+}
+.git-diff-head-btn:hover { color: var(--text-primary); border-color: var(--border-default); }
+.git-diff-head-btn.active { background: rgba(86,156,214,0.15); border-color: #569cd6; color: #569cd6; }
 .git-diff-mode-toggle { display: flex; gap: 1px; }
 .git-diff-mode-btn {
   font-family: var(--font-ui); font-size: 9px; padding: 1px 6px;

@@ -87,6 +87,7 @@ export function App() {
   const [apiPanelOpen, setApiPanelOpen]         = useState(false);
   const [apiEditorPanelOpen, setApiEditorPanelOpen] = useState(false);
   const [gitPanelOpen, setGitPanelOpen]         = useState(false);
+  const [gitRefreshKey, setGitRefreshKey]       = useState(0);
   const [filesCurrentDir, setFilesCurrentDir]   = useState(null);
   const [favoriteFolders, setFavoriteFolders]   = useState([]);
   const favoriteFoldersRef = useRef([]);
@@ -713,10 +714,10 @@ export function App() {
     open:             handleLoad,
     'import-polyglot': handleImportPolyglot,
     'import-data':     handleImportData,
-    save: () => {
+    save: async () => {
       const id = activeIdRef.current;
       if (isLibEditorId(id)) handleSaveLibEditor(id);
-      else handleSave(id);
+      else { await handleSave(id); setGitRefreshKey((k) => k + 1); }
     },
     'save-as':         () => { if (isNotebook()) handleSaveAs(activeIdRef.current); },
     'run-all':         () => { if (isNotebook()) runAll(activeIdRef.current); },
@@ -970,6 +971,7 @@ export function App() {
       git: {
         onToggle: () => setGitPanelOpen((v) => !v),
         notebookDir: activeNb?.path ? activeNb.path.replace(/\\/g, '/').replace(/\/[^/]+$/, '') : null,
+        refreshKey: gitRefreshKey,
       },
       graph: {
         onToggle: nbId ? () => setNb(nbId, (n) => ({ graphPanelOpen: !n.graphPanelOpen })) : () => {},

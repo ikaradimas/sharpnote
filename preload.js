@@ -128,6 +128,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   gitIsRepo:     (cwd) => ipcRenderer.invoke('git-is-repo', cwd),
   gitStatus:     (cwd) => ipcRenderer.invoke('git-status', cwd),
   gitDiff:       (cwd, file, staged) => ipcRenderer.invoke('git-diff', cwd, file, staged),
+  gitDiffHead:   (cwd, file) => ipcRenderer.invoke('git-diff-head', cwd, file),
   gitDiffCommit: (cwd, hash) => ipcRenderer.invoke('git-diff-commit', cwd, hash),
   gitLog:        (cwd, count) => ipcRenderer.invoke('git-log', cwd, count),
   gitStage:      (cwd, files) => ipcRenderer.invoke('git-stage', cwd, files),

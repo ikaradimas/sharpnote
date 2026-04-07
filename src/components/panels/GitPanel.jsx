@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { FileStatusList } from './git/FileStatusList.jsx';
 import { DiffView } from './git/DiffView.jsx';
 
-export function GitPanel({ onToggle, notebookDir }) {
+export function GitPanel({ onToggle, notebookDir, refreshKey }) {
   const [isRepo, setIsRepo] = useState(null); // null = loading, true/false
   const [status, setStatus] = useState(null);
   const [branches, setBranches] = useState(null);
@@ -38,12 +38,18 @@ export function GitPanel({ onToggle, notebookDir }) {
   }, [cwd]);
 
   useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => { if (refreshKey > 0) refresh(); }, [refreshKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const loadDiff = useCallback(async (file, staged = false) => {
+  const [diffMode, setDiffMode] = useState('auto'); // 'auto' | 'head'
+
+  const loadDiff = useCallback(async (file, staged = false, mode = 'auto') => {
     if (!cwd) return;
     setSelectedFile(file);
     setSelectedStaged(staged);
-    const result = await window.electronAPI?.gitDiff(cwd, file, staged);
+    setDiffMode(mode);
+    const result = mode === 'head'
+      ? await window.electronAPI?.gitDiffHead(cwd, file)
+      : await window.electronAPI?.gitDiff(cwd, file, staged);
     setDiffText(result?.success ? result.data : (result?.error || ''));
   }, [cwd]);
 
@@ -256,7 +262,16 @@ export function GitPanel({ onToggle, notebookDir }) {
         )}
 
         {/* Diff viewer */}
-        <DiffView diffText={diffText} fileName={selectedFile} />
+        <DiffView
+          diffText={diffText}
+          fileName={selectedFile}
+          diffMode={diffMode}
+          onToggleDiffMode={() => {
+            if (!selectedFile || selectedFile.startsWith('commit:')) return;
+            const next = diffMode === 'head' ? 'auto' : 'head';
+            loadDiff(selectedFile, selectedStaged, next);
+          }}
+        />
       </div>
     </div>
   );

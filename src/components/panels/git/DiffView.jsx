@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { parseDiff } from '../../../utils/diff-parser.js';
 
-export function DiffView({ diffText, fileName }) {
+export function DiffView({ diffText, fileName, diffMode, onToggleDiffMode }) {
   const [viewMode, setViewMode] = useState('unified'); // 'unified' | 'split'
   const hunks = parseDiff(diffText);
 
@@ -13,10 +13,21 @@ export function DiffView({ diffText, fileName }) {
     return <div className="git-diff-empty">No changes (binary file or empty diff)</div>;
   }
 
+  const isCommitDiff = fileName?.startsWith('commit:');
+
   return (
     <div className="git-diff-view">
       <div className="git-diff-header">
         <span className="git-diff-filename">{fileName}</span>
+        {!isCommitDiff && onToggleDiffMode && (
+          <button
+            className={`git-diff-head-btn${diffMode === 'head' ? ' active' : ''}`}
+            onClick={onToggleDiffMode}
+            title={diffMode === 'head' ? 'Showing all changes vs HEAD — click for section diff' : 'Click to show all changes vs last commit'}
+          >
+            vs HEAD
+          </button>
+        )}
         <div className="git-diff-mode-toggle">
           <button
             className={`git-diff-mode-btn${viewMode === 'unified' ? ' active' : ''}`}
