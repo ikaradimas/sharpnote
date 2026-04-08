@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { PlayCircle, Timer, Zap, Menu, Plus, ChevronDown } from 'lucide-react';
 import { getNotebookDisplayName } from '../../utils.js';
 import { IconSave, IconOpen } from './Icons.jsx';
 import { ThemePicker } from './ThemePicker.jsx';
@@ -203,14 +204,14 @@ export function Toolbar({
             disabled={kernelStatus !== 'ready'}
             title={kernelStatus === 'ready' ? 'Run all code cells' : 'Waiting for kernel…'}
             className="toolbar-run-all"
-          >▶▶ Run All</button>
+          ><PlayCircle size={14} /> Run All</button>
           <div className="toolbar-add-cell-wrap" ref={schedRef}>
             <button
               className={`toolbar-text-btn${notebookScheduleMs ? ' toolbar-autorun-btn--on' : ''}`}
               onClick={() => notebookScheduleMs ? onNotebookScheduleStop?.(notebookId) : setSchedOpen(v => !v)}
               title={notebookScheduleMs ? `Scheduled: ${NOTEBOOK_SCHEDULE_PRESETS.find(p => p.ms === notebookScheduleMs)?.label ?? 'custom'} — click to stop` : 'Schedule notebook'}
             >
-              {notebookScheduleMs ? '⏱ Stop' : '⏱'}
+              {notebookScheduleMs ? <><Timer size={13} /> Stop</> : <Timer size={13} />}
             </button>
             {schedOpen && !notebookScheduleMs && (
               <div className="toolbar-add-cell-dropdown">
@@ -221,7 +222,7 @@ export function Toolbar({
             )}
           </div>
           <div className="toolbar-add-cell-wrap" ref={addCellRef}>
-            <button className="toolbar-text-btn" onClick={() => setAddCellOpen(v => !v)} title="Add cell">+ Cell ▾</button>
+            <button className="toolbar-text-btn" onClick={() => setAddCellOpen(v => !v)} title="Add cell"><Plus size={12} /> Cell <ChevronDown size={10} /></button>
             {addCellOpen && (
               <div className="toolbar-add-cell-dropdown">
                 <button onClick={() => { onAddCode(); setAddCellOpen(false); }}>+ Code</button>
@@ -239,7 +240,7 @@ export function Toolbar({
             className={`toolbar-autorun-btn${autoRun ? ' toolbar-autorun-btn--on' : ''}`}
             onClick={onToggleAutoRun}
             title={autoRun ? 'Auto-run on open: ON — click to disable' : 'Auto-run on open: OFF — click to enable'}
-          >⚡</button>
+          ><Zap size={13} /></button>
           <button className="toolbar-icon-btn" onClick={onSave} title="Save notebook"><IconSave /></button>
           <button className="toolbar-icon-btn" onClick={onLoad} title="Open notebook"><IconOpen /></button>
           <div className="toolbar-separator" />
@@ -271,7 +272,7 @@ export function Toolbar({
             className="toolbar-overflow-btn"
             onClick={() => setOverflowOpen((o) => !o)}
             title="More options"
-          >≡</button>
+          ><Menu size={16} /></button>
           {overflowOpen && (
             <div ref={overflowRef} className="toolbar-overflow-menu">
               <button
@@ -279,20 +280,20 @@ export function Toolbar({
                 onClick={() => { onRunAll(); closeOverflow(); }}
                 disabled={kernelStatus !== 'ready'}
                 title={kernelStatus === 'ready' ? 'Run all code cells' : 'Waiting for kernel…'}
-              >▶▶ Run All</button>
-              <button className="toolbar-overflow-item" onClick={() => { onAddMarkdown(); closeOverflow(); }}>+ Markdown</button>
-              <button className="toolbar-overflow-item" onClick={() => { onAddCode();     closeOverflow(); }}>+ Code</button>
-              <button className="toolbar-overflow-item" onClick={() => { onAddSql();      closeOverflow(); }}>+ SQL</button>
-              <button className="toolbar-overflow-item" onClick={() => { onAddHttp();     closeOverflow(); }}>+ HTTP</button>
-              <button className="toolbar-overflow-item" onClick={() => { onAddShell();    closeOverflow(); }}>+ Shell</button>
-              <button className="toolbar-overflow-item" onClick={() => { onAddCheck();    closeOverflow(); }}>+ Check</button>
-              <button className="toolbar-overflow-item" onClick={() => { onAddDecision(); closeOverflow(); }}>+ Decision</button>
+              ><PlayCircle size={14} /> Run All</button>
+              <button className="toolbar-overflow-item" onClick={() => { onAddMarkdown(); closeOverflow(); }}><Plus size={12} /> Markdown</button>
+              <button className="toolbar-overflow-item" onClick={() => { onAddCode();     closeOverflow(); }}><Plus size={12} /> Code</button>
+              <button className="toolbar-overflow-item" onClick={() => { onAddSql();      closeOverflow(); }}><Plus size={12} /> SQL</button>
+              <button className="toolbar-overflow-item" onClick={() => { onAddHttp();     closeOverflow(); }}><Plus size={12} /> HTTP</button>
+              <button className="toolbar-overflow-item" onClick={() => { onAddShell();    closeOverflow(); }}><Plus size={12} /> Shell</button>
+              <button className="toolbar-overflow-item" onClick={() => { onAddCheck();    closeOverflow(); }}><Plus size={12} /> Check</button>
+              <button className="toolbar-overflow-item" onClick={() => { onAddDecision(); closeOverflow(); }}><Plus size={12} /> Decision</button>
               <div className="toolbar-overflow-sep" />
               <button
                 className={`toolbar-overflow-item${autoRun ? ' toolbar-overflow-item--on' : ''}`}
                 onClick={onToggleAutoRun}
                 title={autoRun ? 'Auto-run: ON' : 'Auto-run: OFF'}
-              >⚡ Auto-run {autoRun ? 'ON' : 'OFF'}</button>
+              ><Zap size={13} /> Auto-run {autoRun ? 'ON' : 'OFF'}</button>
               <button className="toolbar-overflow-item" onClick={() => { onSave(); closeOverflow(); }}>Save</button>
               <button className="toolbar-overflow-item" onClick={() => { onLoad(); closeOverflow(); }}>Open…</button>
             </div>

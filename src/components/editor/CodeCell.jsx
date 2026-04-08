@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Play, Square, ChevronRight, ChevronDown, ChevronsRight, ChevronsUp, Lock, Unlock, Timer, Check, X, SkipForward } from 'lucide-react';
 import { CodeEditor } from './CodeEditor.jsx';
 import { CellOutput } from '../output/OutputBlock.jsx';
 import { CellControls } from './CellControls.jsx';
@@ -137,8 +138,8 @@ export function CodeCell({
       )}
       {debugState?.cellId === cell.id && debugState.paused && (
         <div className="cell-debug-controls">
-          <button className="debug-resume-btn" onClick={onDebugResume} title="Resume execution">▶ Resume</button>
-          <button className="debug-step-btn" onClick={onDebugStep} title="Step to next statement">⏭ Step</button>
+          <button className="debug-resume-btn" onClick={onDebugResume} title="Resume execution"><Play size={12} /> Resume</button>
+          <button className="debug-step-btn" onClick={onDebugStep} title="Step to next statement"><SkipForward size={12} /> Step</button>
           <span className="debug-paused-label">Paused at line {debugState.line}</span>
         </div>
       )}
@@ -148,7 +149,7 @@ export function CodeCell({
           onClick={onToggleFold}
           title={codeFolded ? 'Expand cell' : 'Collapse cell'}
         >
-          {codeFolded ? '▸' : '▾'}
+          {codeFolded ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
         </button>
         <CellNameColor name={cell.name} color={cell.color} onNameChange={onNameChange} onColorChange={onColorChange} />
         <span className="cell-lang-label">C#</span>
@@ -157,11 +158,11 @@ export function CodeCell({
           {isRunning ? (
             <button className="cell-stop-btn" onClick={onInterrupt}
                     title="Interrupt (stops async ops; use Reset for tight loops)">
-              ⏹ Stop
+              <Square size={12} /> Stop
             </button>
           ) : (
             <>
-              <button className="run-btn" onClick={onRun} disabled={anyRunning || !kernelReady} title="Run (Ctrl+Enter)">▶ Run</button>
+              <button className="run-btn" onClick={onRun} disabled={anyRunning || !kernelReady} title="Run (Ctrl+Enter)"><Play size={12} /> Run</button>
               <button className="cell-run-chevron" onClick={() => setDropdownOpen((v) => !v)}
                       disabled={anyRunning || !kernelReady} title="More run options">▾</button>
             </>
@@ -169,13 +170,13 @@ export function CodeCell({
           {dropdownOpen && !isRunning && (
             <div className="cell-run-dropdown">
               <button className="cell-run-dropdown-item" onClick={() => { onRun(); setDropdownOpen(false); }}>
-                ▶&nbsp; Run this cell
+                <Play size={12} /> Run this cell
               </button>
               <button className="cell-run-dropdown-item" onClick={() => { onRunFrom(); setDropdownOpen(false); }}>
-                ▶▶ Run from here
+                <ChevronsRight size={12} /> Run from here
               </button>
               <button className="cell-run-dropdown-item" onClick={() => { onRunTo(); setDropdownOpen(false); }}>
-                ▲▲ Run to here
+                <ChevronsUp size={12} /> Run to here
               </button>
             </div>
           )}
@@ -229,7 +230,7 @@ export function CodeCell({
             onClick={() => setOutputCollapsed((v) => !v)}
             title={outputCollapsed ? 'Show output' : 'Hide output'}
           >
-            {outputCollapsed ? '▸ Output' : '▾ Output'}
+            {outputCollapsed ? <><ChevronRight size={12} /> Output</> : <><ChevronDown size={12} /> Output</>}
           </button>
         </div>
       )}
@@ -240,9 +241,9 @@ export function CodeCell({
             {isRunning
               ? <span className="cell-execution-spinner" />
               : lastResult === 'success'
-                ? <span className="cell-exec-icon cell-exec-success">✓</span>
+                ? <span className="cell-exec-icon cell-exec-success"><Check size={11} /></span>
                 : lastResult === 'error'
-                  ? <span className="cell-exec-icon cell-exec-error">✗</span>
+                  ? <span className="cell-exec-icon cell-exec-error"><X size={11} /></span>
                   : null
             }
             {formatElapsed(isRunning ? elapsed : lastDuration)}
@@ -280,7 +281,7 @@ export function CodeCell({
               onClick={onScheduleStop}
               title="Stop scheduled execution"
             >
-              ⏱ {formatInterval(cell.scheduleInterval)}
+              <Timer size={12} /> {formatInterval(cell.scheduleInterval)}
             </button>
           ) : (
             <button
@@ -288,7 +289,7 @@ export function CodeCell({
               onClick={() => setScheduleDropdownOpen((v) => !v)}
               title="Run on interval"
             >
-              ⏱
+              <Timer size={12} />
             </button>
           )}
           {scheduleDropdownOpen && !isScheduled && (
@@ -310,7 +311,7 @@ export function CodeCell({
           onClick={onToggleLock}
           title={locked ? 'Unlock cell' : 'Lock cell (read-only)'}
         >
-          {locked ? '🔒' : '🔓'}
+          {locked ? <Lock size={12} /> : <Unlock size={12} />}
         </button>
       </div>
     </div>
