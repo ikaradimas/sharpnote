@@ -173,7 +173,8 @@ describe('CodeCell – execution timer', () => {
     const icon = document.querySelector('.cell-exec-icon');
     expect(icon).not.toBeNull();
     expect(icon.classList.contains('cell-exec-success')).toBe(true);
-    expect(icon.textContent).toBe('✓');
+    // Icon is now an SVG (lucide Check), not text
+    expect(icon.querySelector('svg')).not.toBeNull();
   });
 
   it('shows red x on error', () => {
@@ -182,7 +183,7 @@ describe('CodeCell – execution timer', () => {
     const icon = document.querySelector('.cell-exec-icon');
     expect(icon).not.toBeNull();
     expect(icon.classList.contains('cell-exec-error')).toBe(true);
-    expect(icon.textContent).toBe('✗');
+    expect(icon.querySelector('svg')).not.toBeNull();
   });
 
   it('shows no icon when lastResult is null', () => {

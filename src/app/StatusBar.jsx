@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Cpu, Loader2, Save, AlertTriangle } from 'lucide-react';
 import { isNotebookId } from '../utils.js';
 import { registerCursorPosSetter } from '../components/editor/CodeEditor.jsx';
 
@@ -53,6 +54,7 @@ export function StatusBar({ notebooks, activeId }) {
 
   return (
     <div className="status-bar">
+      <Cpu size={10} className="status-icon" />
       <span className="status-label">MEM</span>
       <MemorySparkline history={history} />
       <span className="status-mem-value">
@@ -62,14 +64,14 @@ export function StatusBar({ notebooks, activeId }) {
         <span className="status-mem-peak">peak {peak.toFixed(1)}</span>
       )}
       {nb?.memoryWarning && (
-        <span className="status-mem-warning" title="Kernel memory usage is high">⚠ {nb.memoryWarning}</span>
+        <span className="status-mem-warning" title="Kernel memory usage is high"><AlertTriangle size={10} /> {nb.memoryWarning}</span>
       )}
       <span className="status-spacer" />
       {nb && (
-        <span className={`status-save-dot${nb.isDirty ? ' status-save-unsaved' : ''}`}
+        <Save size={10} className={`status-save-icon${nb.isDirty ? ' status-save-unsaved' : ''}`}
               title={nb.isDirty ? 'Unsaved changes' : 'Saved'} />
       )}
-      {anyRunning && <span className="status-running-spinner" title="Cell executing" />}
+      {anyRunning && <Loader2 size={11} className="status-running-icon" title="Cell executing" />}
       {cursorPos && (
         <span className="status-cursor-pos">
           {cursorPos.cellIndex != null ? `Cell ${cursorPos.cellIndex + 1}/${totalCells}  ` : ''}Ln {cursorPos.line}  Col {cursorPos.col}
