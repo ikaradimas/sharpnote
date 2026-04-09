@@ -145,12 +145,21 @@ public static class DbCodeGen
                 sb.AppendLine($"            {entityRef}.HasKey(e => new {{ {props} }});");
             }
 
-            // Column name mappings (for case differences, e.g. "id" → Id)
+            // Column name + type mappings
             foreach (var col in table.Columns)
             {
                 var propName = SanitizeTypeName(col.Name);
-                if (propName != col.Name)
-                    sb.AppendLine($"            {entityRef}.Property(e => e.{propName}).HasColumnName(\"{Esc(col.Name)}\");");
+                var dbTypeLower = col.DbType?.ToLowerInvariant() ?? "";
+                var needsColumnName = propName != col.Name;
+                var needsColumnType = dbTypeLower is "json" or "jsonb";
+
+                if (needsColumnName || needsColumnType)
+                {
+                    var chain = $"{entityRef}.Property(e => e.{propName})";
+                    if (needsColumnName) chain += $".HasColumnName(\"{Esc(col.Name)}\")";
+                    if (needsColumnType) chain += $".HasColumnType(\"{Esc(dbTypeLower)}\")";
+                    sb.AppendLine($"            {chain};");
+                }
             }
         }
         sb.AppendLine("        }");
@@ -193,6 +202,7 @@ public static class DbCodeGen
             MetadataReference.CreateFromFile(Assembly.Load("System.Linq.Expressions").Location),
             MetadataReference.CreateFromFile(Assembly.Load("System.ComponentModel.Primitives").Location),
             MetadataReference.CreateFromFile(Assembly.Load("System.ComponentModel.Annotations").Location),
+            MetadataReference.CreateFromFile(typeof(System.Text.Json.JsonDocument).Assembly.Location),
         };
 
         // Add all provider assemblies from RequiredAssemblies
