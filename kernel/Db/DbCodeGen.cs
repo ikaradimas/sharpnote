@@ -151,7 +151,7 @@ public static class DbCodeGen
                 var propName = SanitizeTypeName(col.Name);
                 var dbTypeLower = col.DbType?.ToLowerInvariant() ?? "";
                 var needsColumnName = propName != col.Name;
-                var needsColumnType = dbTypeLower is "json" or "jsonb";
+                var needsColumnType = dbTypeLower is "json" or "jsonb" && !col.IsPrimaryKey;
 
                 if (needsColumnName || needsColumnType)
                 {
