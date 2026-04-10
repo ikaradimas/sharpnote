@@ -698,6 +698,34 @@ body {
   text-shadow: 0 0 6px var(--accent-glow);
 }
 
+/* ── Cell presentation mode ─────────────────────────────────────────────── */
+.cell-present-btn {
+  background: transparent; border: none; cursor: pointer;
+  font-size: 13px; line-height: 1; padding: 2px 3px; border-radius: 3px;
+  opacity: 0; transition: opacity 0.15s; display: inline-flex; align-items: center;
+  color: var(--text-muted);
+}
+.cell:hover .cell-present-btn { opacity: 0.45; }
+.cell:hover .cell-present-btn:hover { opacity: 1; color: var(--accent-primary); }
+.cell-present-btn-on { opacity: 1 !important; color: var(--accent-primary) !important; }
+
+.cell.cell-presenting .code-editor-wrap,
+.cell.cell-presenting .code-cell-footer,
+.cell.cell-presenting .header-right,
+.cell.cell-presenting .cell-fold-btn,
+.cell.cell-presenting .cell-lang-label,
+.cell.cell-presenting .cell-id-label,
+.cell.cell-presenting .cell-run-group,
+.cell.cell-presenting .cell-stale-banner,
+.cell.cell-presenting .cell-debug-controls,
+.cell.cell-presenting .output-toggle-row { display: none !important; }
+.cell.cell-presenting .code-cell-header {
+  background: transparent; border-bottom: none; border-left-color: transparent;
+  padding: 2px 8px;
+}
+.cell.cell-presenting { border: none; margin: 4px 0; }
+.cell.cell-presenting .cell-output { padding: 8px 12px; }
+
 /* ── Cell scheduling ─────────────────────────────────────────────────────── */
 
 .cell-schedule-group {
@@ -5462,6 +5490,44 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
   padding: 16px; text-align: center;
   font-size: 13px; color: var(--text-muted);
 }
+
+/* Tabs */
+.cmd-palette-tabs {
+  display: flex; border-bottom: 1px solid var(--border-subtle);
+  padding: 0 8px; gap: 2px;
+}
+.cmd-palette-tab {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 12px; background: none; border: none;
+  font-family: var(--font-ui); font-size: 11px; font-weight: 500;
+  color: var(--text-muted); cursor: pointer;
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+  transition: color 0.15s, border-color 0.15s;
+}
+.cmd-palette-tab:hover { color: var(--text-secondary); }
+.cmd-palette-tab.active {
+  color: var(--accent-primary); border-bottom-color: var(--accent-primary);
+}
+
+/* Search results */
+.cmd-palette-search-result { flex-direction: column; align-items: flex-start !important; gap: 2px; }
+.cmd-search-meta {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 10px; color: var(--text-dim); width: 100%;
+}
+.cmd-search-badge {
+  font-family: var(--font-code); font-size: 8px; font-weight: 600;
+  color: var(--accent-primary); background: rgba(196,150,74,0.1);
+  padding: 0 4px; border-radius: 3px; flex-shrink: 0;
+}
+.cmd-search-pos { color: var(--text-muted); }
+.cmd-search-chapter { margin-left: auto; color: var(--text-dim); font-style: italic; }
+.cmd-search-snippet {
+  font-family: var(--font-code); font-size: 11px; color: var(--text-secondary);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 100%;
+}
+.cmd-palette-match { color: var(--accent-primary); font-weight: 600; }
 
 /* ── Output history navigator ────────────────────────────────────────────── */
 

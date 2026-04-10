@@ -58,11 +58,11 @@ export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef, for
       config: nb.config.filter((e) => e.key.trim()),
       attachedDbIds: nb.attachedDbs.filter((d) => d.status === 'ready').map((d) => d.connectionId),
       autoRun: nb.autoRun || false,
-      cells: nb.cells.map(({ id, type, content, name, color, outputMode, locked, codeFolded, db, label, mode, truePath, falsePath, switchPaths }) => ({
+      cells: nb.cells.map(({ id, type, content, name, color, outputMode, locked, codeFolded, presenting, db, label, mode, truePath, falsePath, switchPaths }) => ({
         id, type, content,
         ...(name ? { name } : {}),
         ...(color ? { color } : {}),
-        ...(type === 'code' ? { outputMode: outputMode || 'auto', locked: locked || false, ...(codeFolded ? { codeFolded: true } : {}) } : {}),
+        ...(type === 'code' ? { outputMode: outputMode || 'auto', locked: locked || false, ...(codeFolded ? { codeFolded: true } : {}), ...(presenting ? { presenting: true } : {}) } : {}),
         ...(type === 'sql'  ? { db: db || '' } : {}),
         ...(type === 'check' || type === 'decision' ? { label: label || '' } : {}),
         ...(type === 'decision' ? { mode: mode || 'bool', truePath: truePath || [], falsePath: falsePath || [], switchPaths: switchPaths || {} } : {}),

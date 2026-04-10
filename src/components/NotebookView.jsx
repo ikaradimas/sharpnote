@@ -405,6 +405,7 @@ export function NotebookView({
                 debugState={debugState}
                 onDebugResume={() => onDebugResume?.(nb.id)}
                 onDebugStep={() => onDebugStep?.(nb.id)}
+                onTogglePresent={() => updateCellProp(cell.id, 'presenting', !(cell.presenting || false))}
               />
             )}
             {!dashboardMode && (

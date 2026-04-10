@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Square, ChevronRight, ChevronDown, ChevronsRight, ChevronsUp, Lock, Unlock, Timer, Check, X, SkipForward } from 'lucide-react';
+import { Play, Square, ChevronRight, ChevronDown, ChevronsRight, ChevronsUp, Lock, Unlock, Timer, Check, X, SkipForward, Monitor } from 'lucide-react';
 import { CodeEditor } from './CodeEditor.jsx';
 import { CellOutput } from '../output/OutputBlock.jsx';
 import { CellControls } from './CellControls.jsx';
@@ -66,10 +66,12 @@ export function CodeCell({
   debugState,
   onDebugResume,
   onDebugStep,
+  onTogglePresent,
 }) {
   const outputMode = cell.outputMode || 'auto';
   const locked = cell.locked || false;
   const codeFolded = cell.codeFolded || false;
+  const presenting = cell.presenting || false;
   const [outputCollapsed, setOutputCollapsed] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -129,7 +131,7 @@ export function CodeCell({
     : outputs;
 
   return (
-    <div className={`cell code-cell${isRunning ? ' running' : ''}${locked ? ' cell-locked' : ''}${isStale ? ' cell-stale' : ''}${codeFolded ? ' cell-folded' : ''}${isScheduled ? ' cell-scheduled' : ''}${debugState?.cellId === cell.id && debugState.paused ? ' debug-paused' : ''}`}>
+    <div className={`cell code-cell${isRunning ? ' running' : ''}${locked ? ' cell-locked' : ''}${isStale ? ' cell-stale' : ''}${codeFolded ? ' cell-folded' : ''}${isScheduled ? ' cell-scheduled' : ''}${presenting ? ' cell-presenting' : ''}${debugState?.cellId === cell.id && debugState.paused ? ' debug-paused' : ''}`}>
       {cellIndex != null && <span className="cell-index-badge">{cellIndex + 1}</span>}
       {isStale && (
         <div className="cell-stale-banner" title="Variables used in this cell may have changed — consider re-running">
@@ -306,6 +308,13 @@ export function CodeCell({
             </div>
           )}
         </div>
+        <button
+          className={`cell-present-btn${presenting ? ' cell-present-btn-on' : ''}`}
+          onClick={onTogglePresent}
+          title={presenting ? 'Exit presentation mode' : 'Presentation mode (show output only)'}
+        >
+          <Monitor size={12} />
+        </button>
         <button
           className={`cell-lock-btn${locked ? ' cell-lock-btn-on' : ''}`}
           onClick={onToggleLock}

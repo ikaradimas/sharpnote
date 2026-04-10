@@ -833,7 +833,9 @@ export function App() {
     });
   }, [handleOpenRecent]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Command palette keyboard shortcut ─────────────────────────────────────
+  // ── Command palette keyboard shortcut + double-shift ───────────────────────
+  const lastShiftRef = useRef(0);
+  const shiftPendingRef = useRef(false);
   useEffect(() => {
     const onKeyDown = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -844,9 +846,27 @@ export function App() {
         e.preventDefault();
         setShortcutsOpen((v) => !v);
       }
+      // Track shift for double-tap detection
+      if (e.key === 'Shift') shiftPendingRef.current = true;
+      else shiftPendingRef.current = false;
+    };
+    const onKeyUp = (e) => {
+      if (e.key !== 'Shift' || !shiftPendingRef.current) return;
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) return;
+      const now = Date.now();
+      if (now - lastShiftRef.current < 400) {
+        setCommandPaletteOpen((v) => !v);
+        lastShiftRef.current = 0;
+      } else {
+        lastShiftRef.current = now;
+      }
     };
     document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
+    document.addEventListener('keyup', onKeyUp);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.removeEventListener('keyup', onKeyUp);
+    };
   }, []);
 
   // ── Quit guard ────────────────────────────────────────────────────────────
@@ -1276,6 +1296,11 @@ export function App() {
             menuHandlersRef.current[id]?.();
           }}
           onClose={() => setCommandPaletteOpen(false)}
+          cells={(() => { const nb = notebooksRef.current.find((n) => n.id === activeIdRef.current); return nb?.cells || []; })()}
+          onNavigateToCell={(cellId) => {
+            const el = document.querySelector(`[data-cell-id="${cellId}"]`);
+            if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.classList.add('cell-flash'); el.addEventListener('animationend', () => el.classList.remove('cell-flash'), { once: true }); }
+          }}
         />
       )}
       {shortcutsOpen && (
