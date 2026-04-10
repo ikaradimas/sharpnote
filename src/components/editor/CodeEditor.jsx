@@ -393,7 +393,7 @@ const RAINBOW_COLORS = [
   '#c678dd', // purple
   '#61afef', // blue
   '#98c379', // green
-  '#e06c75', // red
+  '#d19a66', // orange
   '#e5c07b', // amber
   '#56b6c2', // cyan
 ];
