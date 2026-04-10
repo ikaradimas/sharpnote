@@ -917,19 +917,26 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 8px 4px 12px;
-  background: linear-gradient(90deg, rgba(196,150,74,0.04) 0%, var(--bg-mid) 30%);
+  padding: 5px 8px 5px 12px;
+  font-size: 13.8px;
+  background: var(--bg-mid);
   border-bottom: 1px solid var(--border-default);
   border-left: 3px solid var(--accent-primary-dim);
   border-radius: 4px 4px 0 0;
-  transition: border-left-color 0.2s;
+  transition: border-left-color 0.2s, background 0.2s;
   position: sticky;
   top: 0;
   z-index: 20;
 }
 
+.cell:focus-within .code-cell-header {
+  background: linear-gradient(90deg, rgba(104,137,160,0.08) 0%, var(--bg-elevated) 40%);
+  border-left-color: var(--accent-secondary);
+}
+
 .cell.running .code-cell-header {
   border-left-color: var(--accent-primary);
+  background: linear-gradient(90deg, rgba(196,150,74,0.06) 0%, var(--bg-mid) 30%);
 }
 
 .cell-header-timer {
@@ -941,7 +948,7 @@ body {
 
 .cell-lang-label {
   font-family: var(--font-heading);
-  font-size: 10px;
+  font-size: 11.5px;
   font-weight: 600;
   color: var(--accent-secondary);
   letter-spacing: 0.12em;
@@ -5999,7 +6006,7 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 /* ── Code cell muted cell ID ─────────────────────────────────────────────── */
 
 .cell-id-label {
-  font-family: var(--font-code); font-size: 9px; color: var(--text-faint);
+  font-family: var(--font-code); font-size: 10px; color: var(--text-faint);
   letter-spacing: .04em; margin-left: 4px; user-select: all;
 }
 
@@ -6354,12 +6361,12 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
   cursor: pointer; padding: 0 2px; line-height: 14px;
 }
 .cell-name-input {
-  font-family: var(--font-ui); font-size: 10px; color: var(--text-primary);
+  font-family: var(--font-ui); font-size: 11.5px; color: var(--text-primary);
   background: var(--bg-deepest); border: 1px solid var(--border-default);
   border-radius: 3px; padding: 1px 4px; outline: none; width: 160px; max-width: 100%;
 }
 .cell-name-label {
-  font-family: var(--font-ui); font-size: 10px; font-weight: 500;
+  font-family: var(--font-ui); font-size: 11.5px; font-weight: 500;
   color: var(--text-secondary); cursor: pointer; max-width: 200px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
