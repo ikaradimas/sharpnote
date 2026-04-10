@@ -11,7 +11,7 @@ const PANEL_FONT_SIZE_DEFAULT = 11.5;
 
 // ── Appearance section ────────────────────────────────────────────────────────
 
-function AppearanceSection({ theme, fontSize, onThemeChange, onFontSizeChange, panelFontSize, onPanelFontSizeChange, lineAltEnabled, onLineAltChange, lintEnabled, onLintEnabledChange, strongCuesEnabled, onStrongCuesChange, tablePageSize = 10, onTablePageSizeChange }) {
+function AppearanceSection({ theme, fontSize, onThemeChange, onFontSizeChange, panelFontSize, onPanelFontSizeChange, lineAltEnabled, onLineAltChange, lintEnabled, onLintEnabledChange, strongCuesEnabled, onStrongCuesChange, formatOnSave, onFormatOnSaveChange, tablePageSize = 10, onTablePageSizeChange }) {
   return (
     <div className="settings-section">
       <div className="settings-group">
@@ -88,6 +88,14 @@ function AppearanceSection({ theme, fontSize, onThemeChange, onFontSizeChange, p
             onChange={(e) => onStrongCuesChange(e.target.checked)}
           />
           <span>Stronger visual cues (higher contrast borders, accents, and status indicators)</span>
+        </label>
+        <label className="settings-toggle-row">
+          <input
+            type="checkbox"
+            checked={!!formatOnSave}
+            onChange={(e) => onFormatOnSaveChange(e.target.checked)}
+          />
+          <span>Format and check code on save (reformats C# cells and reports errors)</span>
         </label>
       </div>
 
@@ -401,6 +409,8 @@ export function SettingsDialog({
   onLintEnabledChange,
   strongCuesEnabled,
   onStrongCuesChange,
+  formatOnSave,
+  onFormatOnSaveChange,
   tablePageSize = 10,
   onTablePageSizeChange,
   customShortcuts,
@@ -512,6 +522,8 @@ export function SettingsDialog({
                 onLintEnabledChange={onLintEnabledChange}
                 strongCuesEnabled={strongCuesEnabled}
                 onStrongCuesChange={onStrongCuesChange}
+                formatOnSave={formatOnSave}
+                onFormatOnSaveChange={onFormatOnSaveChange}
                 tablePageSize={tablePageSize}
                 onTablePageSizeChange={onTablePageSizeChange}
               />

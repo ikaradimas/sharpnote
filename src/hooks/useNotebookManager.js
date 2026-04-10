@@ -13,7 +13,7 @@ import { generateImportCode } from '../data-import-templates.js';
  * @param {object} opts.cancelPendingCellsRef - Ref whose .current(cells) cancels pending executions
  * @param {object} opts.saveSettingsRef       - Ref whose .current() persists all app settings
  */
-export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef }) {
+export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef, formatOnSaveRef }) {
   const initialNb = useRef(null);
   if (!initialNb.current) initialNb.current = createNotebook(true);
 
@@ -71,12 +71,73 @@ export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef }) {
     };
   }, []);
 
+  // ── Format on save ──────────────────────────────────────────────────────────
+
+  const formatCellsOnSave = useCallback(async (notebookId) => {
+    const nb = notebooksRef.current.find((n) => n.id === notebookId);
+    if (!nb || !window.electronAPI) return;
+    const codeCells = nb.cells.filter((c) => c.type === 'code' && c.content?.trim());
+    if (codeCells.length === 0) return;
+
+    // Format each code cell sequentially via the kernel
+    for (const cell of codeCells) {
+      const requestId = `fmt_${cell.id}_${Date.now()}`;
+      try {
+        const result = await new Promise((resolve, reject) => {
+          const timeout = setTimeout(() => { cleanup(); reject(new Error('timeout')); }, 5000);
+          const handler = (_ev, { message: msg }) => {
+            if (msg?.type !== 'format_result' || msg.requestId !== requestId) return;
+            cleanup();
+            resolve(msg);
+          };
+          const cleanup = () => {
+            clearTimeout(timeout);
+            window.electronAPI.offKernelMessage?.(handler);
+          };
+          window.electronAPI.onKernelMessage?.(handler);
+          window.electronAPI.sendToKernel(notebookId, {
+            type: 'format',
+            requestId,
+            code: cell.content,
+          });
+        });
+
+        // Update cell content if formatting changed it
+        if (result.formatted && result.formatted !== cell.content) {
+          setNb(notebookId, (n) => ({
+            cells: n.cells.map((c) => c.id === cell.id ? { ...c, content: result.formatted } : c),
+          }));
+        }
+
+        // Report errors as a brief flash in the cell output
+        const errors = (result.diagnostics || []).filter((d) => d.severity === 'error');
+        if (errors.length > 0) {
+          const msg = errors.map((d) => d.message).join('\n');
+          setNb(notebookId, (n) => ({
+            outputs: {
+              ...n.outputs,
+              [cell.id]: [{ type: 'error', id: cell.id, message: `Format check: ${errors.length} error(s)\n${msg}` }],
+            },
+          }));
+        }
+      } catch {
+        // Timeout or other error — skip this cell silently
+      }
+    }
+  }, [setNb]);
+
   // ── Save / Load ────────────────────────────────────────────────────────────
 
   const handleSave = useCallback(async (notebookId) => {
     if (!window.electronAPI) return;
     const nb = notebooksRef.current.find((n) => n.id === notebookId);
     if (!nb) return;
+
+    // Format and check code cells before saving (if enabled)
+    if (formatOnSaveRef?.current) {
+      await formatCellsOnSave(notebookId);
+    }
+
     const data = buildNotebookData(notebookId);
     if (nb.path) {
       await window.electronAPI.saveNotebookTo(nb.path, data);
@@ -86,7 +147,7 @@ export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef }) {
       const result = await window.electronAPI.saveNotebook(data);
       if (result.success) setNb(notebookId, { path: result.filePath, isDirty: false });
     }
-  }, [buildNotebookData, setNb]);
+  }, [buildNotebookData, setNb, formatCellsOnSave]);
 
   const handleSaveAs = useCallback(async (notebookId) => {
     if (!window.electronAPI) return;

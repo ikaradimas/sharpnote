@@ -253,6 +253,12 @@ partial class Program
                     break;
                 }
 
+                case "format":
+                {
+                    await HandleFormat(msg, realStdout);
+                    break;
+                }
+
                 case "autocomplete":
                 {
                     await HandleAutocomplete(msg, realStdout);

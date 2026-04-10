@@ -231,6 +231,19 @@ public sealed class WorkspaceManager : IDisposable
     }
 
     /// <summary>
+    /// Formats the user code portion of the document and returns the formatted text.
+    /// Call <see cref="UpdateDocument"/> first.
+    /// </summary>
+    public async Task<string> FormatDocumentAsync()
+    {
+        var doc       = _workspace.CurrentSolution.GetDocument(_docId)!;
+        var formatted = await Microsoft.CodeAnalysis.Formatting.Formatter.FormatAsync(doc);
+        var text      = (await formatted.GetTextAsync()).ToString();
+        // Strip the preamble — return only the user code
+        return text[TotalPreambleLength..];
+    }
+
+    /// <summary>
     /// Returns signature help at <paramref name="position"/> within the current
     /// document (position is relative to the start of user code, not the preamble).
     /// Call <see cref="UpdateDocument"/> first.

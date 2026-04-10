@@ -51,10 +51,13 @@ export function App() {
 
   const [lintEnabled, setLintEnabled] = useState(true);
   const [strongCuesEnabled, setStrongCuesEnabled] = useState(false);
+  const [formatOnSave, setFormatOnSave] = useState(false);
   const lintEnabledRef = useRef(true);
   useEffect(() => { lintEnabledRef.current = lintEnabled; }, [lintEnabled]);
   const strongCuesRef = useRef(false);
   useEffect(() => { strongCuesRef.current = strongCuesEnabled; }, [strongCuesEnabled]);
+  const formatOnSaveRef = useRef(false);
+  useEffect(() => { formatOnSaveRef.current = formatOnSave; }, [formatOnSave]);
 
   const [tablePageSize, setTablePageSize] = useState(10);
   const tablePageSizeRef = useRef(10);
@@ -120,7 +123,7 @@ export function App() {
     kafkaTabOpen, handleOpenKafkaTab, handleCloseKafkaTab,
     handleTogglePin, handleNavigateToCell,
     handleInsertLibraryFile, handleImportData, openPinnedNotebooks,
-  } = useNotebookManager({ cancelPendingCellsRef, saveSettingsRef });
+  } = useNotebookManager({ cancelPendingCellsRef, saveSettingsRef, formatOnSaveRef });
 
   const {
     dockLayout, setDockLayout, savedLayouts, setSavedLayouts,
@@ -243,6 +246,7 @@ export function App() {
       lineAltEnabled: lineAltEnabledRef.current,
       lintEnabled: lintEnabledRef.current,
       strongCuesEnabled: strongCuesRef.current,
+      formatOnSave: formatOnSaveRef.current,
       tablePageSize: tablePageSizeRef.current,
       customShortcuts: customShortcutsRef.current,
       pinnedTabs: [...pinnedPathsRef.current],
@@ -271,6 +275,7 @@ export function App() {
       if (typeof s?.lineAltEnabled === 'boolean') setLineAltEnabled(s.lineAltEnabled);
       if (typeof s?.lintEnabled === 'boolean') setLintEnabled(s.lintEnabled);
       if (typeof s?.strongCuesEnabled === 'boolean') setStrongCuesEnabled(s.strongCuesEnabled);
+      if (typeof s?.formatOnSave === 'boolean') setFormatOnSave(s.formatOnSave);
       if (typeof s?.tablePageSize === 'number') setTablePageSize(s.tablePageSize);
       if (s?.customShortcuts && typeof s.customShortcuts === 'object') {
         setCustomShortcuts(s.customShortcuts);
@@ -358,6 +363,11 @@ export function App() {
     if (!settingsLoadedRef.current) return;
     saveSettingsRef.current();
   }, [tablePageSize]);
+
+  useEffect(() => {
+    if (!settingsLoadedRef.current) return;
+    saveSettingsRef.current();
+  }, [formatOnSave]);
 
   const handleShortcutsChange = useCallback((id, combo) => {
     setCustomShortcuts((prev) => {
@@ -1236,6 +1246,8 @@ export function App() {
           onLintEnabledChange={setLintEnabled}
           strongCuesEnabled={strongCuesEnabled}
           onStrongCuesChange={setStrongCuesEnabled}
+          formatOnSave={formatOnSave}
+          onFormatOnSaveChange={setFormatOnSave}
           tablePageSize={tablePageSize}
           onTablePageSizeChange={setTablePageSize}
           customShortcuts={customShortcuts}
