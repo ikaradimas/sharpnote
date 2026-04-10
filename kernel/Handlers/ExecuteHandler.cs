@@ -238,6 +238,10 @@ partial class Program
 
         if (success && script != null)
         {
+            // Append executed code to workspace so subsequent cells' LSP diagnostics
+            // can resolve types, records, and variables defined here.
+            _workspaceManager.AppendExecutedCode(cleanCode);
+
             var vars = script.Variables
                 .Where(v => !v.Name.StartsWith("<"))
                 .Select(v => new {

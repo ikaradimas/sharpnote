@@ -48,7 +48,10 @@ public sealed class WorkspaceManager : IDisposable
 
     // Dynamic declarations appended after GlobalsPreamble (e.g. attached DB variables).
     private string _dynamicPreamble = "";
-    private int TotalPreambleLength => GlobalsPreamble.Length + _dynamicPreamble.Length;
+    // Accumulated source from successfully executed cells — gives the workspace
+    // visibility into types, records, methods, and variables defined in prior cells.
+    private string _scriptPreamble = "";
+    private int TotalPreambleLength => GlobalsPreamble.Length + _dynamicPreamble.Length + _scriptPreamble.Length;
 
     private readonly AdhocWorkspace _workspace;
     private readonly ProjectId      _projectId;
@@ -115,9 +118,25 @@ public sealed class WorkspaceManager : IDisposable
     /// </summary>
     public void UpdateDocument(string code)
     {
-        var text     = SourceText.From(GlobalsPreamble + _dynamicPreamble + code);
+        var text     = SourceText.From(GlobalsPreamble + _dynamicPreamble + _scriptPreamble + code);
         var solution = _workspace.CurrentSolution.WithDocumentText(_docId, text);
         _workspace.TryApplyChanges(solution);
+    }
+
+    /// <summary>
+    /// Appends successfully executed cell code to the script preamble so the
+    /// workspace can resolve types, records, and variables defined in prior cells.
+    /// </summary>
+    public void AppendExecutedCode(string code)
+    {
+        if (!string.IsNullOrWhiteSpace(code))
+            _scriptPreamble += code + "\n";
+    }
+
+    /// <summary>Clears the accumulated script preamble (e.g. on kernel reset).</summary>
+    public void ClearScriptPreamble()
+    {
+        _scriptPreamble = "";
     }
 
     /// <summary>

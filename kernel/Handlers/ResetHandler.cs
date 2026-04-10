@@ -17,6 +17,7 @@ partial class Program
     {
         script = null;
         UtilHelper.ClearCacheStatic();
+        _workspaceManager.ClearScriptPreamble();
         foreach (var info in attachedDbs.Values)
         {
             try { await InjectDbContextAsync(info, options, globals); }
