@@ -259,8 +259,9 @@ public sealed class WorkspaceManager : IDisposable
         var doc       = _workspace.CurrentSolution.GetDocument(_docId)!;
         var formatted = await Microsoft.CodeAnalysis.Formatting.Formatter.FormatAsync(doc);
         var text      = (await formatted.GetTextAsync()).ToString();
-        // Strip the preamble — return only the user code
-        return text[TotalPreambleLength..];
+        // Strip the preamble — return only the user code, trimming leading blank lines
+        // that the formatter may insert at the preamble/code boundary.
+        return text[TotalPreambleLength..].TrimStart('\r', '\n');
     }
 
     /// <summary>
