@@ -270,9 +270,31 @@ export function CodeCell({
         </div>
       )}
       {presenting && (
-        <button className="cell-present-exit" onClick={onTogglePresent} title="Exit presentation mode">
-          <Monitor size={11} />
-        </button>
+        <div className="cell-present-float-group" ref={presentRefreshRef}>
+          <button
+            className={`cell-present-float-btn${presentInterval > 0 ? ' active' : ''}`}
+            onClick={() => setPresentRefreshOpen((v) => !v)}
+            title={presentInterval > 0 ? `Auto-refresh every ${formatInterval(presentInterval)}` : 'Set auto-refresh interval'}
+          >
+            <RefreshCw size={11} />
+          </button>
+          <button className="cell-present-exit" onClick={onTogglePresent} title="Exit presentation mode">
+            <Monitor size={11} />
+          </button>
+          {presentRefreshOpen && (
+            <div className="cell-present-refresh-dropdown" style={{ top: '100%', bottom: 'auto', marginTop: 4 }}>
+              {PRESENT_REFRESH_PRESETS.map(({ label, ms }) => (
+                <button
+                  key={ms}
+                  className={`cell-present-refresh-item${presentInterval === ms ? ' active' : ''}`}
+                  onClick={() => { onPresentIntervalChange(ms); setPresentRefreshOpen(false); }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       )}
       {!outputCollapsed && <CellOutput messages={displayedOutputs} notebookId={notebookId} allCells={allCells} onRunCellByName={onRunCellByName} />}
       <div className="code-cell-footer">

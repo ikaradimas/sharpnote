@@ -751,16 +751,24 @@ body {
 }
 .cell.cell-presenting { border: none; margin: 4px 0; position: relative; min-height: 36px; }
 .cell.cell-presenting .cell-output { padding: 8px 12px; }
-.cell-present-exit {
+.cell-present-float-group {
   position: absolute; top: 4px; right: 6px; z-index: 10;
+  display: flex; align-items: center; gap: 3px;
+  opacity: 0; transition: opacity 0.15s;
+}
+.cell.cell-presenting:hover .cell-present-float-group { opacity: 0.6; }
+.cell-present-float-group:hover { opacity: 1 !important; }
+.cell-present-exit, .cell-present-float-btn {
   display: flex; align-items: center; justify-content: center;
   width: 22px; height: 22px; border-radius: 4px;
   background: var(--bg-mid); border: 1px solid var(--border-subtle);
-  color: var(--accent-primary); cursor: pointer;
-  opacity: 0; transition: opacity 0.15s;
+  color: var(--text-muted); cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
 }
-.cell.cell-presenting:hover .cell-present-exit { opacity: 0.6; }
-.cell-present-exit:hover { opacity: 1 !important; background: var(--bg-elevated); border-color: var(--accent-primary-dim); }
+.cell-present-exit:hover { color: var(--accent-primary); border-color: var(--accent-primary-dim); background: var(--bg-elevated); }
+.cell-present-float-btn:hover { color: var(--accent-primary); border-color: var(--accent-primary-dim); background: var(--bg-elevated); }
+.cell-present-float-btn.active { color: var(--accent-primary); border-color: var(--accent-primary-dim); }
+.cell-present-float-btn.active svg { animation: spin 2s linear infinite; }
 
 /* ── Cell scheduling ─────────────────────────────────────────────────────── */
 
