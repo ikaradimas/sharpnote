@@ -504,14 +504,19 @@ export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [language, notebookId]);
 
-  // Sync external value changes (e.g., load notebook)
+  // Sync external value changes (e.g., load notebook, format-on-save)
+  // Preserves cursor at the nearest viable position in the new content.
   useEffect(() => {
     const view = viewRef.current;
     if (!view) return;
     const current = view.state.doc.toString();
     if (current !== value) {
+      const oldPos = view.state.selection.main.head;
+      const newLen = value.length;
+      const clampedPos = Math.min(oldPos, newLen);
       view.dispatch({
         changes: { from: 0, to: current.length, insert: value },
+        selection: { anchor: clampedPos },
       });
     }
   }, [value]);
