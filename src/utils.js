@@ -75,11 +75,19 @@ export function getCollapsedSections(cells) {
 export function extractHeadings(cells) {
   const headings = [];
   cells.forEach((cell) => {
-    if (cell.type !== 'markdown') return;
-    (cell.content || '').split('\n').forEach((line) => {
-      const m = line.match(/^(#{1,3})\s+(.+)$/);
-      if (m) headings.push({ level: m[1].length, text: m[2].trim(), cellId: cell.id });
-    });
+    // Markdown headings
+    if (cell.type === 'markdown') {
+      (cell.content || '').split('\n').forEach((line) => {
+        const m = line.match(/^(#{1,3})\s+(.+)$/);
+        if (m) headings.push({ level: m[1].length, text: m[2].trim(), cellId: cell.id });
+      });
+      return;
+    }
+    // Named non-markdown cells appear as level-3 entries
+    if (cell.name) {
+      const typeLabel = (cell.type || 'code').charAt(0).toUpperCase() + (cell.type || 'code').slice(1);
+      headings.push({ level: 3, text: `${cell.name}`, cellId: cell.id, cellType: typeLabel });
+    }
   });
   return headings;
 }

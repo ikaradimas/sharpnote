@@ -49,7 +49,8 @@ export function TocPanel({ cells }) {
       ) : (
         <div className="toc-list">
           {filtered.map((h, i) => (
-            <button key={i} className={`toc-item toc-h${h.level}`} onClick={() => scroll(h.cellId)}>
+            <button key={i} className={`toc-item toc-h${h.level}${h.cellType ? ' toc-cell' : ''}`} onClick={() => scroll(h.cellId)}>
+              {h.cellType && <span className="toc-cell-badge">{h.cellType}</span>}
               {h.text}
             </button>
           ))}

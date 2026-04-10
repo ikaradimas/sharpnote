@@ -4700,6 +4700,13 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 .toc-h1 { color: var(--text-primary); font-weight: 600; padding-left: 12px; }
 .toc-h2 { padding-left: 22px; }
 .toc-h3 { padding-left: 32px; font-size: 11px; color: var(--text-muted); }
+.toc-cell { display: flex; align-items: center; gap: 6px; }
+.toc-cell-badge {
+  font-family: var(--font-code); font-size: 8px; font-weight: 600;
+  color: var(--accent-primary); background: rgba(196,150,74,0.1);
+  padding: 0 4px; border-radius: 3px; letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
 
 /* ── Section collapse ────────────────────────────────────────────────────── */
 .cell-section-hidden { display: none; }
@@ -6206,7 +6213,7 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 .check-run-btn { padding: 2px 8px !important; font-size: 11px !important; }
 
 /* ── Cell Name + Color ──────────────────────────────────────────────────── */
-.cell-name-color { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.cell-name-color { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 1; min-width: 0; }
 .cell-color-dot-wrap { position: relative; }
 .cell-color-dot {
   width: 10px; height: 10px; border-radius: 50%; border: 1px solid var(--border-subtle);
@@ -6232,11 +6239,11 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 .cell-name-input {
   font-family: var(--font-ui); font-size: 10px; color: var(--text-primary);
   background: var(--bg-deepest); border: 1px solid var(--border-default);
-  border-radius: 3px; padding: 1px 4px; outline: none; width: 90px;
+  border-radius: 3px; padding: 1px 4px; outline: none; width: 160px; max-width: 100%;
 }
 .cell-name-label {
   font-family: var(--font-ui); font-size: 10px; font-weight: 500;
-  color: var(--text-secondary); cursor: pointer; max-width: 100px;
+  color: var(--text-secondary); cursor: pointer; max-width: 200px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .cell-name-label:hover { color: var(--text-primary); }
