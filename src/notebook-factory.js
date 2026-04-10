@@ -424,27 +424,27 @@ variable (\`scratch\`) is available to the **next** cell, not the one that calle
 
 **Run the setup cell first, then run the query cell.**`),
 
-    md(`### Step 1 — Create Schema, Register, and Attach
+    md(`### Step 1 — Register and Attach
 
-Creates an in-memory SQLite database with an \`Orders\` and \`Products\` table,
-then registers and attaches it. The \`scratch\` DbContext (with typed \`DbSet\`
-properties) is available in the **next** cell.`),
+Registers an in-memory SQLite database and attaches it. The \`scratch\` DbContext
+is available in the **next** cell.`),
 
-    cs(`// ── Step 1: create schema, register, attach ──────────────────────────────────
+    cs(`// ── Step 1: register and attach ──────────────────────────────────────────────
 // Run this cell once. The 'scratch' DbContext will be ready for the next cell.
 
 await Db.AddAsync("scratch", DbProvider.SqliteMemory, "");
-
-// Create tables using the raw connection before attaching,
-// so schema introspection picks them up.
-var conn = Microsoft.Data.Sqlite.SqliteConnection
-    .CreateHandle?.Invoke()
-    ?? throw new Exception("SQLite connection not available");
-
-// We need to get the connection from EF — attach first with empty schema,
-// then create tables, then re-attach to pick up the schema.
 Db.Attach("scratch");
-await Task.Delay(1500); // wait for schema introspection round-trip
+
+Display.Html("<p style='color:#4ec9b0'>Attached — run the next cell to create tables.</p>");`),
+
+    md(`### Step 2 — Create Tables and Re-attach
+
+Creates \`Orders\` and \`Products\` tables, then detaches and re-attaches so the
+schema introspection picks up the new tables as typed \`DbSet\` properties.`),
+
+    cs(`// ── Step 2: create tables and refresh schema ────────────────────────────────
+// The 'scratch' context exists but has no DbSets yet (empty schema).
+// Create the tables, then re-attach to get typed DbSets.
 
 scratch.Database.ExecuteSqlRaw(@"
     CREATE TABLE IF NOT EXISTS Orders (
@@ -461,24 +461,23 @@ scratch.Database.ExecuteSqlRaw(@"
         Stock INTEGER NOT NULL DEFAULT 0
     )");
 
-// Re-attach to refresh the schema with the new tables
+// Re-attach to refresh the typed context with the new tables
 Db.Detach("scratch");
 Db.Attach("scratch");
 
-Display.Html("<p style='color:#4ec9b0'>Tables created and schema refreshed — run the cells below.</p>");`),
+Display.Html("<p style='color:#4ec9b0'>Tables created — run the cells below.</p>");`),
 
-    md('### Step 2 — Query with LINQ'),
+    md('### Step 3 — Query with LINQ'),
 
-    cs(`// ── Step 2: seed data and query ──────────────────────────────────────────────
-// Run after the setup cell above has completed.
+    cs(`// ── Step 3: seed data and query ──────────────────────────────────────────────
+// Now scratch.Orders and scratch.Products are typed DbSets.
 
-// Seed via raw insert (tables are empty)
-scratch.Database.ExecuteSqlRaw(@"
-    INSERT INTO Orders VALUES
-        (1, 'Widget A', 3,  9.99),
-        (2, 'Widget B', 1, 24.99),
-        (3, 'Widget A', 7,  9.99),
-        (4, 'Gadget',   2, 49.99)");
+// Seed orders
+scratch.Orders.Add(new() { Id = 1, Product = "Widget A", Qty = 3, Price = 9.99 });
+scratch.Orders.Add(new() { Id = 2, Product = "Widget B", Qty = 1, Price = 24.99 });
+scratch.Orders.Add(new() { Id = 3, Product = "Widget A", Qty = 7, Price = 9.99 });
+scratch.Orders.Add(new() { Id = 4, Product = "Gadget",   Qty = 2, Price = 49.99 });
+scratch.SaveChanges();
 
 // Query using the typed DbSet
 scratch.Orders.OrderBy(o => o.Id).ToList().DisplayTable();
