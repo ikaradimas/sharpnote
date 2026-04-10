@@ -583,6 +583,8 @@ ${cellsHtml}
       return [...base, ...toAdd.filter(({ nb }) => !existing.has(nb.path)).map(({ nb }) => nb)];
     });
     toAdd.forEach(({ nb }) => window.electronAPI.startKernel(nb.id));
+    // Focus the first loaded pinned notebook
+    setActiveId(toAdd[0].nb.id);
   }, []);
 
   return {

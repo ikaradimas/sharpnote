@@ -293,7 +293,16 @@ export function App() {
       if (Array.isArray(s?.favoriteFolders)) setFavoriteFolders(s.favoriteFolders);
       settingsLoadedRef.current = true;
       const pinned = Array.isArray(s?.pinnedTabs) ? s.pinnedTabs : [];
-      if (pinned.length > 0) openPinnedNotebooks(pinned);
+      if (pinned.length > 0) {
+        openPinnedNotebooks(pinned);
+      } else {
+        // No pinned tabs — focus a random existing notebook
+        const nbs = notebooksRef.current;
+        if (nbs.length > 0) {
+          const pick = nbs[Math.floor(Math.random() * nbs.length)];
+          setActiveId(pick.id);
+        }
+      }
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
