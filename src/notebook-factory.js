@@ -53,6 +53,7 @@ export const NOTEBOOK_TEMPLATES = [
   { key: 'workspace-panels', label: 'Workspace & Panels',      description: 'Panels API, dock/float, layout scripting' },
   { key: 'orchestration',    label: 'Cell Orchestration',      description: 'Decision cells, naming, colors, pipelines' },
   { key: 'forms',            label: 'Forms',                   description: 'Interactive forms, submit-to-cell, dashboard mode' },
+  { key: 'raytracer',        label: 'Raytracer',               description: 'Build a raytracer with live preview using Display.Image' },
 ];
 
 function cellsForTemplate(key) {
@@ -65,6 +66,7 @@ function cellsForTemplate(key) {
     case 'workspace-panels': return makeWorkspacePanelsCells();
     case 'orchestration':    return makeOrchestrationCells();
     case 'forms':            return makeFormsCells();
+    case 'raytracer':        return makeRaytracerCells();
     default:                 return [];
   }
 }
@@ -1812,6 +1814,224 @@ and the handler cell processes the response:`),
 }
 
 // ── Notebook factory ──────────────────────────────────────────────────────────
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Template 9 — Raytracer
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function makeRaytracerCells() {
+  return [
+    md(`# Raytracer
+
+Build a simple raytracer step by step, rendering directly into the notebook via base64 images.
+Each cell builds on the previous — run them in order.`),
+
+    md('## 1. Vector Math'),
+
+    cs([
+      '// ── Vec3: immutable 3D vector with operator overloads ─────────────────────────',
+      'record struct Vec3(double X, double Y, double Z) {',
+      '    public double Length    => Math.Sqrt(X*X + Y*Y + Z*Z);',
+      '    public double LengthSq => X*X + Y*Y + Z*Z;',
+      '    public Vec3 Normalized => this / Length;',
+      '    public double Dot(Vec3 b) => X*b.X + Y*b.Y + Z*b.Z;',
+      '    public Vec3 Cross(Vec3 b) => new(Y*b.Z - Z*b.Y, Z*b.X - X*b.Z, X*b.Y - Y*b.X);',
+      '    public Vec3 Reflect(Vec3 n) => this - 2 * Dot(n) * n;',
+      '    public static Vec3 operator +(Vec3 a, Vec3 b) => new(a.X+b.X, a.Y+b.Y, a.Z+b.Z);',
+      '    public static Vec3 operator -(Vec3 a, Vec3 b) => new(a.X-b.X, a.Y-b.Y, a.Z-b.Z);',
+      '    public static Vec3 operator -(Vec3 a)         => new(-a.X, -a.Y, -a.Z);',
+      '    public static Vec3 operator *(double s, Vec3 a) => new(s*a.X, s*a.Y, s*a.Z);',
+      '    public static Vec3 operator *(Vec3 a, double s) => new(s*a.X, s*a.Y, s*a.Z);',
+      '    public static Vec3 operator *(Vec3 a, Vec3 b)   => new(a.X*b.X, a.Y*b.Y, a.Z*b.Z);',
+      '    public static Vec3 operator /(Vec3 a, double s) => new(a.X/s, a.Y/s, a.Z/s);',
+      '}',
+      '',
+      '// Quick test',
+      'var v = new Vec3(1, 2, 3);',
+      'new { v, normalized = v.Normalized, length = v.Length, dot = v.Dot(new Vec3(0,1,0)) }.Display();',
+    ].join('\n')),
+
+    md('## 2. Ray, Sphere, and Hit Record'),
+
+    cs([
+      '// ── Ray + Sphere + HitRecord ─────────────────────────────────────────────────',
+      'record struct Ray(Vec3 Origin, Vec3 Dir);',
+      '',
+      'record struct HitRecord(double T, Vec3 Point, Vec3 Normal, Vec3 Color, double Reflectivity);',
+      '',
+      'record Sphere(Vec3 Center, double Radius, Vec3 Color, double Reflectivity = 0) {',
+      '    public HitRecord? Hit(Ray ray, double tMin, double tMax) {',
+      '        var oc = ray.Origin - Center;',
+      '        var a  = ray.Dir.Dot(ray.Dir);',
+      '        var h  = oc.Dot(ray.Dir);',
+      '        var c  = oc.Dot(oc) - Radius * Radius;',
+      '        var disc = h * h - a * c;',
+      '        if (disc < 0) return null;',
+      '        var sqrtD = Math.Sqrt(disc);',
+      '        var t = (-h - sqrtD) / a;',
+      '        if (t < tMin || t > tMax) { t = (-h + sqrtD) / a; if (t < tMin || t > tMax) return null; }',
+      '        var p = ray.Origin + t * ray.Dir;',
+      '        var n = (p - Center) / Radius;',
+      '        return new HitRecord(t, p, n, Color, Reflectivity);',
+      '    }',
+      '}',
+      '',
+      '"Sphere + Ray types ready".Display();',
+    ].join('\n')),
+
+    md('## 3. Scene and Camera'),
+
+    cs([
+      '// ── Scene definition ──────────────────────────────────────────────────────────',
+      'var spheres = new Sphere[] {',
+      '    new(new Vec3( 0,   -0.2, -1.2), 0.5,  new Vec3(0.8, 0.3, 0.3), 0.05),  // red',
+      '    new(new Vec3(-1.1,  0,   -1.5), 0.5,  new Vec3(0.3, 0.8, 0.3), 0.3),   // green (reflective)',
+      '    new(new Vec3( 1.1,  0,   -1.5), 0.5,  new Vec3(0.3, 0.3, 0.8), 0.8),   // blue (mirror)',
+      '    new(new Vec3( 0, -100.7, -1),  100.0, new Vec3(0.6, 0.6, 0.6), 0.02),  // ground',
+      '};',
+      '',
+      'var lightDir = new Vec3(-0.5, 0.8, -0.3).Normalized;',
+      'var lightColor = new Vec3(1, 0.95, 0.8);',
+      'var ambient = new Vec3(0.08, 0.08, 0.12);',
+      'var skyTop = new Vec3(0.3, 0.5, 1.0);',
+      'var skyBottom = new Vec3(0.8, 0.85, 1.0);',
+      '',
+      'int W = 400, H = 250;',
+      'double aspect = (double)W / H;',
+      'double fov = 1.0;  // tan(half-angle)',
+      '',
+      'Display.Html($"<p style=\'color:#4ec9b0\'>Scene: {spheres.Length} spheres, {W}×{H} image</p>");',
+    ].join('\n')),
+
+    md('## 4. Trace Function'),
+
+    cs([
+      '// ── Trace: cast a ray and compute color ──────────────────────────────────────',
+      'Vec3 Sky(Ray ray) {',
+      '    var t = 0.5 * (ray.Dir.Normalized.Y + 1);',
+      '    return (1 - t) * skyBottom + t * skyTop;',
+      '}',
+      '',
+      'HitRecord? SceneHit(Ray ray, double tMin, double tMax) {',
+      '    HitRecord? closest = null;',
+      '    foreach (var s in spheres) {',
+      '        var hit = s.Hit(ray, tMin, closest?.T ?? tMax);',
+      '        if (hit != null) closest = hit;',
+      '    }',
+      '    return closest;',
+      '}',
+      '',
+      'Vec3 Trace(Ray ray, int depth) {',
+      '    if (depth <= 0) return new Vec3(0, 0, 0);',
+      '    var hit = SceneHit(ray, 0.001, 1e20);',
+      '    if (hit == null) return Sky(ray);',
+      '    var h = hit.Value;',
+      '',
+      '    // Diffuse (Lambertian)',
+      '    var diff = Math.Max(0, h.Normal.Dot(lightDir));',
+      '    // Shadow test',
+      '    var shadowRay = new Ray(h.Point + 0.001 * h.Normal, lightDir);',
+      '    if (SceneHit(shadowRay, 0.001, 1e20) != null) diff *= 0.15;',
+      '',
+      '    var color = h.Color * (ambient + diff * lightColor);',
+      '',
+      '    // Reflection',
+      '    if (h.Reflectivity > 0) {',
+      '        var refl = ray.Dir.Normalized.Reflect(h.Normal);',
+      '        var reflColor = Trace(new Ray(h.Point + 0.001 * h.Normal, refl), depth - 1);',
+      '        color = (1 - h.Reflectivity) * color + h.Reflectivity * reflColor;',
+      '    }',
+      '    return color;',
+      '}',
+      '',
+      '"Trace function ready".Display();',
+    ].join('\n')),
+
+    md('## 5. Render with Live Preview'),
+
+    cs([
+      '// ── Render to BMP and display as base64 image ─────────────────────────────────',
+      'var pixels = new byte[W * H * 3];',
+      '',
+      'byte Clamp(double v) => (byte)(Math.Clamp(v, 0, 1) * 255);',
+      '',
+      'var progress = Display.Progress("Rendering", total: H);',
+      '',
+      'for (int y = 0; y < H; y++) {',
+      '    for (int x = 0; x < W; x++) {',
+      '        // Map pixel to camera ray (simple pinhole)',
+      '        double u = (2.0 * (x + 0.5) / W - 1) * aspect * fov;',
+      '        double v = (1 - 2.0 * (y + 0.5) / H) * fov;',
+      '        var ray = new Ray(new Vec3(0, 0, 0), new Vec3(u, v, -1).Normalized);',
+      '        var color = Trace(ray, 5);',
+      '        int i = (y * W + x) * 3;',
+      '        pixels[i]     = Clamp(color.X);',
+      '        pixels[i + 1] = Clamp(color.Y);',
+      '        pixels[i + 2] = Clamp(color.Z);',
+      '    }',
+      '    if (y % 10 == 0) progress.Report(y);',
+      '}',
+      'progress.Complete();',
+      '',
+      '// Encode as BMP',
+      'byte[] EncodeBmp(byte[] rgb, int w, int h) {',
+      '    int rowBytes = ((w * 3 + 3) / 4) * 4;',
+      '    int dataSize = rowBytes * h;',
+      '    var bmp = new byte[54 + dataSize];',
+      '    bmp[0] = (byte)\'B\'; bmp[1] = (byte)\'M\';',
+      '    BitConverter.GetBytes(54 + dataSize).CopyTo(bmp, 2);',
+      '    BitConverter.GetBytes(54).CopyTo(bmp, 10);',
+      '    BitConverter.GetBytes(40).CopyTo(bmp, 14);',
+      '    BitConverter.GetBytes(w).CopyTo(bmp, 18);',
+      '    BitConverter.GetBytes(h).CopyTo(bmp, 22);',
+      '    BitConverter.GetBytes((short)1).CopyTo(bmp, 26);',
+      '    BitConverter.GetBytes((short)24).CopyTo(bmp, 28);',
+      '    BitConverter.GetBytes(dataSize).CopyTo(bmp, 34);',
+      '    for (int y2 = 0; y2 < h; y2++) {',
+      '        int srcRow = (h - 1 - y2) * w * 3;',
+      '        int dstRow = 54 + y2 * rowBytes;',
+      '        for (int x2 = 0; x2 < w; x2++) {',
+      '            int si = srcRow + x2 * 3;',
+      '            int di = dstRow + x2 * 3;',
+      '            bmp[di]     = rgb[si + 2]; // B',
+      '            bmp[di + 1] = rgb[si + 1]; // G',
+      '            bmp[di + 2] = rgb[si];     // R',
+      '        }',
+      '    }',
+      '    return bmp;',
+      '}',
+      '',
+      'var bmpData = EncodeBmp(pixels, W, H);',
+      'var base64  = Convert.ToBase64String(bmpData);',
+      'Display.Html($"<img src=\'data:image/bmp;base64,{base64}\' style=\'border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,0.4)\' />");',
+      '',
+      'Display.Html($"<p style=\'color:#5a7080;margin-top:8px\'>{W}×{H} — {spheres.Length} spheres, 5 bounces</p>");',
+    ].join('\n')),
+
+    md(`## 6. Experiment
+
+Try modifying the scene in cell 3:
+- Change sphere positions, colors, and reflectivity
+- Adjust \`lightDir\` for different lighting angles
+- Increase \`W\` and \`H\` for higher resolution (slower)
+- Add more spheres to the array
+
+Then re-run cells 3 → 5 to see the result.
+
+---
+
+### Feature Wishlist
+
+Building this raytracer highlighted several features that would improve the notebook experience:
+
+1. **Display.Image from byte array** — having to manually encode BMP and base64 is tedious; a \`Display.Image(bytes, "bmp")\` overload would be much simpler
+2. **Canvas/pixel buffer API** — a \`Display.Canvas(width, height)\` returning a handle with \`SetPixel(x, y, r, g, b)\` and \`Flush()\` would be ideal for pixel-level rendering
+3. **Live image updates** — \`Display.NewImage()\` with \`UpdateImage(bytes)\` for progressive rendering (like \`NewHtml\` but for images)
+4. **Elapsed time per cell** — the timer exists but a \`Util.Time()\` wrapper that auto-displays would be handy for benchmarking render passes
+5. **Cell dependencies** — being able to mark "cell 5 depends on cells 1-4" so Run auto-runs prerequisites
+6. **Shared types across cells** — types defined in one cell (Vec3, Sphere) sometimes cause LSP flicker in dependent cells until they're re-run`),
+  ];
+}
 
 export function createNotebook(templateKey = null) {
   return {
