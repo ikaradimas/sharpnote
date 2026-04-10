@@ -82,6 +82,18 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
           // Auto-run on open
           if (nb.autoRun) {
             setTimeout(() => runAllRef.current?.(notebookId), 200);
+          } else {
+            // Auto-execute presenting cells on kernel ready
+            const presentingCells = nb.cells.filter((c) => c.type === 'code' && c.presenting);
+            if (presentingCells.length > 0) {
+              setTimeout(async () => {
+                for (const cell of presentingCells) {
+                  const nbNow = notebooksRef.current.find((n) => n.id === notebookId);
+                  if (!nbNow || nbNow.kernelStatus !== 'ready') break;
+                  await runCell(notebookId, cell);
+                }
+              }, 200);
+            }
           }
 
           const pending = nb.nugetPackages.filter((p) => p.status === 'pending');

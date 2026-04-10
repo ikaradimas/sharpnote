@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Square, ChevronRight, ChevronDown, ChevronsRight, ChevronsUp, Lock, Unlock, Timer, Check, X, SkipForward, Monitor } from 'lucide-react';
+import { Play, Square, ChevronRight, ChevronDown, ChevronsRight, ChevronsUp, Lock, Unlock, Timer, Check, X, SkipForward, Monitor, RefreshCw } from 'lucide-react';
 import { CodeEditor } from './CodeEditor.jsx';
 import { CellOutput } from '../output/OutputBlock.jsx';
 import { CellControls } from './CellControls.jsx';
@@ -25,6 +25,15 @@ const SCHEDULE_PRESETS = [
   { label: '30s', ms: 30000 },
   { label: '1m',  ms: 60000 },
   { label: '5m',  ms: 300000 },
+];
+
+const PRESENT_REFRESH_PRESETS = [
+  { label: 'Off',  ms: 0 },
+  { label: '5s',   ms: 5000 },
+  { label: '10s',  ms: 10000 },
+  { label: '30s',  ms: 30000 },
+  { label: '1m',   ms: 60000 },
+  { label: '5m',   ms: 300000 },
 ];
 
 function formatInterval(ms) {
@@ -67,11 +76,15 @@ export function CodeCell({
   onDebugResume,
   onDebugStep,
   onTogglePresent,
+  onPresentIntervalChange,
 }) {
   const outputMode = cell.outputMode || 'auto';
   const locked = cell.locked || false;
   const codeFolded = cell.codeFolded || false;
   const presenting = cell.presenting || false;
+  const presentInterval = cell.presentInterval || 0;
+  const [presentRefreshOpen, setPresentRefreshOpen] = useState(false);
+  const presentRefreshRef = useRef(null);
   const [outputCollapsed, setOutputCollapsed] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -88,6 +101,16 @@ export function CodeCell({
   useEffect(() => {
     setHistIdx(-1);
   }, [isRunning, outputs]);
+
+  // Presentation auto-refresh interval
+  useEffect(() => {
+    if (!presenting || !presentInterval || presentInterval <= 0) return;
+    const tick = () => {
+      if (!isRunning && kernelReady) onRun?.();
+    };
+    const id = setInterval(tick, presentInterval);
+    return () => clearInterval(id);
+  }, [presenting, presentInterval, isRunning, kernelReady, onRun]);
 
   useEffect(() => {
     if (!isRunning) return;
@@ -124,6 +147,16 @@ export function CodeCell({
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [scheduleDropdownOpen]);
+
+  useEffect(() => {
+    if (!presentRefreshOpen) return;
+    const handler = (e) => {
+      if (presentRefreshRef.current && !presentRefreshRef.current.contains(e.target))
+        setPresentRefreshOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [presentRefreshOpen]);
 
   const histLen = outputHistory ? outputHistory.length : 0;
   const displayedOutputs = histIdx >= 0 && histLen > 0
@@ -313,13 +346,38 @@ export function CodeCell({
             </div>
           )}
         </div>
-        <button
-          className={`cell-present-btn${presenting ? ' cell-present-btn-on' : ''}`}
-          onClick={onTogglePresent}
-          title={presenting ? 'Exit presentation mode' : 'Presentation mode (show output only)'}
-        >
-          <Monitor size={12} />
-        </button>
+        <div className="cell-present-group" ref={presentRefreshRef}>
+          <button
+            className={`cell-present-btn${presenting ? ' cell-present-btn-on' : ''}`}
+            onClick={onTogglePresent}
+            title={presenting ? 'Exit presentation mode' : 'Presentation mode (show output only)'}
+          >
+            <Monitor size={12} />
+          </button>
+          {presenting && (
+            <button
+              className={`cell-present-refresh-btn${presentInterval > 0 ? ' active' : ''}`}
+              onClick={() => setPresentRefreshOpen((v) => !v)}
+              title={presentInterval > 0 ? `Auto-refresh every ${formatInterval(presentInterval)} — click to change` : 'Set auto-refresh interval'}
+            >
+              <RefreshCw size={11} />
+              {presentInterval > 0 && <span className="cell-present-refresh-label">{formatInterval(presentInterval)}</span>}
+            </button>
+          )}
+          {presentRefreshOpen && (
+            <div className="cell-present-refresh-dropdown">
+              {PRESENT_REFRESH_PRESETS.map(({ label, ms }) => (
+                <button
+                  key={ms}
+                  className={`cell-present-refresh-item${presentInterval === ms ? ' active' : ''}`}
+                  onClick={() => { onPresentIntervalChange(ms); setPresentRefreshOpen(false); }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <button
           className={`cell-lock-btn${locked ? ' cell-lock-btn-on' : ''}`}
           onClick={onToggleLock}
