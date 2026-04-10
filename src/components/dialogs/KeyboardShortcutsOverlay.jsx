@@ -29,7 +29,7 @@ const SHORTCUT_GROUPS = [
       ['Command Palette', '⌘K'],
       ['Find in Notebook', '⌘F'],
       ['Settings', '⌘,'],
-      ['Keyboard Shortcuts', '⌘/'],
+      ['Keyboard Shortcuts', '⌘⇧?'],
     ],
   },
   {

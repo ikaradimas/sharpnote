@@ -830,7 +830,7 @@ export function App() {
         e.preventDefault();
         setCommandPaletteOpen((v) => !v);
       }
-      if ((e.metaKey || e.ctrlKey) && e.key === '/') {
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === '?') {
         e.preventDefault();
         setShortcutsOpen((v) => !v);
       }

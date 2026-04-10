@@ -36,7 +36,7 @@ export const PALETTE_COMMANDS = [
   { id: 'docs',             label: 'Documentation',             keys: 'F1',    category: 'Settings' },
   { id: 'settings',         label: 'Settings…',                 keys: '⌘,',   category: 'Settings' },
   { id: 'about',            label: 'About SharpNote',                          category: 'Settings' },
-  { id: 'shortcuts',        label: 'Keyboard Shortcuts',        keys: '⌘/',   category: 'Settings' },
+  { id: 'shortcuts',        label: 'Keyboard Shortcuts',        keys: '⌘⇧?',  category: 'Settings' },
   { id: 'dashboard',        label: 'Toggle Dashboard Mode',     keys: '⌘⇧B',  category: 'Settings' },
 ];
 
