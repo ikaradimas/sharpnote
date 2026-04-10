@@ -430,8 +430,14 @@ Registers an in-memory SQLite database and attaches it. The \`scratch\` DbContex
 is available in the **next** cell.`),
 
     cs(`// ── Step 1: register and attach ──────────────────────────────────────────────
-// Run this cell once. The 'scratch' DbContext will be ready for the next cell.
+// Safe to re-run: removes any previous "scratch" connection first.
 
+var existing = await Db.ListAsync();
+if (existing.Any(c => c.Name == "scratch")) {
+    Db.Detach("scratch");
+    Db.Remove("scratch");
+    await Task.Delay(300);
+}
 await Db.AddAsync("scratch", DbProvider.SqliteMemory, "");
 Db.Attach("scratch");
 
