@@ -7665,6 +7665,27 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 .dashboard-exit-btn:hover { opacity: 1; color: var(--text-primary); }
 
 /* ── Debugger ───────────────────────────────────────────────────────────── */
+/* ── Rainbow brackets ───────────────────────────────────────────────────── */
+.cm-rb-0 { color: #c4964a !important; }
+.cm-rb-1 { color: #c678dd !important; }
+.cm-rb-2 { color: #61afef !important; }
+.cm-rb-3 { color: #98c379 !important; }
+.cm-rb-4 { color: #e06c75 !important; }
+.cm-rb-5 { color: #e5c07b !important; }
+.cm-rb-6 { color: #56b6c2 !important; }
+
+/* Bracket matching highlight (cursor at bracket) */
+.cm-matchingBracket {
+  background: rgba(196,150,74,0.2) !important;
+  outline: 1px solid rgba(196,150,74,0.4);
+  border-radius: 2px;
+}
+.cm-nonmatchingBracket {
+  background: rgba(224,64,96,0.25) !important;
+  outline: 1px solid rgba(224,64,96,0.4);
+  border-radius: 2px;
+}
+
 .cm-breakpoint-gutter { width: 16px; cursor: pointer; }
 .cm-breakpoint-marker {
   width: 10px; height: 10px; border-radius: 50%;

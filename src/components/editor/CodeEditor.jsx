@@ -1,10 +1,10 @@
 import React, { useEffect, useRef } from 'react';
 import { EditorState, StateEffect, StateField, RangeSet, Prec, Compartment } from '@codemirror/state';
-import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter, hoverTooltip, showTooltip, gutter, GutterMarker, Decoration } from '@codemirror/view';
+import { EditorView, ViewPlugin, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter, hoverTooltip, showTooltip, gutter, GutterMarker, Decoration } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
-import { StreamLanguage } from '@codemirror/language';
+import { StreamLanguage, bracketMatching } from '@codemirror/language';
 import { csharp } from '@codemirror/legacy-modes/mode/clike';
 import { standardSQL } from '@codemirror/legacy-modes/mode/sql';
 import { acceptCompletion, autocompletion } from '@codemirror/autocomplete';
@@ -382,6 +382,56 @@ const pausedLineField = StateField.define({
   provide: (f) => EditorView.decorations.from(f),
 });
 
+// ── Rainbow brackets ─────────────────────────────────────────────────────────
+
+const BRACKET_PAIRS = { '(': ')', '[': ']', '{': '}' };
+const CLOSE_BRACKETS = new Set([')', ']', '}']);
+const ALL_BRACKETS = new Set(['(', ')', '[', ']', '{', '}']);
+
+const RAINBOW_COLORS = [
+  '#c4964a', // gold
+  '#c678dd', // purple
+  '#61afef', // blue
+  '#98c379', // green
+  '#e06c75', // red
+  '#e5c07b', // amber
+  '#56b6c2', // cyan
+];
+
+const rainbowDecos = RAINBOW_COLORS.map((color) =>
+  Decoration.mark({ class: `cm-rb-${RAINBOW_COLORS.indexOf(color)}` })
+);
+
+function buildRainbowDecorations(view) {
+  const doc = view.state.doc;
+  const text = doc.toString();
+  const decorations = [];
+  const stack = [];
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (BRACKET_PAIRS[ch]) {
+      const depth = stack.length % RAINBOW_COLORS.length;
+      stack.push({ pos: i, depth });
+      decorations.push(rainbowDecos[depth].range(i, i + 1));
+    } else if (CLOSE_BRACKETS.has(ch)) {
+      const open = stack.pop();
+      const depth = open ? open.depth : stack.length % RAINBOW_COLORS.length;
+      decorations.push(rainbowDecos[depth].range(i, i + 1));
+    }
+  }
+
+  return Decoration.set(decorations, true);
+}
+
+const rainbowBracketPlugin = ViewPlugin.fromClass(class {
+  constructor(view) { this.decorations = buildRainbowDecorations(view); }
+  update(update) {
+    if (update.docChanged || update.viewportChanged)
+      this.decorations = buildRainbowDecorations(update.view);
+  }
+}, { decorations: (v) => v.decorations });
+
 export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
                       notebookId, readOnly = false, cellIndex = null, sqlSchema = null,
                       breakpoints = null, onToggleBreakpoint = null, pausedLine = null }) {
@@ -467,6 +517,8 @@ export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
       readOnlyCompartment.of(EditorState.readOnly.of(readOnly)),
       breakpointGutter((lineNum) => onToggleBreakpointRef.current?.(lineNum)),
       pausedLineField,
+      bracketMatching({ brackets: '()[]{}' }),
+      rainbowBracketPlugin,
     ];
 
     if (language === 'csharp' && notebookId) {

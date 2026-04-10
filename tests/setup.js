@@ -65,7 +65,8 @@ vi.mock('@codemirror/view', () => ({
   hoverTooltip: () => ({ hoverTooltip: true }),
   GutterMarker: class GutterMarker { range(from) { return { from, value: this }; } },
   gutter: () => ({ gutter: true }),
-  Decoration: { none: {}, line: () => ({ line: true }), set: (a) => a },
+  Decoration: { none: {}, line: () => ({ line: true }), set: (a) => a, mark: () => ({ mark: true, range: (f, t) => ({ from: f, to: t }) }) },
+  ViewPlugin: { fromClass: (cls, opts) => ({ viewPlugin: cls, ...opts }) },
 }));
 
 const mockStateEffect = { define: () => { const e = (v) => ({ effect: v }); e.of = (v) => ({ effect: v }); e.is = () => false; return e; } };
@@ -108,6 +109,7 @@ vi.mock('@codemirror/lang-markdown', () => ({
 
 vi.mock('@codemirror/language', () => ({
   StreamLanguage: { define: () => ({ streamLanguage: true }) },
+  bracketMatching: () => ({ bracketMatching: true }),
 }));
 
 vi.mock('@codemirror/legacy-modes/mode/clike', () => ({
