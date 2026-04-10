@@ -475,6 +475,94 @@ orders
 Db.Detach("scratch");
 Db.Remove("scratch");`),
 
+    md(`### LINQ to SQL — Full CRUD
+
+The typed \`DbContext\` variable injected by \`Db.Attach\` supports full EF Core CRUD via LINQ.
+Below is a complete Create → Read → Update → Delete workflow using the in-memory SQLite database.
+
+**Run the "Register and Attach" cell above first**, then run this cell.`),
+
+    cs(`// ── LINQ to SQL CRUD ─────────────────────────────────────────────────────────
+// Uses the 'scratch' DbContext from the setup cell above.
+
+// Ensure table exists
+scratch.Database.ExecuteSqlRaw(@"
+    CREATE TABLE IF NOT EXISTS Products (
+        Id    INTEGER PRIMARY KEY AUTOINCREMENT,
+        Name  TEXT    NOT NULL,
+        Price REAL    NOT NULL,
+        Stock INTEGER NOT NULL DEFAULT 0
+    )");
+
+// ── CREATE ───────────────────────────────────────────────────────────────────
+record Product(long Id, string Name, double Price, int Stock);
+
+scratch.Database.ExecuteSqlRaw(
+    "INSERT INTO Products (Name, Price, Stock) VALUES ('Keyboard', 79.99, 25)");
+scratch.Database.ExecuteSqlRaw(
+    "INSERT INTO Products (Name, Price, Stock) VALUES ('Mouse', 29.99, 50)");
+scratch.Database.ExecuteSqlRaw(
+    "INSERT INTO Products (Name, Price, Stock) VALUES ('Monitor', 349.99, 10)");
+scratch.Database.ExecuteSqlRaw(
+    "INSERT INTO Products (Name, Price, Stock) VALUES ('Webcam', 59.99, 0)");
+scratch.Database.ExecuteSqlRaw(
+    "INSERT INTO Products (Name, Price, Stock) VALUES ('Headset', 99.99, 15)");
+
+Display.Html("<h4 style='color:#4ec9b0;margin:4px 0'>CREATE — 5 products inserted</h4>");
+
+// ── READ ─────────────────────────────────────────────────────────────────────
+// All products
+var all = scratch.Database
+    .SqlQueryRaw<Product>("SELECT Id, Name, Price, Stock FROM Products ORDER BY Id")
+    .ToList();
+Display.Html("<h4 style='color:#61afef;margin:8px 0 4px'>READ — All products</h4>");
+all.DisplayTable();
+
+// Filtered: in-stock items over $50
+var expensive = all
+    .Where(p => p.Price > 50 && p.Stock > 0)
+    .OrderByDescending(p => p.Price)
+    .ToList();
+Display.Html("<h4 style='color:#61afef;margin:8px 0 4px'>READ — In stock & over $50</h4>");
+expensive.DisplayTable();
+
+// Aggregation
+var summary = new {
+    TotalProducts = all.Count,
+    InStock       = all.Count(p => p.Stock > 0),
+    OutOfStock    = all.Count(p => p.Stock == 0),
+    AvgPrice      = Math.Round(all.Average(p => p.Price), 2),
+    TotalValue    = Math.Round(all.Sum(p => p.Price * p.Stock), 2),
+};
+Display.Html("<h4 style='color:#61afef;margin:8px 0 4px'>READ — Inventory summary</h4>");
+summary.Display();
+
+// ── UPDATE ───────────────────────────────────────────────────────────────────
+// Restock the Webcam and increase Keyboard price
+scratch.Database.ExecuteSqlRaw(
+    "UPDATE Products SET Stock = 20 WHERE Name = 'Webcam'");
+scratch.Database.ExecuteSqlRaw(
+    "UPDATE Products SET Price = 89.99 WHERE Name = 'Keyboard'");
+
+var updated = scratch.Database
+    .SqlQueryRaw<Product>("SELECT Id, Name, Price, Stock FROM Products WHERE Name IN ('Webcam','Keyboard')")
+    .ToList();
+Display.Html("<h4 style='color:#e5c07b;margin:8px 0 4px'>UPDATE — Webcam restocked, Keyboard repriced</h4>");
+updated.DisplayTable();
+
+// ── DELETE ───────────────────────────────────────────────────────────────────
+scratch.Database.ExecuteSqlRaw(
+    "DELETE FROM Products WHERE Stock = 0");
+
+var remaining = scratch.Database
+    .SqlQueryRaw<Product>("SELECT Id, Name, Price, Stock FROM Products ORDER BY Id")
+    .ToList();
+Display.Html("<h4 style='color:#e06c75;margin:8px 0 4px'>DELETE — Removed out-of-stock items</h4>");
+remaining.DisplayTable();
+
+// Clean up table
+scratch.Database.ExecuteSqlRaw("DROP TABLE Products");`),
+
     md('### Querying an External Database'),
 
     cs(`// ── Querying an externally-registered database ───────────────────────────────
