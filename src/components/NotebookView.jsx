@@ -113,7 +113,14 @@ export function NotebookView({
   };
 
   const updateCell = (id, content) => {
-    onSetNbDirty((n) => ({ cells: n.cells.map((c) => c.id === id ? { ...c, content } : c) }));
+    onSetNbDirty((n) => {
+      const cellOutputs = n.outputs?.[id];
+      const hasErrors = cellOutputs?.some((o) => o.type === 'error');
+      return {
+        cells: n.cells.map((c) => c.id === id ? { ...c, content } : c),
+        ...(hasErrors ? { outputs: { ...n.outputs, [id]: cellOutputs.filter((o) => o.type !== 'error') } } : {}),
+      };
+    });
   };
 
   const updateCellProp = (id, prop, value) => {
