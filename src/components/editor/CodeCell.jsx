@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Square, ChevronRight, ChevronDown, ChevronsRight, ChevronsUp, Lock, Unlock, Timer, Check, X, SkipForward, Monitor, RefreshCw, Eraser } from 'lucide-react';
+import { Play, Square, ChevronRight, ChevronDown, ChevronsRight, ChevronsUp, Lock, Unlock, Timer, Check, X, SkipForward, Monitor, RefreshCw, Eraser, AlertTriangle } from 'lucide-react';
 import { CodeEditor } from './CodeEditor.jsx';
 import { CellOutput } from '../output/OutputBlock.jsx';
 import { CellControls } from './CellControls.jsx';
@@ -161,9 +161,15 @@ export function CodeCell({
   }, [presentRefreshOpen]);
 
   const histLen = outputHistory ? outputHistory.length : 0;
-  const displayedOutputs = histIdx >= 0 && histLen > 0
+  const [errorsHidden, setErrorsHidden] = useState(true);
+
+  const rawDisplayedOutputs = histIdx >= 0 && histLen > 0
     ? outputHistory[histIdx]
     : outputs;
+  const errorCount = (rawDisplayedOutputs || []).filter((o) => o.type === 'error').length;
+  const displayedOutputs = errorsHidden
+    ? (rawDisplayedOutputs || []).filter((o) => o.type !== 'error')
+    : rawDisplayedOutputs;
 
   return (
     <div className={`cell code-cell${isRunning ? ' running' : ''}${locked ? ' cell-locked' : ''}${isStale ? ' cell-stale' : ''}${codeFolded ? ' cell-folded' : ''}${isScheduled ? ' cell-scheduled' : ''}${presenting ? ' cell-presenting' : ''}${debugState?.cellId === cell.id && debugState.paused ? ' debug-paused' : ''}`}>
@@ -261,15 +267,26 @@ export function CodeCell({
           inlineDiagnostics={inlineDiagnostics}
         />
       )}
-      {displayedOutputs && displayedOutputs.length > 0 && (
+      {(displayedOutputs?.length > 0 || errorCount > 0) && (
         <div className="output-toggle-row">
-          <button
-            className="output-toggle-btn"
-            onClick={() => setOutputCollapsed((v) => !v)}
-            title={outputCollapsed ? 'Show output' : 'Hide output'}
-          >
-            {outputCollapsed ? <><ChevronRight size={12} /> Output</> : <><ChevronDown size={12} /> Output</>}
-          </button>
+          {displayedOutputs?.length > 0 && (
+            <button
+              className="output-toggle-btn"
+              onClick={() => setOutputCollapsed((v) => !v)}
+              title={outputCollapsed ? 'Show output' : 'Hide output'}
+            >
+              {outputCollapsed ? <><ChevronRight size={12} /> Output</> : <><ChevronDown size={12} /> Output</>}
+            </button>
+          )}
+          {errorCount > 0 && (
+            <button
+              className={`output-error-badge${errorsHidden ? '' : ' active'}`}
+              onClick={() => setErrorsHidden((v) => !v)}
+              title={errorsHidden ? `${errorCount} error(s) hidden — click to show` : 'Hide errors'}
+            >
+              <AlertTriangle size={11} /> {errorCount}
+            </button>
+          )}
           <button className="output-clear-btn" onClick={onClearOutput} title="Clear output">
             <Eraser size={11} />
           </button>
