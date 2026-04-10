@@ -76,6 +76,7 @@ export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef, for
   const formatCellsOnSave = useCallback(async (notebookId) => {
     const nb = notebooksRef.current.find((n) => n.id === notebookId);
     if (!nb || !window.electronAPI) return;
+    if (nb.kernelStatus !== 'ready') return; // kernel must be running
     const codeCells = nb.cells.filter((c) => c.type === 'code' && c.content?.trim());
     if (codeCells.length === 0) return;
 
@@ -85,7 +86,7 @@ export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef, for
       try {
         const result = await new Promise((resolve, reject) => {
           const timeout = setTimeout(() => { cleanup(); reject(new Error('timeout')); }, 5000);
-          const handler = (_ev, { message: msg }) => {
+          const handler = ({ message: msg }) => {
             if (msg?.type !== 'format_result' || msg.requestId !== requestId) return;
             cleanup();
             resolve(msg);
