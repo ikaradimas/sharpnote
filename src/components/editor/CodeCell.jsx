@@ -236,6 +236,11 @@ export function CodeCell({
           </button>
         </div>
       )}
+      {presenting && (
+        <button className="cell-present-exit" onClick={onTogglePresent} title="Exit presentation mode">
+          <Monitor size={11} />
+        </button>
+      )}
       {!outputCollapsed && <CellOutput messages={displayedOutputs} notebookId={notebookId} allCells={allCells} onRunCellByName={onRunCellByName} />}
       <div className="code-cell-footer">
         {(isRunning || lastDuration !== null) && (
