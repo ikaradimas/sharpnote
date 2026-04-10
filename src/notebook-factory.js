@@ -424,20 +424,27 @@ variable (\`scratch\`) is available to the **next** cell, not the one that calle
 
 **Run the setup cell first, then run the query cell.**`),
 
-    md('### Step 1 — Register and Attach'),
+    md(`### Step 1 — Create Schema, Register, and Attach
 
-    cs(`// ── Step 1: register and attach ──────────────────────────────────────────────
+Creates an in-memory SQLite database with an \`Orders\` and \`Products\` table,
+then registers and attaches it. The \`scratch\` DbContext (with typed \`DbSet\`
+properties) is available in the **next** cell.`),
+
+    cs(`// ── Step 1: create schema, register, attach ──────────────────────────────────
 // Run this cell once. The 'scratch' DbContext will be ready for the next cell.
 
 await Db.AddAsync("scratch", DbProvider.SqliteMemory, "");
-Db.Attach("scratch");   // triggers schema introspection; 'scratch' available next cell
 
-Display.Html("<p style='color:#4ec9b0'>Setup sent — run the query cell below.</p>");`),
+// Create tables using the raw connection before attaching,
+// so schema introspection picks them up.
+var conn = Microsoft.Data.Sqlite.SqliteConnection
+    .CreateHandle?.Invoke()
+    ?? throw new Exception("SQLite connection not available");
 
-    md('### Step 2 — Create Schema, Insert, and Query'),
-
-    cs(`// ── Step 2: create schema, insert, and query ─────────────────────────────────
-// Run after the setup cell above has completed.
+// We need to get the connection from EF — attach first with empty schema,
+// then create tables, then re-attach to pick up the schema.
+Db.Attach("scratch");
+await Task.Delay(1500); // wait for schema introspection round-trip
 
 scratch.Database.ExecuteSqlRaw(@"
     CREATE TABLE IF NOT EXISTS Orders (
@@ -447,46 +454,6 @@ scratch.Database.ExecuteSqlRaw(@"
         Price   REAL    NOT NULL
     )");
 scratch.Database.ExecuteSqlRaw(@"
-    INSERT INTO Orders VALUES
-        (1, 'Widget A', 3,  9.99),
-        (2, 'Widget B', 1, 24.99),
-        (3, 'Widget A', 7,  9.99),
-        (4, 'Gadget',   2, 49.99)");
-
-record Order(long Id, string Product, int Qty, double Price);
-var orders = scratch.Database
-    .SqlQueryRaw<Order>("SELECT Id, Product, Qty, Price FROM Orders ORDER BY Id")
-    .ToList();
-
-Display.Table(orders);
-
-// LINQ aggregation
-orders
-    .GroupBy(o => o.Product)
-    .Select(g => new {
-        Product = g.Key,
-        Units   = g.Sum(o => o.Qty),
-        Revenue = Math.Round(g.Sum(o => o.Qty * o.Price), 2),
-    })
-    .OrderByDescending(s => s.Revenue)
-    .DisplayTable();
-
-// Clean up
-Db.Detach("scratch");
-Db.Remove("scratch");`),
-
-    md(`### LINQ to SQL — Full CRUD
-
-The typed \`DbContext\` variable injected by \`Db.Attach\` supports full EF Core CRUD via LINQ.
-Below is a complete Create → Read → Update → Delete workflow using the in-memory SQLite database.
-
-**Run the "Register and Attach" cell above first**, then run this cell.`),
-
-    cs(`// ── LINQ to SQL CRUD ─────────────────────────────────────────────────────────
-// Uses the 'scratch' DbContext from the setup cell above.
-
-// Ensure table exists
-scratch.Database.ExecuteSqlRaw(@"
     CREATE TABLE IF NOT EXISTS Products (
         Id    INTEGER PRIMARY KEY AUTOINCREMENT,
         Name  TEXT    NOT NULL,
@@ -494,32 +461,68 @@ scratch.Database.ExecuteSqlRaw(@"
         Stock INTEGER NOT NULL DEFAULT 0
     )");
 
+// Re-attach to refresh the schema with the new tables
+Db.Detach("scratch");
+Db.Attach("scratch");
+
+Display.Html("<p style='color:#4ec9b0'>Tables created and schema refreshed — run the cells below.</p>");`),
+
+    md('### Step 2 — Query with LINQ'),
+
+    cs(`// ── Step 2: seed data and query ──────────────────────────────────────────────
+// Run after the setup cell above has completed.
+
+// Seed via raw insert (tables are empty)
+scratch.Database.ExecuteSqlRaw(@"
+    INSERT INTO Orders VALUES
+        (1, 'Widget A', 3,  9.99),
+        (2, 'Widget B', 1, 24.99),
+        (3, 'Widget A', 7,  9.99),
+        (4, 'Gadget',   2, 49.99)");
+
+// Query using the typed DbSet
+scratch.Orders.OrderBy(o => o.Id).ToList().DisplayTable();
+
+// LINQ aggregation
+scratch.Orders.ToList()
+    .GroupBy(o => o.Product)
+    .Select(g => new {
+        Product = g.Key,
+        Units   = g.Sum(o => o.Qty),
+        Revenue = Math.Round(g.Sum(o => (double)(o.Qty * o.Price)), 2),
+    })
+    .OrderByDescending(s => s.Revenue)
+    .DisplayTable();`),
+
+    md(`### LINQ to SQL — Full CRUD
+
+Complete Create → Read → Update → Delete workflow using the typed DbContext.
+All operations use the \`DbSet\` properties and EF Core change tracking — **no raw SQL**.
+
+**Run the setup cell above first.**`),
+
+    cs(`// ── LINQ to SQL CRUD — no raw SQL ───────────────────────────────────────────
+// Uses the 'scratch' DbContext with its typed Products DbSet.
+
 // ── CREATE ───────────────────────────────────────────────────────────────────
-record Product(long Id, string Name, double Price, int Stock);
+// Add entities via the DbSet and SaveChanges
+scratch.Products.Add(new() { Name = "Keyboard", Price = 79.99, Stock = 25 });
+scratch.Products.Add(new() { Name = "Mouse",    Price = 29.99, Stock = 50 });
+scratch.Products.Add(new() { Name = "Monitor",  Price = 349.99, Stock = 10 });
+scratch.Products.Add(new() { Name = "Webcam",   Price = 59.99, Stock = 0 });
+scratch.Products.Add(new() { Name = "Headset",  Price = 99.99, Stock = 15 });
+scratch.SaveChanges();
 
-scratch.Database.ExecuteSqlRaw(
-    "INSERT INTO Products (Name, Price, Stock) VALUES ('Keyboard', 79.99, 25)");
-scratch.Database.ExecuteSqlRaw(
-    "INSERT INTO Products (Name, Price, Stock) VALUES ('Mouse', 29.99, 50)");
-scratch.Database.ExecuteSqlRaw(
-    "INSERT INTO Products (Name, Price, Stock) VALUES ('Monitor', 349.99, 10)");
-scratch.Database.ExecuteSqlRaw(
-    "INSERT INTO Products (Name, Price, Stock) VALUES ('Webcam', 59.99, 0)");
-scratch.Database.ExecuteSqlRaw(
-    "INSERT INTO Products (Name, Price, Stock) VALUES ('Headset', 99.99, 15)");
-
-Display.Html("<h4 style='color:#4ec9b0;margin:4px 0'>CREATE — 5 products inserted</h4>");
+Display.Html("<h4 style='color:#4ec9b0;margin:4px 0'>CREATE — 5 products added via DbSet</h4>");
 
 // ── READ ─────────────────────────────────────────────────────────────────────
-// All products
-var all = scratch.Database
-    .SqlQueryRaw<Product>("SELECT Id, Name, Price, Stock FROM Products ORDER BY Id")
-    .ToList();
+// All products via LINQ
+var all = scratch.Products.OrderBy(p => p.Id).ToList();
 Display.Html("<h4 style='color:#61afef;margin:8px 0 4px'>READ — All products</h4>");
 all.DisplayTable();
 
 // Filtered: in-stock items over $50
-var expensive = all
+var expensive = scratch.Products
     .Where(p => p.Price > 50 && p.Stock > 0)
     .OrderByDescending(p => p.Price)
     .ToList();
@@ -528,40 +531,39 @@ expensive.DisplayTable();
 
 // Aggregation
 var summary = new {
-    TotalProducts = all.Count,
-    InStock       = all.Count(p => p.Stock > 0),
-    OutOfStock    = all.Count(p => p.Stock == 0),
-    AvgPrice      = Math.Round(all.Average(p => p.Price), 2),
-    TotalValue    = Math.Round(all.Sum(p => p.Price * p.Stock), 2),
+    TotalProducts = scratch.Products.Count(),
+    InStock       = scratch.Products.Count(p => p.Stock > 0),
+    OutOfStock    = scratch.Products.Count(p => p.Stock == 0),
+    AvgPrice      = Math.Round(scratch.Products.Average(p => (double)p.Price), 2),
+    TotalValue    = Math.Round(scratch.Products.Sum(p => (double)(p.Price * p.Stock)), 2),
 };
 Display.Html("<h4 style='color:#61afef;margin:8px 0 4px'>READ — Inventory summary</h4>");
 summary.Display();
 
 // ── UPDATE ───────────────────────────────────────────────────────────────────
-// Restock the Webcam and increase Keyboard price
-scratch.Database.ExecuteSqlRaw(
-    "UPDATE Products SET Stock = 20 WHERE Name = 'Webcam'");
-scratch.Database.ExecuteSqlRaw(
-    "UPDATE Products SET Price = 89.99 WHERE Name = 'Keyboard'");
+// Find and modify entities, then SaveChanges
+var webcam = scratch.Products.First(p => p.Name == "Webcam");
+webcam.Stock = 20;
 
-var updated = scratch.Database
-    .SqlQueryRaw<Product>("SELECT Id, Name, Price, Stock FROM Products WHERE Name IN ('Webcam','Keyboard')")
-    .ToList();
+var keyboard = scratch.Products.First(p => p.Name == "Keyboard");
+keyboard.Price = 89.99;
+
+scratch.SaveChanges();
+
 Display.Html("<h4 style='color:#e5c07b;margin:8px 0 4px'>UPDATE — Webcam restocked, Keyboard repriced</h4>");
-updated.DisplayTable();
+scratch.Products
+    .Where(p => p.Name == "Webcam" || p.Name == "Keyboard")
+    .ToList()
+    .DisplayTable();
 
 // ── DELETE ───────────────────────────────────────────────────────────────────
-scratch.Database.ExecuteSqlRaw(
-    "DELETE FROM Products WHERE Stock = 0");
+// Remove entities matching a condition
+var outOfStock = scratch.Products.Where(p => p.Stock == 0).ToList();
+scratch.Products.RemoveRange(outOfStock);
+scratch.SaveChanges();
 
-var remaining = scratch.Database
-    .SqlQueryRaw<Product>("SELECT Id, Name, Price, Stock FROM Products ORDER BY Id")
-    .ToList();
 Display.Html("<h4 style='color:#e06c75;margin:8px 0 4px'>DELETE — Removed out-of-stock items</h4>");
-remaining.DisplayTable();
-
-// Clean up table
-scratch.Database.ExecuteSqlRaw("DROP TABLE Products");`),
+scratch.Products.OrderBy(p => p.Id).ToList().DisplayTable();`),
 
     md('### Querying an External Database'),
 
