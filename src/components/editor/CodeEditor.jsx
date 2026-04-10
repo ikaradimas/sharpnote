@@ -4,10 +4,10 @@ import { EditorView, ViewPlugin, keymap, lineNumbers, highlightActiveLine, highl
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
-import { StreamLanguage, bracketMatching } from '@codemirror/language';
+import { StreamLanguage, bracketMatching, indentOnInput, indentUnit } from '@codemirror/language';
 import { csharp } from '@codemirror/legacy-modes/mode/clike';
 import { standardSQL } from '@codemirror/legacy-modes/mode/sql';
-import { acceptCompletion, autocompletion } from '@codemirror/autocomplete';
+import { acceptCompletion, autocompletion, closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete';
 import { LanguageServerClient, languageServerPlugin, jumpToDefinitionKeymap, jumpToDefinitionPos } from 'codemirror-languageserver';
 import { ElectronLspTransport } from './lspTransport.js';
 
@@ -510,7 +510,11 @@ export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
       oneDark,
       langExt,
       ctrlEnterKey,
-      keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
+      indentUnit.of('    '),
+      EditorState.tabSize.of(4),
+      closeBrackets(),
+      indentOnInput(),
+      keymap.of([...closeBracketsKeymap, ...defaultKeymap, ...historyKeymap, indentWithTab]),
       updateListener,
       blurHandler,
       EditorView.lineWrapping,

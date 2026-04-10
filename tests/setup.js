@@ -83,6 +83,7 @@ vi.mock('@codemirror/state', () => ({
   EditorState: {
     create: (cfg) => ({ ...mockState, ...cfg }),
     readOnly: { of: (v) => ({ readOnly: v }) },
+    tabSize: { of: (v) => ({ tabSize: v }) },
   },
   Compartment: mockCompartment,
   Prec: { highest: (ext) => ext },
@@ -110,6 +111,8 @@ vi.mock('@codemirror/lang-markdown', () => ({
 vi.mock('@codemirror/language', () => ({
   StreamLanguage: { define: () => ({ streamLanguage: true }) },
   bracketMatching: () => ({ bracketMatching: true }),
+  indentOnInput: () => ({ indentOnInput: true }),
+  indentUnit: { of: () => ({ indentUnit: true }) },
 }));
 
 vi.mock('@codemirror/legacy-modes/mode/clike', () => ({
@@ -120,6 +123,8 @@ vi.mock('@codemirror/autocomplete', () => ({
   autocompletion: () => ({ autocompletion: true }),
   completionKeymap: [],
   acceptCompletion: () => false,
+  closeBrackets: () => ({ closeBrackets: true }),
+  closeBracketsKeymap: [],
 }));
 
 vi.mock('@codemirror/lint', () => ({
