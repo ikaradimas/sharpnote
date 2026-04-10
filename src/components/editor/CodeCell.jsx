@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Square, ChevronRight, ChevronDown, ChevronsRight, ChevronsUp, Lock, Unlock, Timer, Check, X, SkipForward, Monitor, RefreshCw } from 'lucide-react';
+import { Play, Square, ChevronRight, ChevronDown, ChevronsRight, ChevronsUp, Lock, Unlock, Timer, Check, X, SkipForward, Monitor, RefreshCw, Eraser } from 'lucide-react';
 import { CodeEditor } from './CodeEditor.jsx';
 import { CellOutput } from '../output/OutputBlock.jsx';
 import { CellControls } from './CellControls.jsx';
@@ -77,6 +77,7 @@ export function CodeCell({
   onDebugStep,
   onTogglePresent,
   onPresentIntervalChange,
+  onClearOutput,
 }) {
   const outputMode = cell.outputMode || 'auto';
   const locked = cell.locked || false;
@@ -266,6 +267,9 @@ export function CodeCell({
             title={outputCollapsed ? 'Show output' : 'Hide output'}
           >
             {outputCollapsed ? <><ChevronRight size={12} /> Output</> : <><ChevronDown size={12} /> Output</>}
+          </button>
+          <button className="output-clear-btn" onClick={onClearOutput} title="Clear output">
+            <Eraser size={11} />
           </button>
         </div>
       )}

@@ -6245,6 +6245,13 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
   font-size: 11px; color: var(--text-muted); font-family: inherit;
 }
 .output-toggle-btn:hover { color: var(--text-secondary); }
+.output-clear-btn {
+  display: inline-flex; align-items: center; margin-left: auto;
+  background: none; border: none; cursor: pointer; padding: 2px 4px;
+  color: var(--text-dim); opacity: 0; transition: opacity 0.15s, color 0.15s;
+}
+.output-toggle-row:hover .output-clear-btn { opacity: 0.6; }
+.output-clear-btn:hover { opacity: 1 !important; color: var(--text-secondary); }
 
 /* ── Find bar ────────────────────────────────────────────────────────────── */
 .find-bar {

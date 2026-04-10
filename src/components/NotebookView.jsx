@@ -407,6 +407,7 @@ export function NotebookView({
                 onDebugStep={() => onDebugStep?.(nb.id)}
                 onTogglePresent={() => updateCellProp(cell.id, 'presenting', !(cell.presenting || false))}
                 onPresentIntervalChange={(ms) => updateCellProp(cell.id, 'presentInterval', ms || undefined)}
+                onClearOutput={() => onSetNb((n) => ({ outputs: { ...n.outputs, [cell.id]: [] } }))}
               />
             )}
             {!dashboardMode && (
