@@ -143,10 +143,10 @@ partial class Program
             else
             {
                 // 3. Generate + compile DbContext
-                // Use a unique namespace suffix on reconnect so the new type doesn't
-                // collide with the old (still loaded) assembly in the Roslyn script state.
-                var isRecompile = attachedDbs.ContainsKey(connectionId);
-                var nsSuffix = isRecompile ? Guid.NewGuid().ToString("N")[..8] : null;
+                // Always use a unique namespace suffix so the generated type never
+                // collides with a previous compilation still loaded in the AppDomain
+                // (e.g. after Detach + re-Attach).
+                var nsSuffix = Guid.NewGuid().ToString("N")[..8];
                 var source = DbCodeGen.GenerateSource(connName, provider, schema, nsSuffix);
                 (_, metaRef) = DbCodeGen.Compile(source, provider);
                 contextTypeName = DbCodeGen.ContextTypeName(connName, nsSuffix);
