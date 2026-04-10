@@ -432,9 +432,90 @@ const rainbowBracketPlugin = ViewPlugin.fromClass(class {
   }
 }, { decorations: (v) => v.decorations });
 
+// ── Inline diagnostics (error underlines + hover tooltips) ───────────────────
+
+const setInlineDiagsEffect = StateEffect.define();
+
+const errorUnderline = Decoration.mark({ class: 'cm-error-underline' });
+const warningUnderline = Decoration.mark({ class: 'cm-warning-underline' });
+
+const inlineDiagsField = StateField.define({
+  create() { return { decorations: Decoration.none, diagnostics: [] }; },
+  update(value, tr) {
+    for (const e of tr.effects) {
+      if (e.is(setInlineDiagsEffect)) {
+        const diags = e.value || [];
+        if (diags.length === 0) return { decorations: Decoration.none, diagnostics: [] };
+        const doc = tr.state.doc;
+        const decos = [];
+        for (const d of diags) {
+          if (d.line < 1 || d.line > doc.lines) continue;
+          const line = doc.line(d.line);
+          const from = Math.min(line.from + (d.col - 1), line.to);
+          const to = d.endLine === d.line
+            ? Math.min(line.from + (d.endCol - 1), line.to)
+            : line.to;
+          const actualTo = Math.max(to, from + 1); // at least 1 char wide
+          decos.push((d.severity === 'error' ? errorUnderline : warningUnderline).range(from, Math.min(actualTo, doc.length)));
+        }
+        return { decorations: Decoration.set(decos, true), diagnostics: diags };
+      }
+    }
+    return { decorations: value.decorations.map(tr.changes), diagnostics: value.diagnostics };
+  },
+  provide: (f) => EditorView.decorations.from(f, (v) => v.decorations),
+});
+
+function inlineDiagsTooltip() {
+  return hoverTooltip((view, pos) => {
+    const { diagnostics } = view.state.field(inlineDiagsField);
+    if (!diagnostics?.length) return null;
+    const doc = view.state.doc;
+    const line = doc.lineAt(pos);
+    const lineNum = line.number;
+    const col = pos - line.from + 1;
+    const matching = diagnostics.filter((d) => {
+      if (d.line !== lineNum) return false;
+      const dFrom = d.col;
+      const dTo = d.endLine === d.line ? d.endCol : line.to - line.from + 1;
+      return col >= dFrom && col <= dTo;
+    });
+    if (matching.length === 0) return null;
+    return {
+      pos,
+      above: true,
+      create() {
+        const dom = document.createElement('div');
+        dom.className = 'cm-diag-tooltip';
+        matching.forEach((d) => {
+          const row = document.createElement('div');
+          row.className = 'cm-diag-tooltip-row';
+          const icon = document.createElement('span');
+          icon.className = `cm-diag-icon cm-diag-${d.severity}`;
+          icon.textContent = d.severity === 'error' ? '✕' : '⚠';
+          row.appendChild(icon);
+          const msg = document.createElement('span');
+          msg.className = 'cm-diag-msg';
+          msg.textContent = `${d.code}: ${d.message}`;
+          row.appendChild(msg);
+          const copyBtn = document.createElement('button');
+          copyBtn.className = 'cm-diag-copy';
+          copyBtn.title = 'Copy error';
+          copyBtn.textContent = '⎘';
+          copyBtn.onclick = () => navigator.clipboard?.writeText(`${d.code}: ${d.message}`);
+          row.appendChild(copyBtn);
+          dom.appendChild(row);
+        });
+        return { dom };
+      },
+    };
+  }, { hideOnChange: true });
+}
+
 export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
                       notebookId, readOnly = false, cellIndex = null, sqlSchema = null,
-                      breakpoints = null, onToggleBreakpoint = null, pausedLine = null }) {
+                      breakpoints = null, onToggleBreakpoint = null, pausedLine = null,
+                      inlineDiagnostics = null }) {
   const containerRef = useRef(null);
   const viewRef = useRef(null);
   const onChangeRef = useRef(onChange);
@@ -523,6 +604,8 @@ export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
       pausedLineField,
       bracketMatching({ brackets: '()[]{}' }),
       rainbowBracketPlugin,
+      inlineDiagsField,
+      inlineDiagsTooltip(),
     ];
 
     if (language === 'csharp' && notebookId) {
@@ -595,6 +678,13 @@ export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
       view.dispatch({ effects: EditorView.scrollIntoView(linePos, { y: 'center' }) });
     }
   }, [pausedLine]);
+
+  // Sync inline diagnostics from execution errors
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) return;
+    view.dispatch({ effects: setInlineDiagsEffect.of(inlineDiagnostics || []) });
+  }, [inlineDiagnostics]);
 
   return <div ref={containerRef} className="code-editor-wrap" />;
 }

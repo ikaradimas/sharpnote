@@ -78,6 +78,7 @@ export function CodeCell({
   onTogglePresent,
   onPresentIntervalChange,
   onClearOutput,
+  inlineDiagnostics,
 }) {
   const outputMode = cell.outputMode || 'auto';
   const locked = cell.locked || false;
@@ -257,6 +258,7 @@ export function CodeCell({
           breakpoints={breakpoints}
           onToggleBreakpoint={onToggleBreakpoint}
           pausedLine={debugState?.cellId === cell.id ? debugState.line : null}
+          inlineDiagnostics={inlineDiagnostics}
         />
       )}
       {displayedOutputs && displayedOutputs.length > 0 && (

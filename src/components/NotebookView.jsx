@@ -69,7 +69,7 @@ export function NotebookView({
   onToggleBreakpoint,
 }) {
   const { cells, outputs, outputHistory, cellResults, running, kernelStatus,
-          config, logPanelOpen, nugetPanelOpen, configPanelOpen,
+          config, logPanelOpen, nugetPanelOpen, configPanelOpen, inlineDiagnostics,
           dbPanelOpen, varsPanelOpen, tocPanelOpen, graphPanelOpen, todoPanelOpen, regexPanelOpen, historyPanelOpen, depsPanelOpen,
           path: notebookPath, staleCellIds, attachedDbs, autoRun, breakpoints, debugState } = nb;
 
@@ -116,9 +116,11 @@ export function NotebookView({
     onSetNbDirty((n) => {
       const cellOutputs = n.outputs?.[id];
       const hasErrors = cellOutputs?.some((o) => o.type === 'error');
+      const hadDiags = n.inlineDiagnostics?.[id]?.length > 0;
       return {
         cells: n.cells.map((c) => c.id === id ? { ...c, content } : c),
         ...(hasErrors ? { outputs: { ...n.outputs, [id]: cellOutputs.filter((o) => o.type !== 'error') } } : {}),
+        ...(hadDiags ? { inlineDiagnostics: { ...(n.inlineDiagnostics || {}), [id]: [] } } : {}),
       };
     });
   };
@@ -415,6 +417,7 @@ export function NotebookView({
                 onTogglePresent={() => updateCellProp(cell.id, 'presenting', !(cell.presenting || false))}
                 onPresentIntervalChange={(ms) => updateCellProp(cell.id, 'presentInterval', ms || undefined)}
                 onClearOutput={() => onSetNb((n) => ({ outputs: { ...n.outputs, [cell.id]: [] } }))}
+                inlineDiagnostics={inlineDiagnostics?.[cell.id] || null}
               />
             )}
             {!dashboardMode && (

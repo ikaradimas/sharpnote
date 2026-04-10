@@ -257,6 +257,14 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
           });
           break;
 
+        case 'inline_diagnostics':
+          if (msg.id) {
+            setNb(notebookId, (n) => ({
+              inlineDiagnostics: { ...(n.inlineDiagnostics || {}), [msg.id]: msg.diagnostics },
+            }));
+          }
+          break;
+
         case 'paused':
           setNb(notebookId, {
             debugState: { cellId: msg.id, line: msg.line, variables: msg.variables, paused: true },

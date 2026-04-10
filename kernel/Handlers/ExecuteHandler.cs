@@ -110,6 +110,7 @@ partial class Program
         var execToken = _execCts.Token;
         UtilContext.Current.SetCancellationToken(execToken);
         var interrupted = false;
+        var isCompilationError = false;
 
         // Inject FormData variable when the execute message contains form submission data.
         if (msg.TryGetProperty("formData", out var formDataProp) && formDataProp.ValueKind == JsonValueKind.Object)
@@ -199,7 +200,29 @@ partial class Program
         catch (Microsoft.CodeAnalysis.Scripting.CompilationErrorException ex)
         {
             success = false;
+            isCompilationError = true;
             errorMessage = string.Join("\n", ex.Diagnostics);
+            // Send structured diagnostics with positions for inline display
+            var inlineDiags = ex.Diagnostics
+                .Where(d => d.Location.IsInSource)
+                .Select(d => {
+                    var span = d.Location.GetLineSpan();
+                    return new {
+                        line    = span.StartLinePosition.Line + 1,
+                        col     = span.StartLinePosition.Character + 1,
+                        endLine = span.EndLinePosition.Line + 1,
+                        endCol  = span.EndLinePosition.Character + 1,
+                        severity = d.Severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error ? "error" : "warning",
+                        message  = d.GetMessage(),
+                        code     = d.Id,
+                    };
+                })
+                .ToList();
+            if (inlineDiags.Count > 0)
+            {
+                realStdout.WriteLine(JsonSerializer.Serialize(new
+                { type = "inline_diagnostics", id, diagnostics = inlineDiags }));
+            }
         }
         catch (Exception ex)
         {
@@ -230,7 +253,7 @@ partial class Program
             RenderReturnValue(display, script.ReturnValue, outputMode, id, realStdout);
         }
 
-        if (!success && errorMessage != "Execution interrupted")
+        if (!success && errorMessage != "Execution interrupted" && !isCompilationError)
         {
             realStdout.WriteLine(JsonSerializer.Serialize(new
             { type = "error", id, message = errorMessage, stackTrace }));

@@ -7686,6 +7686,35 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
   border-radius: 2px;
 }
 
+/* ── Inline diagnostics ─────────────────────────────────────────────────── */
+.cm-error-underline {
+  text-decoration: wavy underline #e06c75 1.5px;
+  text-underline-offset: 3px;
+}
+.cm-warning-underline {
+  text-decoration: wavy underline #e5c07b 1.5px;
+  text-underline-offset: 3px;
+}
+.cm-diag-tooltip {
+  background: var(--bg-mid); border: 1px solid var(--border-default);
+  border-radius: 6px; box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+  padding: 4px 0; max-width: 450px; font-family: var(--font-ui);
+}
+.cm-diag-tooltip-row {
+  display: flex; align-items: flex-start; gap: 6px;
+  padding: 4px 10px; font-size: 11px; color: var(--text-secondary);
+}
+.cm-diag-icon { flex-shrink: 0; font-size: 10px; font-weight: 700; }
+.cm-diag-icon.cm-diag-error { color: #e06c75; }
+.cm-diag-icon.cm-diag-warning { color: #e5c07b; }
+.cm-diag-msg { flex: 1; line-height: 1.4; word-break: break-word; }
+.cm-diag-copy {
+  flex-shrink: 0; background: none; border: none; cursor: pointer;
+  color: var(--text-dim); font-size: 13px; padding: 0 2px;
+  opacity: 0.5; transition: opacity 0.15s;
+}
+.cm-diag-copy:hover { opacity: 1; color: var(--accent-primary); }
+
 .cm-breakpoint-gutter { width: 16px; cursor: pointer; }
 .cm-breakpoint-marker {
   width: 10px; height: 10px; border-radius: 50%;
