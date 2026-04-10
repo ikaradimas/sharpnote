@@ -159,9 +159,10 @@ internal sealed class LspHandlers
             isIncomplete = false,
             items = items.Select(c => new
             {
-                label  = c.Label,
-                kind   = MapCompletionKind(c.Kind),
-                detail = c.Detail,
+                label    = c.Label,
+                kind     = MapCompletionKind(c.Kind),
+                detail   = c.Detail,
+                sortText = c.SortText,
             }).ToList()
         };
     }

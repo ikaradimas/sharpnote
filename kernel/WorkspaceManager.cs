@@ -19,7 +19,7 @@ namespace SharpNoteKernel;
 
 // ── Data transfer objects ─────────────────────────────────────────────────────
 
-public record CompletionItemData(string Label, string Kind, string? Detail);
+public record CompletionItemData(string Label, string Kind, string? Detail, string? SortText = null);
 
 public record DiagnosticData(int From, int To, string Severity, string Message);
 
@@ -202,7 +202,8 @@ public sealed class WorkspaceManager : IDisposable
             .Select(item => new CompletionItemData(
                 item.DisplayText,
                 MapCompletionTags(item.Tags),
-                item.InlineDescription.Length > 0 ? item.InlineDescription : null))
+                item.InlineDescription.Length > 0 ? item.InlineDescription : null,
+                item.SortText))
             .ToList();
     }
 
