@@ -1,9 +1,34 @@
 import React, { useEffect, useRef } from 'react';
 import { PANEL_META } from '../../config/dock-layout.jsx';
 
+function clampToViewport(pos) {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const w = pos.w || 320;
+  const h = pos.h || 300;
+  // Ensure at least 40px of the panel header is visible on screen
+  const x = Math.max(0, Math.min(pos.x, vw - Math.min(w, 40)));
+  const y = Math.max(0, Math.min(pos.y, vh - 40));
+  return { ...pos, x, y };
+}
+
 export function FloatPanel({ panelId, pos, onMove, onClose, onStartDrag, flashing, children }) {
   const posRef = useRef(pos);
   useEffect(() => { posRef.current = pos; }, [pos]);
+
+  // Clamp to viewport on mount and when window resizes
+  useEffect(() => {
+    const clamped = clampToViewport(pos);
+    if (clamped.x !== pos.x || clamped.y !== pos.y) onMove(panelId, clamped);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const onResize = () => {
+      const clamped = clampToViewport(posRef.current);
+      if (clamped.x !== posRef.current.x || clamped.y !== posRef.current.y) onMove(panelId, clamped);
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [panelId, onMove]);
 
   const handleHeaderDown = (e) => {
     if (e.button !== 0) return;
