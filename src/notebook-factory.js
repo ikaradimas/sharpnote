@@ -807,6 +807,81 @@ Display.Html($@"
   </p>
 </div>");`),
 
+    md('### Multi-Step Progress'),
+
+    cs(`// Display.Progress with multiple stages — simulates a data pipeline
+
+var stages = new[] { "Downloading", "Parsing", "Validating", "Indexing", "Finalising" };
+
+foreach (var stage in stages) {
+    var p = Display.Progress(stage, total: 10);
+    for (int i = 1; i <= 10; i++) {
+        await Task.Delay(60);
+        p.Report(i);
+    }
+    p.Complete();
+}
+
+Display.Html("<p style='color:#4ec9b0'>Pipeline complete — all 5 stages finished.</p>");`),
+
+    md(`### Live HTML Updates
+
+\`Display.NewHtml()\` returns a **handle** whose \`UpdateHtml()\` method replaces the output in-place.
+Useful for custom progress indicators, streaming results, or dynamic status displays.`),
+
+    cs(`// Display.NewHtml — live-updating HTML content
+var status = Display.NewHtml("<p style='color:#5a7080'>Starting…</p>");
+
+var steps = new[] { "Connecting", "Authenticating", "Fetching data", "Processing", "Done" };
+for (int i = 0; i < steps.Length; i++) {
+    await Task.Delay(400);
+    var pct = (int)((i + 1.0) / steps.Length * 100);
+    status.UpdateHtml($@"
+        <div style='font-family:sans-serif'>
+            <p style='color:#cdd6e0;margin:0 0 4px'><strong>{steps[i]}</strong> ({pct}%)</p>
+            <div style='background:#282830;border-radius:4px;height:8px;overflow:hidden'>
+                <div style='width:{pct}%;height:100%;background:linear-gradient(90deg,#c4964a,#e5c07b);
+                             border-radius:4px;transition:width 0.3s'></div>
+            </div>
+        </div>");
+}`),
+
+    md(`### Live Table Updates
+
+\`Display.NewTable()\` renders a table that can be updated in-place via \`UpdateTable()\`.`),
+
+    cs(`// Display.NewTable — live-updating table
+record Metric(string Name, int Value, string Status);
+
+var data = new List<Metric> {
+    new("CPU",     0, "…"),
+    new("Memory",  0, "…"),
+    new("Disk",    0, "…"),
+    new("Network", 0, "…"),
+};
+var table = Display.NewTable(data, "System Metrics");
+
+var rng = new Random(99);
+for (int tick = 0; tick < 8; tick++) {
+    await Task.Delay(300);
+    data = data.Select(m => m with {
+        Value  = Math.Clamp(m.Value + rng.Next(-10, 20), 0, 100),
+        Status = m.Value > 80 ? "⚠ High" : m.Value > 50 ? "Normal" : "Low",
+    }).ToList();
+    table.UpdateTable(data);
+}`),
+
+    md(`### Images
+
+\`Display.Image(source, alt?, width?, height?)\` renders an image from a URL, file path, or base64 data URI.`),
+
+    cs(`// Display.Image — render images from URLs
+Display.Image(
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0d/C_Sharp_wordmark.svg/240px-C_Sharp_wordmark.svg.png",
+    alt: "C# Logo",
+    width: 120
+);`),
+
     md(`### Confirm Dialog
 
 \`Util.ConfirmAsync(message, title?)\` renders an **OK / Cancel** dialog inline in the cell output
@@ -823,6 +898,19 @@ else
 {
     "✕ Cancelled by user.".Display();
 }`),
+
+    md(`### Text Prompt
+
+\`Util.PromptAsync(message, title?, defaultValue?)\` renders a text input inline and pauses execution
+until the user submits. Returns the entered string, or \`null\` if cancelled.`),
+
+    cs(`// Util.PromptAsync — ask for text input inline
+var name = await Util.PromptAsync("What is your name?", "Greeting", "World");
+
+if (name != null)
+    Display.Html($"<h3 style='color:#4ec9b0;margin:4px 0'>Hello, {name}!</h3>");
+else
+    Display.Html("<p style='color:#e06c75'>Prompt cancelled.</p>");`),
 
     // ── Display.Markdown ───────────────────────────────────────────────────
 
