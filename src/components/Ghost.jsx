@@ -82,7 +82,7 @@ export function Ghost() {
     };
   }, []);
 
-  // Deep idle chase with bead trail
+  // Deep idle chase — beads lead, Pac-Man follows, ghost pursues slowly
   useEffect(() => {
     if (mood !== 'deepIdle') {
       setPacman(null);
@@ -93,77 +93,94 @@ export function Ghost() {
 
     const m = mouseRef.current;
     const W = window.innerWidth, H = window.innerHeight;
-    let px = Math.max(40, Math.min(W - 40, m.x + 70));
-    let py = Math.max(40, Math.min(H - 60, m.y));
-    let gx = Math.max(40, Math.min(W - 40, m.x));
-    let gy = Math.max(40, Math.min(H - 60, m.y));
-    let heading = Math.random() * Math.PI * 2;
-    let swerveTimer = 0;
-    let swerveTarget = heading;
-    let nextSwerveAt = 60 + Math.floor(Math.random() * 80);
-    let beadList = [];
-    let beadCounter = 0;
+    const clampX = (v) => Math.max(40, Math.min(W - 40, v));
+    const clampY = (v) => Math.max(50, Math.min(H - 50, v));
+    let px = clampX(m.x + 70), py = clampY(m.y);
+    let gx = clampX(m.x), gy = clampY(m.y);
+    let frame = 0;
+    let beadId = 0;
 
-    // Spawn a trail of beads along a direction from a point
-    const spawnTrail = (fromX, fromY, dir) => {
-      const count = 5 + Math.floor(Math.random() * 3); // 5-7 beads
-      for (let i = 1; i <= count; i++) {
-        const bx = fromX + Math.cos(dir) * i * 22;
-        const by = fromY + Math.sin(dir) * i * 22;
-        if (bx > 20 && bx < W - 20 && by > 30 && by < H - 30) {
-          beadList.push({ id: beadCounter++, x: bx, y: by, alive: true });
-        }
+    // Path: queue of waypoints Pac-Man will follow. Beads revealed gradually.
+    // Each: { id, x, y, visible, eaten }
+    let path = [];
+    let revealIdx = 0;  // next bead to make visible
+    let targetIdx = 0;  // bead Pac-Man is heading toward
+
+    // Plan a path segment: random walk of 6-8 waypoints spaced ~28px apart
+    const planSegment = (startX, startY) => {
+      let dir = Math.random() * Math.PI * 2;
+      let cx = startX, cy = startY;
+      const count = 6 + Math.floor(Math.random() * 3);
+      for (let i = 0; i < count; i++) {
+        // Slight random turn each step
+        dir += randomBetween(-0.5, 0.5);
+        cx += Math.cos(dir) * 28;
+        cy += Math.sin(dir) * 28;
+        // Bounce off edges
+        if (cx < 40 || cx > W - 40) { dir = Math.PI - dir; cx = clampX(cx); }
+        if (cy < 50 || cy > H - 50) { dir = -dir; cy = clampY(cy); }
+        path.push({ id: beadId++, x: cx, y: cy, visible: false, eaten: false });
       }
-      // Cap total beads
-      while (beadList.length > MAX_BEADS) beadList.shift();
     };
 
-    // Initial trail ahead of Pac-Man
-    spawnTrail(px, py, heading);
+    // Initial segment
+    planSegment(px, py);
 
     setPos({ x: gx, y: gy });
     setVisible(true);
 
     const chase = () => {
-      swerveTimer++;
+      frame++;
 
-      // Pac-Man eats beads it passes over
-      for (const b of beadList) {
-        if (!b.alive) continue;
-        const dx = px - b.x, dy = py - b.y;
-        if (dx * dx + dy * dy < 120) b.alive = false;
+      // Reveal beads gradually — one every 18 frames, well ahead of Pac-Man
+      if (frame % 18 === 0 && revealIdx < path.length) {
+        path[revealIdx].visible = true;
+        revealIdx++;
       }
 
-      // Pac-Man swerves — spawn a new trail toward the new direction
-      if (swerveTimer >= nextSwerveAt) {
-        swerveTarget = heading + randomBetween(-Math.PI * 0.7, Math.PI * 0.7);
-        // Spawn beads along the new target path BEFORE Pac-Man turns
-        spawnTrail(px, py, swerveTarget);
-        nextSwerveAt = swerveTimer + 100 + Math.floor(Math.random() * 100);
+      // Plan more path when running low on future beads
+      if (revealIdx >= path.length - 2) {
+        const last = path[path.length - 1];
+        planSegment(last?.x ?? px, last?.y ?? py);
       }
-      heading += (swerveTarget - heading) * 0.04;
 
-      const speed = 1.6;
-      px += Math.cos(heading) * speed;
-      py += Math.sin(heading) * speed;
+      // Pac-Man steers toward current target bead
+      const target = path[targetIdx];
+      if (target) {
+        const dx = target.x - px, dy = target.y - py;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const speed = 1.5;
+        if (dist > 2) {
+          px += (dx / dist) * speed;
+          py += (dy / dist) * speed;
+        }
+        // Eat bead when centered on it
+        if (dist < 6) {
+          target.eaten = true;
+          targetIdx++;
+        }
+      }
 
-      if (px < 30) { px = 30; heading = Math.PI - heading; swerveTarget = heading; spawnTrail(px, py, heading); }
-      if (px > W - 30) { px = W - 30; heading = Math.PI - heading; swerveTarget = heading; spawnTrail(px, py, heading); }
-      if (py < 40) { py = 40; heading = -heading; swerveTarget = heading; spawnTrail(px, py, heading); }
-      if (py > H - 50) { py = H - 50; heading = -heading; swerveTarget = heading; spawnTrail(px, py, heading); }
+      // Trim old eaten beads to prevent unbounded growth
+      while (path.length > 30 && path[0].eaten) {
+        path.shift();
+        targetIdx--;
+        revealIdx--;
+      }
 
-      // Ghost chases — slow pursuit
+      // Ghost chases — very slow pursuit
       const gdx = px - gx, gdy = py - gy;
-      const dist = Math.sqrt(gdx * gdx + gdy * gdy);
-      if (dist > 28) {
-        gx += (gdx / dist) * 0.7;
-        gy += (gdy / dist) * 0.7;
+      const gDist = Math.sqrt(gdx * gdx + gdy * gdy);
+      if (gDist > 35) {
+        gx += (gdx / gDist) * 0.4;
+        gy += (gdy / gDist) * 0.4;
       }
 
-      const mouthOpen = Math.sin(swerveTimer * 0.3) > 0;
+      const heading = target ? Math.atan2(target.y - py, target.x - px) : 0;
+      const mouthOpen = Math.sin(frame * 0.3) > 0;
       setPos({ x: gx, y: gy });
       setPacman({ x: px, y: py, mouthOpen, angle: heading });
-      setBeads(beadList.filter(b => b.alive).map(b => ({ id: b.id, x: b.x, y: b.y })));
+      setBeads(path.filter(b => b.visible && !b.eaten).map(b => ({ id: b.id, x: b.x, y: b.y })));
       chaseFrameRef.current = requestAnimationFrame(chase);
     };
 
