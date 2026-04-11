@@ -1084,7 +1084,7 @@ body {
   border-bottom: 1px solid var(--border-subtle); margin-bottom: 4px;
 }
 .output-tab {
-  font-family: var(--font-ui); font-size: 11px; padding: 4px 10px;
+  font-family: var(--font-ui); font-size: calc((var(--base-font-size) - 1.6) * 1px); padding: 4px 10px;
   background: none; border: 1px solid transparent; border-bottom: none;
   border-radius: 4px 4px 0 0; color: var(--text-muted); cursor: pointer;
   display: flex; align-items: center; gap: 5px;
@@ -1096,7 +1096,7 @@ body {
   margin-bottom: -1px; padding-bottom: 5px;
 }
 .output-tab-count {
-  font-size: 9px; color: var(--text-muted); background: var(--bg-deep);
+  font-size: calc((var(--base-font-size) - 3.6) * 1px); color: var(--text-muted); background: var(--bg-deep);
   border-radius: 8px; padding: 1px 5px; min-width: 16px; text-align: center;
 }
 
@@ -1117,15 +1117,15 @@ body {
   color: var(--text-dim);
   white-space: pre;
   overflow-x: auto;
-  font-size: 11px;
+  font-size: calc((var(--base-font-size) - 1.6) * 1px);
   margin-top: 4px;
 }
 
-.output-interrupted { color: #9a6040; font-style: italic; font-size: 11px; padding: 3px 0; opacity: 0.8; }
+.output-interrupted { color: #9a6040; font-style: italic; font-size: calc((var(--base-font-size) - 1.6) * 1px); padding: 3px 0; opacity: 0.8; }
 
 .output-title {
   font-family: var(--font-heading);
-  font-size: 11px;
+  font-size: calc((var(--base-font-size) - 1.6) * 1px);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--accent-primary);
@@ -1136,7 +1136,7 @@ body {
 .output-html {
   color: var(--text-secondary);
   font-family: var(--font-ui);
-  font-size: 13px;
+  font-size: calc((var(--base-font-size) + 0.4) * 1px);
   overflow-x: auto;
 }
 
@@ -1166,7 +1166,7 @@ body {
   text-align: left;
   border: 1px solid var(--border-default);
   font-family: var(--font-heading);
-  font-size: 10px;
+  font-size: calc((var(--base-font-size) - 2.6) * 1px);
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -1196,7 +1196,7 @@ body {
   align-items: center;
   gap: 8px;
   padding: 6px 4px 4px;
-  font-size: 11px;
+  font-size: calc((var(--base-font-size) - 1.6) * 1px);
   color: #7a8fa0;
   flex-wrap: wrap;
 }
@@ -1258,11 +1258,11 @@ body {
   padding: 4px 8px; border-top: 1px solid var(--border-subtle);
 }
 .table-row-count {
-  font-family: var(--font-ui); font-size: 10px; color: var(--text-muted);
+  font-family: var(--font-ui); font-size: calc((var(--base-font-size) - 2.6) * 1px); color: var(--text-muted);
   margin-right: auto;
 }
 .table-export-btn {
-  font-family: var(--font-ui); font-size: 10px; padding: 2px 8px;
+  font-family: var(--font-ui); font-size: calc((var(--base-font-size) - 2.6) * 1px); padding: 2px 8px;
   background: var(--bg-deep); border: 1px solid var(--border-default);
   color: var(--text-secondary); border-radius: 3px; cursor: pointer;
 }
@@ -5919,7 +5919,7 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
   overflow-x: auto; margin: 8px 0;
 }
 .output-markdown pre code { background: none; padding: 0; }
-.output-markdown table { border-collapse: collapse; width: 100%; font-size: 12px; margin: 6px 0; }
+.output-markdown table { border-collapse: collapse; width: 100%; font-size: calc((var(--base-font-size) - 0.6) * 1px); margin: 6px 0; }
 .output-markdown th {
   background: var(--bg-elevated); padding: 5px 10px; text-align: left;
   color: var(--accent-secondary);
