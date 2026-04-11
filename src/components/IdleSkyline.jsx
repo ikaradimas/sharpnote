@@ -218,13 +218,20 @@ export function IdleSkyline() {
         const amb = ambientColor(timeOfDay, li);
 
         for (const b of l.buildings) {
-          let revealed;
-          if (l.direction === -1) revealed = cursor >= (W - b.x);
-          else revealed = cursor >= (b.x + b.w);
-          if (!isCurrent) revealed = true;
-          if (!revealed) continue;
+          // Compute reveal threshold and fade-in
+          const threshold = l.direction === -1 ? (W - b.x) : (b.x + b.w);
+          let buildingAlpha;
+          if (!isCurrent) {
+            buildingAlpha = 1; // past layers fully visible
+          } else {
+            const overshoot = cursor - threshold; // how far cursor is past reveal point
+            if (overshoot < 0) continue; // not yet revealed
+            buildingAlpha = Math.min(1, overshoot / 40); // fade in over 40px of cursor travel
+          }
 
           const bx = b.x, fullH = b.h + l.offset, by = H - fullH;
+          const prevAlpha = ctx.globalAlpha;
+          ctx.globalAlpha = prevAlpha * buildingAlpha;
 
           // Building gradient — lighter top, darker base
           const br = Math.floor(amb.r + b.colorSeed * 10);
@@ -289,6 +296,8 @@ export function IdleSkyline() {
             ctx.fillStyle = `rgba(${winCol.r},${winCol.g},${winCol.b},${a})`;
             ctx.fillRect(bx+win.wx, by+win.wy, 2, 2);
           }
+
+          ctx.globalAlpha = prevAlpha; // restore after building fade
         }
       }
 
