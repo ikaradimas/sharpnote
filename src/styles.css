@@ -3476,41 +3476,58 @@ body {
 /* ── Status bar fish ─────────────────────────────────────── */
 .status-fish {
   display: inline-flex; align-items: center; flex-shrink: 0;
-  animation: fish-swim 4s ease-in-out infinite;
+  width: 24px; position: relative;
+  animation: fish-drift 3s ease-in-out infinite;
 }
 .fish-body {
-  position: relative; display: block;
-  width: 14px; height: 8px;
-  background: #3a7060; border-radius: 50% 40% 40% 50%;
-  animation: fish-wiggle 1.2s ease-in-out infinite;
+  position: absolute; display: block;
+  width: 10px; height: 5.5px;
+  background: #2ec4b6; border-radius: 50% 35% 35% 50%;
+  animation: fish-wiggle 0.8s ease-in-out infinite;
 }
 .fish-eye {
-  position: absolute; top: 2px; left: 2.5px;
-  width: 2.5px; height: 2.5px;
-  background: #c0e0d0; border-radius: 50%;
+  position: absolute; top: 1.2px; left: 1.5px;
+  width: 2px; height: 2px;
+  background: #b0f0e8; border-radius: 50%;
+  box-shadow: 0 0 1.5px #b0f0e8;
 }
 .fish-tail {
-  position: absolute; right: -5px; top: 0.5px;
+  position: absolute; right: -3.5px; top: 0.25px;
   width: 0; height: 0;
-  border-top: 3.5px solid transparent;
-  border-bottom: 3.5px solid transparent;
-  border-left: 6px solid #3a7060;
-  animation: tail-flap 0.6s ease-in-out infinite alternate;
+  border-top: 2.5px solid transparent;
+  border-bottom: 2.5px solid transparent;
+  border-left: 4.5px solid #2ec4b6;
+  animation: tail-flap 0.35s ease-in-out infinite alternate;
   transform-origin: left center;
 }
-@keyframes fish-swim {
-  0%, 100% { transform: translateY(0); }
-  25%      { transform: translateY(-1.5px); }
-  75%      { transform: translateY(1.5px); }
+.fish-fin {
+  position: absolute; bottom: -1.5px; left: 3.5px;
+  width: 0; height: 0;
+  border-left: 2px solid transparent;
+  border-right: 2px solid transparent;
+  border-top: 2.5px solid #22a89c;
+  animation: fin-wave 0.7s ease-in-out infinite alternate;
+  transform-origin: top center;
+}
+@keyframes fish-drift {
+  0%       { transform: translateX(0) translateY(0); }
+  25%      { transform: translateX(6px) translateY(-2px); }
+  50%      { transform: translateX(12px) translateY(0); }
+  75%      { transform: translateX(6px) translateY(2px); }
+  100%     { transform: translateX(0) translateY(0); }
 }
 @keyframes fish-wiggle {
   0%, 100% { transform: rotate(0deg); }
-  30%      { transform: rotate(2deg); }
-  70%      { transform: rotate(-2deg); }
+  25%      { transform: rotate(3deg); }
+  75%      { transform: rotate(-3deg); }
 }
 @keyframes tail-flap {
-  from { transform: scaleY(1); }
-  to   { transform: scaleY(0.6); }
+  from { transform: scaleY(1) rotate(-8deg); }
+  to   { transform: scaleY(0.5) rotate(8deg); }
+}
+@keyframes fin-wave {
+  from { transform: rotate(-10deg); }
+  to   { transform: rotate(10deg); }
 }
 
 .status-icon { color: #3a5060; flex-shrink: 0; }

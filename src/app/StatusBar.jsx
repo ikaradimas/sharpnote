@@ -58,6 +58,7 @@ export function StatusBar({ notebooks, activeId }) {
         <span className="fish-body">
           <span className="fish-eye" />
           <span className="fish-tail" />
+          <span className="fish-fin" />
         </span>
       </span>
       <Cpu size={10} className="status-icon" />
