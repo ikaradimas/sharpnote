@@ -102,11 +102,25 @@ public class DockerHelper
             }).ToList();
     }
 
+    private static readonly string DockerPath = ResolveDocker();
+
+    private static string ResolveDocker()
+    {
+        string[] candidates = OperatingSystem.IsWindows()
+            ? new[] { @"C:\Program Files\Docker\Docker\resources\bin\docker.exe" }
+            : new[] { "/usr/local/bin/docker", "/opt/homebrew/bin/docker" };
+
+        foreach (var p in candidates)
+            if (File.Exists(p)) return p;
+
+        return "docker"; // fall back to PATH
+    }
+
     internal static string RunDocker(string args)
     {
         var psi = new ProcessStartInfo
         {
-            FileName = "docker",
+            FileName = DockerPath,
             Arguments = args,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
