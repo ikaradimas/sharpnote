@@ -174,28 +174,45 @@ export function IdleSkyline() {
       const winCol = windowColor(timeOfDay);
       const isNight = timeOfDay < 0.25 || timeOfDay > 0.75;
 
-      // Sun or Moon — fixed position to the right, just above the back layer horizon
+      // Sky gradient: colored at bottom, transparent at top
+      if (s.skyPhase || s.layers.length > 0) {
+        const skyGrad = ctx.createLinearGradient(0, 0, 0, H);
+        if (isNight) {
+          skyGrad.addColorStop(0, 'transparent');
+          skyGrad.addColorStop(0.5, 'rgba(8,8,16,0.3)');
+          skyGrad.addColorStop(1, 'rgba(8,8,16,0.6)');
+        } else {
+          // Interpolate blue intensity with time of day
+          const dayStrength = Math.sin(timeOfDay * Math.PI); // peaks at noon
+          const b = Math.floor(40 * dayStrength);
+          skyGrad.addColorStop(0, 'transparent');
+          skyGrad.addColorStop(0.4, `rgba(20,${30 + b},${60 + b * 2},${0.15 * dayStrength})`);
+          skyGrad.addColorStop(1, `rgba(15,${25 + b},${50 + b * 2},${0.3 * dayStrength})`);
+        }
+        ctx.fillStyle = skyGrad;
+        ctx.fillRect(0, 0, W, H);
+      }
+
+      // Sun or Moon — fixed right of horizon, higher in the sky
       if (s.skyPhase) {
-        const bodyX = W * 0.88;
-        const bodyY = H - LAYER_OFFSETS[MAX_LAYERS - 1] - 30;
+        const bodyX = W * 0.85;
+        const bodyY = H - LAYER_OFFSETS[MAX_LAYERS - 1] - 50;
         const pulse = 1 + Math.sin(s.cycleFrame * 0.025) * 0.08;
 
         if (isNight) {
-          // Moon: small, white, subtle glow
-          const r = 6;
-          const glareR = r * 2 * pulse;
+          const r = 9;
+          const glareR = r * 2.5 * pulse;
           const grad = ctx.createRadialGradient(bodyX, bodyY, 0, bodyX, bodyY, glareR);
-          grad.addColorStop(0, `rgba(200,210,240,${0.2 * pulse})`);
+          grad.addColorStop(0, `rgba(200,210,240,${0.25 * pulse})`);
           grad.addColorStop(1, 'transparent');
           ctx.fillStyle = grad;
           ctx.beginPath(); ctx.arc(bodyX, bodyY, glareR, 0, Math.PI * 2); ctx.fill();
           ctx.fillStyle = '#d0d8e8';
           ctx.beginPath(); ctx.arc(bodyX, bodyY, r, 0, Math.PI * 2); ctx.fill();
           ctx.fillStyle = '#1c1c28';
-          ctx.beginPath(); ctx.arc(bodyX + 2.5, bodyY - 1, r * 0.75, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(bodyX + 3, bodyY - 1.5, r * 0.75, 0, Math.PI * 2); ctx.fill();
         } else {
-          // Sun: bigger, yellow, warm glow
-          const r = 10;
+          const r = 14;
           const glareR = r * 3 * pulse;
           const grad = ctx.createRadialGradient(bodyX, bodyY, 0, bodyX, bodyY, glareR);
           grad.addColorStop(0, `rgba(255,200,80,${0.3 * pulse})`);
