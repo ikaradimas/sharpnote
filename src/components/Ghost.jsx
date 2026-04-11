@@ -100,8 +100,26 @@ export function Ghost() {
     let heading = Math.random() * Math.PI * 2;
     let swerveTimer = 0;
     let swerveTarget = heading;
+    let nextSwerveAt = 60 + Math.floor(Math.random() * 80);
     let beadList = [];
     let beadCounter = 0;
+
+    // Spawn a trail of beads along a direction from a point
+    const spawnTrail = (fromX, fromY, dir) => {
+      const count = 5 + Math.floor(Math.random() * 3); // 5-7 beads
+      for (let i = 1; i <= count; i++) {
+        const bx = fromX + Math.cos(dir) * i * 22;
+        const by = fromY + Math.sin(dir) * i * 22;
+        if (bx > 20 && bx < W - 20 && by > 30 && by < H - 30) {
+          beadList.push({ id: beadCounter++, x: bx, y: by, alive: true });
+        }
+      }
+      // Cap total beads
+      while (beadList.length > MAX_BEADS) beadList.shift();
+    };
+
+    // Initial trail ahead of Pac-Man
+    spawnTrail(px, py, heading);
 
     setPos({ x: gx, y: gy });
     setVisible(true);
@@ -109,28 +127,19 @@ export function Ghost() {
     const chase = () => {
       swerveTimer++;
 
-      // Spawn beads ahead of Pac-Man
-      if (swerveTimer % 12 === 0) {
-        const ahead = 30;
-        beadList.push({
-          id: beadCounter++,
-          x: px + Math.cos(heading) * ahead,
-          y: py + Math.sin(heading) * ahead,
-          alive: true,
-        });
-        if (beadList.length > MAX_BEADS) beadList.shift();
-      }
-
       // Pac-Man eats beads it passes over
       for (const b of beadList) {
         if (!b.alive) continue;
         const dx = px - b.x, dy = py - b.y;
-        if (dx * dx + dy * dy < 100) b.alive = false;
+        if (dx * dx + dy * dy < 120) b.alive = false;
       }
 
-      // Pac-Man swerves
-      if (swerveTimer % (80 + Math.floor(Math.random() * 120)) === 0) {
+      // Pac-Man swerves — spawn a new trail toward the new direction
+      if (swerveTimer >= nextSwerveAt) {
         swerveTarget = heading + randomBetween(-Math.PI * 0.7, Math.PI * 0.7);
+        // Spawn beads along the new target path BEFORE Pac-Man turns
+        spawnTrail(px, py, swerveTarget);
+        nextSwerveAt = swerveTimer + 100 + Math.floor(Math.random() * 100);
       }
       heading += (swerveTarget - heading) * 0.04;
 
@@ -138,17 +147,17 @@ export function Ghost() {
       px += Math.cos(heading) * speed;
       py += Math.sin(heading) * speed;
 
-      if (px < 30) { px = 30; heading = Math.PI - heading; swerveTarget = heading; }
-      if (px > W - 30) { px = W - 30; heading = Math.PI - heading; swerveTarget = heading; }
-      if (py < 40) { py = 40; heading = -heading; swerveTarget = heading; }
-      if (py > H - 50) { py = H - 50; heading = -heading; swerveTarget = heading; }
+      if (px < 30) { px = 30; heading = Math.PI - heading; swerveTarget = heading; spawnTrail(px, py, heading); }
+      if (px > W - 30) { px = W - 30; heading = Math.PI - heading; swerveTarget = heading; spawnTrail(px, py, heading); }
+      if (py < 40) { py = 40; heading = -heading; swerveTarget = heading; spawnTrail(px, py, heading); }
+      if (py > H - 50) { py = H - 50; heading = -heading; swerveTarget = heading; spawnTrail(px, py, heading); }
 
-      // Ghost chases
+      // Ghost chases — slow pursuit
       const gdx = px - gx, gdy = py - gy;
       const dist = Math.sqrt(gdx * gdx + gdy * gdy);
-      if (dist > 22) {
-        gx += (gdx / dist) * 1.3;
-        gy += (gdy / dist) * 1.3;
+      if (dist > 28) {
+        gx += (gdx / dist) * 0.7;
+        gy += (gdy / dist) * 0.7;
       }
 
       const mouthOpen = Math.sin(swerveTimer * 0.3) > 0;
