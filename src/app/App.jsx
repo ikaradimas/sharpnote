@@ -7,7 +7,7 @@ import React, {
 } from 'react';
 import { DOCS_TAB_ID, KAFKA_TAB_ID } from '../constants.js';
 import {
-  makeLibEditorId, isLibEditorId, isNotebookId, getNotebookDisplayName,
+  makeLibEditorId, isLibEditorId, isNotebookId, getNotebookDisplayName, generateDockerCompose,
 } from '../utils.js';
 import { DEFAULT_DOCK_LAYOUT, DEFAULT_FLOAT_W, DEFAULT_FLOAT_H } from '../config/dock-layout.jsx';
 import { TablePageSizeContext } from '../config/table-page-size-context.js';
@@ -801,6 +801,18 @@ export function App() {
         packages: (nb.nugetPackages || []).filter((p) => p.status === 'loaded').map((p) => ({ id: p.id, version: p.version })),
         config: (nb.config || []).filter((e) => e.key.trim()).map((e) => ({ key: e.key, value: e.value })),
         title: getNotebookDisplayName(nb.path, nb.title, 'notebook'),
+      });
+    },
+    'export-docker-compose': () => {
+      const nb = notebooksRef.current.find((n) => n.id === activeIdRef.current);
+      if (!nb) return;
+      const dockerCells = nb.cells.filter((c) => c.type === 'docker' && c.image);
+      if (dockerCells.length === 0) return;
+      const yaml = generateDockerCompose(dockerCells);
+      window.electronAPI?.saveFile({
+        content: yaml,
+        defaultName: 'docker-compose.yml',
+        filters: [{ name: 'YAML', extensions: ['yml', 'yaml'] }],
       });
     },
     'command-palette': () => setCommandPaletteOpen(true),
