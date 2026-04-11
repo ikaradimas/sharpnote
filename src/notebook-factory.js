@@ -1969,7 +1969,32 @@ Each cell builds on the previous — run them in order.`),
       'Display.Html($"<p style=\'color:#5a7080;margin-top:8px\'>{W}×{H} — {spheres.Length} spheres, 5 bounces</p>");',
     ].join('\n')),
 
-    md(`## 6. Experiment
+    md('## 6. Parallel Render + Shape Overlay'),
+
+    cs([
+      '// ── ParallelRender: render all pixels using all CPU cores ─────────────────────',
+      'var fast = Display.Canvas(W, H, "Parallel Render");',
+      '',
+      'fast.ParallelRender((x, y) => {',
+      '    double u = (2.0 * (x + 0.5) / W - 1) * aspect * fov;',
+      '    double v = (1 - 2.0 * (y + 0.5) / H) * fov;',
+      '    var ray = new Ray(new Vec3(0, 0, 0), new Vec3(u, v, -1).Normalized);',
+      '    var c = Trace(ray, 5);',
+      '    return (c.X, c.Y, c.Z);',
+      '});',
+      '',
+      '// Draw shape overlays on the rendered image',
+      'fast.DrawRect(10, 10, 100, 20, 255, 255, 255);      // white border rectangle',
+      'fast.FillRect(12, 12, 96, 16, 40, 40, 50);           // dark fill inside',
+      'fast.DrawCircle(W - 30, 30, 15, 255, 200, 60);       // gold circle marker',
+      'fast.FillCircle(W - 30, 30, 12, 60, 50, 30);         // dark fill',
+      'fast.DrawLine(0, H - 1, W - 1, H - 1, 100, 100, 120); // bottom border line',
+      '',
+      'fast.Flush();',
+      'Display.Html("<p style=\'color:#4ec9b0;margin-top:4px\'>Rendered with ParallelRender + shape overlays</p>");',
+    ].join('\n')),
+
+    md(`## 7. Experiment
 
 Try modifying the scene in cell 3:
 - Change sphere positions, colors, and reflectivity
@@ -1991,7 +2016,11 @@ Then re-run cells 3 → 5 to see the result.
 | \`Display.ImageBytes(rgb, w, h)\` | One-shot: renders raw RGB bytes as an image |
 | \`Display.NewImage(src)\` | Creates a live-updating image handle |
 | \`handle.UpdateImage(src)\` | Updates the image in-place |
-| \`handle.UpdateImageBytes(rgb, w, h)\` | Updates with raw RGB bytes |`),
+| \`handle.UpdateImageBytes(rgb, w, h)\` | Updates with raw RGB bytes |
+| \`canvas.DrawLine(x0, y0, x1, y1, r, g, b)\` | Bresenham line drawing |
+| \`canvas.DrawRect / FillRect(x, y, w, h, ...)\` | Rectangle outline / fill |
+| \`canvas.DrawCircle / FillCircle(cx, cy, r, ...)\` | Circle outline / fill |
+| \`canvas.ParallelRender((x, y) => (r, g, b))\` | Render all pixels using all CPU cores |`),
   ];
 }
 

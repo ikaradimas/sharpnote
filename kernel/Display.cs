@@ -231,6 +231,92 @@ public class CanvasHandle
     /// <summary>Returns the raw RGB pixel buffer (3 bytes per pixel, row-major).</summary>
     public byte[] Pixels => _pixels;
 
+    // ── Shape primitives ─────────────────────────────────────────────────────
+
+    /// <summary>Draws a line from (x0,y0) to (x1,y1) using Bresenham's algorithm.</summary>
+    public void DrawLine(int x0, int y0, int x1, int y1, byte r, byte g, byte b)
+    {
+        int dx = Math.Abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
+        int dy = -Math.Abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
+        int err = dx + dy;
+        while (true)
+        {
+            SetPixel(x0, y0, r, g, b);
+            if (x0 == x1 && y0 == y1) break;
+            int e2 = 2 * err;
+            if (e2 >= dy) { err += dy; x0 += sx; }
+            if (e2 <= dx) { err += dx; y0 += sy; }
+        }
+    }
+
+    /// <summary>Draws an axis-aligned rectangle outline.</summary>
+    public void DrawRect(int x, int y, int w, int h, byte r, byte g, byte b)
+    {
+        DrawLine(x, y, x + w - 1, y, r, g, b);
+        DrawLine(x + w - 1, y, x + w - 1, y + h - 1, r, g, b);
+        DrawLine(x + w - 1, y + h - 1, x, y + h - 1, r, g, b);
+        DrawLine(x, y + h - 1, x, y, r, g, b);
+    }
+
+    /// <summary>Fills an axis-aligned rectangle.</summary>
+    public void FillRect(int x, int y, int w, int h, byte r, byte g, byte b)
+    {
+        for (int py = y; py < y + h; py++)
+            for (int px = x; px < x + w; px++)
+                SetPixel(px, py, r, g, b);
+    }
+
+    /// <summary>Draws a circle outline using the midpoint algorithm.</summary>
+    public void DrawCircle(int cx, int cy, int radius, byte r, byte g, byte b)
+    {
+        int x = radius, y = 0, err = 1 - radius;
+        while (x >= y)
+        {
+            SetPixel(cx + x, cy + y, r, g, b); SetPixel(cx - x, cy + y, r, g, b);
+            SetPixel(cx + x, cy - y, r, g, b); SetPixel(cx - x, cy - y, r, g, b);
+            SetPixel(cx + y, cy + x, r, g, b); SetPixel(cx - y, cy + x, r, g, b);
+            SetPixel(cx + y, cy - x, r, g, b); SetPixel(cx - y, cy - x, r, g, b);
+            y++;
+            if (err < 0) { err += 2 * y + 1; }
+            else { x--; err += 2 * (y - x) + 1; }
+        }
+    }
+
+    /// <summary>Fills a circle using the midpoint algorithm with horizontal spans.</summary>
+    public void FillCircle(int cx, int cy, int radius, byte r, byte g, byte b)
+    {
+        int x = radius, y = 0, err = 1 - radius;
+        while (x >= y)
+        {
+            for (int px = cx - x; px <= cx + x; px++) { SetPixel(px, cy + y, r, g, b); SetPixel(px, cy - y, r, g, b); }
+            for (int px = cx - y; px <= cx + y; px++) { SetPixel(px, cy + x, r, g, b); SetPixel(px, cy - x, r, g, b); }
+            y++;
+            if (err < 0) { err += 2 * y + 1; }
+            else { x--; err += 2 * (y - x) + 1; }
+        }
+    }
+
+    // ── Parallel rendering ───────────────────────────────────────────────────
+
+    /// <summary>
+    /// Renders every pixel in parallel using the provided function.
+    /// The function receives (x, y) and returns (r, g, b) as doubles in 0–1.
+    /// </summary>
+    public void ParallelRender(Func<int, int, (double r, double g, double b)> colorFn)
+    {
+        System.Threading.Tasks.Parallel.For(0, _height, y =>
+        {
+            for (int x = 0; x < _width; x++)
+            {
+                var (cr, cg, cb) = colorFn(x, y);
+                int i = (y * _width + x) * 3;
+                _pixels[i]     = (byte)(Math.Clamp(cr, 0, 1) * 255);
+                _pixels[i + 1] = (byte)(Math.Clamp(cg, 0, 1) * 255);
+                _pixels[i + 2] = (byte)(Math.Clamp(cb, 0, 1) * 255);
+            }
+        });
+    }
+
     /// <summary>Encodes the current pixel buffer as BMP and pushes the update to the display.</summary>
     public void Flush()
     {
