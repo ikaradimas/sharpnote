@@ -1323,46 +1323,14 @@ body {
   line-height: 1.7;
 }
 
-/* ── Breakout minigame ──────────────────────────────────────────────────── */
-.pong-game {
+/* ── Circuit board animation ────────────────────────────────────────────── */
+.circuit-board {
   margin-top: 80px;
-  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  display: flex; justify-content: center;
 }
-.pong-score {
-  font-family: var(--font-code); font-size: 11px; color: var(--text-muted);
-  letter-spacing: 0.06em;
-}
-.pong-arena {
-  position: relative;
-  border: 1px solid var(--border-subtle);
-  border-radius: 8px;
-  overflow: hidden;
-  background: #0a0a10;
-  box-shadow: 0 0 28px rgba(46,196,182,0.08);
-}
-.pong-canvas { display: block; cursor: none; }
-.pong-overlay {
-  position: absolute; inset: 0;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
-  background: rgba(10,10,16,0.85);
-}
-.pong-message {
-  font-family: var(--font-heading); font-size: 18px; color: #2ec4b6;
-  letter-spacing: 0.08em;
-}
-.pong-restart {
-  font-family: var(--font-ui); font-size: 11px;
-  padding: 4px 14px; border-radius: 4px; cursor: pointer;
-  background: #2ec4b6; color: #0a0a10; border: none; font-weight: 600;
-  transition: background 0.15s;
-}
-.pong-restart:hover { background: #3dd8ca; }
-.pong-pause-hint {
-  font-family: var(--font-ui); font-size: 11px; color: var(--text-dim);
-}
-.pong-hint {
-  font-family: var(--font-ui); font-size: 10px; color: var(--text-faint);
-  letter-spacing: 0.04em;
+.circuit-canvas {
+  display: block;
+  opacity: 0.6;
 }
 
 /* ── CodeMirror lint + autocomplete theming ─────────────────────────────── */

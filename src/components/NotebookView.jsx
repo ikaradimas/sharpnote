@@ -13,7 +13,7 @@ import { DecisionCell } from './editor/DecisionCell.jsx';
 import { DockerCell } from './editor/DockerCell.jsx';
 import { AddBar } from './editor/AddBar.jsx';
 import { FindBar } from './FindBar.jsx';
-import { PongGame } from './PongGame.jsx';
+import { CircuitBoard } from './CircuitBoard.jsx';
 
 export function NotebookView({
   nb,
@@ -73,7 +73,7 @@ export function NotebookView({
   onDebugResume,
   onDebugStep,
   onToggleBreakpoint,
-  showMinigame = true,
+  showCircuit = true,
 }) {
   const { cells, outputs, outputHistory, cellResults, running, kernelStatus,
           config, logPanelOpen, nugetPanelOpen, configPanelOpen, inlineDiagnostics,
@@ -359,7 +359,7 @@ export function NotebookView({
           <div className="empty-notebook">
             <h2>Empty Notebook</h2>
             <p>Add a markdown or code cell to get started.</p>
-            {showMinigame && <PongGame />}
+            {showCircuit && <CircuitBoard />}
           </div>
         )}
 

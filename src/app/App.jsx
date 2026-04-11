@@ -65,9 +65,9 @@ export function App() {
   const [showFish, setShowFish] = useState(true);
   const showFishRef = useRef(true);
   useEffect(() => { showFishRef.current = showFish; }, [showFish]);
-  const [showMinigame, setShowMinigame] = useState(true);
-  const showMinigameRef = useRef(true);
-  useEffect(() => { showMinigameRef.current = showMinigame; }, [showMinigame]);
+  const [showCircuit, setShowCircuit] = useState(true);
+  const showCircuitRef = useRef(true);
+  useEffect(() => { showCircuitRef.current = showCircuit; }, [showCircuit]);
   const [showGhost, setShowGhost] = useState(true);
   const showGhostRef = useRef(true);
   useEffect(() => { showGhostRef.current = showGhost; }, [showGhost]);
@@ -265,7 +265,7 @@ export function App() {
       strongCuesEnabled: strongCuesRef.current,
       formatOnSave: formatOnSaveRef.current,
       showFish: showFishRef.current,
-      showMinigame: showMinigameRef.current,
+      showCircuit: showCircuitRef.current,
       showGhost: showGhostRef.current,
       showSkyline: showSkylineRef.current,
       tablePageSize: tablePageSizeRef.current,
@@ -298,7 +298,8 @@ export function App() {
       if (typeof s?.strongCuesEnabled === 'boolean') setStrongCuesEnabled(s.strongCuesEnabled);
       if (typeof s?.formatOnSave === 'boolean') setFormatOnSave(s.formatOnSave);
       if (typeof s?.showFish === 'boolean') setShowFish(s.showFish);
-      if (typeof s?.showMinigame === 'boolean') setShowMinigame(s.showMinigame);
+      if (typeof s?.showCircuit === 'boolean') setShowCircuit(s.showCircuit);
+      else if (typeof s?.showMinigame === 'boolean') setShowCircuit(s.showMinigame);
       if (typeof s?.showGhost === 'boolean') setShowGhost(s.showGhost);
       if (typeof s?.showSkyline === 'boolean') setShowSkyline(s.showSkyline);
       if (typeof s?.tablePageSize === 'number') setTablePageSize(s.tablePageSize);
@@ -1241,7 +1242,7 @@ export function App() {
                     onDebugResume={debugResume}
                     onDebugStep={debugStep}
                     onToggleBreakpoint={toggleBreakpoint}
-                    showMinigame={showMinigame}
+                    showCircuit={showCircuit}
                   />
                 </div>
               ))}
@@ -1336,8 +1337,8 @@ export function App() {
           onFormatOnSaveChange={setFormatOnSave}
           showFish={showFish}
           onShowFishChange={setShowFish}
-          showMinigame={showMinigame}
-          onShowMinigameChange={setShowMinigame}
+          showCircuit={showCircuit}
+          onShowCircuitChange={setShowCircuit}
           showGhost={showGhost}
           onShowGhostChange={setShowGhost}
           showSkyline={showSkyline}

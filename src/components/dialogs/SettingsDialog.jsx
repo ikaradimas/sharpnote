@@ -11,7 +11,7 @@ const PANEL_FONT_SIZE_DEFAULT = 11.5;
 
 // ── Appearance section ────────────────────────────────────────────────────────
 
-function AppearanceSection({ theme, fontSize, onThemeChange, onFontSizeChange, panelFontSize, onPanelFontSizeChange, lineAltEnabled, onLineAltChange, lintEnabled, onLintEnabledChange, strongCuesEnabled, onStrongCuesChange, formatOnSave, onFormatOnSaveChange, showFish, onShowFishChange, showMinigame, onShowMinigameChange, showGhost, onShowGhostChange, showSkyline, onShowSkylineChange, tablePageSize = 10, onTablePageSizeChange }) {
+function AppearanceSection({ theme, fontSize, onThemeChange, onFontSizeChange, panelFontSize, onPanelFontSizeChange, lineAltEnabled, onLineAltChange, lintEnabled, onLintEnabledChange, strongCuesEnabled, onStrongCuesChange, formatOnSave, onFormatOnSaveChange, showFish, onShowFishChange, showCircuit, onShowCircuitChange, showGhost, onShowGhostChange, showSkyline, onShowSkylineChange, tablePageSize = 10, onTablePageSizeChange }) {
   return (
     <div className="settings-section">
       <div className="settings-group">
@@ -112,10 +112,10 @@ function AppearanceSection({ theme, fontSize, onThemeChange, onFontSizeChange, p
         <label className="settings-toggle-row">
           <input
             type="checkbox"
-            checked={!!showMinigame}
-            onChange={(e) => onShowMinigameChange(e.target.checked)}
+            checked={!!showCircuit}
+            onChange={(e) => onShowCircuitChange(e.target.checked)}
           />
-          <span>Empty notebook minigame (breakout game when no cells exist)</span>
+          <span>Circuit board animation (draws on empty notebooks)</span>
         </label>
         <label className="settings-toggle-row">
           <input
@@ -449,8 +449,8 @@ export function SettingsDialog({
   onFormatOnSaveChange,
   showFish,
   onShowFishChange,
-  showMinigame,
-  onShowMinigameChange,
+  showCircuit,
+  onShowCircuitChange,
   showGhost,
   onShowGhostChange,
   showSkyline,
@@ -570,8 +570,8 @@ export function SettingsDialog({
                 onFormatOnSaveChange={onFormatOnSaveChange}
                 showFish={showFish}
                 onShowFishChange={onShowFishChange}
-                showMinigame={showMinigame}
-                onShowMinigameChange={onShowMinigameChange}
+                showCircuit={showCircuit}
+                onShowCircuitChange={onShowCircuitChange}
                 showGhost={showGhost}
                 onShowGhostChange={onShowGhostChange}
                 showSkyline={showSkyline}
