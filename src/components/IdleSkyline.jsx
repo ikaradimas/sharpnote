@@ -3,46 +3,46 @@ import React, { useEffect, useRef, useCallback, useState } from 'react';
 const IDLE_START = 20_000;
 const FADE_MS = 3000;
 const BUILD_SPEED = 0.75;
-const LAYER_OFFSETS = [0, 30, 55];
+const LAYER_OFFSETS = [0, 40, 75]; // bigger gaps between layers
 const MAX_LAYERS = 3;
-const CYCLE_FRAMES = 2400; // full day-night cycle
+const CYCLE_FRAMES = 2400;
 const SCREEN_COLORS = ['#e04060', '#40a0e0', '#40c080', '#e0a030', '#c060d0'];
 const BILLBOARD_TEXTS = ['NEON', 'CYBER', 'PIXEL', 'DATA', 'FLUX', 'SYNC', 'GRID', 'NOVA'];
-
-// Night → dawn → day → dusk → night
-// t: 0=midnight, 0.25=dawn, 0.5=noon, 0.75=dusk, 1=midnight
-function ambientColor(t) {
-  // Building base colors per phase
-  if (t < 0.2)       return { r: 20, g: 20, b: 30 };   // deep night
-  if (t < 0.35)      { const p = (t - 0.2) / 0.15; return lerpC({ r: 20, g: 20, b: 30 }, { r: 50, g: 40, b: 45 }, p); } // dawn
-  if (t < 0.5)       { const p = (t - 0.35) / 0.15; return lerpC({ r: 50, g: 40, b: 45 }, { r: 60, g: 55, b: 50 }, p); } // morning
-  if (t < 0.65)      return { r: 60, g: 55, b: 50 };   // noon
-  if (t < 0.8)       { const p = (t - 0.65) / 0.15; return lerpC({ r: 60, g: 55, b: 50 }, { r: 45, g: 30, b: 40 }, p); } // dusk
-  const p = (t - 0.8) / 0.2; return lerpC({ r: 45, g: 30, b: 40 }, { r: 20, g: 20, b: 30 }, p); // evening
-}
 
 function lerpC(a, b, t) {
   return { r: a.r + (b.r - a.r) * t, g: a.g + (b.g - a.g) * t, b: a.b + (b.b - a.b) * t };
 }
 
+// t: 0=midnight, 0.25=dawn, 0.5=noon, 0.75=dusk, 1=midnight
+function ambientColor(t, layerIdx) {
+  // Higher contrast: front layer dark, back layers brighter
+  const lift = layerIdx * 25; // +25 RGB per layer
+  let base;
+  if (t < 0.2)       base = { r: 16, g: 16, b: 26 };
+  else if (t < 0.35) { const p = (t-0.2)/0.15; base = lerpC({ r: 16, g: 16, b: 26 }, { r: 55, g: 40, b: 50 }, p); }
+  else if (t < 0.5)  { const p = (t-0.35)/0.15; base = lerpC({ r: 55, g: 40, b: 50 }, { r: 80, g: 72, b: 65 }, p); }
+  else if (t < 0.65) base = { r: 80, g: 72, b: 65 };
+  else if (t < 0.8)  { const p = (t-0.65)/0.15; base = lerpC({ r: 80, g: 72, b: 65 }, { r: 50, g: 30, b: 48 }, p); }
+  else               { const p = (t-0.8)/0.2; base = lerpC({ r: 50, g: 30, b: 48 }, { r: 16, g: 16, b: 26 }, p); }
+  return { r: Math.min(255, base.r + lift), g: Math.min(255, base.g + lift), b: Math.min(255, base.b + lift) };
+}
+
 function windowAlpha(t) {
-  // Brighter at night, dimmer during day
-  if (t < 0.2 || t > 0.8) return 0.4;
-  if (t > 0.35 && t < 0.65) return 0.15;
+  if (t < 0.2 || t > 0.8) return 0.45;
+  if (t > 0.35 && t < 0.65) return 0.12;
   return 0.25;
 }
 
 function windowColor(t) {
-  // Night: white/blue. Day: warm yellow
-  if (t < 0.25 || t > 0.75) return { r: 200, g: 210, b: 240 }; // cool white
-  return { r: 255, g: 230, b: 170 }; // warm
+  if (t < 0.25 || t > 0.75) return { r: 200, g: 210, b: 240 };
+  return { r: 255, g: 230, b: 170 };
 }
 
 function generateBuildings(width, layerIdx = 0) {
   const buildings = [];
   let x = -10;
-  const hMin = layerIdx === 0 ? 18 : layerIdx === 1 ? 14 : 10;
-  const hMax = layerIdx === 0 ? 60 : layerIdx === 1 ? 40 : 25;
+  const hMin = layerIdx === 0 ? 22 : layerIdx === 1 ? 16 : 12;
+  const hMax = layerIdx === 0 ? 70 : layerIdx === 1 ? 45 : 28;
   const wMin = layerIdx === 0 ? 14 : 10;
   const wMax = layerIdx === 0 ? 30 : layerIdx === 1 ? 24 : 18;
   while (x < width + 30) {
@@ -56,7 +56,6 @@ function generateBuildings(width, layerIdx = 0) {
       else if (Math.random() < 0.10) screen = { color: SCREEN_COLORS[Math.floor(Math.random() * SCREEN_COLORS.length)], y: 6 + Math.floor(Math.random() * 8), h: 8 + Math.floor(Math.random() * 6) };
     }
     const columnLight = layerIdx === 0 && Math.random() < 0.25;
-    // Per-building color variation seed
     const colorSeed = Math.random();
     buildings.push({ x, w, h, windows: makeWindows(w, h), antenna, billboard, screen, columnLight, colorSeed });
     x += w + gap;
@@ -101,9 +100,7 @@ export function IdleSkyline() {
 
   const handleDismiss = useCallback(() => {
     const s = stateRef.current;
-    if (s.active && !s.fadingOut) {
-      s.fadingOut = true; s.fadeStart = Date.now();
-    }
+    if (s.active && !s.fadingOut) { s.fadingOut = true; s.fadeStart = Date.now(); }
   }, []);
 
   useEffect(() => {
@@ -112,7 +109,7 @@ export function IdleSkyline() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const resize = () => { canvas.width = window.innerWidth; canvas.height = 140; };
+    const resize = () => { canvas.width = window.innerWidth; canvas.height = 160; };
     resize();
     window.addEventListener('resize', resize);
 
@@ -147,8 +144,7 @@ export function IdleSkyline() {
         s.buildCursor += BUILD_SPEED;
         if (s.buildCursor >= W + 40) {
           if (s.currentLayer < MAX_LAYERS - 1) {
-            s.currentLayer++;
-            s.buildCursor = 0;
+            s.currentLayer++; s.buildCursor = 0;
             const dir = s.currentLayer % 2 === 0 ? -1 : 1;
             s.layers.push({ buildings: generateBuildings(W, s.currentLayer), offset: LAYER_OFFSETS[s.currentLayer], direction: dir });
           } else if (!s.skyPhase) {
@@ -157,23 +153,54 @@ export function IdleSkyline() {
         }
       }
 
-      // Ambient cycle (0→1 over CYCLE_FRAMES, looping)
-      let timeOfDay = 0; // start at night during build
-      if (s.skyPhase) {
-        s.cycleFrame++;
-        timeOfDay = (s.cycleFrame % CYCLE_FRAMES) / CYCLE_FRAMES;
-      }
-      const amb = ambientColor(timeOfDay);
+      let timeOfDay = 0;
+      if (s.skyPhase) { s.cycleFrame++; timeOfDay = (s.cycleFrame % CYCLE_FRAMES) / CYCLE_FRAMES; }
       const winAlpha = windowAlpha(timeOfDay);
       const winCol = windowColor(timeOfDay);
+      const isNight = timeOfDay < 0.25 || timeOfDay > 0.75;
+
+      // Sun or Moon — fixed position to the right, just above the back layer horizon
+      if (s.skyPhase) {
+        const bodyX = W * 0.88;
+        const bodyY = H - LAYER_OFFSETS[MAX_LAYERS - 1] - 30;
+        const pulse = 1 + Math.sin(s.cycleFrame * 0.025) * 0.08;
+
+        if (isNight) {
+          // Moon: small, white, subtle glow
+          const r = 6;
+          const glareR = r * 2 * pulse;
+          const grad = ctx.createRadialGradient(bodyX, bodyY, 0, bodyX, bodyY, glareR);
+          grad.addColorStop(0, `rgba(200,210,240,${0.2 * pulse})`);
+          grad.addColorStop(1, 'transparent');
+          ctx.fillStyle = grad;
+          ctx.beginPath(); ctx.arc(bodyX, bodyY, glareR, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = '#d0d8e8';
+          ctx.beginPath(); ctx.arc(bodyX, bodyY, r, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = '#1c1c28';
+          ctx.beginPath(); ctx.arc(bodyX + 2.5, bodyY - 1, r * 0.75, 0, Math.PI * 2); ctx.fill();
+        } else {
+          // Sun: bigger, yellow, warm glow
+          const r = 10;
+          const glareR = r * 3 * pulse;
+          const grad = ctx.createRadialGradient(bodyX, bodyY, 0, bodyX, bodyY, glareR);
+          grad.addColorStop(0, `rgba(255,200,80,${0.3 * pulse})`);
+          grad.addColorStop(0.4, `rgba(255,220,140,${0.1 * pulse})`);
+          grad.addColorStop(1, 'transparent');
+          ctx.fillStyle = grad;
+          ctx.beginPath(); ctx.arc(bodyX, bodyY, glareR, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = '#f0b030';
+          ctx.beginPath(); ctx.arc(bodyX, bodyY, r, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = '#ffd870';
+          ctx.beginPath(); ctx.arc(bodyX, bodyY, r * 0.4, 0, Math.PI * 2); ctx.fill();
+        }
+      }
 
       // Draw layers back-to-front
       for (let li = s.layers.length - 1; li >= 0; li--) {
         const l = s.layers[li];
         const isCurrent = li === s.currentLayer;
         const cursor = isCurrent ? s.buildCursor : W + 40;
-        // Layer depth darkening: back layers slightly lighter
-        const depthMul = 1 + li * 0.15;
+        const amb = ambientColor(timeOfDay, li);
 
         for (const b of l.buildings) {
           let revealed;
@@ -184,19 +211,19 @@ export function IdleSkyline() {
 
           const bx = b.x, fullH = b.h + l.offset, by = H - fullH;
 
-          // Building body — gradient from base color to slightly lighter top
-          const br = Math.floor(amb.r * depthMul + b.colorSeed * 8);
-          const bg = Math.floor(amb.g * depthMul + b.colorSeed * 6);
-          const bb = Math.floor(amb.b * depthMul + b.colorSeed * 10);
+          // Building gradient — lighter top, darker base
+          const br = Math.floor(amb.r + b.colorSeed * 10);
+          const bg = Math.floor(amb.g + b.colorSeed * 8);
+          const bb = Math.floor(amb.b + b.colorSeed * 12);
           const grad = ctx.createLinearGradient(bx, by, bx, H);
-          grad.addColorStop(0, `rgb(${Math.min(255, br + 12)},${Math.min(255, bg + 10)},${Math.min(255, bb + 14)})`);
+          grad.addColorStop(0, `rgb(${Math.min(255, br + 18)},${Math.min(255, bg + 14)},${Math.min(255, bb + 20)})`);
           grad.addColorStop(1, `rgb(${br},${bg},${bb})`);
           ctx.fillStyle = grad;
           ctx.fillRect(bx, by, b.w, fullH);
 
           // Antenna
           if (b.antenna > 0) {
-            ctx.strokeStyle = `rgba(${br+30},${bg+30},${bb+30},0.5)`; ctx.lineWidth = 1;
+            ctx.strokeStyle = `rgba(${br+40},${bg+40},${bb+40},0.5)`; ctx.lineWidth = 1;
             ctx.beginPath(); ctx.moveTo(bx+b.w/2, by); ctx.lineTo(bx+b.w/2, by-b.antenna); ctx.stroke();
             if (Math.sin(s.cycleFrame * 0.08 + bx) > 0.3) {
               ctx.fillStyle = 'rgba(255,60,60,0.8)';
@@ -231,8 +258,7 @@ export function IdleSkyline() {
 
           // Column lights
           if (b.columnLight && li === 0) {
-            const isDay = timeOfDay > 0.3 && timeOfDay < 0.7;
-            const lc = isDay ? `rgba(255,220,160,0.25)` : `rgba(160,180,220,0.2)`;
+            const lc = isNight ? 'rgba(160,180,220,0.2)' : 'rgba(255,220,160,0.25)';
             ctx.fillStyle = lc;
             ctx.beginPath(); ctx.arc(bx+2, H-1, 2, 0, Math.PI*2); ctx.fill();
             ctx.beginPath(); ctx.arc(bx+b.w-2, H-1, 2, 0, Math.PI*2); ctx.fill();
@@ -242,7 +268,7 @@ export function IdleSkyline() {
             ctx.fillRect(bx, by+fullH*0.4, b.w, fullH*0.6);
           }
 
-          // Windows — color and brightness follow ambient
+          // Windows
           for (const win of b.windows) {
             const a = winAlpha + Math.random() * 0.06;
             ctx.fillStyle = `rgba(${winCol.r},${winCol.g},${winCol.b},${a})`;
@@ -262,5 +288,5 @@ export function IdleSkyline() {
     };
   }, []);
 
-  return <canvas ref={canvasRef} className={`idle-skyline${isActive ? ' idle-skyline-active' : ''}`} onClick={handleDismiss} width={800} height={140} />;
+  return <canvas ref={canvasRef} className={`idle-skyline${isActive ? ' idle-skyline-active' : ''}`} onClick={handleDismiss} width={800} height={160} />;
 }

@@ -3631,7 +3631,7 @@ body {
 .idle-skyline {
   position: fixed; bottom: 34px; left: 0; right: 0;
   z-index: 9; pointer-events: none;
-  height: 140px;
+  height: 160px;
 }
 .idle-skyline.idle-skyline-active {
   pointer-events: auto; cursor: pointer;
