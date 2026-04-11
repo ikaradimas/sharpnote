@@ -918,7 +918,7 @@ body {
   align-items: center;
   gap: 6px;
   padding: 5px 8px 5px 12px;
-  font-size: 13.8px;
+  font-size: 15.9px;
   background: var(--bg-mid);
   border-bottom: 1px solid var(--border-default);
   border-left: 3px solid var(--accent-primary-dim);
@@ -930,17 +930,17 @@ body {
 }
 
 .cell:focus-within .code-cell-header {
-  background: linear-gradient(90deg, rgba(104,137,160,0.08) 0%, var(--bg-elevated) 40%);
-  border-left-color: var(--accent-secondary);
+  background: linear-gradient(90deg, #2d2418 0%, var(--bg-mid) 40%);
+  border-left-color: #e0943a;
 }
 
 .cell.running .code-cell-header {
   border-left-color: var(--accent-primary);
-  background: linear-gradient(90deg, rgba(196,150,74,0.06) 0%, var(--bg-mid) 30%);
+  background: linear-gradient(90deg, #252219 0%, var(--bg-mid) 30%);
 }
 
 .cell-header-timer {
-  font-family: var(--font-code); font-size: 11px; font-weight: 600;
+  font-family: var(--font-code); font-size: 12.6px; font-weight: 600;
   color: var(--text-muted); margin-left: auto; padding: 0 6px;
 }
 .cell-timer-slow { color: #e0a040; }
@@ -948,7 +948,7 @@ body {
 
 .cell-lang-label {
   font-family: var(--font-heading);
-  font-size: 11.5px;
+  font-size: 13.2px;
   font-weight: 600;
   color: var(--accent-secondary);
   letter-spacing: 0.12em;
@@ -6006,7 +6006,7 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 /* ── Code cell muted cell ID ─────────────────────────────────────────────── */
 
 .cell-id-label {
-  font-family: var(--font-code); font-size: 10px; color: var(--text-faint);
+  font-family: var(--font-code); font-size: 11.5px; color: var(--text-faint);
   letter-spacing: .04em; margin-left: 4px; user-select: all;
 }
 
@@ -6370,13 +6370,13 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
   cursor: pointer; padding: 0 2px; line-height: 14px;
 }
 .cell-name-input {
-  font-family: var(--font-ui); font-size: 11.5px; color: var(--text-primary);
+  font-family: var(--font-ui); font-size: 13.2px; color: var(--text-primary);
   background: var(--bg-deepest); border: 1px solid var(--border-default);
-  border-radius: 3px; padding: 1px 4px; outline: none; width: 160px; max-width: 100%;
+  border-radius: 3px; padding: 1px 4px; outline: none; width: 208px; max-width: 100%;
 }
 .cell-name-label {
-  font-family: var(--font-ui); font-size: 11.5px; font-weight: 500;
-  color: var(--text-secondary); cursor: pointer; max-width: 200px;
+  font-family: var(--font-ui); font-size: 13.2px; font-weight: 500;
+  color: var(--text-secondary); cursor: pointer; max-width: 260px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .cell-name-label:hover { color: var(--text-primary); }
