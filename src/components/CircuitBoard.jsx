@@ -4,9 +4,9 @@ const W = 360, H = 200;
 const TRACE_SPEED = 0.3;
 const NODE_INTERVAL = 800;  // ms between new traces
 const GRID = 16;
-const TRACE_COLOR = 'rgba(46, 196, 182, 0.12)';
-const NODE_COLOR = 'rgba(46, 196, 182, 0.2)';
-const ACTIVE_COLOR = 'rgba(46, 196, 182, 0.35)';
+const TRACE_COLOR = 'rgba(140, 100, 180, 0.12)';   // faded purple
+const NODE_COLOR = 'rgba(140, 100, 180, 0.2)';
+const ACTIVE_COLOR = 'rgba(60, 140, 255, 0.4)';    // bright blue
 const DIRS = [[1,0],[0,1],[-1,0],[0,-1]];
 
 function snap(v) { return Math.round(v / GRID) * GRID; }
@@ -87,7 +87,7 @@ export function CircuitBoard() {
         ctx.stroke();
 
         // Glow tip
-        ctx.fillStyle = 'rgba(46, 196, 182, 0.5)';
+        ctx.fillStyle = 'rgba(60, 140, 255, 0.6)';
         ctx.beginPath();
         ctx.arc(ex, ey, 1.5, 0, Math.PI * 2);
         ctx.fill();
