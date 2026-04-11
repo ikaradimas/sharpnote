@@ -172,12 +172,12 @@ export function IdleSkyline() {
           if (!revealed) continue;
 
           const bx = b.x;
-          const baseY = H - l.offset;
-          const by = baseY - b.h;
+          const fullH = b.h + l.offset; // taller for back layers so roofline peeks above
+          const by = H - fullH;         // all buildings anchored at canvas bottom
 
           // Building body
           ctx.fillStyle = l.color;
-          ctx.fillRect(bx, by, b.w, b.h);
+          ctx.fillRect(bx, by, b.w, fullH);
 
           // Sun warm tint — animated intensity
           if (sunInfluence > 0) {
@@ -187,7 +187,7 @@ export function IdleSkyline() {
             const distFromSun = Math.abs(bx + b.w / 2 - sunX) / W;
             const proximity = Math.max(0, 1 - distFromSun * 2);
             ctx.fillStyle = `rgba(255, 180, 80, ${warmth * (0.5 + proximity * 0.5)})`;
-            ctx.fillRect(bx, by, b.w, b.h);
+            ctx.fillRect(bx, by, b.w, fullH);
           }
 
           // Antenna
