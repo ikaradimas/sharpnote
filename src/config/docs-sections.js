@@ -1098,6 +1098,25 @@ export const DOCS_SECTIONS = [
     ],
   },
   {
+    id: 'embedded-files', title: 'Embedded Files',
+    content: [
+      { type: 'p', text: 'Store files inline in the notebook (.cnb) and access them from code. Open the Embedded Files panel from the Tools menu to manage files visually, or embed programmatically.' },
+      { type: 'ul', items: [
+        'Files["name"] — access by name (returns EmbeddedFile)',
+        'Files["name"].ContentAsText — UTF-8 string content',
+        'Files["name"].Content — raw byte array',
+        'Files["name"].OpenRead() — readable Stream',
+        'Files.Embed(name, bytes, filename, mimeType) — embed from code',
+        'Files.EmbedText(name, text, filename, mimeType?) — embed text',
+        'Files["name"].SetVariable(key, value) — store metadata',
+        'Files["name"].GetVariable(key) — read metadata',
+        'Files.List() — all embedded files',
+        'Files.Contains(name) — check existence',
+      ]},
+      { type: 'code', text: '// Embed a CSV\nFiles.EmbedText("data", "Name,Score\\nAlice,95\\nBob,82", "data.csv", "text/csv");\n\n// Read it back\nvar csv = Files["data"].ContentAsText;\ncsv.Display();\n\n// Set metadata\nFiles["data"].SetVariable("source", "manual");\nFiles["data"].GetVariable("source").Display();' },
+    ],
+  },
+  {
     id: 'cli-execution', title: 'CLI / Headless Execution',
     content: [
       { type: 'p', text: 'Run notebooks from the command line without opening the GUI. Useful for CI/CD, cron jobs, and automated reporting.' },

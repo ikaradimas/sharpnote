@@ -3,7 +3,7 @@ import React from 'react';
 // ── Dock Layout System ────────────────────────────────────────────────────────
 
 export const DEFAULT_DOCK_LAYOUT = {
-  assignments: { log: 'right', nuget: 'bottom', config: 'bottom', db: 'bottom', library: 'left', vars: 'right', toc: 'left', files: 'left', git: 'left', api: 'right', 'api-editor': 'right', graph: 'right', todo: 'bottom', regex: 'bottom', history: 'right', deps: 'right' },
+  assignments: { log: 'right', nuget: 'bottom', config: 'bottom', db: 'bottom', library: 'left', vars: 'right', toc: 'left', files: 'left', git: 'left', api: 'right', 'api-editor': 'right', graph: 'right', todo: 'bottom', regex: 'bottom', history: 'right', deps: 'right', embed: 'left' },
   order:       { log: 0, nuget: 0, config: 1, db: 2, library: 0, vars: 1, toc: 1, files: 2, git: 3, api: 2, 'api-editor': 3, graph: 4, todo: 3, regex: 4, history: 5, deps: 6 },
   sizes:       { left: 300, right: 320, bottom: 280 },
   floatPos:    {},
@@ -171,6 +171,7 @@ export const PANEL_META = {
   deps:    { label: 'Dependencies', icon: <IconDeps /> },
   git:  { label: 'Git', icon: <IconGit /> },
   'api-editor': { label: 'API Editor', icon: <IconApiEditor /> },
+  embed: { label: 'Embedded Files', icon: <IconFiles /> },
 };
 
 // ── Dock drop zones ───────────────────────────────────────────────────────────

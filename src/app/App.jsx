@@ -140,6 +140,7 @@ export function App() {
     kafkaTabOpen, handleOpenKafkaTab, handleCloseKafkaTab,
     handleTogglePin, handleNavigateToCell,
     handleInsertLibraryFile, handleImportData, openPinnedNotebooks,
+    handleRetainOutput, handleUnretainOutput,
   } = useNotebookManager({ cancelPendingCellsRef, saveSettingsRef, formatOnSaveRef });
 
   const {
@@ -959,6 +960,7 @@ export function App() {
     regex:   isNotebookId(activeId) ? (activeNb?.regexPanelOpen  ?? false) : false,
     history: isNotebookId(activeId) ? (activeNb?.historyPanelOpen ?? false) : false,
     deps:    isNotebookId(activeId) ? (activeNb?.depsPanelOpen    ?? false) : false,
+    embed:   isNotebookId(activeId) ? (activeNb?.embedPanelOpen   ?? false) : false,
   }), [activeId, activeNb, libraryPanelOpen, filesPanelOpen, apiPanelOpen, apiEditorPanelOpen, gitPanelOpen]);
 
   const panelPropsMap = useMemo(() => {
@@ -1108,6 +1110,39 @@ export function App() {
         onSetPipelineCells: pipelineManager.setPipelineCells,
         scheduledCells,
       },
+      embed: {
+        onToggle: nbId ? () => setNb(nbId, (n) => ({ embedPanelOpen: !n.embedPanelOpen })) : () => {},
+        files: activeNb?.embeddedFiles || [],
+        onAdd: async () => {
+          if (!nbId) return;
+          const result = await window.electronAPI?.pickEmbedFile?.();
+          if (!result) return;
+          const name = result.filename.replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9_]/g, '_');
+          setNbDirty(nbId, (n) => ({
+            embeddedFiles: [...(n.embeddedFiles || []), { name, ...result, variables: {} }],
+          }));
+          if (activeNb?.kernelStatus === 'ready') {
+            window.electronAPI?.sendToKernel(nbId, {
+              type: 'set_embedded_files',
+              files: [...(activeNb.embeddedFiles || []), { name, ...result, variables: {} }],
+            });
+          }
+        },
+        onDelete: (name) => {
+          if (!nbId) return;
+          setNbDirty(nbId, (n) => ({
+            embeddedFiles: (n.embeddedFiles || []).filter(f => f.name !== name),
+          }));
+        },
+        onUpdateVars: (name, key, value) => {
+          if (!nbId) return;
+          setNbDirty(nbId, (n) => ({
+            embeddedFiles: (n.embeddedFiles || []).map(f =>
+              f.name === name ? { ...f, variables: { ...f.variables, [key]: value } } : f
+            ),
+          }));
+        },
+      },
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeNb, dbConnections, filesPanelOpen, filesCurrentDir, apiPanelOpen, favoriteFolders]);
@@ -1242,6 +1277,8 @@ export function App() {
                     onDebugResume={debugResume}
                     onDebugStep={debugStep}
                     onToggleBreakpoint={toggleBreakpoint}
+                    onRetainOutput={handleRetainOutput}
+                    onUnretainOutput={handleUnretainOutput}
                     showCircuit={showCircuit}
                   />
                 </div>

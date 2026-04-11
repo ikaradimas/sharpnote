@@ -1488,6 +1488,49 @@ var mocks = await Mock.ListAsync();
 mocks.DisplayTable();
 await Mock.StopAllAsync();
 Display.Html("<div style='color:#4ec9b0'>✓ All mocks stopped</div>");`),
+
+    // ── Embedded Files ────────────────────────────────────────────────────
+
+    md(`## Embedded Files
+
+Files can be stored inline in the notebook and accessed from code. Use the **Embedded Files** panel (dock it from the Tools menu) to add files, or embed programmatically:
+
+| Method | Description |
+|--------|-------------|
+| \`Files["name"]\` | Access an embedded file by name |
+| \`Files["name"].ContentAsText\` | Get file content as a UTF-8 string |
+| \`Files["name"].Content\` | Get raw byte array |
+| \`Files["name"].OpenRead()\` | Get a readable Stream |
+| \`Files.Embed("name", bytes, "file.csv", "text/csv")\` | Embed a file from code |
+| \`Files.EmbedText("name", text, "file.txt")\` | Embed a text file |
+| \`Files["name"].SetVariable("key", "val")\` | Set a variable on a file |
+| \`Files["name"].GetVariable("key")\` | Get a variable value |
+| \`Files.List()\` | List all embedded files |
+| \`Files.Contains("name")\` | Check if a file exists |`),
+
+    { ...cs(`// Embed a CSV file programmatically
+Files.EmbedText("sample", "Name,Score\\nAlice,95\\nBob,82\\nCharlie,78", "sample.csv", "text/csv");
+
+// Read it back
+var csv = Files["sample"].ContentAsText;
+Display.Html($"<pre style='color:#4ec9b0'>{csv}</pre>");
+
+// Set metadata
+Files["sample"].SetVariable("source", "manual entry");
+Files["sample"].SetVariable("rows", "3");
+
+// List all embedded files
+Files.List().Select(f => new { f.Name, f.Filename, f.MimeType, Vars = f.Variables.Count }).DisplayTable();`), columns: 2 },
+
+    { ...cs(`Display.Html(@"<div style='background:#111118;border:1px solid #333;border-radius:6px;padding:14px;font-size:12px;color:#aaa;line-height:1.7'>
+<div style='color:#569cd6;font-weight:600;margin-bottom:8px'>📎 Embedded Files Notes</div>
+<div>• Files are stored inline in the .cnb notebook file</div>
+<div>• Binary files are base64 encoded; text files stored as-is</div>
+<div>• Variables are key-value metadata stored on each file</div>
+<div>• Open the <strong>Embedded Files</strong> panel to manage files visually</div>
+<div>• Code completion knows about <code>Files</code> — type <code>Files.</code> to see methods</div>
+<div style='margin-top:8px;color:#4ec9b0'>💡 Use embedded files to ship data alongside your notebook without external file dependencies</div>
+</div>");`, 'html'), columns: 2 },
   ];
 }
 
@@ -2510,6 +2553,7 @@ export function createNotebook(templateKey = null) {
     regexPanelOpen: false,
     historyPanelOpen: false,
     depsPanelOpen: false,
+    embedPanelOpen: false,
     outputHistory: {},
     staleCellIds: [],
     autoRun: false,
