@@ -1357,6 +1357,9 @@ body {
   transition: background 0.15s;
 }
 .pong-restart:hover { background: #3dd8ca; }
+.pong-pause-hint {
+  font-family: var(--font-ui); font-size: 11px; color: var(--text-dim);
+}
 .pong-hint {
   font-family: var(--font-ui); font-size: 10px; color: var(--text-faint);
   letter-spacing: 0.04em;
