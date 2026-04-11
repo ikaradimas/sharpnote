@@ -338,6 +338,12 @@ partial class Program
                     break;
                 }
 
+                case "docker_logs":
+                {
+                    await HandleDockerLogs(msg, realStdout);
+                    break;
+                }
+
                 case "execute_check":
                 {
                     await HandleExecuteCheck(msg, options, globals, realStdout);

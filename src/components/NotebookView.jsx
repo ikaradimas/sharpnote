@@ -27,6 +27,7 @@ export function NotebookView({
   onRunDockerCell,
   onStopDockerCell,
   onPollDockerStatus,
+  onFetchDockerLogs,
   onRunCheckCell,
   onRunDecisionCell,
   onRunCellByName,
@@ -363,6 +364,7 @@ export function NotebookView({
                 onRun={() => onRunDockerCell(nb.id, cell)}
                 onStopDocker={onStopDockerCell}
                 onPollDockerStatus={onPollDockerStatus}
+                onFetchDockerLogs={onFetchDockerLogs}
                 onDelete={() => deleteCell(cell.id)}
                 onMoveUp={() => moveCell(cell.id, -1)}
                 onMoveDown={() => moveCell(cell.id, 1)}

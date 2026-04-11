@@ -233,6 +233,46 @@ partial class Program
         }
     }
 
+    internal static async Task HandleDockerLogs(JsonElement msg, TextWriter realStdout)
+    {
+        var cellId      = msg.TryGetProperty("id",          out var p) ? p.GetString() : null;
+        var containerId = msg.TryGetProperty("containerId",  out var pc) ? pc.GetString()?.Trim() : "";
+        var tail        = msg.TryGetProperty("tail",         out var pt) ? pt.GetInt32() : 200;
+
+        try
+        {
+            var logs = await Task.Run(() =>
+            {
+                if (string.IsNullOrEmpty(containerId)) return "";
+                return DockerHelper.RunDocker($"logs --tail {tail} {containerId}");
+            });
+
+            lock (realStdout)
+            {
+                realStdout.WriteLine(JsonSerializer.Serialize(new
+                {
+                    type = "docker_logs",
+                    id = cellId,
+                    containerId,
+                    logs,
+                }));
+            }
+        }
+        catch (Exception ex)
+        {
+            lock (realStdout)
+            {
+                realStdout.WriteLine(JsonSerializer.Serialize(new
+                {
+                    type = "docker_logs",
+                    id = cellId,
+                    containerId,
+                    logs = $"Error fetching logs: {ex.Message}",
+                }));
+            }
+        }
+    }
+
     internal static void CleanupAllDockerContainers(TextWriter realStdout)
     {
         HashSet<string> snapshot;

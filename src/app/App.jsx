@@ -207,7 +207,7 @@ export function App() {
       }));
   }, [setNb, setLibraryPanelOpen, setFilesPanelOpen, setApiPanelOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const { runCell, runCellWithFormData, runSqlCell, runHttpCell, runShellCell, runDockerCell, stopDockerCell, pollDockerStatus, runCheckCell, runDecisionCell, runAll, runFrom, runTo, handleInterrupt, handleReset,
+  const { runCell, runCellWithFormData, runSqlCell, runHttpCell, runShellCell, runDockerCell, stopDockerCell, pollDockerStatus, fetchDockerLogs, runCheckCell, runDecisionCell, runAll, runFrom, runTo, handleInterrupt, handleReset,
           cancelPendingCells, debugResume, debugStep, toggleBreakpoint } =
     useKernelManager({
       setNb, notebooksRef, dbConnectionsRef, setVarInspectDialog,
@@ -1157,6 +1157,7 @@ export function App() {
                     onRunDockerCell={runDockerCell}
                     onStopDockerCell={stopDockerCell}
                     onPollDockerStatus={pollDockerStatus}
+                    onFetchDockerLogs={fetchDockerLogs}
                     onRunCheckCell={runCheckCell}
                     onRunDecisionCell={runDecisionCell}
                     onRunCellByName={handleRunCellByName}

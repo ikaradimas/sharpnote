@@ -311,6 +311,14 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
           }));
           break;
 
+        case 'docker_logs':
+          setNb(notebookId, (n) => ({
+            cells: n.cells.map((c) =>
+              c.id === msg.id ? { ...c, containerLogs: msg.logs || '' } : c
+            ),
+          }));
+          break;
+
         case 'graph_clear':
           setNb(notebookId, { varHistory: {} });
           break;
@@ -677,6 +685,16 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
     });
   }, []);
 
+  const fetchDockerLogs = useCallback((notebookId, cellId, containerId) => {
+    if (!window.electronAPI) return;
+    window.electronAPI.sendToKernel(notebookId, {
+      type: 'docker_logs',
+      id: cellId,
+      containerId,
+      tail: 200,
+    });
+  }, []);
+
   const runCheckCell = useCallback(async (notebookId, cell) => {
     if (!window.electronAPI || cell.type !== 'check') return;
     const nb = notebooksRef.current.find((n) => n.id === notebookId);
@@ -785,6 +803,7 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
     runDockerCell,
     stopDockerCell,
     pollDockerStatus,
+    fetchDockerLogs,
     runCheckCell,
     runDecisionCell,
     runAll,

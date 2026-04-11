@@ -1,5 +1,5 @@
-import React, { useEffect, useCallback } from 'react';
-import { Play, Square, Monitor, Container, Clock, Wifi, X } from 'lucide-react';
+import React, { useEffect, useCallback, useState, useRef } from 'react';
+import { Play, Square, Monitor, Container, Clock, Wifi, X, ScrollText } from 'lucide-react';
 import { CellNameColor } from './CellNameColor.jsx';
 import { CellControls } from './CellControls.jsx';
 import { CellOutput } from '../output/OutputBlock.jsx';
@@ -29,16 +29,46 @@ function StatusBadge({ state }) {
   return <span className={`docker-status-badge ${cls}`}>{label}</span>;
 }
 
+function LogsPopup({ logs, onClose, onRefresh }) {
+  const preRef = useRef(null);
+
+  useEffect(() => {
+    if (preRef.current) preRef.current.scrollTop = preRef.current.scrollHeight;
+  }, [logs]);
+
+  // Close on Escape
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  return (
+    <div className="docker-logs-overlay" onClick={onClose}>
+      <div className="docker-logs-popup" onClick={(e) => e.stopPropagation()}>
+        <div className="docker-logs-header">
+          <ScrollText size={14} />
+          <span className="docker-logs-title">Container Logs</span>
+          <button className="docker-logs-refresh" onClick={onRefresh} title="Refresh logs">↻</button>
+          <button className="docker-logs-close" onClick={onClose} title="Close"><X size={14} /></button>
+        </div>
+        <pre ref={preRef} className="docker-logs-content">{logs || '(no logs)'}</pre>
+      </div>
+    </div>
+  );
+}
+
 export function DockerCell({
   cell, cellIndex, outputs, notebookId,
   isRunning, anyRunning, kernelReady = true,
-  onUpdate, onRun, onStopDocker, onPollDockerStatus,
+  onUpdate, onRun, onStopDocker, onPollDockerStatus, onFetchDockerLogs,
   onDelete, onMoveUp, onMoveDown,
   onNameChange, onColorChange,
 }) {
   const presenting = cell.presenting || false;
   const containerId = cell.containerId || null;
   const containerState = cell.containerState || 'stopped';
+  const [logsOpen, setLogsOpen] = useState(false);
 
   // Auto-poll status every 5s in presentation mode when running
   useEffect(() => {
@@ -61,6 +91,23 @@ export function DockerCell({
     onUpdate?.({ [field]: value });
   }, [onUpdate]);
 
+  const handleOpenLogs = useCallback(() => {
+    if (containerId) {
+      onFetchDockerLogs?.(notebookId, cell.id, containerId);
+      setLogsOpen(true);
+    }
+  }, [containerId, notebookId, cell.id, onFetchDockerLogs]);
+
+  const handleRefreshLogs = useCallback(() => {
+    if (containerId) onFetchDockerLogs?.(notebookId, cell.id, containerId);
+  }, [containerId, notebookId, cell.id, onFetchDockerLogs]);
+
+  const logsButton = containerId ? (
+    <button className="docker-logs-btn" onClick={handleOpenLogs} title="Container logs">
+      <ScrollText size={12} />
+    </button>
+  ) : null;
+
   // ── Presentation mode ────────────────────────────────────────────────────
   if (presenting) {
     return (
@@ -72,6 +119,7 @@ export function DockerCell({
             <span className="docker-present-image">{cell.image}</span>
           </div>
           <StatusBadge state={containerState} />
+          {logsButton}
           <button
             className="docker-present-exit"
             title="Exit presentation"
@@ -119,6 +167,13 @@ export function DockerCell({
         </div>
 
         <CellOutput messages={outputs} notebookId={notebookId} />
+        {logsOpen && (
+          <LogsPopup
+            logs={cell.containerLogs}
+            onClose={() => setLogsOpen(false)}
+            onRefresh={handleRefreshLogs}
+          />
+        )}
       </div>
     );
   }
@@ -136,6 +191,7 @@ export function DockerCell({
         />
         <span className="cell-lang-label docker-label">Docker</span>
         {containerId && <StatusBadge state={containerState} />}
+        {logsButton}
         <span className="cell-id-label">{cell.id}</span>
         <div className="cell-run-group">
           {containerState === 'running' ? (
@@ -188,6 +244,13 @@ export function DockerCell({
       </div>
 
       <CellOutput messages={outputs} notebookId={notebookId} />
+      {logsOpen && (
+        <LogsPopup
+          logs={cell.containerLogs}
+          onClose={() => setLogsOpen(false)}
+          onRefresh={handleRefreshLogs}
+        />
+      )}
     </div>
   );
 }
