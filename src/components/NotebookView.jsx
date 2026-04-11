@@ -10,6 +10,7 @@ import { HttpCell } from './editor/HttpCell.jsx';
 import { ShellCell } from './editor/ShellCell.jsx';
 import { CheckCell } from './editor/CheckCell.jsx';
 import { DecisionCell } from './editor/DecisionCell.jsx';
+import { DockerCell } from './editor/DockerCell.jsx';
 import { AddBar } from './editor/AddBar.jsx';
 import { FindBar } from './FindBar.jsx';
 import { PongGame } from './PongGame.jsx';
@@ -23,6 +24,9 @@ export function NotebookView({
   onRunSqlCell,
   onRunHttpCell,
   onRunShellCell,
+  onRunDockerCell,
+  onStopDockerCell,
+  onPollDockerStatus,
   onRunCheckCell,
   onRunDecisionCell,
   onRunCellByName,
@@ -170,6 +174,7 @@ export function NotebookView({
       onAddSql={() => addCell('sql')}
       onAddHttp={() => addCell('http')}
       onAddShell={() => addCell('shell')}
+      onAddDocker={() => addCell('docker')}
       onAddCheck={() => addCell('check')}
       onAddDecision={() => addCell('decision')}
       autoRun={autoRun || false}
@@ -255,6 +260,7 @@ export function NotebookView({
             onAddSql={() => addCell('sql', -1)}
             onAddHttp={() => addCell('http', -1)}
             onAddShell={() => addCell('shell', -1)}
+            onAddDocker={() => addCell('docker', -1)}
             onAddCheck={() => addCell('check', -1)}
             onAddDecision={() => addCell('decision', -1)}
           />
@@ -335,6 +341,28 @@ export function NotebookView({
                 kernelReady={kernelStatus === 'ready'}
                 onUpdate={(val) => updateCell(cell.id, val)}
                 onRun={() => onRunShellCell(nb.id, cell)}
+                onDelete={() => deleteCell(cell.id)}
+                onMoveUp={() => moveCell(cell.id, -1)}
+                onMoveDown={() => moveCell(cell.id, 1)}
+                onNameChange={(name) => updateCellProp(cell.id, 'name', name)}
+                onColorChange={(color) => updateCellProp(cell.id, 'color', color)}
+              />
+            ) : cell.type === 'docker' ? (
+              <DockerCell
+                cell={cell}
+                cellIndex={index}
+                outputs={outputs[cell.id]}
+                notebookId={nb.id}
+                isRunning={running.has(cell.id)}
+                anyRunning={running.size > 0}
+                kernelReady={kernelStatus === 'ready'}
+                onUpdate={(fields) => {
+                  if (typeof fields === 'string') updateCell(cell.id, fields);
+                  else onSetNbDirty((n) => ({ cells: n.cells.map((c) => c.id === cell.id ? { ...c, ...fields } : c) }));
+                }}
+                onRun={() => onRunDockerCell(nb.id, cell)}
+                onStopDocker={onStopDockerCell}
+                onPollDockerStatus={onPollDockerStatus}
                 onDelete={() => deleteCell(cell.id)}
                 onMoveUp={() => moveCell(cell.id, -1)}
                 onMoveDown={() => moveCell(cell.id, 1)}
@@ -430,6 +458,7 @@ export function NotebookView({
                 onAddSql={() => addCell('sql', index)}
                 onAddHttp={() => addCell('http', index)}
                 onAddShell={() => addCell('shell', index)}
+                onAddDocker={() => addCell('docker', index)}
                 onAddCheck={() => addCell('check', index)}
                 onAddDecision={() => addCell('decision', index)}
               />

@@ -26,6 +26,7 @@ export function makeCell(type = 'code', content = '') {
     ...(type === 'sql'      ? { db: '' } : {}),
     ...(type === 'check'    ? { label: '' } : {}),
     ...(type === 'decision' ? { label: '', mode: 'bool', truePath: [], falsePath: [], switchPaths: {} } : {}),
+    ...(type === 'docker'   ? { image: '', containerName: '', ports: '', env: '', volume: '', command: '', runOnStartup: false, runOnShutdown: false, presenting: false } : {}),
   };
 }
 

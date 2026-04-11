@@ -58,7 +58,7 @@ export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef, for
       config: nb.config.filter((e) => e.key.trim()),
       attachedDbIds: nb.attachedDbs.filter((d) => d.status === 'ready').map((d) => d.connectionId),
       autoRun: nb.autoRun || false,
-      cells: nb.cells.map(({ id, type, content, name, color, outputMode, locked, codeFolded, presenting, presentInterval, db, label, mode, truePath, falsePath, switchPaths }) => ({
+      cells: nb.cells.map(({ id, type, content, name, color, outputMode, locked, codeFolded, presenting, presentInterval, db, label, mode, truePath, falsePath, switchPaths, image, containerName, ports, env, volume, command, runOnStartup, runOnShutdown }) => ({
         id, type, content,
         ...(name ? { name } : {}),
         ...(color ? { color } : {}),
@@ -66,6 +66,7 @@ export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef, for
         ...(type === 'sql'  ? { db: db || '' } : {}),
         ...(type === 'check' || type === 'decision' ? { label: label || '' } : {}),
         ...(type === 'decision' ? { mode: mode || 'bool', truePath: truePath || [], falsePath: falsePath || [], switchPaths: switchPaths || {} } : {}),
+        ...(type === 'docker' ? { image: image || '', containerName: containerName || '', ports: ports || '', env: env || '', volume: volume || '', command: command || '', runOnStartup: runOnStartup || false, runOnShutdown: runOnShutdown || false, ...(presenting ? { presenting: true } : {}) } : {}),
       })),
       pipelines: (nb.pipelines || []).map(({ id, name, cellIds, color }) => ({ id, name, cellIds, color: color || null })),
     };

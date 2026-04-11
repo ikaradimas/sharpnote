@@ -207,7 +207,7 @@ export function App() {
       }));
   }, [setNb, setLibraryPanelOpen, setFilesPanelOpen, setApiPanelOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const { runCell, runCellWithFormData, runSqlCell, runHttpCell, runShellCell, runCheckCell, runDecisionCell, runAll, runFrom, runTo, handleInterrupt, handleReset,
+  const { runCell, runCellWithFormData, runSqlCell, runHttpCell, runShellCell, runDockerCell, stopDockerCell, pollDockerStatus, runCheckCell, runDecisionCell, runAll, runFrom, runTo, handleInterrupt, handleReset,
           cancelPendingCells, debugResume, debugStep, toggleBreakpoint } =
     useKernelManager({
       setNb, notebooksRef, dbConnectionsRef, setVarInspectDialog,
@@ -910,7 +910,7 @@ export function App() {
   const depGraph = useCellDependencies(activeNb);
   const orchestrator = useCellOrchestrator({
     notebooksRef, nodes: depGraph.nodes, edges: depGraph.edges,
-    runCell, runSqlCell, runHttpCell, runShellCell, runCheckCell, runDecisionCell,
+    runCell, runSqlCell, runHttpCell, runShellCell, runDockerCell, runCheckCell, runDecisionCell,
   });
 
   const openFlags = useMemo(() => ({
@@ -1142,6 +1142,9 @@ export function App() {
                     onRunSqlCell={runSqlCell}
                     onRunHttpCell={runHttpCell}
                     onRunShellCell={runShellCell}
+                    onRunDockerCell={runDockerCell}
+                    onStopDockerCell={stopDockerCell}
+                    onPollDockerStatus={pollDockerStatus}
                     onRunCheckCell={runCheckCell}
                     onRunDecisionCell={runDecisionCell}
                     onRunCellByName={handleRunCellByName}

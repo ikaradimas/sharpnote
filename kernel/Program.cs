@@ -320,6 +320,24 @@ partial class Program
                     break;
                 }
 
+                case "execute_docker":
+                {
+                    await HandleExecuteDocker(msg, realStdout);
+                    break;
+                }
+
+                case "stop_docker":
+                {
+                    await HandleStopDocker(msg, realStdout);
+                    break;
+                }
+
+                case "docker_status":
+                {
+                    await HandleDockerStatus(msg, realStdout);
+                    break;
+                }
+
                 case "execute_check":
                 {
                     await HandleExecuteCheck(msg, options, globals, realStdout);
@@ -362,6 +380,7 @@ partial class Program
                 }
 
                 case "exit":
+                    CleanupAllDockerContainers(realStdout);
                     memCts.Cancel();
                     return;
             }

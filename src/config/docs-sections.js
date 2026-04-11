@@ -1066,6 +1066,14 @@ export const DOCS_SECTIONS = [
         'Docker.List() — list all containers with status',
       ]},
       { type: 'code', text: '// Start a Redis container for testing\nvar id = Docker.Run("redis:7", name: "test-redis",\n    ports: new() { ["6379"] = "6379" });\n\n// Use it...\nawait Task.Delay(2000); // wait for startup\nDocker.IsRunning("test-redis").Display();\n\n// Clean up\nDocker.Stop("test-redis");\nDocker.Remove("test-redis");' },
+      { type: 'h3', text: 'Docker Cells' },
+      { type: 'p', text: 'Docker cells provide a visual interface for managing containers without writing code. Configure image, ports, environment variables, volumes, and commands via form fields.' },
+      { type: 'ul', items: [
+        'Run on Startup — automatically start the container when the kernel becomes ready',
+        'Run on Shutdown — execute on app quit (e.g. for cleanup containers)',
+        'Presentation Mode — dashboard view with large title, status badge, port mappings, and start/stop controls',
+        'All containers spawned by Docker cells are gracefully stopped and removed on app shutdown',
+      ]},
     ],
   },
   {

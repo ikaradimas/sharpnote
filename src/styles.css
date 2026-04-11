@@ -6399,6 +6399,105 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 .sql-label { color: #56b6c2 !important; }
 .http-label { color: #e0a040 !important; }
 .shell-label { color: #4ec9b0 !important; }
+.docker-label { color: #0db7ed !important; }
+
+/* ── Docker Cell ─────────────────────────────────────────────────────────── */
+.docker-cell { border-left: 3px solid #0db7ed40; border-radius: 4px; margin: 2px 0; transition: border-color 0.2s; }
+.docker-cell.docker-running { border-left-color: #0db7ed; }
+
+.docker-config-form {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 6px 12px; padding: 10px 14px;
+  background: var(--bg-deepest); border-bottom: 1px solid var(--border-subtle);
+}
+.docker-field { display: flex; flex-direction: column; gap: 2px; }
+.docker-field-label {
+  font-family: var(--font-ui); font-size: 10px; font-weight: 600;
+  color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em;
+}
+.docker-field-input {
+  font-family: var(--font-ui); font-size: 12px; color: var(--text-primary);
+  background: var(--bg-mid); border: 1px solid var(--border-default);
+  border-radius: 3px; padding: 3px 6px; outline: none;
+}
+.docker-field-input:focus { border-color: #0db7ed; }
+.docker-mono { font-family: var(--font-code); }
+
+.docker-lifecycle-row {
+  grid-column: 1 / -1; display: flex; gap: 16px; padding-top: 4px;
+}
+.docker-checkbox {
+  display: flex; align-items: center; gap: 5px; cursor: pointer;
+  font-family: var(--font-ui); font-size: 11px; color: var(--text-secondary);
+}
+
+.docker-status-badge {
+  font-family: var(--font-ui); font-size: 10px; font-weight: 600;
+  padding: 1px 8px; border-radius: 10px; letter-spacing: 0.04em;
+}
+.docker-badge-running { background: #0db7ed20; color: #0db7ed; }
+.docker-badge-stopped { background: var(--bg-deepest); color: var(--text-dim); }
+.docker-badge-error   { background: rgba(224,96,112,0.15); color: var(--status-error); }
+
+/* ── Docker Presentation Mode ───────────────────────────────────────── */
+.docker-presenting {
+  border-left-width: 4px; border-radius: 8px;
+  background: var(--bg-elevated); overflow: hidden;
+}
+.docker-present-header {
+  display: flex; align-items: center; gap: 12px;
+  padding: 18px 20px; background: linear-gradient(135deg, #0a1820 0%, var(--bg-elevated) 60%);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.docker-present-icon { color: #0db7ed; flex-shrink: 0; }
+.docker-present-title { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.docker-present-name {
+  font-family: var(--font-heading); font-size: 18px; font-weight: 500;
+  color: var(--text-primary); letter-spacing: 0.02em;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.docker-present-image {
+  font-family: var(--font-code); font-size: 11px; color: #0db7ed; opacity: 0.7;
+}
+.docker-present-exit {
+  background: none; border: none; color: var(--text-dim); cursor: pointer;
+  padding: 4px; border-radius: 4px;
+}
+.docker-present-exit:hover { background: var(--bg-mid); color: var(--text-primary); }
+
+.docker-present-details {
+  display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 20px;
+}
+.docker-detail-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-family: var(--font-code); font-size: 11px;
+  color: var(--text-secondary); background: var(--bg-mid);
+  padding: 3px 10px; border-radius: 12px; border: 1px solid var(--border-subtle);
+}
+.docker-chip-live { color: #0db7ed; border-color: #0db7ed40; }
+
+.docker-present-controls {
+  display: flex; gap: 8px; padding: 8px 20px 14px;
+}
+.docker-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: var(--font-ui); font-size: 12px; font-weight: 600;
+  padding: 6px 16px; border-radius: 6px; border: none; cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+.docker-btn:hover { transform: translateY(-1px); }
+.docker-btn-start { background: #0db7ed; color: #0a0a10; }
+.docker-btn-start:hover { background: #2dc8f5; }
+.docker-btn-start:disabled { opacity: 0.4; cursor: default; transform: none; }
+.docker-btn-stop { background: #e06070; color: #fff; }
+.docker-btn-stop:hover { background: #e8707f; }
+
+.cell-add-docker:hover { color: #0db7ed !important; }
+.cell-present-btn {
+  background: none; border: 1px solid var(--border-default); color: var(--text-dim);
+  padding: 2px 4px; border-radius: 3px; cursor: pointer; transition: color 0.15s, border-color 0.15s;
+}
+.cell-present-btn:hover, .cell-present-btn.active { color: #0db7ed; border-color: #0db7ed; }
 
 /* ── Check Cell ──────────────────────────────────────────────────────────── */
 .check-cell {
