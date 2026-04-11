@@ -3601,6 +3601,13 @@ body {
 }
 .ghost-zzz-deep { font-size: 12px; color: #e06070; }
 
+.ghost-bead {
+  position: fixed; z-index: 8498; pointer-events: none;
+  width: 5px; height: 5px; border-radius: 50%;
+  background: #f0d060; opacity: 0.7;
+  box-shadow: 0 0 4px #f0d060;
+}
+
 .ghost-pacman {
   position: fixed; z-index: 8499; pointer-events: none;
   opacity: 0.65;

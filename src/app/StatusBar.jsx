@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Cpu, Loader2, Save, AlertTriangle, Container, Server } from 'lucide-react';
 import { isNotebookId } from '../utils.js';
 import { registerCursorPosSetter } from '../components/editor/CodeEditor.jsx';

@@ -1,26 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
 
 const IDLE_THRESHOLD = 15_000;
-const DEEP_IDLE     = 60_000;
+const DEEP_IDLE     = 20_000;    // 20s → chase pacman
 const FLICKER_MIN   = 3_000;
 const FLICKER_MAX   = 8_000;
 const SHOW_DURATION = 2_500;
+const MAX_BEADS     = 12;
 
 function randomBetween(a, b) { return a + Math.random() * (b - a); }
 
-// Prefer dark UI regions: sidebar edges, toolbar, status bar, panel borders
 function pickDarkSpot(mouseX, mouseY) {
   const W = window.innerWidth, H = window.innerHeight;
   const spots = [
-    // Near left sidebar edge
     { x: randomBetween(8, 50), y: randomBetween(60, H - 60) },
-    // Near right edge (panel border zone)
     { x: randomBetween(W - 60, W - 12), y: randomBetween(60, H - 60) },
-    // Toolbar area
     { x: randomBetween(80, W - 80), y: randomBetween(4, 40) },
-    // Status bar area
     { x: randomBetween(80, W - 80), y: randomBetween(H - 36, H - 8) },
-    // Near cursor but biased toward edges
     { x: Math.max(20, Math.min(W - 40, mouseX + randomBetween(-150, 150))),
       y: Math.max(20, Math.min(H - 40, mouseY + randomBetween(-120, 120))) },
   ];
@@ -31,13 +26,15 @@ export function Ghost() {
   const [visible, setVisible] = useState(false);
   const [mood, setMood] = useState('happy');
   const [pos, setPos] = useState({ x: 200, y: 200 });
+  const [pacman, setPacman] = useState(null);
+  const [beads, setBeads] = useState([]);
   const mouseRef = useRef({ x: 300, y: 300 });
   const lastActivityRef = useRef(Date.now());
   const flickerTimerRef = useRef(null);
   const hideTimerRef = useRef(null);
   const chaseFrameRef = useRef(null);
+  const moodRef = useRef('happy');
 
-  // Track mouse + activity
   useEffect(() => {
     const onMove = (e) => {
       mouseRef.current = { x: e.clientX, y: e.clientY };
@@ -54,27 +51,26 @@ export function Ghost() {
     };
   }, []);
 
-  // Mood tracker
   useEffect(() => {
     const id = setInterval(() => {
       const idle = Date.now() - lastActivityRef.current;
-      if (idle > DEEP_IDLE) setMood('deepIdle');
-      else if (idle > IDLE_THRESHOLD) setMood('idle');
-      else setMood('happy');
+      const next = idle > DEEP_IDLE ? 'deepIdle' : idle > IDLE_THRESHOLD ? 'idle' : 'happy';
+      moodRef.current = next;
+      setMood(next);
     }, 2000);
     return () => clearInterval(id);
   }, []);
 
-  // Flicker near dark regions
+  // Flicker (only when NOT in deep idle — chase handles its own visibility)
   useEffect(() => {
     const scheduleFlicker = () => {
       const delay = randomBetween(FLICKER_MIN, FLICKER_MAX);
       flickerTimerRef.current = setTimeout(() => {
-        const m = mouseRef.current;
-        setPos(pickDarkSpot(m.x, m.y));
+        if (moodRef.current === 'deepIdle') { scheduleFlicker(); return; }
+        setPos(pickDarkSpot(mouseRef.current.x, mouseRef.current.y));
         setVisible(true);
         hideTimerRef.current = setTimeout(() => {
-          setVisible(false);
+          if (moodRef.current !== 'deepIdle') setVisible(false);
           scheduleFlicker();
         }, SHOW_DURATION);
       }, delay);
@@ -86,11 +82,11 @@ export function Ghost() {
     };
   }, []);
 
-  // Deep idle: Pac-Man flees with swerving, ghost chases
-  const [pacman, setPacman] = useState(null);
+  // Deep idle chase with bead trail
   useEffect(() => {
     if (mood !== 'deepIdle') {
       setPacman(null);
+      setBeads([]);
       if (chaseFrameRef.current) cancelAnimationFrame(chaseFrameRef.current);
       return;
     }
@@ -101,45 +97,64 @@ export function Ghost() {
     let py = Math.max(40, Math.min(H - 60, m.y));
     let gx = Math.max(40, Math.min(W - 40, m.x));
     let gy = Math.max(40, Math.min(H - 60, m.y));
-    // Pac-Man has a heading that swerves randomly
     let heading = Math.random() * Math.PI * 2;
     let swerveTimer = 0;
     let swerveTarget = heading;
+    let beadList = [];
+    let beadCounter = 0;
 
     setPos({ x: gx, y: gy });
     setVisible(true);
 
     const chase = () => {
       swerveTimer++;
-      // Pac-Man: pick a new random heading every ~80–200 frames
+
+      // Spawn beads ahead of Pac-Man
+      if (swerveTimer % 12 === 0) {
+        const ahead = 30;
+        beadList.push({
+          id: beadCounter++,
+          x: px + Math.cos(heading) * ahead,
+          y: py + Math.sin(heading) * ahead,
+          alive: true,
+        });
+        if (beadList.length > MAX_BEADS) beadList.shift();
+      }
+
+      // Pac-Man eats beads it passes over
+      for (const b of beadList) {
+        if (!b.alive) continue;
+        const dx = px - b.x, dy = py - b.y;
+        if (dx * dx + dy * dy < 100) b.alive = false;
+      }
+
+      // Pac-Man swerves
       if (swerveTimer % (80 + Math.floor(Math.random() * 120)) === 0) {
         swerveTarget = heading + randomBetween(-Math.PI * 0.7, Math.PI * 0.7);
       }
-      // Smoothly steer toward swerve target
-      const angleDiff = swerveTarget - heading;
-      heading += angleDiff * 0.04;
+      heading += (swerveTarget - heading) * 0.04;
 
       const speed = 1.6;
       px += Math.cos(heading) * speed;
       py += Math.sin(heading) * speed;
 
-      // Bounce off edges by reversing heading component
       if (px < 30) { px = 30; heading = Math.PI - heading; swerveTarget = heading; }
       if (px > W - 30) { px = W - 30; heading = Math.PI - heading; swerveTarget = heading; }
       if (py < 40) { py = 40; heading = -heading; swerveTarget = heading; }
       if (py > H - 50) { py = H - 50; heading = -heading; swerveTarget = heading; }
 
-      // Ghost chases with slight lag
-      const dx = px - gx, dy = py - gy;
-      const dist = Math.sqrt(dx * dx + dy * dy);
+      // Ghost chases
+      const gdx = px - gx, gdy = py - gy;
+      const dist = Math.sqrt(gdx * gdx + gdy * gdy);
       if (dist > 22) {
-        gx += (dx / dist) * 1.3;
-        gy += (dy / dist) * 1.3;
+        gx += (gdx / dist) * 1.3;
+        gy += (gdy / dist) * 1.3;
       }
 
       const mouthOpen = Math.sin(swerveTimer * 0.3) > 0;
       setPos({ x: gx, y: gy });
       setPacman({ x: px, y: py, mouthOpen, angle: heading });
+      setBeads(beadList.filter(b => b.alive).map(b => ({ id: b.id, x: b.x, y: b.y })));
       chaseFrameRef.current = requestAnimationFrame(chase);
     };
 
@@ -150,11 +165,12 @@ export function Ghost() {
   }, [mood]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const color = mood === 'happy' ? '#38b6ff' : '#e0943a';
+  const isChasing = mood === 'deepIdle';
 
   return (
     <>
       <div
-        className={`ghost-sprite${visible ? ' ghost-visible' : ''}`}
+        className={`ghost-sprite${visible || isChasing ? ' ghost-visible' : ''}`}
         style={{ left: pos.x, top: pos.y, color }}
       >
         <svg width="28" height="32" viewBox="0 0 24 28" fill="none">
@@ -168,12 +184,13 @@ export function Ghost() {
         {mood === 'idle' && (
           <span className="ghost-zzz">zzz</span>
         )}
-        {mood === 'deepIdle' && (
-          <span className="ghost-zzz ghost-zzz-deep">ZZZ</span>
-        )}
       </div>
 
-      {pacman && mood === 'deepIdle' && (
+      {beads.map((b) => (
+        <div key={b.id} className="ghost-bead" style={{ left: b.x, top: b.y }} />
+      ))}
+
+      {pacman && isChasing && (
         <div
           className="ghost-pacman"
           style={{
