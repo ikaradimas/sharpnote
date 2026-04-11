@@ -100,25 +100,36 @@ export function Ghost() {
     let frame = 0;
     let beadId = 0;
 
-    // Path: queue of waypoints Pac-Man will follow. Beads revealed gradually.
-    // Each: { id, x, y, visible, eaten }
     let path = [];
-    let revealIdx = 0;  // next bead to make visible
-    let targetIdx = 0;  // bead Pac-Man is heading toward
+    let revealIdx = 0;
+    let targetIdx = 0;
 
-    // Plan a path segment: random walk of 6-8 waypoints spaced ~28px apart
+    // Cardinal directions only: right, down, left, up
+    const DIRS = [
+      { dx: 1, dy: 0, angle: 0 },           // right
+      { dx: 0, dy: 1, angle: Math.PI / 2 },  // down
+      { dx: -1, dy: 0, angle: Math.PI },     // left
+      { dx: 0, dy: -1, angle: -Math.PI / 2 }, // up
+    ];
+    let lastDir = DIRS[Math.floor(Math.random() * 4)];
+
+    // Plan a segment: pick a cardinal direction, lay 4-7 beads in a straight line,
+    // then turn 90 degrees for the next segment
     const planSegment = (startX, startY) => {
-      let dir = Math.random() * Math.PI * 2;
+      // Pick a new direction (avoid reversing)
+      const candidates = DIRS.filter(d => d.dx !== -lastDir.dx || d.dy !== -lastDir.dy);
+      const dir = candidates[Math.floor(Math.random() * candidates.length)];
+      lastDir = dir;
+      const count = 4 + Math.floor(Math.random() * 4);
       let cx = startX, cy = startY;
-      const count = 6 + Math.floor(Math.random() * 3);
       for (let i = 0; i < count; i++) {
-        // Slight random turn each step
-        dir += randomBetween(-0.5, 0.5);
-        cx += Math.cos(dir) * 28;
-        cy += Math.sin(dir) * 28;
-        // Bounce off edges
-        if (cx < 40 || cx > W - 40) { dir = Math.PI - dir; cx = clampX(cx); }
-        if (cy < 50 || cy > H - 50) { dir = -dir; cy = clampY(cy); }
+        cx += dir.dx * 24;
+        cy += dir.dy * 24;
+        // Bounce: if we hit an edge, stop this segment early
+        if (cx < 40 || cx > W - 40 || cy < 50 || cy > H - 50) {
+          cx = clampX(cx); cy = clampY(cy);
+          break;
+        }
         path.push({ id: beadId++, x: cx, y: cy, visible: false, eaten: false });
       }
     };
@@ -144,39 +155,52 @@ export function Ghost() {
         planSegment(last?.x ?? px, last?.y ?? py);
       }
 
-      // Pac-Man steers toward current target bead
+      // Pac-Man steers toward current target bead in cardinal direction
       const target = path[targetIdx];
       if (target) {
         const dx = target.x - px, dy = target.y - py;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        const speed = 1.5;
+        const speed = 1.4;
         if (dist > 2) {
-          px += (dx / dist) * speed;
-          py += (dy / dist) * speed;
+          // Move along the dominant axis (cardinal snap)
+          if (Math.abs(dx) > Math.abs(dy)) {
+            px += Math.sign(dx) * speed;
+          } else {
+            py += Math.sign(dy) * speed;
+          }
         }
-        // Eat bead when centered on it
-        if (dist < 6) {
+        if (dist < 8) {
           target.eaten = true;
           targetIdx++;
         }
       }
 
-      // Trim old eaten beads to prevent unbounded growth
       while (path.length > 30 && path[0].eaten) {
         path.shift();
         targetIdx--;
         revealIdx--;
       }
 
-      // Ghost chases — very slow pursuit
+      // Ghost chases — keeps up but trails behind
       const gdx = px - gx, gdy = py - gy;
       const gDist = Math.sqrt(gdx * gdx + gdy * gdy);
-      if (gDist > 35) {
-        gx += (gdx / gDist) * 0.4;
-        gy += (gdy / gDist) * 0.4;
+      if (gDist > 25) {
+        const gSpeed = 1.2;
+        // Ghost also moves cardinally
+        if (Math.abs(gdx) > Math.abs(gdy)) {
+          gx += Math.sign(gdx) * gSpeed;
+        } else {
+          gy += Math.sign(gdy) * gSpeed;
+        }
       }
 
-      const heading = target ? Math.atan2(target.y - py, target.x - px) : 0;
+      // Pac-Man facing: snap to cardinal
+      let heading = 0;
+      if (target) {
+        const dx = target.x - px, dy = target.y - py;
+        if (Math.abs(dx) > Math.abs(dy)) heading = dx > 0 ? 0 : Math.PI;
+        else heading = dy > 0 ? Math.PI / 2 : -Math.PI / 2;
+      }
       const mouthOpen = Math.sin(frame * 0.3) > 0;
       setPos({ x: gx, y: gy });
       setPacman({ x: px, y: py, mouthOpen, angle: heading });
