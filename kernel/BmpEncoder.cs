@@ -14,6 +14,7 @@ public static class BmpEncoder
     public static byte[] Encode(byte[] rgb, int width, int height)
     {
         int rowBytes = ((width * 3 + 3) / 4) * 4; // rows padded to 4-byte boundary
+        int pad = rowBytes - width * 3;
         int dataSize = rowBytes * height;
         var bmp = new byte[54 + dataSize];
 
@@ -31,18 +32,23 @@ public static class BmpEncoder
         BitConverter.GetBytes(dataSize).CopyTo(bmp, 34);       // image size
 
         // Pixel data (BMP stores bottom-to-top, BGR order)
+        // Use Span for fast bulk processing
+        var src = rgb.AsSpan();
+        var dst = bmp.AsSpan(54);
+
         for (int y = 0; y < height; y++)
         {
-            int srcRow = (height - 1 - y) * width * 3; // flip vertically
-            int dstRow = 54 + y * rowBytes;
+            var srcRow = src.Slice((height - 1 - y) * width * 3, width * 3);
+            var dstRow = dst.Slice(y * rowBytes, width * 3);
+            // Swap RGB → BGR in bulk
             for (int x = 0; x < width; x++)
             {
-                int si = srcRow + x * 3;
-                int di = dstRow + x * 3;
-                bmp[di]     = rgb[si + 2]; // B
-                bmp[di + 1] = rgb[si + 1]; // G
-                bmp[di + 2] = rgb[si];     // R
+                int s = x * 3, d = x * 3;
+                dstRow[d]     = srcRow[s + 2]; // B
+                dstRow[d + 1] = srcRow[s + 1]; // G
+                dstRow[d + 2] = srcRow[s];     // R
             }
+            // Padding bytes are already zero from array init
         }
 
         return bmp;

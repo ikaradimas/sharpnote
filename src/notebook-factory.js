@@ -1918,7 +1918,7 @@ Each cell builds on the previous — run them in order.`),
 
     { ...cs(`Display.StatCard("Resolution", "400 × 300", color: "#569cd6", icon: "🖼");`), columns: 4 },
     { ...cs(`Display.StatCard("Spheres", "4 objects", color: "#4ec9b0", icon: "🔵");`), columns: 4 },
-    { ...cs(`Display.StatCard("Bounces", "3 max depth", color: "#e0a040", icon: "↩");`), columns: 4 },
+    { ...cs(`Display.StatCard("Bounces", "3 depth", color: "#e0a040", icon: "↩");`), columns: 4 },
     { ...cs(`Display.StatCard("Render", "ParallelRender", color: "#c084d0", icon: "⚡");`), columns: 4 },
 
     md('## 1. Vector Math'),
@@ -2045,23 +2045,19 @@ Each cell builds on the previous — run them in order.`),
     md('## 5. Render with Live Preview'),
 
     cs([
-      '// ── Render using Display.Canvas with live progressive preview ─────────────────',
+      '// ── Render using RenderRows with automatic live preview ──────────────────────',
       'var canvas = Display.Canvas(W, H, "Raytracer Output");',
       '',
-      'for (int y = 0; y < H; y++) {',
-      '    for (int x = 0; x < W; x++) {',
-      '        double u = (2.0 * (x + 0.5) / W - 1) * aspect * fov;',
-      '        double v = (1 - 2.0 * (y + 0.5) / H) * fov;',
-      '        var ray = new Ray(new Vec3(0, 0, 0), new Vec3(u, v, -1).Normalized);',
-      '        var color = Trace(ray, 5);',
-      '        canvas.SetPixel(x, y, color.X, color.Y, color.Z);',
-      '    }',
-      '    // Flush every 25 rows for a live progressive preview',
-      '    if (y % 25 == 0) canvas.Flush();',
-      '}',
-      'canvas.Flush();  // final flush',
+      '// RenderRows handles the loop + periodic Flush for you (every 50 rows)',
+      'canvas.RenderRows((x, y) => {',
+      '    double u = (2.0 * (x + 0.5) / W - 1) * aspect * fov;',
+      '    double v = (1 - 2.0 * (y + 0.5) / H) * fov;',
+      '    var ray = new Ray(new Vec3(0, 0, 0), new Vec3(u, v, -1).Normalized);',
+      '    var c = Trace(ray, 3);',
+      '    return (c.X, c.Y, c.Z);',
+      '}, flushEvery: 50);',
       '',
-      'Display.Html($"<p style=\'color:#5a7080;margin-top:8px\'>{W}×{H} — {spheres.Length} spheres, 5 bounces</p>");',
+      'Display.Html($"<p style=\'color:#5a7080;margin-top:8px\'>{W}×{H} — {spheres.Length} spheres, 3 bounces</p>");',
     ].join('\n')),
 
     md('## 6. Parallel Render + Shape Overlay'),
@@ -2074,7 +2070,7 @@ Each cell builds on the previous — run them in order.`),
       '    double u = (2.0 * (x + 0.5) / W - 1) * aspect * fov;',
       '    double v = (1 - 2.0 * (y + 0.5) / H) * fov;',
       '    var ray = new Ray(new Vec3(0, 0, 0), new Vec3(u, v, -1).Normalized);',
-      '    var c = Trace(ray, 5);',
+      '    var c = Trace(ray, 3);',
       '    return (c.X, c.Y, c.Z);',
       '});',
       '',
@@ -2115,7 +2111,8 @@ Then re-run cells 3 → 5 to see the result.
 | \`canvas.DrawLine(x0, y0, x1, y1, r, g, b)\` | Bresenham line drawing |
 | \`canvas.DrawRect / FillRect(x, y, w, h, ...)\` | Rectangle outline / fill |
 | \`canvas.DrawCircle / FillCircle(cx, cy, r, ...)\` | Circle outline / fill |
-| \`canvas.ParallelRender((x, y) => (r, g, b))\` | Render all pixels using all CPU cores |`),
+| \`canvas.ParallelRender((x, y) => (r, g, b))\` | Render all pixels using all CPU cores |
+| \`canvas.RenderRows((x, y) => (r, g, b), flushEvery)\` | Sequential render with auto-flush for live preview |`),
   ];
 }
 

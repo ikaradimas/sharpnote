@@ -323,6 +323,27 @@ public class CanvasHandle
         var uri = BmpEncoder.EncodeBase64DataUri(_pixels, _width, _height);
         _display.SendUpdate("image", new { src = uri, width = _width, height = _height }, _handleId);
     }
+
+    /// <summary>
+    /// Renders row-by-row with automatic flush every N rows for live preview.
+    /// Faster than manual SetPixel loops because it minimizes flush overhead.
+    /// </summary>
+    public void RenderRows(Func<int, int, (double r, double g, double b)> colorFn, int flushEvery = 50)
+    {
+        for (int y = 0; y < _height; y++)
+        {
+            for (int x = 0; x < _width; x++)
+            {
+                var (cr, cg, cb) = colorFn(x, y);
+                int i = (y * _width + x) * 3;
+                _pixels[i]     = (byte)(Math.Clamp(cr, 0, 1) * 255);
+                _pixels[i + 1] = (byte)(Math.Clamp(cg, 0, 1) * 255);
+                _pixels[i + 2] = (byte)(Math.Clamp(cb, 0, 1) * 255);
+            }
+            if (flushEvery > 0 && y % flushEvery == 0) Flush();
+        }
+        Flush();
+    }
 }
 
 // ── DisplayHelper ─────────────────────────────────────────────────────────────
