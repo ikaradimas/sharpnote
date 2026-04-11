@@ -71,9 +71,10 @@ partial class Program
         var db      = new DbHelper(realStdout);
         var data    = new DataHelper();
         var docker  = new DockerHelper(realStdout);
+        var mock    = new MockHelper(realStdout);
         var util    = new UtilHelper(realStdout);
         UtilContext.Current = util;
-        var globals = new ScriptGlobals { Display = display, Panels = panels, Db = db, Data = data, Docker = docker };
+        var globals = new ScriptGlobals { Display = display, Panels = panels, Db = db, Data = data, Docker = docker, Mock = mock };
 
         var options = ScriptOptions.Default
             .AddImports(
@@ -209,6 +210,15 @@ partial class Program
                                 var confirmed = root.TryGetProperty("confirmed", out var confProp)
                                     && confProp.GetBoolean();
                                 util.ReceiveConfirmResponse(requestId, confirmed);
+                            }
+                            else if (msgType == "mock_response"
+                                && root.TryGetProperty("requestId", out var mRidProp))
+                            {
+                                var requestId = mRidProp.GetString()!;
+                                var data = root.TryGetProperty("data", out var dataProp)
+                                    ? dataProp.Clone()
+                                    : default;
+                                mock.ReceiveResponse(requestId, data);
                             }
                             else if (msgType == "prompt_response"
                                 && root.TryGetProperty("requestId", out var pRidProp))

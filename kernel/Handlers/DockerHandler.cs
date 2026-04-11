@@ -11,6 +11,11 @@ partial class Program
 {
     private static readonly HashSet<string> _trackedContainers = new();
 
+    internal static HashSet<string> GetTrackedContainers()
+    {
+        lock (_trackedContainers) { return new HashSet<string>(_trackedContainers); }
+    }
+
     internal static async Task HandleExecuteDocker(JsonElement msg, TextWriter realStdout)
     {
         var cellId        = msg.TryGetProperty("id",            out var p) ? p.GetString() : null;

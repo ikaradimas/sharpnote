@@ -109,6 +109,7 @@ partial class Program
         _execCts = new CancellationTokenSource();
         var execToken = _execCts.Token;
         UtilContext.Current.SetCancellationToken(execToken);
+        globals.Mock.SetCancellationToken(execToken);
         var interrupted = false;
         var isCompilationError = false;
 

@@ -48,6 +48,27 @@ public class DockerHelper
     /// <summary>Remove a container (force).</summary>
     public void Remove(string nameOrId) => RunDocker($"rm -f {nameOrId}");
 
+    /// <summary>Stop and remove a container, ignoring errors.</summary>
+    public void StopAndRemove(string nameOrId)
+    {
+        try { Stop(nameOrId); } catch { }
+        try { Remove(nameOrId); } catch { }
+    }
+
+    /// <summary>Stop and remove all containers tracked by Docker cells in this session.</summary>
+    public int StopAllTracked()
+    {
+        // Delegate to the handler's tracked set
+        var snapshot = Program.GetTrackedContainers();
+        int count = 0;
+        foreach (var id in snapshot)
+        {
+            try { StopAndRemove(id); count++; }
+            catch { }
+        }
+        return count;
+    }
+
     /// <summary>Execute a command inside a running container.</summary>
     public string Exec(string nameOrId, string command)
         => RunDocker($"exec {nameOrId} {command}");
