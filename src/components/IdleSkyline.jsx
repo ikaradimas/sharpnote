@@ -109,7 +109,22 @@ export function IdleSkyline() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const resize = () => { canvas.width = window.innerWidth; canvas.height = 160; };
+    const resize = () => {
+      canvas.width = window.innerWidth; canvas.height = 160;
+      const s = stateRef.current;
+      if (s.active && !s.fadingOut) {
+        // Regenerate all layers for the new width
+        const W = canvas.width;
+        s.layers = s.layers.map((l, i) => ({
+          ...l,
+          buildings: generateBuildings(W, i),
+        }));
+        // If still building, reset cursor so it sweeps the new width
+        if (s.buildCursor < W + 40 && s.currentLayer < MAX_LAYERS) {
+          s.buildCursor = 0;
+        }
+      }
+    };
     resize();
     window.addEventListener('resize', resize);
 
