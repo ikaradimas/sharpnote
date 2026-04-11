@@ -54,6 +54,12 @@ export function StatusBar({ notebooks, activeId }) {
 
   return (
     <div className="status-bar">
+      <span className="status-fish" aria-hidden="true">
+        <span className="fish-body">
+          <span className="fish-eye" />
+          <span className="fish-tail" />
+        </span>
+      </span>
       <Cpu size={10} className="status-icon" />
       <span className="status-label">MEM</span>
       <MemorySparkline history={history} />
