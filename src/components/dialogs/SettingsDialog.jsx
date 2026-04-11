@@ -11,7 +11,7 @@ const PANEL_FONT_SIZE_DEFAULT = 11.5;
 
 // ── Appearance section ────────────────────────────────────────────────────────
 
-function AppearanceSection({ theme, fontSize, onThemeChange, onFontSizeChange, panelFontSize, onPanelFontSizeChange, lineAltEnabled, onLineAltChange, lintEnabled, onLintEnabledChange, strongCuesEnabled, onStrongCuesChange, formatOnSave, onFormatOnSaveChange, showFish, onShowFishChange, showMinigame, onShowMinigameChange, tablePageSize = 10, onTablePageSizeChange }) {
+function AppearanceSection({ theme, fontSize, onThemeChange, onFontSizeChange, panelFontSize, onPanelFontSizeChange, lineAltEnabled, onLineAltChange, lintEnabled, onLintEnabledChange, strongCuesEnabled, onStrongCuesChange, formatOnSave, onFormatOnSaveChange, showFish, onShowFishChange, showMinigame, onShowMinigameChange, showGhost, onShowGhostChange, tablePageSize = 10, onTablePageSizeChange }) {
   return (
     <div className="settings-section">
       <div className="settings-group">
@@ -116,6 +116,14 @@ function AppearanceSection({ theme, fontSize, onThemeChange, onFontSizeChange, p
             onChange={(e) => onShowMinigameChange(e.target.checked)}
           />
           <span>Empty notebook minigame (breakout game when no cells exist)</span>
+        </label>
+        <label className="settings-toggle-row">
+          <input
+            type="checkbox"
+            checked={!!showGhost}
+            onChange={(e) => onShowGhostChange(e.target.checked)}
+          />
+          <span>Ghost companion (friendly ghost that appears near your cursor)</span>
         </label>
       </div>
 
@@ -435,6 +443,8 @@ export function SettingsDialog({
   onShowFishChange,
   showMinigame,
   onShowMinigameChange,
+  showGhost,
+  onShowGhostChange,
   tablePageSize = 10,
   onTablePageSizeChange,
   customShortcuts,
@@ -552,6 +562,8 @@ export function SettingsDialog({
                 onShowFishChange={onShowFishChange}
                 showMinigame={showMinigame}
                 onShowMinigameChange={onShowMinigameChange}
+                showGhost={showGhost}
+                onShowGhostChange={onShowGhostChange}
                 tablePageSize={tablePageSize}
                 onTablePageSizeChange={onTablePageSizeChange}
               />

@@ -2,6 +2,11 @@
 
 All notable changes to SharpNote, consolidated by minor version. Complexity: ⚙ fix, ⚙⚙ feature, ⚙⚙⚙ major.
 
+## 1.84 ⚙⚙
+- Ghost companion: friendly ghost that flickers near cursor, mood-reactive
+- Cyan when active, orange when idle, "zzz" balloon when idle, Pac-Man chase when deeply idle
+- Toggle in Settings → Fun
+
 ## 1.83 ⚙⚙
 - In-app changelog panel (Help → Changelog) with search, sidebar index, and complexity gears
 - Major releases highlighted with gold accent; CHANGELOG.md maintained alongside

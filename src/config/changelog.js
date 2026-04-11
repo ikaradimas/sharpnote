@@ -4,6 +4,11 @@
 // gears: 1 = minor fix/tweak, 2 = notable feature, 3 = major feature/architecture
 
 export const CHANGELOG = [
+  { version: '1.84', date: '2026-04-11', title: 'Ghost companion', gears: 2, items: [
+    'Friendly ghost that flickers near your cursor — cyan when active, orange when idle',
+    'Shows "zzz" speech balloon when idle; chases Pac-Man when deeply idle',
+    'Toggle in Settings → Appearance → Fun (on by default)',
+  ]},
   { version: '1.83', date: '2026-04-11', title: 'Changelog tab', gears: 2, items: [
     'In-app changelog panel (Help → Changelog) with search, sidebar index, and complexity gears',
     'Major releases (3 gears) highlighted with gold accent',
