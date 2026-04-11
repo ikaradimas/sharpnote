@@ -104,6 +104,11 @@ export function IdleSkyline() {
   }, []);
 
   useEffect(() => {
+    window.addEventListener('click', handleDismiss);
+    return () => window.removeEventListener('click', handleDismiss);
+  }, [handleDismiss]);
+
+  useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -329,5 +334,5 @@ export function IdleSkyline() {
     };
   }, []);
 
-  return <canvas ref={canvasRef} className={`idle-skyline${isActive ? ' idle-skyline-active' : ''}`} onClick={handleDismiss} width={800} height={160} />;
+  return <canvas ref={canvasRef} className={`idle-skyline${isActive ? ' idle-skyline-active' : ''}`} width={800} height={160} />;
 }
