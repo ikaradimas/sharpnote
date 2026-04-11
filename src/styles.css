@@ -1314,6 +1314,45 @@ body {
   line-height: 1.7;
 }
 
+/* ── Breakout minigame ──────────────────────────────────────────────────── */
+.pong-game {
+  margin-top: 80px;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+}
+.pong-score {
+  font-family: var(--font-code); font-size: 11px; color: var(--text-muted);
+  letter-spacing: 0.06em;
+}
+.pong-arena {
+  position: relative;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  overflow: hidden;
+  background: #0a0a10;
+  box-shadow: 0 0 20px rgba(46,196,182,0.06);
+}
+.pong-canvas { display: block; cursor: none; }
+.pong-overlay {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+  background: rgba(10,10,16,0.85);
+}
+.pong-message {
+  font-family: var(--font-heading); font-size: 18px; color: #2ec4b6;
+  letter-spacing: 0.08em;
+}
+.pong-restart {
+  font-family: var(--font-ui); font-size: 11px;
+  padding: 4px 14px; border-radius: 4px; cursor: pointer;
+  background: #2ec4b6; color: #0a0a10; border: none; font-weight: 600;
+  transition: background 0.15s;
+}
+.pong-restart:hover { background: #3dd8ca; }
+.pong-hint {
+  font-family: var(--font-ui); font-size: 10px; color: var(--text-faint);
+  letter-spacing: 0.04em;
+}
+
 /* ── CodeMirror lint + autocomplete theming ─────────────────────────────── */
 
 .cm-lintRange-error {

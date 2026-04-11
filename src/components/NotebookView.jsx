@@ -12,6 +12,7 @@ import { CheckCell } from './editor/CheckCell.jsx';
 import { DecisionCell } from './editor/DecisionCell.jsx';
 import { AddBar } from './editor/AddBar.jsx';
 import { FindBar } from './FindBar.jsx';
+import { PongGame } from './PongGame.jsx';
 
 export function NotebookView({
   nb,
@@ -242,6 +243,7 @@ export function NotebookView({
           <div className="empty-notebook">
             <h2>Empty Notebook</h2>
             <p>Add a markdown or code cell to get started.</p>
+            <PongGame />
           </div>
         )}
 
