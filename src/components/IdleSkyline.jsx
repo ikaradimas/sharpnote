@@ -4,18 +4,24 @@ const IDLE_START = 20_000;
 const FADE_MS = 3000;
 const BUILD_SPEED = 0.5;
 const LAYER_COLORS = ['#141418', '#1c1c24', '#262632'];
-const LAYER_OFFSETS = [0, 50, 100]; // each layer rises higher
+const LAYER_OFFSETS = [0, 14, 28]; // each back-layer peeks slightly above the one in front
 const SUN_COLOR = '#ff8844';
 const SUN_GLOW = '#ffd080';
 const MAX_LAYERS = 3;
 const MAX_SUN_R = 28;
 
-function generateBuildings(width) {
+// layerIdx 0 = front (tallest), 2 = back (shortest, peeks above)
+function generateBuildings(width, layerIdx = 0) {
   const buildings = [];
   let x = -10;
+  // Back layers: shorter buildings, narrower
+  const hMin = layerIdx === 0 ? 18 : layerIdx === 1 ? 14 : 10;
+  const hMax = layerIdx === 0 ? 60 : layerIdx === 1 ? 40 : 25;
+  const wMin = layerIdx === 0 ? 14 : 10;
+  const wMax = layerIdx === 0 ? 30 : layerIdx === 1 ? 24 : 18;
   while (x < width + 30) {
-    const w = 14 + Math.floor(Math.random() * 30);
-    const h = 18 + Math.floor(Math.random() * 60);
+    const w = wMin + Math.floor(Math.random() * (wMax - wMin));
+    const h = hMin + Math.floor(Math.random() * (hMax - hMin));
     const gap = 3 + Math.floor(Math.random() * 8);
     buildings.push({ x, w, h, windows: makeWindows(w, h), antenna: Math.random() > 0.75 ? 3 + Math.floor(Math.random() * 10) : 0 });
     x += w + gap;
@@ -82,10 +88,10 @@ export function IdleSkyline() {
         s.opacity = 1;
         // Layer 0: right-to-left, layer 1: left-to-right, layer 2: right-to-left
         s.layers = [{
-          buildings: generateBuildings(W),
+          buildings: generateBuildings(W, 0),
           color: LAYER_COLORS[0],
           offset: LAYER_OFFSETS[0],
-          direction: -1, // right to left
+          direction: -1,
         }];
         s.currentLayer = 0;
         s.buildCursor = 0;
@@ -126,7 +132,7 @@ export function IdleSkyline() {
             s.buildCursor = 0;
             const dir = s.currentLayer % 2 === 0 ? -1 : 1; // alternate direction
             s.layers.push({
-              buildings: generateBuildings(W),
+              buildings: generateBuildings(W, s.currentLayer),
               color: LAYER_COLORS[s.currentLayer],
               offset: LAYER_OFFSETS[s.currentLayer],
               direction: dir,
@@ -154,8 +160,8 @@ export function IdleSkyline() {
 
       const sunInfluence = s.sunPhase ? Math.min(1, s.sunY / MAX_SUN_R) : 0;
 
-      // Draw layers back-to-front (index 0 = back)
-      for (let li = 0; li < s.layers.length; li++) {
+      // Draw back-to-front: highest index (farthest) first, layer 0 (foreground) last
+      for (let li = s.layers.length - 1; li >= 0; li--) {
         const l = s.layers[li];
         const isCurrent = li === s.currentLayer;
         const cursor = isCurrent ? s.buildCursor : W + 40; // past layers fully revealed
@@ -177,13 +183,14 @@ export function IdleSkyline() {
           if (!revealed) continue;
 
           const bx = b.x;
-          const by = H - l.offset - b.h;
+          const baseY = H - l.offset; // bottom of this layer
+          const by = baseY - b.h;     // top of building
 
           ctx.fillStyle = l.color;
-          ctx.fillRect(bx, by, b.w, b.h + l.offset); // extend down to bottom
+          ctx.fillRect(bx, by, b.w, b.h);
           if (sunInfluence > 0) {
             ctx.fillStyle = `rgba(255, 180, 80, ${sunInfluence * (0.12 + li * 0.08)})`;
-            ctx.fillRect(bx, by, b.w, b.h + l.offset);
+            ctx.fillRect(bx, by, b.w, b.h);
           }
 
           if (b.antenna > 0) {
