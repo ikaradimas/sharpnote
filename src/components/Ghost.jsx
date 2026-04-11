@@ -74,35 +74,53 @@ export function Ghost() {
     };
   }, []);
 
-  // Deep idle pacman chase
-  const [pacman, setPacman] = useState(null); // { x, y, mouthOpen }
+  // Deep idle: Pac-Man flees, ghost chases
+  const [pacman, setPacman] = useState(null);
   useEffect(() => {
     if (mood !== 'deepIdle') {
       setPacman(null);
       if (chaseFrameRef.current) cancelAnimationFrame(chaseFrameRef.current);
       return;
     }
-    // Init pacman near ghost
-    const gx = pos.x, gy = pos.y;
-    pacmanRef.current = { x: gx + 80, y: gy, angle: Math.PI };
+
+    // Start Pac-Man ahead of the ghost, both near last cursor position
+    const m = mouseRef.current;
+    const startX = Math.max(40, Math.min(window.innerWidth - 40, m.x));
+    const startY = Math.max(40, Math.min(window.innerHeight - 60, m.y));
+    let px = startX + 70, py = startY;
+    let gx = startX, gy = startY;
     let frame = 0;
+
+    setPos({ x: gx, y: gy });
+    setVisible(true);
 
     const chase = () => {
       frame++;
-      const p = pacmanRef.current;
-      // Pacman wanders in a circle near its start
-      const cx = gx + 60, cy = gy;
-      const r = 50;
-      p.x = cx + Math.cos(frame * 0.02) * r;
-      p.y = cy + Math.sin(frame * 0.02) * r;
-      p.angle = Math.atan2(Math.sin((frame + 1) * 0.02) * r - Math.sin(frame * 0.02) * r,
-                           Math.cos((frame + 1) * 0.02) * r - Math.cos(frame * 0.02) * r);
+      // Pac-Man wanders in a wobbly path
+      px += Math.cos(frame * 0.025) * 1.8;
+      py += Math.sin(frame * 0.018) * 1.4;
+      // Bounce off screen edges
+      if (px < 30 || px > window.innerWidth - 30) px = Math.max(30, Math.min(window.innerWidth - 30, px));
+      if (py < 30 || py > window.innerHeight - 50) py = Math.max(30, Math.min(window.innerHeight - 50, py));
+
+      // Ghost chases Pac-Man with a slight lag
+      const dx = px - gx, dy = py - gy;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist > 20) {
+        const speed = 1.2;
+        gx += (dx / dist) * speed;
+        gy += (dy / dist) * speed;
+      }
+
+      const angle = Math.atan2(py - gy, px - gx);
       const mouthOpen = Math.sin(frame * 0.3) > 0;
-      setPacman({ x: p.x, y: p.y, mouthOpen, angle: p.angle });
+
+      setPos({ x: gx, y: gy });
+      setPacman({ x: px, y: py, mouthOpen, angle });
       chaseFrameRef.current = requestAnimationFrame(chase);
     };
+
     chaseFrameRef.current = requestAnimationFrame(chase);
-    setVisible(true);
     return () => {
       if (chaseFrameRef.current) cancelAnimationFrame(chaseFrameRef.current);
     };
