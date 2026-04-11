@@ -1,13 +1,15 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useCallback, useState } from 'react';
 
 const IDLE_START = 20_000;
 const FADE_MS = 3000;
-const BUILD_SPEED = 0.5;
+const BUILD_SPEED = 0.75;   // 50% faster than 0.5
 const LAYER_COLORS = ['#141418', '#1c1c24', '#262632'];
 const LAYER_OFFSETS = [0, 30, 55];
 const MAX_LAYERS = 3;
 const BODY_R = 10;
-const ARC_FRAMES = 1200;   // frames for one full arc across the sky
+const ARC_FRAMES = 1200;
+const SCREEN_COLORS = ['#e04060', '#40a0e0', '#40c080', '#e0a030', '#c060d0'];
+const BILLBOARD_TEXTS = ['NEON', 'CYBER', 'PIXEL', 'DATA', 'FLUX', 'SYNC', 'GRID', 'NOVA'];
 
 function generateBuildings(width, layerIdx = 0) {
   const buildings = [];
@@ -20,7 +22,20 @@ function generateBuildings(width, layerIdx = 0) {
     const w = wMin + Math.floor(Math.random() * (wMax - wMin));
     const h = hMin + Math.floor(Math.random() * (hMax - hMin));
     const gap = 3 + Math.floor(Math.random() * 8);
-    buildings.push({ x, w, h, windows: makeWindows(w, h), antenna: Math.random() > 0.75 ? 3 + Math.floor(Math.random() * 10) : 0 });
+    // 30% more antennas (0.75→0.55 threshold)
+    const antenna = Math.random() > 0.55 ? 3 + Math.floor(Math.random() * 12) : 0;
+    // Front layer: billboards on wide+tall buildings, screens on some
+    let billboard = null, screen = null;
+    if (layerIdx === 0 && w > 18 && h > 35) {
+      if (Math.random() < 0.12) {
+        billboard = { text: BILLBOARD_TEXTS[Math.floor(Math.random() * BILLBOARD_TEXTS.length)], y: 8 + Math.floor(Math.random() * 10) };
+      } else if (Math.random() < 0.10) {
+        screen = { color: SCREEN_COLORS[Math.floor(Math.random() * SCREEN_COLORS.length)], y: 6 + Math.floor(Math.random() * 8), h: 8 + Math.floor(Math.random() * 6) };
+      }
+    }
+    // Front layer: column lights on some buildings
+    const columnLight = layerIdx === 0 && Math.random() < 0.25;
+    buildings.push({ x, w, h, windows: makeWindows(w, h), antenna, billboard, screen, columnLight });
     x += w + gap;
   }
   return buildings;
@@ -41,11 +56,11 @@ export function IdleSkyline() {
   const canvasRef = useRef(null);
   const animRef = useRef(null);
   const lastActivityRef = useRef(Date.now());
+  const [isActive, setIsActive] = useState(false);
   const stateRef = useRef({
     active: false, opacity: 1,
     layers: [], currentLayer: 0, buildCursor: 0,
-    skyPhase: false,       // true once all layers built
-    cycleFrame: 0,         // continuous frame counter for celestial arcs
+    skyPhase: false, cycleFrame: 0,
     fadingOut: false, fadeStart: 0,
   });
 
@@ -59,6 +74,15 @@ export function IdleSkyline() {
       window.removeEventListener('keydown', onActivity);
       window.removeEventListener('mousedown', onActivity);
     };
+  }, []);
+
+  // Click anywhere to dismiss
+  const handleDismiss = useCallback(() => {
+    const s = stateRef.current;
+    if (s.active && !s.fadingOut) {
+      s.fadingOut = true;
+      s.fadeStart = Date.now();
+    }
   }, []);
 
   useEffect(() => {
@@ -81,10 +105,7 @@ export function IdleSkyline() {
         s.layers = [{ buildings: generateBuildings(W, 0), color: LAYER_COLORS[0], offset: LAYER_OFFSETS[0], direction: -1 }];
         s.currentLayer = 0; s.buildCursor = 0;
         s.skyPhase = false; s.cycleFrame = 0;
-      }
-
-      if (idle < IDLE_START && s.active && !s.fadingOut) {
-        s.fadingOut = true; s.fadeStart = Date.now();
+        setIsActive(true);
       }
 
       if (s.fadingOut) {
@@ -92,6 +113,7 @@ export function IdleSkyline() {
         if (s.opacity <= 0) {
           s.active = false; s.fadingOut = false; s.opacity = 1;
           s.layers = []; s.skyPhase = false;
+          setIsActive(false);
         }
       }
 
@@ -100,7 +122,6 @@ export function IdleSkyline() {
 
       ctx.globalAlpha = s.fadingOut ? s.opacity : 1;
 
-      // Build layers
       if (s.active && !s.fadingOut) {
         s.buildCursor += BUILD_SPEED;
         if (s.buildCursor >= W + 40) {
@@ -110,88 +131,51 @@ export function IdleSkyline() {
             const dir = s.currentLayer % 2 === 0 ? -1 : 1;
             s.layers.push({ buildings: generateBuildings(W, s.currentLayer), color: LAYER_COLORS[s.currentLayer], offset: LAYER_OFFSETS[s.currentLayer], direction: dir });
           } else if (!s.skyPhase) {
-            s.skyPhase = true;
-            s.cycleFrame = 0;
+            s.skyPhase = true; s.cycleFrame = 0;
           }
         }
       }
 
-      // Celestial cycle: moon (right→left) then sun (left→right), repeating
-      // Each body does one arc over ARC_FRAMES. Full cycle = 2 * ARC_FRAMES.
+      // Celestial cycle
       let bodyX = -100, bodyY = -100, isSun = false, arcT = 0;
       if (s.skyPhase) {
         s.cycleFrame++;
         const fullCycle = ARC_FRAMES * 2;
         const phase = s.cycleFrame % fullCycle;
         isSun = phase >= ARC_FRAMES;
-        const localFrame = phase % ARC_FRAMES;
-        arcT = localFrame / ARC_FRAMES; // 0→1
-
-        // Arc: parabolic path. t=0 at entry, t=1 at exit
-        // Moon: enters right, exits left
-        // Sun: enters left, exits right
-        const skyTop = H - LAYER_OFFSETS[MAX_LAYERS - 1] - 50; // peak height
-        const skyBase = H - LAYER_OFFSETS[MAX_LAYERS - 1] - 5; // horizon
-        const arcHeight = skyBase - skyTop;
-        bodyY = skyBase - Math.sin(arcT * Math.PI) * arcHeight;
-
-        if (isSun) {
-          bodyX = -20 + (W + 40) * arcT;  // left to right
-        } else {
-          bodyX = W + 20 - (W + 40) * arcT; // right to left
-        }
+        arcT = (phase % ARC_FRAMES) / ARC_FRAMES;
+        const skyTop = H - LAYER_OFFSETS[MAX_LAYERS - 1] - 50;
+        const skyBase = H - LAYER_OFFSETS[MAX_LAYERS - 1] - 5;
+        bodyY = skyBase - Math.sin(arcT * Math.PI) * (skyBase - skyTop);
+        bodyX = isSun ? -20 + (W + 40) * arcT : W + 20 - (W + 40) * arcT;
       }
+      const bodyInfluence = s.skyPhase ? Math.sin(arcT * Math.PI) : 0;
 
-      const bodyInfluence = s.skyPhase ? Math.sin(arcT * Math.PI) : 0; // strongest at zenith
-
-      // Draw celestial body behind buildings
+      // Draw celestial body
       if (s.skyPhase && bodyInfluence > 0.01) {
         const r = BODY_R;
         const pulse = 1 + Math.sin(s.cycleFrame * 0.03) * 0.1;
-
         if (isSun) {
-          // Sun: warm glow
           const glareR = r * 3 * pulse;
           const grad = ctx.createRadialGradient(bodyX, bodyY, 0, bodyX, bodyY, glareR);
-          grad.addColorStop(0, `rgba(255, 136, 68, ${0.35 * pulse})`);
-          grad.addColorStop(0.3, `rgba(255, 208, 128, ${0.15 * pulse})`);
-          grad.addColorStop(1, 'transparent');
-          ctx.fillStyle = grad;
-          ctx.beginPath(); ctx.arc(bodyX, bodyY, glareR, 0, Math.PI * 2); ctx.fill();
-          // Rays
+          grad.addColorStop(0, `rgba(255,136,68,${0.35*pulse})`); grad.addColorStop(0.3, `rgba(255,208,128,${0.15*pulse})`); grad.addColorStop(1, 'transparent');
+          ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(bodyX, bodyY, glareR, 0, Math.PI*2); ctx.fill();
           ctx.save(); ctx.translate(bodyX, bodyY); ctx.rotate(s.cycleFrame * 0.004);
-          for (let i = 0; i < 8; i++) {
-            const a = (i / 8) * Math.PI * 2;
-            const rl = r * (2 + Math.sin(s.cycleFrame * 0.05 + i) * 0.6);
-            ctx.strokeStyle = `rgba(255, 200, 100, ${0.06 * pulse})`;
-            ctx.lineWidth = 1.5;
-            ctx.beginPath(); ctx.moveTo(Math.cos(a) * r * 0.8, Math.sin(a) * r * 0.8);
-            ctx.lineTo(Math.cos(a) * rl, Math.sin(a) * rl); ctx.stroke();
-          }
+          for (let i = 0; i < 8; i++) { const a=(i/8)*Math.PI*2, rl=r*(2+Math.sin(s.cycleFrame*0.05+i)*0.6); ctx.strokeStyle=`rgba(255,200,100,${0.06*pulse})`; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(Math.cos(a)*r*0.8,Math.sin(a)*r*0.8); ctx.lineTo(Math.cos(a)*rl,Math.sin(a)*rl); ctx.stroke(); }
           ctx.restore();
-          ctx.fillStyle = '#ff8844';
-          ctx.beginPath(); ctx.arc(bodyX, bodyY, r, 0, Math.PI * 2); ctx.fill();
-          ctx.fillStyle = '#ffd080';
-          ctx.beginPath(); ctx.arc(bodyX, bodyY, r * 0.45, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle='#ff8844'; ctx.beginPath(); ctx.arc(bodyX,bodyY,r,0,Math.PI*2); ctx.fill();
+          ctx.fillStyle='#ffd080'; ctx.beginPath(); ctx.arc(bodyX,bodyY,r*0.45,0,Math.PI*2); ctx.fill();
         } else {
-          // Moon: cool glow
           const glareR = r * 2.5 * pulse;
-          const grad = ctx.createRadialGradient(bodyX, bodyY, 0, bodyX, bodyY, glareR);
-          grad.addColorStop(0, `rgba(180, 200, 240, ${0.25 * pulse})`);
-          grad.addColorStop(0.4, `rgba(140, 160, 200, ${0.1 * pulse})`);
-          grad.addColorStop(1, 'transparent');
-          ctx.fillStyle = grad;
-          ctx.beginPath(); ctx.arc(bodyX, bodyY, glareR, 0, Math.PI * 2); ctx.fill();
-          // Moon disc
-          ctx.fillStyle = '#c8d4e8';
-          ctx.beginPath(); ctx.arc(bodyX, bodyY, r, 0, Math.PI * 2); ctx.fill();
-          // Crescent shadow
-          ctx.fillStyle = '#1c1c24';
-          ctx.beginPath(); ctx.arc(bodyX + 3, bodyY - 1, r * 0.8, 0, Math.PI * 2); ctx.fill();
+          const grad = ctx.createRadialGradient(bodyX,bodyY,0,bodyX,bodyY,glareR);
+          grad.addColorStop(0,`rgba(180,200,240,${0.25*pulse})`); grad.addColorStop(0.4,`rgba(140,160,200,${0.1*pulse})`); grad.addColorStop(1,'transparent');
+          ctx.fillStyle=grad; ctx.beginPath(); ctx.arc(bodyX,bodyY,glareR,0,Math.PI*2); ctx.fill();
+          ctx.fillStyle='#c8d4e8'; ctx.beginPath(); ctx.arc(bodyX,bodyY,r,0,Math.PI*2); ctx.fill();
+          ctx.fillStyle='#1c1c24'; ctx.beginPath(); ctx.arc(bodyX+3,bodyY-1,r*0.8,0,Math.PI*2); ctx.fill();
         }
       }
 
-      // Draw layers
+      // Draw layers back-to-front
       for (let li = s.layers.length - 1; li >= 0; li--) {
         const l = s.layers[li];
         const isCurrent = li === s.currentLayer;
@@ -204,48 +188,89 @@ export function IdleSkyline() {
           if (!isCurrent) revealed = true;
           if (!revealed) continue;
 
-          const bx = b.x;
-          const fullH = b.h + l.offset;
-          const by = H - fullH;
+          const bx = b.x, fullH = b.h + l.offset, by = H - fullH;
 
+          // Building body
           ctx.fillStyle = l.color;
           ctx.fillRect(bx, by, b.w, fullH);
 
-          // Celestial body tint
+          // Celestial tint
           if (bodyInfluence > 0.05) {
-            const distFromBody = Math.abs(bx + b.w / 2 - bodyX) / W;
-            const proximity = Math.max(0, 1 - distFromBody * 2.5);
-            const strength = bodyInfluence * (0.08 + li * 0.04) * proximity;
-            if (isSun) {
-              ctx.fillStyle = `rgba(255, 180, 80, ${strength})`;
-            } else {
-              ctx.fillStyle = `rgba(140, 170, 220, ${strength * 0.7})`;
-            }
+            const dist = Math.abs(bx + b.w/2 - bodyX) / W;
+            const prox = Math.max(0, 1 - dist * 2.5);
+            const str = bodyInfluence * (0.08 + li * 0.04) * prox;
+            ctx.fillStyle = isSun ? `rgba(255,180,80,${str})` : `rgba(140,170,220,${str*0.7})`;
             ctx.fillRect(bx, by, b.w, fullH);
           }
 
+          // Antenna
           if (b.antenna > 0) {
-            ctx.strokeStyle = 'rgba(80, 80, 100, 0.5)';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(bx + b.w / 2, by);
-            ctx.lineTo(bx + b.w / 2, by - b.antenna);
-            ctx.stroke();
+            ctx.strokeStyle = 'rgba(80,80,100,0.5)'; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(bx+b.w/2, by); ctx.lineTo(bx+b.w/2, by-b.antenna); ctx.stroke();
+            // Blinking light on top
+            if (Math.sin(s.cycleFrame * 0.08 + bx) > 0.3) {
+              ctx.fillStyle = 'rgba(255,60,60,0.8)';
+              ctx.beginPath(); ctx.arc(bx+b.w/2, by-b.antenna, 1.2, 0, Math.PI*2); ctx.fill();
+            }
           }
 
+          // Billboard
+          if (b.billboard && li === 0) {
+            const bb = b.billboard;
+            const bbY = by + bb.y;
+            // Neon sign above building
+            ctx.fillStyle = '#0a0a10';
+            ctx.fillRect(bx+1, bbY, b.w-2, 8);
+            const hue = (s.cycleFrame * 0.5 + bx) % 360;
+            ctx.fillStyle = `hsl(${hue}, 80%, 60%)`;
+            ctx.font = 'bold 6px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText(bb.text, bx + b.w/2, bbY + 6);
+            ctx.textAlign = 'start';
+          }
+
+          // Giant screen (animated color cycling)
+          if (b.screen && li === 0) {
+            const sc = b.screen;
+            const scY = by + sc.y;
+            const flicker = Math.sin(s.cycleFrame * 0.1 + bx * 0.3);
+            const colorIdx = Math.floor(((s.cycleFrame * 0.02 + bx) % SCREEN_COLORS.length + SCREEN_COLORS.length) % SCREEN_COLORS.length);
+            ctx.fillStyle = SCREEN_COLORS[colorIdx];
+            ctx.globalAlpha *= (0.4 + flicker * 0.15);
+            ctx.fillRect(bx+2, scY, b.w-4, sc.h);
+            // Scan line
+            const scanY = scY + ((s.cycleFrame * 0.5 + bx) % sc.h);
+            ctx.fillStyle = 'rgba(255,255,255,0.15)';
+            ctx.fillRect(bx+2, scanY, b.w-4, 1);
+            ctx.globalAlpha = s.fadingOut ? s.opacity : 1;
+          }
+
+          // Column lights (front row only)
+          if (b.columnLight && li === 0) {
+            const lightColor = bodyInfluence > 0.3 && isSun ? 'rgba(255,220,160,0.3)' : 'rgba(160,180,220,0.2)';
+            ctx.fillStyle = lightColor;
+            // Two lights at base of building
+            ctx.beginPath(); ctx.arc(bx+2, H-1, 2, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(bx+b.w-2, H-1, 2, 0, Math.PI*2); ctx.fill();
+            // Upward glow cone
+            const grad = ctx.createLinearGradient(bx, H, bx, by+fullH*0.4);
+            grad.addColorStop(0, lightColor);
+            grad.addColorStop(1, 'transparent');
+            ctx.fillStyle = grad;
+            ctx.fillRect(bx, by+fullH*0.4, b.w, fullH*0.6);
+          }
+
+          // Windows
           for (const win of b.windows) {
             const v = win.brightness;
             let a = 0.2 + Math.random() * 0.1;
             if (bodyInfluence > 0.3) {
-              const distFromBody = Math.abs(bx + win.wx - bodyX) / W;
-              if (distFromBody < 0.12 && Math.random() > 0.6) {
-                a = isSun ? 0.6 + bodyInfluence * 0.4 : 0.3 + bodyInfluence * 0.3;
-              } else {
-                a = 0.2 + bodyInfluence * 0.2;
-              }
+              const dist = Math.abs(bx+win.wx-bodyX) / W;
+              if (dist < 0.12 && Math.random() > 0.6) a = isSun ? 0.6+bodyInfluence*0.4 : 0.3+bodyInfluence*0.3;
+              else a = 0.2 + bodyInfluence * 0.2;
             }
-            ctx.fillStyle = `rgba(${v}, ${v}, ${Math.min(255, v + 10)}, ${a})`;
-            ctx.fillRect(bx + win.wx, by + win.wy, 2, 2);
+            ctx.fillStyle = `rgba(${v},${v},${Math.min(255,v+10)},${a})`;
+            ctx.fillRect(bx+win.wx, by+win.wy, 2, 2);
           }
         }
       }
@@ -261,5 +286,5 @@ export function IdleSkyline() {
     };
   }, []);
 
-  return <canvas ref={canvasRef} className="idle-skyline" width={800} height={140} />;
+  return <canvas ref={canvasRef} className={`idle-skyline${isActive ? ' idle-skyline-active' : ''}`} onClick={handleDismiss} width={800} height={140} />;
 }

@@ -3665,6 +3665,9 @@ body {
   z-index: 9; pointer-events: none;
   height: 140px;
 }
+.idle-skyline.idle-skyline-active {
+  pointer-events: auto; cursor: pointer;
+}
 
 @keyframes ghost-hover {
   0%, 100% { transform: translateY(0); }
