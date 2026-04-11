@@ -184,6 +184,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   fsMkdir:    (dirPath)           => ipcRenderer.invoke('fs-mkdir', dirPath),
   fsOpenPath: (filePath)          => ipcRenderer.invoke('fs-open-path', filePath),
   fsGetHome:  ()                  => ipcRenderer.invoke('fs-get-home'),
+  pickEmbedFile: ()               => ipcRenderer.invoke('pick-embed-file'),
   getEnvVar:  (name)              => ipcRenderer.invoke('get-env-var', name),
 
   // Code library

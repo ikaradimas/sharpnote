@@ -13,6 +13,7 @@ import { DecisionCell } from './editor/DecisionCell.jsx';
 import { DockerCell } from './editor/DockerCell.jsx';
 import { AddBar } from './editor/AddBar.jsx';
 import { FindBar } from './FindBar.jsx';
+import { EmbeddedFilesSection } from './EmbeddedFilesSection.jsx';
 import { CircuitBoard } from './CircuitBoard.jsx';
 
 export function NotebookView({
@@ -73,6 +74,8 @@ export function NotebookView({
   onDebugResume,
   onDebugStep,
   onToggleBreakpoint,
+  onRetainOutput,
+  onUnretainOutput,
   showCircuit = true,
 }) {
   const { cells, outputs, outputHistory, cellResults, running, kernelStatus,
@@ -380,7 +383,10 @@ export function NotebookView({
         onTogglePresent={() => updateCellProp(cell.id, 'presenting', !(cell.presenting || false))}
         onPresentIntervalChange={(ms) => updateCellProp(cell.id, 'presentInterval', ms || undefined)}
         onClearOutput={() => onSetNb((n) => ({ outputs: { ...n.outputs, [cell.id]: [] } }))}
-        inlineDiagnostics={inlineDiagnostics?.[cell.id] || null} />
+        inlineDiagnostics={inlineDiagnostics?.[cell.id] || null}
+        retainedResult={nb.retainedResults?.[cell.id] || null}
+        onRetain={() => onRetainOutput?.(nb.id, cell.id)}
+        onUnretain={() => onUnretainOutput?.(nb.id, cell.id)} />
     );
   };
 
@@ -392,6 +398,38 @@ export function NotebookView({
           cells={cells}
           onClose={closeFindBar}
           onHighlight={setFindHighlighted}
+        />
+      )}
+      {!dashboardMode && (
+        <EmbeddedFilesSection
+          files={nb.embeddedFiles || []}
+          onAdd={async () => {
+            const result = await window.electronAPI?.pickEmbedFile?.();
+            if (!result) return;
+            const name = result.filename.replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9_]/g, '_');
+            onSetNbDirty((n) => ({
+              embeddedFiles: [...(n.embeddedFiles || []), { name, ...result, variables: {} }],
+            }));
+            // Send to kernel if ready
+            if (kernelStatus === 'ready') {
+              window.electronAPI?.sendToKernel(nb.id, {
+                type: 'set_embedded_files',
+                files: [...(nb.embeddedFiles || []), { name, ...result, variables: {} }],
+              });
+            }
+          }}
+          onDelete={(name) => {
+            onSetNbDirty((n) => ({
+              embeddedFiles: (n.embeddedFiles || []).filter(f => f.name !== name),
+            }));
+          }}
+          onUpdateVars={(name, key, value) => {
+            onSetNbDirty((n) => ({
+              embeddedFiles: (n.embeddedFiles || []).map(f =>
+                f.name === name ? { ...f, variables: { ...f.variables, [key]: value } } : f
+              ),
+            }));
+          }}
         />
       )}
       <div className={`notebook${dashboardMode ? ' dashboard-mode' : ''}`}>

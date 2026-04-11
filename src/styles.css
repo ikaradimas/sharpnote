@@ -623,6 +623,84 @@ body {
 
 .md-edit-btn { }
 
+/* ── Embedded files section ───────────────────────────────────────────────── */
+.embedded-files-bar {
+  display: flex; align-items: center; gap: 4px;
+  padding: 2px 14px; font-size: 10px; color: var(--text-dim);
+}
+.embedded-files-toggle {
+  display: inline-flex; align-items: center; gap: 3px;
+  background: none; border: none; color: var(--text-dim); cursor: pointer;
+  font-family: var(--font-ui); font-size: 10px;
+}
+.embedded-files-toggle:hover { color: var(--text-secondary); }
+.embedded-files-add {
+  background: none; border: none; color: var(--text-dim); cursor: pointer; padding: 1px 3px;
+}
+.embedded-files-add:hover { color: var(--accent-secondary); }
+.embedded-files-section { border-bottom: 1px solid var(--border-subtle); }
+.embedded-files-list { padding: 2px 14px 6px; }
+.embedded-file-item { margin-bottom: 2px; }
+.embedded-file-row {
+  display: flex; align-items: center; gap: 6px; padding: 2px 6px;
+  border-radius: 3px; cursor: pointer; font-size: 11px;
+}
+.embedded-file-row:hover { background: var(--bg-mid); }
+.embedded-file-name { font-family: var(--font-code); color: var(--accent-secondary); font-weight: 600; }
+.embedded-file-info { color: var(--text-dim); font-size: 10px; flex: 1; }
+.embedded-file-del {
+  background: none; border: none; color: var(--text-dim); cursor: pointer; opacity: 0;
+  transition: opacity 0.15s;
+}
+.embedded-file-row:hover .embedded-file-del { opacity: 1; }
+.embedded-file-del:hover { color: var(--status-error); }
+.embedded-file-vars { padding: 4px 12px 6px; font-size: 10px; }
+.embedded-file-mime { color: var(--text-faint); margin-bottom: 3px; }
+.embedded-var-row { display: flex; align-items: center; gap: 4px; margin-bottom: 2px; }
+.embedded-var-key { font-family: var(--font-code); color: var(--text-muted); min-width: 60px; }
+.embedded-var-val {
+  font-family: var(--font-code); font-size: 10px; color: var(--text-primary);
+  background: var(--bg-deepest); border: 1px solid var(--border-default);
+  border-radius: 2px; padding: 1px 4px; flex: 1;
+}
+.embedded-file-access { margin-top: 4px; }
+.embedded-file-access code {
+  font-family: var(--font-code); font-size: 10px; color: var(--text-faint);
+  background: var(--bg-deepest); padding: 1px 4px; border-radius: 2px;
+}
+.embedded-files-empty { color: var(--text-faint); font-size: 10px; font-style: italic; }
+
+/* ── Retained results ─────────────────────────────────────────────────────── */
+.retained-result {
+  border-left: 2px solid #e0a040;
+  background: rgba(224,160,64,0.03);
+  margin: 2px 0;
+}
+.retained-header {
+  display: flex; align-items: center; gap: 6px;
+  padding: 3px 10px; font-size: calc((var(--base-font-size) - 2.6) * 1px);
+  color: var(--text-dim);
+}
+.retained-badge {
+  font-family: var(--font-heading); font-weight: 600; color: #e0a040;
+  text-transform: uppercase; letter-spacing: 0.08em; font-size: calc((var(--base-font-size) - 3) * 1px);
+}
+.retained-time { color: var(--text-faint); font-family: var(--font-code); }
+.retained-unpin {
+  margin-left: auto; background: none; border: none; color: var(--text-dim);
+  cursor: pointer; font-size: 11px; padding: 0 4px;
+}
+.retained-unpin:hover { color: var(--status-error); }
+.retain-controls {
+  display: flex; justify-content: flex-end; padding: 2px 8px;
+}
+.retain-btn {
+  background: none; border: none; cursor: pointer; font-size: 12px;
+  opacity: 0.3; transition: opacity 0.15s;
+}
+.retain-btn:hover { opacity: 0.7; }
+.retain-btn-active { opacity: 0.8; }
+
 /* ── Cell lock button ─────────────────────────────────────────────────────── */
 
 .code-cell-footer {

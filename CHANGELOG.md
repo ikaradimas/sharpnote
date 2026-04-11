@@ -2,6 +2,22 @@
 
 All notable changes to SharpNote, consolidated by minor version. Complexity: ⚙ fix, ⚙⚙ feature, ⚙⚙⚙ major.
 
+## 1.89 ⚙⚙⚙
+- Notebook v2 format: embedded files and retained results
+- Files API: Files["name"].ContentAsText, .Embed(), .SetVariable() from C#
+- Pin button on cell outputs to persist results across sessions
+- Embedded files UI with add/delete/variables management
+
+## 1.88 ⚙⚙
+- Copy/paste cells; output font size scales with setting
+- MAINTAINER-INSTRUCTIONS.md architecture guide
+
+## 1.87 ⚙⚙
+- Ambient day-night skyline cycle, circuit board animation, DB timeout fields
+
+## 1.86 ⚙⚙
+- Moon/sun arcs, ghost symbols, fish waves and bubbles
+
 ## 1.85 ⚙⚙
 - Idle skyline: futuristic city builds from right to left when idle 20s
 - Three layered skylines stack progressively; sun rises after completion

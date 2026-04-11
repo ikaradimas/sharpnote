@@ -51,7 +51,7 @@ export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef, for
     const nb = notebooksRef.current.find((n) => n.id === notebookId);
     if (!nb) return null;
     return {
-      version: '1.0',
+      version: '2.0',
       title: getNotebookDisplayName(nb.path, nb.title, 'notebook'),
       color: nb.color || null,
       packages: nb.nugetPackages.map(({ id, version }) => ({ id, version: version || null })),
@@ -71,6 +71,8 @@ export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef, for
         ...(type === 'docker' ? { image: image || '', containerName: containerName || '', ports: ports || '', env: env || '', volume: volume || '', command: command || '', runOnStartup: runOnStartup || false, runOnShutdown: runOnShutdown || false, ...(presenting ? { presenting: true } : {}) } : {}),
       })),
       pipelines: (nb.pipelines || []).map(({ id, name, cellIds, color }) => ({ id, name, cellIds, color: color || null })),
+      embeddedFiles: nb.embeddedFiles || [],
+      retainedResults: nb.retainedResults || {},
     };
   }, []);
 
@@ -176,6 +178,8 @@ export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef, for
       autoRun: result.data.autoRun || false,
       cells: result.data.cells || [],
       pipelines: result.data.pipelines || [],
+      embeddedFiles: result.data.embeddedFiles || [],
+      retainedResults: result.data.retainedResults || {},
       nugetPackages: (result.data.packages || []).map((p) => ({ ...p, status: 'pending' })),
       nugetSources: result.data.sources || [...DEFAULT_NUGET_SOURCES],
       config: result.data.config || [],
@@ -203,6 +207,8 @@ export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef, for
       autoRun: result.data.autoRun || false,
       cells: result.data.cells || [],
       pipelines: result.data.pipelines || [],
+      embeddedFiles: result.data.embeddedFiles || [],
+      retainedResults: result.data.retainedResults || {},
       nugetPackages: (result.data.packages || []).map((p) => ({ ...p, status: 'pending' })),
       nugetSources: result.data.sources || [...DEFAULT_NUGET_SOURCES],
       config: result.data.config || [],
@@ -602,6 +608,31 @@ ${cellsHtml}
     setActiveId(toAdd[0].nb.id);
   }, []);
 
+  const RETAINABLE_TYPES = new Set(['stdout', 'display']);
+
+  const handleRetainOutput = useCallback((notebookId, cellId) => {
+    setNbDirty(notebookId, (n) => {
+      const outputs = n.outputs?.[cellId];
+      if (!outputs?.length) return {};
+      const retainable = outputs.filter(o => RETAINABLE_TYPES.has(o.type));
+      if (!retainable.length) return {};
+      return {
+        retainedResults: {
+          ...(n.retainedResults || {}),
+          [cellId]: { outputs: retainable, retainedAt: new Date().toISOString() },
+        },
+      };
+    });
+  }, [setNbDirty]);
+
+  const handleUnretainOutput = useCallback((notebookId, cellId) => {
+    setNbDirty(notebookId, (n) => {
+      const r = { ...(n.retainedResults || {}) };
+      delete r[cellId];
+      return { retainedResults: r };
+    });
+  }, [setNbDirty]);
+
   return {
     // State
     notebooks,
@@ -648,5 +679,7 @@ ${cellsHtml}
     handleInsertLibraryFile,
     handleImportData,
     openPinnedNotebooks,
+    handleRetainOutput,
+    handleUnretainOutput,
   };
 }

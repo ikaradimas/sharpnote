@@ -72,9 +72,10 @@ partial class Program
         var data    = new DataHelper();
         var docker  = new DockerHelper(realStdout);
         var mock    = new MockHelper(realStdout);
+        var files   = new FilesHelper(realStdout);
         var util    = new UtilHelper(realStdout);
         UtilContext.Current = util;
-        var globals = new ScriptGlobals { Display = display, Panels = panels, Db = db, Data = data, Docker = docker, Mock = mock };
+        var globals = new ScriptGlobals { Display = display, Panels = panels, Db = db, Data = data, Docker = docker, Mock = mock, Files = files };
 
         var options = ScriptOptions.Default
             .AddImports(
@@ -351,6 +352,13 @@ partial class Program
                 case "docker_logs":
                 {
                     await HandleDockerLogs(msg, realStdout);
+                    break;
+                }
+
+                case "set_embedded_files":
+                {
+                    if (msg.TryGetProperty("files", out var filesArr))
+                        files.LoadAll(filesArr);
                     break;
                 }
 

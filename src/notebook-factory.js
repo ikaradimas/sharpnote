@@ -2514,6 +2514,8 @@ export function createNotebook(templateKey = null) {
     staleCellIds: [],
     autoRun: false,
     pipelines: [],
+    embeddedFiles: [],
+    retainedResults: {},
     breakpoints: {},
     debugState: null,
   };

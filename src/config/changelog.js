@@ -4,6 +4,29 @@
 // gears: 1 = minor fix/tweak, 2 = notable feature, 3 = major feature/architecture
 
 export const CHANGELOG = [
+  { version: '1.89', date: '2026-04-11', title: 'Notebook v2: embedded files & retained results', gears: 3, items: [
+    'File format bumped to v2 (backward compatible with v1)',
+    'Embedded files: store files inline in .cnb with variables; Files API in kernel',
+    'Files["name"].ContentAsText, .OpenRead(), .SetVariable(), .Embed() from code',
+    'Retainable results: pin cell outputs to persist across sessions with timestamp',
+    'Embedded files UI section with add/delete/variables management',
+  ]},
+  { version: '1.88', date: '2026-04-11', title: 'Copy/paste cells & scaled output', gears: 2, items: [
+    'Copy button on all cell types; paste in AddBar inserts clone below',
+    'Output results scale with notebook font size setting',
+    'MAINTAINER-INSTRUCTIONS.md with architecture guide',
+  ]},
+  { version: '1.87', date: '2026-04-11', title: 'Ambient skyline & circuit board', gears: 2, items: [
+    'Idle skyline: ambient day-night cycle, layered depth, billboards, screens',
+    'Circuit board animation replaces breakout minigame on empty notebooks',
+    'Sun/moon at fixed horizon, higher contrast layers',
+    'DB connection dialog: connection and command timeout fields',
+  ]},
+  { version: '1.86', date: '2026-04-11', title: 'Moon/sun arcs & ghost symbols', gears: 2, items: [
+    'Moon arcs right-to-left, sun left-to-right over the skyline, cycling',
+    'Ghost drops glowing symbols instead of Pac-Man chase',
+    'Fish swarm: waves, bubbles, steeper size progression',
+  ]},
   { version: '1.85', date: '2026-04-11', title: 'Idle skyline', gears: 2, items: [
     'Futuristic city skyline builds slowly from right to left when idle for 20s',
     'Three layered skylines in progressively lighter shades stack on top of each other',

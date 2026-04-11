@@ -79,6 +79,14 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
           const nb = notebooksRef.current.find((n) => n.id === notebookId);
           if (!nb) break;
 
+          // Send embedded files to kernel
+          if (nb.embeddedFiles?.length > 0) {
+            window.electronAPI.sendToKernel(notebookId, {
+              type: 'set_embedded_files',
+              files: nb.embeddedFiles,
+            });
+          }
+
           // Auto-run on open
           if (nb.autoRun) {
             setTimeout(() => runAllRef.current?.(notebookId), 200);
@@ -320,6 +328,26 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
           setNb(notebookId, (n) => ({
             cells: n.cells.map((c) =>
               c.id === msg.id ? { ...c, containerLogs: msg.logs || '' } : c
+            ),
+          }));
+          break;
+
+        case 'file_embed':
+          setNb(notebookId, (n) => {
+            const idx = (n.embeddedFiles || []).findIndex(f => f.name === msg.name);
+            const file = { name: msg.name, filename: msg.filename, mimeType: msg.mimeType,
+                           content: msg.content, encoding: msg.encoding || 'base64', variables: msg.variables || {} };
+            const files = idx >= 0
+              ? n.embeddedFiles.map((f, i) => i === idx ? file : f)
+              : [...(n.embeddedFiles || []), file];
+            return { embeddedFiles: files };
+          });
+          break;
+
+        case 'file_var_set':
+          setNb(notebookId, (n) => ({
+            embeddedFiles: (n.embeddedFiles || []).map(f =>
+              f.name === msg.name ? { ...f, variables: { ...f.variables, [msg.key]: msg.value } } : f
             ),
           }));
           break;

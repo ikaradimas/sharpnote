@@ -79,6 +79,9 @@ export function CodeCell({
   onPresentIntervalChange,
   onClearOutput,
   inlineDiagnostics,
+  retainedResult,
+  onRetain,
+  onUnretain,
 }) {
   const outputMode = cell.outputMode || 'auto';
   const locked = cell.locked || false;
@@ -320,6 +323,27 @@ export function CodeCell({
         </div>
       )}
       {!outputCollapsed && <CellOutput messages={displayedOutputs} notebookId={notebookId} allCells={allCells} onRunCellByName={onRunCellByName} />}
+      {!outputCollapsed && !displayedOutputs?.length && retainedResult && (
+        <div className="retained-result">
+          <div className="retained-header">
+            <span className="retained-badge">Retained</span>
+            <span className="retained-time">{new Date(retainedResult.retainedAt).toLocaleString()}</span>
+            <button className="retained-unpin" onClick={onUnretain} title="Remove retained result">x</button>
+          </div>
+          <CellOutput messages={retainedResult.outputs} notebookId={notebookId} allCells={allCells} onRunCellByName={onRunCellByName} />
+        </div>
+      )}
+      {!outputCollapsed && displayedOutputs?.length > 0 && (
+        <div className="retain-controls">
+          <button
+            className={`retain-btn${retainedResult ? ' retain-btn-active' : ''}`}
+            onClick={retainedResult ? onUnretain : onRetain}
+            title={retainedResult ? 'Unpin results' : 'Pin results (persist across sessions)'}
+          >
+            {retainedResult ? '📌' : '📍'}
+          </button>
+        </div>
+      )}
       <div className="code-cell-footer">
         {(isRunning || lastDuration !== null) && (
           <span className="cell-execution-timer">
