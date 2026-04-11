@@ -3600,6 +3600,14 @@ body {
   letter-spacing: 0.04em;
   white-space: nowrap;
 }
+.status-docker, .status-mock {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-family: var(--font-code); font-size: 10px; font-weight: 600;
+  padding: 1px 6px; border-radius: 8px; flex-shrink: 0;
+}
+.status-docker { color: #0db7ed; background: rgba(13,183,237,0.10); }
+.status-mock   { color: #4ec9b0; background: rgba(78,201,176,0.10); }
+
 .status-save-icon { color: #4ec9b0; flex-shrink: 0; }
 .status-save-icon.status-save-unsaved { color: #e0a040; }
 .status-running-icon {

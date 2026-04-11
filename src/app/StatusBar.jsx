@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Cpu, Loader2, Save, AlertTriangle } from 'lucide-react';
+import { Cpu, Loader2, Save, AlertTriangle, Container, Server } from 'lucide-react';
 import { isNotebookId } from '../utils.js';
 import { registerCursorPosSetter } from '../components/editor/CodeEditor.jsx';
 
@@ -52,6 +52,21 @@ export function StatusBar({ notebooks, activeId, showFish = true }) {
     return () => { registerCursorPosSetter(null); };
   }, []);
 
+  // Docker container count: count cells across all notebooks with containerState === 'running'
+  const dockerCount = notebooks.reduce((sum, n) =>
+    sum + (n.cells || []).filter((c) => c.type === 'docker' && c.containerState === 'running').length, 0);
+
+  // Mock server count: poll periodically
+  const [mockCount, setMockCount] = useState(0);
+  useEffect(() => {
+    const poll = () => {
+      window.electronAPI?.listMockServers?.().then((list) => setMockCount(list?.length ?? 0)).catch(() => {});
+    };
+    poll();
+    const id = setInterval(poll, 5000);
+    return () => clearInterval(id);
+  }, []);
+
   return (
     <div className="status-bar">
       {showFish && (
@@ -76,6 +91,16 @@ export function StatusBar({ notebooks, activeId, showFish = true }) {
         <span className="status-mem-warning" title="Kernel memory usage is high"><AlertTriangle size={10} /> {nb.memoryWarning}</span>
       )}
       <span className="status-spacer" />
+      {dockerCount > 0 && (
+        <span className="status-docker" title={`${dockerCount} Docker container${dockerCount > 1 ? 's' : ''} running`}>
+          <Container size={11} /> {dockerCount}
+        </span>
+      )}
+      {mockCount > 0 && (
+        <span className="status-mock" title={`${mockCount} mock server${mockCount > 1 ? 's' : ''} running`}>
+          <Server size={11} /> {mockCount}
+        </span>
+      )}
       {nb && (
         <Save size={10} className={`status-save-icon${nb.isDirty ? ' status-save-unsaved' : ''}`}
               title={nb.isDirty ? 'Unsaved changes' : 'Saved'} />
