@@ -13,7 +13,7 @@ export function CheckCell({
   onUpdate,
   onLabelChange,
   onRun,
-  onDelete,
+  onDelete, onCopy,
   onMoveUp,
   onMoveDown,
   onNameChange,
@@ -70,7 +70,7 @@ export function CheckCell({
           >
             ▶
           </button>
-          <CellControls onMoveUp={onMoveUp} onMoveDown={onMoveDown} onDelete={onDelete} />
+          <CellControls onCopy={onCopy} onMoveUp={onMoveUp} onMoveDown={onMoveDown} onDelete={onDelete} />
         </div>
       </div>
     </div>

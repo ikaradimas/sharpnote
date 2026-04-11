@@ -119,6 +119,38 @@ export function NotebookView({
     }, 50);
   };
 
+  // Cell clipboard
+  const [clipCell, setClipCell] = useState(null);
+
+  const copyCell = (id) => {
+    const cell = cells.find((c) => c.id === id);
+    if (cell) setClipCell({ ...cell });
+  };
+
+  const pasteCell = (afterIndex) => {
+    if (!clipCell) return;
+    const newId = Math.random().toString(36).slice(2, 10);
+    const cloned = { ...clipCell, id: newId };
+    // Strip transient runtime state
+    delete cloned.containerId;
+    delete cloned.containerState;
+    delete cloned.containerLogs;
+    delete cloned.containerPorts;
+    onSetNbDirty((n) => {
+      const next = [...n.cells];
+      const idx = afterIndex === null || afterIndex === undefined ? next.length
+                : afterIndex < 0 ? 0 : afterIndex + 1;
+      next.splice(idx, 0, cloned);
+      return { cells: next };
+    });
+    setTimeout(() => {
+      const wrapper = document.querySelector(
+        `.notebook-pane[data-nb="${nb.id}"] .cell-wrapper[data-cell-id="${cloned.id}"]`
+      );
+      wrapper?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }, 50);
+  };
+
   const updateCell = (id, content) => {
     onSetNbDirty((n) => {
       const cellOutputs = n.outputs?.[id];
@@ -244,6 +276,7 @@ export function NotebookView({
         collapsedCount={collapsedCounts.get(cell.id) ?? 0}
         onUpdate={(val) => updateCell(cell.id, val)}
         onDelete={() => deleteCell(cell.id)}
+        onCopy={() => copyCell(cell.id)}
         onMoveUp={() => moveCell(cell.id, -1)} onMoveDown={() => moveCell(cell.id, 1)} />
     );
     if (cell.type === 'sql') return (
@@ -253,6 +286,7 @@ export function NotebookView({
         onRun={() => onRunSqlCell(nb.id, cell)}
         onDbChange={(connectionId) => updateCellProp(cell.id, 'db', connectionId)}
         onDelete={() => deleteCell(cell.id)}
+        onCopy={() => copyCell(cell.id)}
         onMoveUp={() => moveCell(cell.id, -1)} onMoveDown={() => moveCell(cell.id, 1)}
         onNameChange={(name) => updateCellProp(cell.id, 'name', name)}
         onColorChange={(color) => updateCellProp(cell.id, 'color', color)} />
@@ -262,6 +296,7 @@ export function NotebookView({
         isRunning={running.has(cell.id)} anyRunning={running.size > 0}
         kernelReady={kernelStatus === 'ready'} onUpdate={(val) => updateCell(cell.id, val)}
         onRun={() => onRunHttpCell(nb.id, cell)} onDelete={() => deleteCell(cell.id)}
+        onCopy={() => copyCell(cell.id)}
         onMoveUp={() => moveCell(cell.id, -1)} onMoveDown={() => moveCell(cell.id, 1)}
         onNameChange={(name) => updateCellProp(cell.id, 'name', name)}
         onColorChange={(color) => updateCellProp(cell.id, 'color', color)} />
@@ -271,6 +306,7 @@ export function NotebookView({
         isRunning={running.has(cell.id)} anyRunning={running.size > 0}
         kernelReady={kernelStatus === 'ready'} onUpdate={(val) => updateCell(cell.id, val)}
         onRun={() => onRunShellCell(nb.id, cell)} onDelete={() => deleteCell(cell.id)}
+        onCopy={() => copyCell(cell.id)}
         onMoveUp={() => moveCell(cell.id, -1)} onMoveDown={() => moveCell(cell.id, 1)}
         onNameChange={(name) => updateCellProp(cell.id, 'name', name)}
         onColorChange={(color) => updateCellProp(cell.id, 'color', color)} />
@@ -286,6 +322,7 @@ export function NotebookView({
         onRun={() => onRunDockerCell(nb.id, cell)} onStopDocker={onStopDockerCell}
         onPollDockerStatus={onPollDockerStatus} onFetchDockerLogs={onFetchDockerLogs}
         onDelete={() => deleteCell(cell.id)}
+        onCopy={() => copyCell(cell.id)}
         onMoveUp={() => moveCell(cell.id, -1)} onMoveDown={() => moveCell(cell.id, 1)}
         onNameChange={(name) => updateCellProp(cell.id, 'name', name)}
         onColorChange={(color) => updateCellProp(cell.id, 'color', color)} />
@@ -296,6 +333,7 @@ export function NotebookView({
         kernelReady={kernelStatus === 'ready'} onUpdate={(val) => updateCell(cell.id, val)}
         onLabelChange={(label) => updateCellProp(cell.id, 'label', label)}
         onRun={() => onRunCheckCell(nb.id, cell)} onDelete={() => deleteCell(cell.id)}
+        onCopy={() => copyCell(cell.id)}
         onMoveUp={() => moveCell(cell.id, -1)} onMoveDown={() => moveCell(cell.id, 1)}
         onNameChange={(name) => updateCellProp(cell.id, 'name', name)}
         onColorChange={(color) => updateCellProp(cell.id, 'color', color)} />
@@ -313,6 +351,7 @@ export function NotebookView({
         onFalsePathChange={(ids) => updateCellProp(cell.id, 'falsePath', ids)}
         onSwitchPathsChange={(paths) => updateCellProp(cell.id, 'switchPaths', paths)}
         onRun={() => onRunDecisionCell(nb.id, cell)} onDelete={() => deleteCell(cell.id)}
+        onCopy={() => copyCell(cell.id)}
         onMoveUp={() => moveCell(cell.id, -1)} onMoveDown={() => moveCell(cell.id, 1)} />
     );
     return (
@@ -324,6 +363,7 @@ export function NotebookView({
         onRun={() => onRunCell(nb.id, cell)} onInterrupt={() => onInterrupt(nb.id)}
         onRunFrom={() => onRunFrom(nb.id, cell.id)} onRunTo={() => onRunTo(nb.id, cell.id)}
         onDelete={() => deleteCell(cell.id)}
+        onCopy={() => copyCell(cell.id)}
         onMoveUp={() => moveCell(cell.id, -1)} onMoveDown={() => moveCell(cell.id, 1)}
         isScheduled={scheduledCells?.has(cell.id) || false}
         onOutputModeChange={(mode) => updateCellProp(cell.id, 'outputMode', mode)}
@@ -373,6 +413,7 @@ export function NotebookView({
             onAddDocker={() => addCell('docker', -1)}
             onAddCheck={() => addCell('check', -1)}
             onAddDecision={() => addCell('decision', -1)}
+            onPaste={clipCell ? () => pasteCell(-1) : undefined}
           />
         )}
 
@@ -430,6 +471,7 @@ export function NotebookView({
                 onAddDocker={() => addCell('docker', index)}
                 onAddCheck={() => addCell('check', index)}
                 onAddDecision={() => addCell('decision', index)}
+                onPaste={clipCell ? () => pasteCell(index) : undefined}
               />
             )}
           </div>

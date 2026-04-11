@@ -1,7 +1,7 @@
 import React from 'react';
-import { Plus, Code, FileText, Database, Globe, Terminal, CheckCircle, GitBranch, Container } from 'lucide-react';
+import { Plus, Code, FileText, Database, Globe, Terminal, CheckCircle, GitBranch, Container, Clipboard } from 'lucide-react';
 
-export function AddBar({ onAddMarkdown, onAddCode, onAddSql, onAddHttp, onAddShell, onAddDocker, onAddCheck, onAddDecision }) {
+export function AddBar({ onAddMarkdown, onAddCode, onAddSql, onAddHttp, onAddShell, onAddDocker, onAddCheck, onAddDecision, onPaste }) {
   return (
     <div className="cell-add-bar">
       <div className="cell-add-bar-inner">
@@ -13,6 +13,7 @@ export function AddBar({ onAddMarkdown, onAddCode, onAddSql, onAddHttp, onAddShe
         {onAddDocker && <button className="cell-add-btn cell-add-docker" onClick={onAddDocker}><Plus size={11} /><Container size={11} /> Docker</button>}
         {onAddCheck && <button className="cell-add-btn cell-add-check" onClick={onAddCheck}><Plus size={11} /><CheckCircle size={11} /> Check</button>}
         {onAddDecision && <button className="cell-add-btn cell-add-decision" onClick={onAddDecision}><Plus size={11} /><GitBranch size={11} /> Decision</button>}
+        {onPaste && <button className="cell-add-btn cell-add-paste" onClick={onPaste}><Clipboard size={11} /> Paste</button>}
       </div>
     </div>
   );

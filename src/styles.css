@@ -6583,6 +6583,8 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 .docker-btn-stop:hover { background: #e8707f; }
 
 .cell-add-docker:hover { color: #0db7ed !important; }
+.cell-add-paste { border-left: 1px solid var(--border-subtle) !important; margin-left: 4px; padding-left: 8px; }
+.cell-add-paste:hover { color: #c084d0 !important; }
 
 /* ── Docker Logs ─────────────────────────────────────────────────────── */
 .docker-logs-btn {

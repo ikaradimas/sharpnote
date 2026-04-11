@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowUp, ArrowDown, Trash2, Check, X } from 'lucide-react';
+import { ArrowUp, ArrowDown, Trash2, Check, X, Copy } from 'lucide-react';
 
-export function CellControls({ onMoveUp, onMoveDown, onDelete }) {
+export function CellControls({ onMoveUp, onMoveDown, onCopy, onDelete }) {
   const [confirming, setConfirming] = useState(false);
 
   useEffect(() => {
@@ -22,6 +22,7 @@ export function CellControls({ onMoveUp, onMoveDown, onDelete }) {
 
   return (
     <>
+      {onCopy && <button className="cell-ctrl-btn" title="Copy cell" onClick={onCopy}><Copy size={12} /></button>}
       <button className="cell-ctrl-btn" title="Move Up" onClick={onMoveUp}><ArrowUp size={12} /></button>
       <button className="cell-ctrl-btn" title="Move Down" onClick={onMoveDown}><ArrowDown size={12} /></button>
       <button className="cell-ctrl-btn" title="Delete" onClick={() => setConfirming(true)}><Trash2 size={12} /></button>

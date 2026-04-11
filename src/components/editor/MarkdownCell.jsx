@@ -8,7 +8,7 @@ import { CellControls } from './CellControls.jsx';
 mermaid.initialize({ startOnLoad: false, theme: 'dark', securityLevel: 'loose' });
 
 export function MarkdownCell({
-  cell, cellIndex, onUpdate, onDelete, onMoveUp, onMoveDown,
+  cell, cellIndex, onUpdate, onDelete, onCopy, onMoveUp, onMoveDown,
   isSectionHeader, onToggleCollapse, collapsedCount,
 }) {
   const [editing, setEditing] = useState(!cell.content);
@@ -80,7 +80,7 @@ export function MarkdownCell({
             {collapsed ? '▶' : '▼'}
           </button>
         )}
-        <CellControls onMoveUp={onMoveUp} onMoveDown={onMoveDown} onDelete={onDelete} />
+        <CellControls onCopy={onCopy} onMoveUp={onMoveUp} onMoveDown={onMoveDown} onDelete={onDelete} />
       </div>
       {editing ? (
         <div onKeyDown={(e) => { if (e.key === 'Escape') handleCancel(); }}>

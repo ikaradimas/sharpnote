@@ -20,7 +20,7 @@ export function DecisionCell({
   onFalsePathChange,
   onSwitchPathsChange,
   onRun,
-  onDelete,
+  onDelete, onCopy,
   onMoveUp,
   onMoveDown,
 }) {
@@ -134,7 +134,7 @@ export function DecisionCell({
           >
             ▶
           </button>
-          <CellControls onMoveUp={onMoveUp} onMoveDown={onMoveDown} onDelete={onDelete} />
+          <CellControls onCopy={onCopy} onMoveUp={onMoveUp} onMoveDown={onMoveDown} onDelete={onDelete} />
         </div>
       </div>
     </div>

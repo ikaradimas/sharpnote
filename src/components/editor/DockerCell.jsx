@@ -62,7 +62,7 @@ export function DockerCell({
   cell, cellIndex, outputs, notebookId,
   isRunning, anyRunning, kernelReady = true,
   onUpdate, onRun, onStopDocker, onPollDockerStatus, onFetchDockerLogs,
-  onDelete, onMoveUp, onMoveDown,
+  onDelete, onCopy, onMoveUp, onMoveDown,
   onNameChange, onColorChange,
 }) {
   const presenting = cell.presenting || false;
@@ -211,6 +211,7 @@ export function DockerCell({
           ><Monitor size={12} /></button>
         </div>
         <CellControls
+          onCopy={onCopy}
           onMoveUp={onMoveUp}
           onMoveDown={onMoveDown}
           onDelete={onDelete}
