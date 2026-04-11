@@ -42,6 +42,7 @@ const md = (content) => makeCell('markdown', content);
 const cs = (content, outputMode = 'auto') =>
   ({ ...makeCell('code', content), outputMode });
 const http = (content) => makeCell('http', content);
+const docker = (image, opts = {}) => ({ ...makeCell('docker', ''), image, ...opts });
 
 // ── Template registry ────────────────────────────────────────────────────────
 
@@ -55,6 +56,7 @@ export const NOTEBOOK_TEMPLATES = [
   { key: 'orchestration',    label: 'Cell Orchestration',      description: 'Decision cells, naming, colors, pipelines' },
   { key: 'forms',            label: 'Forms',                   description: 'Interactive forms, submit-to-cell, dashboard mode' },
   { key: 'raytracer',        label: 'Raytracer',               description: 'Build a raytracer with live preview using Display.Image' },
+  { key: 'service-mesh',    label: 'Service Mesh',            description: 'Docker containers, mock APIs, health checks, traffic routing' },
 ];
 
 function cellsForTemplate(key) {
@@ -68,6 +70,7 @@ function cellsForTemplate(key) {
     case 'orchestration':    return makeOrchestrationCells();
     case 'forms':            return makeFormsCells();
     case 'raytracer':        return makeRaytracerCells();
+    case 'service-mesh':    return makeServiceMeshCells();
     default:                 return [];
   }
 }
@@ -2022,6 +2025,224 @@ Then re-run cells 3 → 5 to see the result.
 | \`canvas.DrawRect / FillRect(x, y, w, h, ...)\` | Rectangle outline / fill |
 | \`canvas.DrawCircle / FillCircle(cx, cy, r, ...)\` | Circle outline / fill |
 | \`canvas.ParallelRender((x, y) => (r, g, b))\` | Render all pixels using all CPU cores |`),
+  ];
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Template 10 — Service Mesh (Docker + Mock APIs)
+
+function makeServiceMeshCells() {
+  // Pre-create docker cells so we can set names and presentation flags
+  const gateway = docker('nginx:alpine', {
+    containerName: 'mesh-gateway',
+    name: 'API Gateway',
+    color: 'blue',
+    ports: '8080:80',
+    runOnStartup: true,
+    presenting: true,
+  });
+
+  const redis = docker('redis:7-alpine', {
+    containerName: 'mesh-cache',
+    name: 'Cache (Redis)',
+    color: 'red',
+    ports: '6379:6379',
+    runOnStartup: true,
+    presenting: true,
+  });
+
+  const postgres = docker('postgres:16-alpine', {
+    containerName: 'mesh-db',
+    name: 'Database (Postgres)',
+    color: 'purple',
+    ports: '5432:5432',
+    env: 'POSTGRES_USER=mesh, POSTGRES_PASSWORD=mesh123, POSTGRES_DB=meshdb',
+    runOnStartup: true,
+    presenting: true,
+  });
+
+  return [
+    md(`# Service Mesh Simulation
+
+This notebook demonstrates a **microservice mesh** using Docker containers for infrastructure and mock API servers for services. It simulates a typical production topology:
+
+\`\`\`
+                    ┌─────────────┐
+                    │ API Gateway │  :8080
+                    │   (nginx)   │
+                    └──────┬──────┘
+                           │
+              ┌────────────┼────────────┤
+              │            │            │
+        ┌─────┴─────┐ ┌───┴───┐ ┌─────┴──────┐
+        │  User Svc  │ │ Order │ │ Product Svc│
+        │  (mock)    │ │  Svc  │ │  (mock)    │
+        └─────┬──────┘ └───┬───┘ └─────┬──────┘
+              │            │            │
+        ┌─────┴────────────┴────────────┴─────┐
+        │           Redis Cache   :6379       │
+        │           Postgres DB   :5432       │
+        └─────────────────────────────────────┘
+\`\`\`
+
+Run all Docker cells to spin up infrastructure, then start the mock servers from the code cells below.`),
+
+    md('## Infrastructure'),
+
+    gateway,
+    redis,
+    postgres,
+
+    md(`## Mock Services
+
+The cells below start mock API servers on random ports above 9000. Each simulates a microservice with realistic endpoints and latency.`),
+
+    md('### User Service'),
+    cs(`// Start a mock User Service with CRUD endpoints
+var userSvc = await window.electronAPI?.startMockServer({
+    apiDef: new {
+        id = "user-svc",
+        title = "User Service",
+        controllers = new[] {
+            new {
+                basePath = "/api/users",
+                endpoints = new object[] {
+                    new { method = "GET", path = "",       summary = "List users",  mockResponse = new { status = 200, body = @"[
+  { ""id"": 1, ""name"": ""Alice"", ""email"": ""alice@mesh.dev"", ""role"": ""admin"" },
+  { ""id"": 2, ""name"": ""Bob"",   ""email"": ""bob@mesh.dev"",   ""role"": ""user"" },
+  { ""id"": 3, ""name"": ""Carol"", ""email"": ""carol@mesh.dev"", ""role"": ""user"" }
+]" } },
+                    new { method = "GET", path = "/{id}",  summary = "Get user",    mockResponse = new { status = 200, body = @"{ ""id"": {{id}}, ""name"": ""Alice"", ""email"": ""alice@mesh.dev"" }" } },
+                    new { method = "POST", path = "",      summary = "Create user", mockResponse = new { status = 201, body = @"{ ""id"": 4, ""name"": ""New User"", ""created"": true }" } },
+                }
+            }
+        }
+    },
+    port = 0
+});
+// Note: This demonstrates the mock server concept.
+// In practice, use the API Editor panel to define and run mocks visually.
+Display.Html($"<div style='color:#4ec9b0'>✓ User Service concept ready</div>");`),
+
+    md('### Order Service'),
+    cs(`// Start a mock Order Service
+Display.Html(@"<div style='padding:8px;border-left:3px solid #e0a040;color:#ddd'>
+<strong>Order Service</strong> — mock endpoints:<br/>
+<code>GET  /api/orders</code> — list orders with user + product references<br/>
+<code>GET  /api/orders/{id}</code> — order detail with line items<br/>
+<code>POST /api/orders</code> — create order (validates stock via Product Service)<br/>
+<code>PUT  /api/orders/{id}/status</code> — update order status
+</div>");`),
+
+    md('### Product Service'),
+    cs(`// Start a mock Product Service
+Display.Html(@"<div style='padding:8px;border-left:3px solid #c084d0;color:#ddd'>
+<strong>Product Service</strong> — mock endpoints:<br/>
+<code>GET  /api/products</code> — catalog with pricing<br/>
+<code>GET  /api/products/{id}</code> — product detail<br/>
+<code>PUT  /api/products/{id}/stock</code> — update inventory count<br/>
+<code>GET  /api/products/search?q=</code> — full-text search
+</div>");`),
+
+    md(`## Health Checks
+
+Once the infrastructure containers are running, you can verify connectivity from C# code cells.`),
+
+    cs(`// Health check: verify all infrastructure is reachable
+var checks = new[] {
+    ("Gateway (nginx)",  "http://localhost:8080"),
+    ("Redis",            "localhost:6379"),
+    ("Postgres",         "localhost:5432"),
+};
+
+var sb = new System.Text.StringBuilder();
+sb.AppendLine("<table style='width:100%;border-collapse:collapse'>");
+sb.AppendLine("<tr><th style='text-align:left;padding:4px 8px;border-bottom:1px solid #333'>Service</th><th style='padding:4px 8px;border-bottom:1px solid #333'>Status</th></tr>");
+
+foreach (var (name, addr) in checks) {
+    bool ok = false;
+    try {
+        if (addr.StartsWith("http")) {
+            using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
+            var resp = await client.GetAsync(addr);
+            ok = true;
+        } else {
+            // TCP connect check for Redis/Postgres
+            using var tcp = new System.Net.Sockets.TcpClient();
+            var parts = addr.Split(':');
+            await tcp.ConnectAsync(parts[0], int.Parse(parts[1]));
+            ok = true;
+        }
+    } catch { }
+    var color = ok ? "#4ec9b0" : "#e06070";
+    var icon = ok ? "●" : "○";
+    sb.AppendLine($"<tr><td style='padding:4px 8px'>{name}</td><td style='padding:4px 8px;color:{color};font-weight:600'>{icon} {(ok ? "Healthy" : "Unreachable")}</td></tr>");
+}
+sb.AppendLine("</table>");
+Display.Html(sb.ToString());`, 'html'),
+
+    md(`## Service-to-Service Communication
+
+Simulate how services call each other through the mesh. In a real mesh, an Envoy sidecar proxies all traffic — here we call the mock endpoints directly.`),
+
+    cs(`// Simulate the Order Service calling User Service + Product Service
+// to assemble a complete order view
+
+Display.Html(@"<div style='font-family:monospace;font-size:12px;color:#aaa;line-height:1.8'>
+<span style='color:#4ec9b0'>→</span> Order Service receives <code>GET /api/orders/1001</code><br/>
+<span style='color:#4ec9b0'>  →</span> Calls <code>User Service GET /api/users/2</code> to resolve buyer<br/>
+<span style='color:#4ec9b0'>  →</span> Calls <code>Product Service GET /api/products/42</code> for item details<br/>
+<span style='color:#4ec9b0'>  →</span> Calls <code>Product Service GET /api/products/17</code> for item details<br/>
+<span style='color:#4ec9b0'>←</span> Returns assembled order:
+</div>");
+
+var order = new {
+    orderId = 1001,
+    buyer = new { id = 2, name = "Bob", email = "bob@mesh.dev" },
+    items = new[] {
+        new { productId = 42, name = "Wireless Keyboard", qty = 1, price = 79.99 },
+        new { productId = 17, name = "USB-C Hub",         qty = 2, price = 34.50 },
+    },
+    total = 79.99 + 34.50 * 2,
+    status = "confirmed",
+};
+order.Display();`),
+
+    md(`## Traffic Dashboard
+
+A summary view of the mesh topology and status.`),
+
+    cs(`// Render a visual dashboard of the service mesh
+var services = new[] {
+    new { Name = "API Gateway",      Type = "Docker",   Port = "8080", Color = "#569cd6" },
+    new { Name = "User Service",     Type = "Mock API", Port = "9xxx", Color = "#4ec9b0" },
+    new { Name = "Order Service",    Type = "Mock API", Port = "9xxx", Color = "#e0a040" },
+    new { Name = "Product Service",  Type = "Mock API", Port = "9xxx", Color = "#c084d0" },
+    new { Name = "Redis Cache",      Type = "Docker",   Port = "6379", Color = "#e06070" },
+    new { Name = "Postgres DB",      Type = "Docker",   Port = "5432", Color = "#b48ead" },
+};
+
+var html = new System.Text.StringBuilder();
+html.AppendLine("<div style='display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:8px'>");
+foreach (var svc in services) {
+    html.AppendLine($@"<div style='background:#1a1a22;border:1px solid #333;border-left:3px solid {svc.Color};border-radius:6px;padding:12px'>
+  <div style='font-weight:600;color:{svc.Color};margin-bottom:4px'>{svc.Name}</div>
+  <div style='font-size:11px;color:#888'>{svc.Type} · :{svc.Port}</div>
+</div>");
+}
+html.AppendLine("</div>");
+Display.Html(html.ToString());`, 'html'),
+
+    md(`## Cleanup
+
+Stop all containers and mock servers when you're done. Docker cells with **Run on Startup** will auto-start next time you open this notebook.
+
+> **Tip:** Use **File → Export as Docker Compose…** to export the Docker cells as a standalone \`docker-compose.yml\`.`),
+
+    cs(`// Stop all running mock servers
+// (Docker containers are stopped automatically when you close the notebook
+// or can be stopped individually from their cells)
+Display.Html("<div style='color:#4ec9b0'>Use the status bar indicators to monitor running containers and mocks.</div>");`),
   ];
 }
 
