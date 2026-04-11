@@ -1,10 +1,10 @@
 import React, { useRef, useEffect, useCallback, useState } from 'react';
 
-const W = 260, H = 180;
-const PADDLE_W = 48, PADDLE_H = 6, PADDLE_Y = H - 14;
-const BALL_R = 4;
-const BRICK_ROWS = 4, BRICK_COLS = 8, BRICK_W = 28, BRICK_H = 8, BRICK_GAP = 3, BRICK_TOP = 12;
-const BALL_SPEED = 2.2;
+const W = 364, H = 252;
+const PADDLE_W = 67, PADDLE_H = 8, PADDLE_Y = H - 20;
+const BALL_R = 6;
+const BRICK_ROWS = 4, BRICK_COLS = 8, BRICK_W = 39, BRICK_H = 11, BRICK_GAP = 4, BRICK_TOP = 17;
+const BALL_SPEED = 3.1;
 const TEAL = '#2ec4b6';
 const COLORS = ['#2ec4b6', '#e0943a', '#c084d0', '#6a9fd8', '#4ec9b0', '#e06070', '#d4a843', '#7a8fa0'];
 
@@ -57,20 +57,20 @@ export function PongGame() {
       if (!b.alive) continue;
       ctx.fillStyle = b.color;
       ctx.beginPath();
-      ctx.roundRect(b.x, b.y, BRICK_W, BRICK_H, 2);
+      ctx.roundRect(b.x, b.y, BRICK_W, BRICK_H, 3);
       ctx.fill();
     }
 
     // paddle
     ctx.fillStyle = TEAL;
     ctx.beginPath();
-    ctx.roundRect(s.px, PADDLE_Y, PADDLE_W, PADDLE_H, 3);
+    ctx.roundRect(s.px, PADDLE_Y, PADDLE_W, PADDLE_H, 4);
     ctx.fill();
 
     // ball
     ctx.fillStyle = '#e0e0f0';
     ctx.shadowColor = TEAL;
-    ctx.shadowBlur = 6;
+    ctx.shadowBlur = 8;
     ctx.beginPath();
     ctx.arc(s.bx, s.by, BALL_R, 0, Math.PI * 2);
     ctx.fill();
@@ -105,7 +105,7 @@ export function PongGame() {
       if (s.by - BALL_R <= 0) { s.by = BALL_R; s.vy = Math.abs(s.vy); }
 
       // paddle bounce
-      if (s.vy > 0 && s.by + BALL_R >= PADDLE_Y && s.by + BALL_R <= PADDLE_Y + PADDLE_H + 4
+      if (s.vy > 0 && s.by + BALL_R >= PADDLE_Y && s.by + BALL_R <= PADDLE_Y + PADDLE_H + 6
           && s.bx >= s.px && s.bx <= s.px + PADDLE_W) {
         s.by = PADDLE_Y - BALL_R;
         const hit = (s.bx - s.px) / PADDLE_W - 0.5; // -0.5 to 0.5
