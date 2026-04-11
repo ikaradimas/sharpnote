@@ -62,6 +62,7 @@ export function NotebookView({
   onLoadLayout,
   onDeleteLayout,
   onCloseAllPanels,
+  onImportData,
   scheduledCells,
   onScheduleStart,
   onScheduleStop,
@@ -253,6 +254,7 @@ export function NotebookView({
       depsPanelOpen={depsPanelOpen}
       onToggleDeps={() => { if (!depsPanelOpen) onFocusPanel?.('deps'); onSetNb((n) => ({ depsPanelOpen: !n.depsPanelOpen })); }}
       onCloseAllPanels={onCloseAllPanels}
+      onImportData={onImportData}
       theme={theme}
       onThemeChange={onThemeChange}
       lineAltEnabled={lineAltEnabled}
