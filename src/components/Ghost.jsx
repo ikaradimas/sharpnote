@@ -1,11 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 
 const IDLE_THRESHOLD = 15_000;
-const DEEP_IDLE     = 20_000;    // 20s → chase pacman
+const DEEP_IDLE     = 20_000;
 const FLICKER_MIN   = 3_000;
 const FLICKER_MAX   = 8_000;
 const SHOW_DURATION = 2_500;
-const MAX_BEADS     = 12;
+const SYMBOL_LIFE   = 4000;      // base lifetime in ms
+const SYMBOL_EXTEND = 2000;      // extra life when mouse approaches
+const SYMBOL_HOVER_R = 30;       // hover glow radius
+const SYMBOL_NEAR_R  = 120;      // proximity that extends lifetime
+const SYMBOL_SPAWN_INTERVAL = 1200; // ms between symbol drops in deep idle
+const SYMBOLS = ['✦', '◈', '⟡', '⬡', '✧', '⊛', '◇', '△', '∞', '⊕', '⟐', '☍'];
 
 function randomBetween(a, b) { return a + Math.random() * (b - a); }
 
@@ -26,15 +31,16 @@ export function Ghost() {
   const [visible, setVisible] = useState(false);
   const [mood, setMood] = useState('happy');
   const [pos, setPos] = useState({ x: 200, y: 200 });
-  const [pacman, setPacman] = useState(null);
-  const [beads, setBeads] = useState([]);
+  const [symbols, setSymbols] = useState([]);
   const mouseRef = useRef({ x: 300, y: 300 });
   const lastActivityRef = useRef(Date.now());
   const flickerTimerRef = useRef(null);
   const hideTimerRef = useRef(null);
-  const chaseFrameRef = useRef(null);
+  const symbolTimerRef = useRef(null);
   const moodRef = useRef('happy');
+  const symbolIdRef = useRef(0);
 
+  // Track mouse + activity
   useEffect(() => {
     const onMove = (e) => {
       mouseRef.current = { x: e.clientX, y: e.clientY };
@@ -51,6 +57,7 @@ export function Ghost() {
     };
   }, []);
 
+  // Mood tracker
   useEffect(() => {
     const id = setInterval(() => {
       const idle = Date.now() - lastActivityRef.current;
@@ -61,18 +68,18 @@ export function Ghost() {
     return () => clearInterval(id);
   }, []);
 
-  // Flicker (only when NOT in deep idle — chase handles its own visibility)
+  // Ghost flickering — teleports around in all moods
   useEffect(() => {
     const scheduleFlicker = () => {
-      const delay = randomBetween(FLICKER_MIN, FLICKER_MAX);
+      const isDeep = moodRef.current === 'deepIdle';
+      const delay = isDeep ? randomBetween(1500, 3000) : randomBetween(FLICKER_MIN, FLICKER_MAX);
       flickerTimerRef.current = setTimeout(() => {
-        if (moodRef.current === 'deepIdle') { scheduleFlicker(); return; }
         setPos(pickDarkSpot(mouseRef.current.x, mouseRef.current.y));
         setVisible(true);
         hideTimerRef.current = setTimeout(() => {
-          if (moodRef.current !== 'deepIdle') setVisible(false);
+          setVisible(false);
           scheduleFlicker();
-        }, SHOW_DURATION);
+        }, isDeep ? randomBetween(1500, 3000) : SHOW_DURATION);
       }, delay);
     };
     scheduleFlicker();
@@ -82,145 +89,58 @@ export function Ghost() {
     };
   }, []);
 
-  // Deep idle chase — beads lead, Pac-Man follows, ghost pursues slowly
+  // Deep idle: drop glowing symbols at random positions
   useEffect(() => {
     if (mood !== 'deepIdle') {
-      setPacman(null);
-      setBeads([]);
-      if (chaseFrameRef.current) cancelAnimationFrame(chaseFrameRef.current);
+      clearInterval(symbolTimerRef.current);
       return;
     }
 
-    const m = mouseRef.current;
-    const W = window.innerWidth, H = window.innerHeight;
-    const clampX = (v) => Math.max(40, Math.min(W - 40, v));
-    const clampY = (v) => Math.max(50, Math.min(H - 50, v));
-    let px = clampX(m.x + 70), py = clampY(m.y);
-    let gx = clampX(m.x), gy = clampY(m.y);
-    let frame = 0;
-    let beadId = 0;
-
-    let path = [];
-    let revealIdx = 0;
-    let targetIdx = 0;
-
-    // Cardinal directions only: right, down, left, up
-    const DIRS = [
-      { dx: 1, dy: 0, angle: 0 },           // right
-      { dx: 0, dy: 1, angle: Math.PI / 2 },  // down
-      { dx: -1, dy: 0, angle: Math.PI },     // left
-      { dx: 0, dy: -1, angle: -Math.PI / 2 }, // up
-    ];
-    let lastDir = DIRS[Math.floor(Math.random() * 4)];
-
-    // Plan a segment: pick a cardinal direction, lay 4-7 beads in a straight line,
-    // then turn 90 degrees for the next segment
-    const planSegment = (startX, startY) => {
-      // Pick a new direction (avoid reversing)
-      const candidates = DIRS.filter(d => d.dx !== -lastDir.dx || d.dy !== -lastDir.dy);
-      const dir = candidates[Math.floor(Math.random() * candidates.length)];
-      lastDir = dir;
-      const count = 4 + Math.floor(Math.random() * 4);
-      let cx = startX, cy = startY;
-      for (let i = 0; i < count; i++) {
-        cx += dir.dx * 24;
-        cy += dir.dy * 24;
-        // Bounce: if we hit an edge, stop this segment early
-        if (cx < 40 || cx > W - 40 || cy < 50 || cy > H - 50) {
-          cx = clampX(cx); cy = clampY(cy);
-          break;
-        }
-        path.push({ id: beadId++, x: cx, y: cy, visible: false, eaten: false });
-      }
+    const drop = () => {
+      const W = window.innerWidth, H = window.innerHeight;
+      const sym = {
+        id: symbolIdRef.current++,
+        char: SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)],
+        x: randomBetween(30, W - 30),
+        y: randomBetween(50, H - 60),
+        born: Date.now(),
+        extended: false,
+      };
+      setSymbols(prev => [...prev, sym]);
     };
 
-    // Initial segment
-    planSegment(px, py);
+    drop(); // first one immediately
+    symbolTimerRef.current = setInterval(drop, SYMBOL_SPAWN_INTERVAL);
+    return () => clearInterval(symbolTimerRef.current);
+  }, [mood]);
 
-    setPos({ x: gx, y: gy });
-    setVisible(true);
-
-    const chase = () => {
-      frame++;
-
-      // Reveal beads gradually — one every 18 frames, well ahead of Pac-Man
-      if (frame % 18 === 0 && revealIdx < path.length) {
-        path[revealIdx].visible = true;
-        revealIdx++;
-      }
-
-      // Plan more path when running low on future beads
-      if (revealIdx >= path.length - 2) {
-        const last = path[path.length - 1];
-        planSegment(last?.x ?? px, last?.y ?? py);
-      }
-
-      // Pac-Man steers toward current target bead in cardinal direction
-      const target = path[targetIdx];
-      if (target) {
-        const dx = target.x - px, dy = target.y - py;
+  // Symbol lifecycle: expire old symbols, extend near mouse
+  useEffect(() => {
+    if (symbols.length === 0) return;
+    const id = setInterval(() => {
+      const now = Date.now();
+      const mx = mouseRef.current.x, my = mouseRef.current.y;
+      setSymbols(prev => prev.filter(s => {
+        const age = now - s.born;
+        const dx = mx - s.x, dy = my - s.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        const speed = 1.4;
-        if (dist > 2) {
-          // Move along the dominant axis (cardinal snap)
-          if (Math.abs(dx) > Math.abs(dy)) {
-            px += Math.sign(dx) * speed;
-          } else {
-            py += Math.sign(dy) * speed;
-          }
+        // Extend life if mouse is approaching
+        if (dist < SYMBOL_NEAR_R && !s.extended) {
+          s.born += SYMBOL_EXTEND; // push born forward = longer life
+          s.extended = true;
         }
-        if (dist < 8) {
-          target.eaten = true;
-          targetIdx++;
-        }
-      }
-
-      while (path.length > 30 && path[0].eaten) {
-        path.shift();
-        targetIdx--;
-        revealIdx--;
-      }
-
-      // Ghost chases — keeps up but trails behind
-      const gdx = px - gx, gdy = py - gy;
-      const gDist = Math.sqrt(gdx * gdx + gdy * gdy);
-      if (gDist > 25) {
-        const gSpeed = 1.2;
-        // Ghost also moves cardinally
-        if (Math.abs(gdx) > Math.abs(gdy)) {
-          gx += Math.sign(gdx) * gSpeed;
-        } else {
-          gy += Math.sign(gdy) * gSpeed;
-        }
-      }
-
-      // Pac-Man facing: snap to cardinal
-      let heading = 0;
-      if (target) {
-        const dx = target.x - px, dy = target.y - py;
-        if (Math.abs(dx) > Math.abs(dy)) heading = dx > 0 ? 0 : Math.PI;
-        else heading = dy > 0 ? Math.PI / 2 : -Math.PI / 2;
-      }
-      const mouthOpen = Math.sin(frame * 0.3) > 0;
-      setPos({ x: gx, y: gy });
-      setPacman({ x: px, y: py, mouthOpen, angle: heading });
-      setBeads(path.filter(b => b.visible && !b.eaten).map(b => ({ id: b.id, x: b.x, y: b.y })));
-      chaseFrameRef.current = requestAnimationFrame(chase);
-    };
-
-    chaseFrameRef.current = requestAnimationFrame(chase);
-    return () => {
-      if (chaseFrameRef.current) cancelAnimationFrame(chaseFrameRef.current);
-    };
-  }, [mood]); // eslint-disable-line react-hooks/exhaustive-deps
+        return age < SYMBOL_LIFE;
+      }));
+    }, 200);
+    return () => clearInterval(id);
+  }, [symbols.length > 0]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const color = mood === 'happy' ? '#38b6ff' : '#e0943a';
-  const isChasing = mood === 'deepIdle';
 
   return (
     <>
       <div
-        className={`ghost-sprite${visible || isChasing ? ' ghost-visible' : ''}`}
+        className={`ghost-sprite${visible ? ' ghost-visible' : ''}`}
         style={{ left: pos.x, top: pos.y, color }}
       >
         <svg width="28" height="32" viewBox="0 0 24 28" fill="none">
@@ -231,34 +151,44 @@ export function Ghost() {
           <circle cx="9.6" cy="10.4" r="0.9" fill="#fff" />
           <circle cx="15.6" cy="10.4" r="0.9" fill="#fff" />
         </svg>
-        {mood === 'idle' && (
-          <span className="ghost-zzz">zzz</span>
-        )}
       </div>
 
-      {beads.map((b) => (
-        <div key={b.id} className="ghost-bead" style={{ left: b.x, top: b.y }} />
+      {symbols.map((s) => (
+        <GlowSymbol key={s.id} sym={s} mouseRef={mouseRef} />
       ))}
-
-      {pacman && isChasing && (
-        <div
-          className="ghost-pacman"
-          style={{
-            left: pacman.x,
-            top: pacman.y,
-            transform: `rotate(${pacman.angle}rad)`,
-          }}
-        >
-          <svg width="20" height="20" viewBox="0 0 18 18">
-            {pacman.mouthOpen ? (
-              <path d="M9 1a8 8 0 110 16 8 8 0 010-16zm0 0L17 9 9 17" fill="#e0e040" />
-            ) : (
-              <circle cx="9" cy="9" r="8" fill="#e0e040" />
-            )}
-            <circle cx="9" cy="4" r="1.2" fill="#0a0a10" />
-          </svg>
-        </div>
-      )}
     </>
+  );
+}
+
+function GlowSymbol({ sym, mouseRef }) {
+  const [hovered, setHovered] = useState(false);
+  const ref = useRef(null);
+
+  // Check hover via mouse proximity (since pointer-events: none on parent)
+  useEffect(() => {
+    const check = () => {
+      const mx = mouseRef.current.x, my = mouseRef.current.y;
+      const dx = mx - sym.x, dy = my - sym.y;
+      setHovered(dx * dx + dy * dy < SYMBOL_HOVER_R * SYMBOL_HOVER_R);
+    };
+    const id = setInterval(check, 80);
+    return () => clearInterval(id);
+  }, [sym.x, sym.y, mouseRef]);
+
+  const age = (Date.now() - sym.born) / SYMBOL_LIFE;
+  const fadeOut = age > 0.7 ? 1 - (age - 0.7) / 0.3 : 1;
+
+  return (
+    <div
+      ref={ref}
+      className={`ghost-symbol${hovered ? ' ghost-symbol-hover' : ''}`}
+      style={{
+        left: sym.x,
+        top: sym.y,
+        opacity: Math.max(0, fadeOut * 0.7),
+      }}
+    >
+      {sym.char}
+    </div>
   );
 }

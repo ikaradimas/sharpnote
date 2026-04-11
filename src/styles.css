@@ -3596,13 +3596,24 @@ body {
 }
 .ghost-sprite.ghost-visible { opacity: 0.75; }
 
-.ghost-zzz {
-  position: absolute; top: -12px; right: -16px;
-  font-size: 10px; font-weight: 700; font-family: var(--font-code);
-  color: #e0943a; opacity: 0.9;
-  animation: ghost-zzz-float 1.5s ease-in-out infinite;
+/* ── Ghost symbols ────────────────────────────────────────── */
+.ghost-symbol {
+  position: fixed; z-index: 8490; pointer-events: none;
+  font-size: 16px; line-height: 1;
+  color: #38b6ff;
+  filter: drop-shadow(0 0 6px #38b6ff);
+  transform: translate(-50%, -50%);
+  transition: color 0.2s, filter 0.2s;
+  animation: ghost-symbol-pulse 2s ease-in-out infinite;
 }
-.ghost-zzz-deep { font-size: 12px; color: #e06070; }
+.ghost-symbol-hover {
+  color: #f0c040 !important;
+  filter: drop-shadow(0 0 10px #f0c040) !important;
+}
+@keyframes ghost-symbol-pulse {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); }
+  50%      { transform: translate(-50%, -50%) scale(1.15); }
+}
 
 /* ── Idle skyline ─────────────────────────────────────────── */
 .idle-skyline {
@@ -3611,26 +3622,9 @@ body {
   height: 140px;
 }
 
-.ghost-bead {
-  position: fixed; z-index: 8498; pointer-events: none;
-  width: 5px; height: 5px; border-radius: 50%;
-  background: #f0d060; opacity: 0.7;
-  box-shadow: 0 0 4px #f0d060;
-}
-
-.ghost-pacman {
-  position: fixed; z-index: 8499; pointer-events: none;
-  opacity: 0.65;
-}
-
 @keyframes ghost-hover {
   0%, 100% { transform: translateY(0); }
   50%      { transform: translateY(-4px); }
-}
-@keyframes ghost-zzz-float {
-  0%       { transform: translateY(0) scale(1); opacity: 0.8; }
-  50%      { transform: translateY(-6px) scale(1.1); opacity: 0.4; }
-  100%     { transform: translateY(0) scale(1); opacity: 0.8; }
 }
 
 .status-icon { color: #3a5060; flex-shrink: 0; }
