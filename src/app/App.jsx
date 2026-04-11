@@ -5,7 +5,7 @@ import React, {
   useCallback,
   useMemo,
 } from 'react';
-import { DOCS_TAB_ID, KAFKA_TAB_ID } from '../constants.js';
+import { DOCS_TAB_ID, CHANGELOG_TAB_ID, KAFKA_TAB_ID } from '../constants.js';
 import {
   makeLibEditorId, isLibEditorId, isNotebookId, getNotebookDisplayName, generateDockerCompose,
 } from '../utils.js';
@@ -22,6 +22,7 @@ import { TabBar } from '../components/toolbar/TabBar.jsx';
 import { NotebookView } from '../components/NotebookView.jsx';
 import { LibraryEditorPane } from '../components/panels/library/LibraryEditorPane.jsx';
 import { DocsPanel } from '../components/panels/docs/DocsPanel.jsx';
+import { ChangelogPanel } from '../components/panels/ChangelogPanel.jsx';
 import { KafkaPanel } from '../components/panels/kafka/KafkaPanel.jsx';
 import { DockZone } from '../components/dock/DockZone.jsx';
 import { FloatPanel } from '../components/dock/FloatPanel.jsx';
@@ -127,6 +128,7 @@ export function App() {
     handleNew, handleLoad, handleImportPolyglot, handleOpenRecent, handleCloseTab, handleReorder,
     handleRenameTab, handleSetTabColor, handleSave, handleSaveAs, handleExportHtml, handleExportGoogleDoc,
     handleOpenDocs, handleCloseDocs,
+    changelogOpen, handleOpenChangelog, handleCloseChangelog,
     kafkaTabOpen, handleOpenKafkaTab, handleCloseKafkaTab,
     handleTogglePin, handleNavigateToCell,
     handleInsertLibraryFile, handleImportData, openPinnedNotebooks,
@@ -767,6 +769,7 @@ export function App() {
     reset:             () => { if (isNotebook()) handleResetWithSchedules(activeIdRef.current); },
     'clear-output':    () => { if (isNotebook()) setNb(activeIdRef.current, { outputs: {} }); },
     docs:              handleOpenDocs,
+    changelog:         handleOpenChangelog,
     'toggle-packages': () => setPanelVisible('nuget',   null),
     'toggle-config':   () => setPanelVisible('config',  null),
     'toggle-logs':     () => setPanelVisible('log',     null),
@@ -832,8 +835,9 @@ export function App() {
       ...libEditors.map((e) => ({
         id: e.id, label: e.filename, isDirty: e.isDirty, isActive: e.id === activeId,
       })),
-      ...(docsOpen     ? [{ id: DOCS_TAB_ID,  label: 'Documentation', isDirty: false, isActive: activeId === DOCS_TAB_ID  }] : []),
-      ...(kafkaTabOpen ? [{ id: KAFKA_TAB_ID, label: 'Kafka',         isDirty: false, isActive: activeId === KAFKA_TAB_ID }] : []),
+      ...(docsOpen      ? [{ id: DOCS_TAB_ID,      label: 'Documentation', isDirty: false, isActive: activeId === DOCS_TAB_ID      }] : []),
+      ...(changelogOpen ? [{ id: CHANGELOG_TAB_ID, label: 'Changelog',     isDirty: false, isActive: activeId === CHANGELOG_TAB_ID }] : []),
+      ...(kafkaTabOpen  ? [{ id: KAFKA_TAB_ID,     label: 'Kafka',         isDirty: false, isActive: activeId === KAFKA_TAB_ID     }] : []),
     ]);
   }, [notebooks, libEditors, docsOpen, kafkaTabOpen, activeId]);
 
@@ -1124,6 +1128,9 @@ export function App() {
         docsOpen={docsOpen}
         onActivateDocs={handleOpenDocs}
         onCloseDocs={handleCloseDocs}
+        changelogOpen={changelogOpen}
+        onActivateChangelog={handleOpenChangelog}
+        onCloseChangelog={handleCloseChangelog}
         kafkaTabOpen={kafkaTabOpen}
         onActivateKafka={handleOpenKafkaTab}
         onCloseKafka={handleCloseKafkaTab}
@@ -1245,6 +1252,14 @@ export function App() {
                   style={activeId === DOCS_TAB_ID ? undefined : { display: 'none' }}
                 >
                   <DocsPanel />
+                </div>
+              )}
+              {changelogOpen && (
+                <div
+                  className="notebook-pane"
+                  style={activeId === CHANGELOG_TAB_ID ? undefined : { display: 'none' }}
+                >
+                  <ChangelogPanel />
                 </div>
               )}
               {kafkaTabOpen && (

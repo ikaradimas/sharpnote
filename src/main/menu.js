@@ -211,6 +211,7 @@ function buildMenu(customShortcuts = {}) {
     label: 'Help',
     submenu: [
       { label: 'Documentation', accelerator: accel('app-docs', 'F1'), click: () => send('docs') },
+      { label: 'Changelog',     click: () => send('changelog') },
       { type: 'separator' },
       { label: 'About SharpNote…', click: () => send('about') },
     ],

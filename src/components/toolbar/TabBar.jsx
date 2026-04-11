@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { DOCS_TAB_ID, KAFKA_TAB_ID } from '../../constants.js';
+import { DOCS_TAB_ID, CHANGELOG_TAB_ID, KAFKA_TAB_ID } from '../../constants.js';
 import { isLibEditorId, getNotebookDisplayName } from '../../utils.js';
 import { Tab } from './Tab.jsx';
 import { TabSection } from './TabSection.jsx';
@@ -7,6 +7,7 @@ import { TabSection } from './TabSection.jsx';
 export function TabBar({ notebooks, activeId, onActivate, onClose, onNew, onRename,
                   onReorder, onSetColor, activeTabColor,
                   docsOpen, onActivateDocs, onCloseDocs,
+                  changelogOpen, onActivateChangelog, onCloseChangelog,
                   kafkaTabOpen, onActivateKafka, onCloseKafka,
                   libEditors, onCloseLibEditor,
                   pinnedPaths, onTogglePin }) {
@@ -32,6 +33,15 @@ export function TabBar({ notebooks, activeId, onActivate, onClose, onNew, onRena
       >
         <span className="tab-title">Documentation</span>
         <button className="tab-close" onClick={(e) => { e.stopPropagation(); onCloseDocs(); }} title="Close">×</button>
+      </div>
+    );
+    if (item.id === CHANGELOG_TAB_ID) return (
+      <div
+        className={`tab${activeId === CHANGELOG_TAB_ID ? ' tab-active' : ''}`}
+        onClick={onActivateChangelog}
+      >
+        <span className="tab-title">Changelog</span>
+        <button className="tab-close" onClick={(e) => { e.stopPropagation(); onCloseChangelog(); }} title="Close">x</button>
       </div>
     );
     if (item.id === KAFKA_TAB_ID) return (
@@ -91,8 +101,9 @@ export function TabBar({ notebooks, activeId, onActivate, onClose, onNew, onRena
       _label: e.filename,
       _onActivate: () => onActivate(e.id),
     })),
-    ...(docsOpen      ? [{ id: DOCS_TAB_ID,  isDirty: false, _label: 'Documentation', _onActivate: onActivateDocs  }] : []),
-    ...(kafkaTabOpen  ? [{ id: KAFKA_TAB_ID, isDirty: false, _label: 'Kafka',         _onActivate: onActivateKafka }] : []),
+    ...(docsOpen      ? [{ id: DOCS_TAB_ID,      isDirty: false, _label: 'Documentation', _onActivate: onActivateDocs      }] : []),
+    ...(changelogOpen ? [{ id: CHANGELOG_TAB_ID, isDirty: false, _label: 'Changelog',     _onActivate: onActivateChangelog }] : []),
+    ...(kafkaTabOpen  ? [{ id: KAFKA_TAB_ID,     isDirty: false, _label: 'Kafka',         _onActivate: onActivateKafka    }] : []),
   ];
 
   return (
