@@ -163,8 +163,80 @@ public class DisplayHandle
     public void UpdateGraph(object config) =>
         _display.SendUpdate("graph", config, HandleId);
 
+    /// <summary>Updates a live image display (created via <see cref="DisplayHelper.NewImage"/>).</summary>
+    public void UpdateImage(string src, string? alt = null, int? width = null, int? height = null) =>
+        _display.SendUpdate("image", new { src, alt, width, height }, HandleId);
+
+    /// <summary>Updates a live image with raw RGB bytes.</summary>
+    public void UpdateImageBytes(byte[] rgb, int width, int height) =>
+        UpdateImage(BmpEncoder.EncodeBase64DataUri(rgb, width, height), width: width, height: height);
+
     public void Clear() =>
         _display.SendUpdate("html", (object)"", HandleId);
+}
+
+// ── CanvasHandle ─────────────────────────────────────────────────────────────
+
+/// <summary>
+/// A pixel buffer that renders as a live-updating image. Write pixels with
+/// <see cref="SetPixel"/> and call <see cref="Flush"/> to push the update.
+/// </summary>
+public class CanvasHandle
+{
+    private readonly byte[] _pixels;
+    private readonly int _width;
+    private readonly int _height;
+    private readonly DisplayHelper _display;
+    private readonly string _handleId;
+
+    internal CanvasHandle(DisplayHelper display, string handleId, int width, int height)
+    {
+        _display  = display;
+        _handleId = handleId;
+        _width    = width;
+        _height   = height;
+        _pixels   = new byte[width * height * 3];
+    }
+
+    /// <summary>Width in pixels.</summary>
+    public int Width => _width;
+
+    /// <summary>Height in pixels.</summary>
+    public int Height => _height;
+
+    /// <summary>Sets a pixel using byte values (0–255).</summary>
+    public void SetPixel(int x, int y, byte r, byte g, byte b)
+    {
+        if ((uint)x >= (uint)_width || (uint)y >= (uint)_height) return;
+        int i = (y * _width + x) * 3;
+        _pixels[i] = r; _pixels[i + 1] = g; _pixels[i + 2] = b;
+    }
+
+    /// <summary>Sets a pixel using double values (0.0–1.0), clamped.</summary>
+    public void SetPixel(int x, int y, double r, double g, double b)
+    {
+        SetPixel(x, y,
+            (byte)(Math.Clamp(r, 0, 1) * 255),
+            (byte)(Math.Clamp(g, 0, 1) * 255),
+            (byte)(Math.Clamp(b, 0, 1) * 255));
+    }
+
+    /// <summary>Fills the entire canvas with a solid colour.</summary>
+    public void Fill(byte r, byte g, byte b)
+    {
+        for (int i = 0; i < _pixels.Length; i += 3)
+        { _pixels[i] = r; _pixels[i + 1] = g; _pixels[i + 2] = b; }
+    }
+
+    /// <summary>Returns the raw RGB pixel buffer (3 bytes per pixel, row-major).</summary>
+    public byte[] Pixels => _pixels;
+
+    /// <summary>Encodes the current pixel buffer as BMP and pushes the update to the display.</summary>
+    public void Flush()
+    {
+        var uri = BmpEncoder.EncodeBase64DataUri(_pixels, _width, _height);
+        _display.SendUpdate("image", new { src = uri, width = _width, height = _height }, _handleId);
+    }
 }
 
 // ── DisplayHelper ─────────────────────────────────────────────────────────────
@@ -380,6 +452,46 @@ public class DisplayHelper
     public void Image(string source, string? alt = null, int? width = null, int? height = null) =>
         Send(new { type = "display", id = _currentId, format = "image",
                    content = new { src = source, alt, width, height } });
+
+    /// <summary>
+    /// Renders an image from raw RGB pixel data (3 bytes per pixel, row-major).
+    /// Encodes as BMP internally — no manual encoding needed.
+    /// </summary>
+    public void ImageBytes(byte[] rgb, int width, int height, string? title = null)
+    {
+        var uri = BmpEncoder.EncodeBase64DataUri(rgb, width, height);
+        Send(new { type = "display", id = _currentId, format = "image",
+                   content = new { src = uri, width, height }, title });
+    }
+
+    /// <summary>
+    /// Creates a live-updating image display. Use the returned handle's
+    /// <see cref="DisplayHandle.UpdateImage"/> or <see cref="DisplayHandle.UpdateImageBytes"/>
+    /// to replace the image in-place.
+    /// </summary>
+    public DisplayHandle NewImage(string initialSrc, string? alt = null, int? width = null, int? height = null, string? title = null)
+    {
+        var h = NewHandle();
+        Send(new { type = "display", id = _currentId, format = "image",
+                   content = new { src = initialSrc, alt, width, height },
+                   handleId = h.HandleId, title });
+        return h;
+    }
+
+    /// <summary>
+    /// Creates a pixel canvas of the given size. Call <see cref="CanvasHandle.SetPixel"/>
+    /// to draw pixels and <see cref="CanvasHandle.Flush"/> to push the update.
+    /// </summary>
+    public CanvasHandle Canvas(int width, int height, string? title = null)
+    {
+        var handleId = NewHandle().HandleId;
+        // Send initial blank image
+        var uri = BmpEncoder.EncodeBase64DataUri(new byte[width * height * 3], width, height);
+        Send(new { type = "display", id = _currentId, format = "image",
+                   content = new { src = uri, width, height },
+                   handleId, title });
+        return new CanvasHandle(this, handleId, width, height);
+    }
 
     /// <summary>
     /// Renders a live-updating progress bar. Call <see cref="ProgressHandle.Report"/> to

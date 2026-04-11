@@ -47,6 +47,12 @@ public static class SharpNoteExtensions
         DisplayContext.Current?.Graph(chartConfig, title);
     }
 
+    /// <summary>Renders raw RGB pixel data (3 bytes/pixel) as an image.</summary>
+    public static void DisplayImage(this byte[] rgb, int width, int height, string? title = null)
+    {
+        DisplayContext.Current?.ImageBytes(rgb, width, height, title);
+    }
+
     public static T Log<T>(this T obj, string? label = null)
     {
         var output = LogContext.Output;

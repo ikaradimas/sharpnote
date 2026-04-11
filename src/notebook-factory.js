@@ -1950,60 +1950,21 @@ Each cell builds on the previous — run them in order.`),
     md('## 5. Render with Live Preview'),
 
     cs([
-      '// ── Render to BMP and display as base64 image ─────────────────────────────────',
-      'var pixels = new byte[W * H * 3];',
-      '',
-      'byte Clamp(double v) => (byte)(Math.Clamp(v, 0, 1) * 255);',
-      '',
-      'var progress = Display.Progress("Rendering", total: H);',
+      '// ── Render using Display.Canvas with live progressive preview ─────────────────',
+      'var canvas = Display.Canvas(W, H, "Raytracer Output");',
       '',
       'for (int y = 0; y < H; y++) {',
       '    for (int x = 0; x < W; x++) {',
-      '        // Map pixel to camera ray (simple pinhole)',
       '        double u = (2.0 * (x + 0.5) / W - 1) * aspect * fov;',
       '        double v = (1 - 2.0 * (y + 0.5) / H) * fov;',
       '        var ray = new Ray(new Vec3(0, 0, 0), new Vec3(u, v, -1).Normalized);',
       '        var color = Trace(ray, 5);',
-      '        int i = (y * W + x) * 3;',
-      '        pixels[i]     = Clamp(color.X);',
-      '        pixels[i + 1] = Clamp(color.Y);',
-      '        pixels[i + 2] = Clamp(color.Z);',
+      '        canvas.SetPixel(x, y, color.X, color.Y, color.Z);',
       '    }',
-      '    if (y % 10 == 0) progress.Report(y);',
+      '    // Flush every 25 rows for a live progressive preview',
+      '    if (y % 25 == 0) canvas.Flush();',
       '}',
-      'progress.Complete();',
-      '',
-      '// Encode as BMP',
-      'byte[] EncodeBmp(byte[] rgb, int w, int h) {',
-      '    int rowBytes = ((w * 3 + 3) / 4) * 4;',
-      '    int dataSize = rowBytes * h;',
-      '    var bmp = new byte[54 + dataSize];',
-      '    bmp[0] = (byte)\'B\'; bmp[1] = (byte)\'M\';',
-      '    BitConverter.GetBytes(54 + dataSize).CopyTo(bmp, 2);',
-      '    BitConverter.GetBytes(54).CopyTo(bmp, 10);',
-      '    BitConverter.GetBytes(40).CopyTo(bmp, 14);',
-      '    BitConverter.GetBytes(w).CopyTo(bmp, 18);',
-      '    BitConverter.GetBytes(h).CopyTo(bmp, 22);',
-      '    BitConverter.GetBytes((short)1).CopyTo(bmp, 26);',
-      '    BitConverter.GetBytes((short)24).CopyTo(bmp, 28);',
-      '    BitConverter.GetBytes(dataSize).CopyTo(bmp, 34);',
-      '    for (int y2 = 0; y2 < h; y2++) {',
-      '        int srcRow = (h - 1 - y2) * w * 3;',
-      '        int dstRow = 54 + y2 * rowBytes;',
-      '        for (int x2 = 0; x2 < w; x2++) {',
-      '            int si = srcRow + x2 * 3;',
-      '            int di = dstRow + x2 * 3;',
-      '            bmp[di]     = rgb[si + 2]; // B',
-      '            bmp[di + 1] = rgb[si + 1]; // G',
-      '            bmp[di + 2] = rgb[si];     // R',
-      '        }',
-      '    }',
-      '    return bmp;',
-      '}',
-      '',
-      'var bmpData = EncodeBmp(pixels, W, H);',
-      'var base64  = Convert.ToBase64String(bmpData);',
-      'Display.Html($"<img src=\'data:image/bmp;base64,{base64}\' style=\'border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,0.4)\' />");',
+      'canvas.Flush();  // final flush',
       '',
       'Display.Html($"<p style=\'color:#5a7080;margin-top:8px\'>{W}×{H} — {spheres.Length} spheres, 5 bounces</p>");',
     ].join('\n')),
@@ -2020,16 +1981,17 @@ Then re-run cells 3 → 5 to see the result.
 
 ---
 
-### Feature Wishlist
+### API Used in This Example
 
-Building this raytracer highlighted several features that would improve the notebook experience:
-
-1. **Display.Image from byte array** — having to manually encode BMP and base64 is tedious; a \`Display.Image(bytes, "bmp")\` overload would be much simpler
-2. **Canvas/pixel buffer API** — a \`Display.Canvas(width, height)\` returning a handle with \`SetPixel(x, y, r, g, b)\` and \`Flush()\` would be ideal for pixel-level rendering
-3. **Live image updates** — \`Display.NewImage()\` with \`UpdateImage(bytes)\` for progressive rendering (like \`NewHtml\` but for images)
-4. **Elapsed time per cell** — the timer exists but a \`Util.Time()\` wrapper that auto-displays would be handy for benchmarking render passes
-5. **Cell dependencies** — being able to mark "cell 5 depends on cells 1-4" so Run auto-runs prerequisites
-6. **Shared types across cells** — types defined in one cell (Vec3, Sphere) sometimes cause LSP flicker in dependent cells until they're re-run`),
+| Method | Purpose |
+|--------|---------|
+| \`Display.Canvas(w, h)\` | Creates a pixel buffer with live-updating image output |
+| \`canvas.SetPixel(x, y, r, g, b)\` | Writes a pixel (double 0–1 or byte 0–255 overloads) |
+| \`canvas.Flush()\` | Encodes the buffer to BMP and pushes the update |
+| \`Display.ImageBytes(rgb, w, h)\` | One-shot: renders raw RGB bytes as an image |
+| \`Display.NewImage(src)\` | Creates a live-updating image handle |
+| \`handle.UpdateImage(src)\` | Updates the image in-place |
+| \`handle.UpdateImageBytes(rgb, w, h)\` | Updates with raw RGB bytes |`),
   ];
 }
 
