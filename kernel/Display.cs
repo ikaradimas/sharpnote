@@ -377,6 +377,43 @@ public class DisplayHelper
     public void Graph(object chartConfig, string? title = null) =>
         Send(new { type = "display", id = _currentId, format = "graph", content = chartConfig, title });
 
+    /// <summary>Display a scrolling marquee ticker.</summary>
+    public void Marquee(string text, int speed = 40, string? color = null, string? background = null, string? title = null)
+    {
+        var c = color ?? "#4ec9b0";
+        var bg = background ?? "transparent";
+        var html = $@"<div style=""overflow:hidden;white-space:nowrap;font-family:monospace;font-size:13px;color:{c};background:{bg};padding:4px 0;border-top:1px solid #333;border-bottom:1px solid #333"">
+  <div style=""display:inline-block;animation:sn-marquee {speed}s linear infinite"">{System.Net.WebUtility.HtmlEncode(text)}</div>
+  <style>@keyframes sn-marquee {{ from {{ transform: translateX(100%); }} to {{ transform: translateX(-100%); }} }}</style>
+</div>";
+        Html(html, title);
+    }
+
+    /// <summary>Display a stat card with large value and label.</summary>
+    public void StatCard(string label, string value, string? color = null, string? icon = null, string? title = null)
+    {
+        var c = color ?? "#4ec9b0";
+        var iconHtml = icon != null ? $"<div style=\"font-size:24px;margin-bottom:4px\">{System.Net.WebUtility.HtmlEncode(icon)}</div>" : "";
+        var html = $@"<div style=""background:#1a1a22;border:1px solid #333;border-left:3px solid {c};border-radius:6px;padding:14px 18px;text-align:center"">
+  {iconHtml}<div style=""font-size:28px;font-weight:700;color:{c};font-family:monospace;line-height:1.2"">{System.Net.WebUtility.HtmlEncode(value)}</div>
+  <div style=""font-size:11px;color:#888;margin-top:4px;text-transform:uppercase;letter-spacing:0.08em"">{System.Net.WebUtility.HtmlEncode(label)}</div>
+</div>";
+        Html(html, title);
+    }
+
+    /// <summary>Display a horizontal progress bar.</summary>
+    public void ProgressBar(double percent, string? label = null, string? color = null, string? title = null)
+    {
+        var c = color ?? "#4ec9b0";
+        var pct = Math.Clamp(percent, 0, 100);
+        var lbl = label ?? $"{pct:F0}%";
+        var html = $@"<div style=""background:#1a1a22;border-radius:4px;overflow:hidden;border:1px solid #333;position:relative;height:22px"">
+  <div style=""width:{pct:F1}%;height:100%;background:{c};transition:width 0.5s;opacity:0.8""></div>
+  <div style=""position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;color:#ddd;font-family:monospace"">{System.Net.WebUtility.HtmlEncode(lbl)}</div>
+</div>";
+        Html(html, title);
+    }
+
     // ── Updateable display handles ────────────────────────────────────────────
 
     public DisplayHandle NewHtml(string initialHtml, string? title = null)

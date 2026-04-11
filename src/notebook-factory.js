@@ -57,6 +57,7 @@ export const NOTEBOOK_TEMPLATES = [
   { key: 'forms',            label: 'Forms',                   description: 'Interactive forms, submit-to-cell, dashboard mode' },
   { key: 'raytracer',        label: 'Raytracer',               description: 'Build a raytracer with live preview using Display.Image' },
   { key: 'service-mesh',    label: 'Service Mesh',            description: 'Docker containers, mock APIs, health checks, traffic routing' },
+  { key: 'infographic',     label: 'Infographic Dashboard',   description: 'Column layouts, stat cards, marquees, progress bars, CSS animations' },
 ];
 
 function cellsForTemplate(key) {
@@ -71,6 +72,7 @@ function cellsForTemplate(key) {
     case 'forms':            return makeFormsCells();
     case 'raytracer':        return makeRaytracerCells();
     case 'service-mesh':    return makeServiceMeshCells();
+    case 'infographic':     return makeInfographicCells();
     default:                 return [];
   }
 }
@@ -2025,6 +2027,151 @@ Then re-run cells 3 → 5 to see the result.
 | \`canvas.DrawRect / FillRect(x, y, w, h, ...)\` | Rectangle outline / fill |
 | \`canvas.DrawCircle / FillCircle(cx, cy, r, ...)\` | Circle outline / fill |
 | \`canvas.ParallelRender((x, y) => (r, g, b))\` | Render all pixels using all CPU cores |`),
+  ];
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Template 11 — Infographic Dashboard
+
+function makeInfographicCells() {
+  // Stat cards in a 4-column layout
+  const stat1 = { ...cs(`Display.StatCard("Active Users", "12,847", color: "#569cd6", icon: "👥");`), columns: 4 };
+  const stat2 = { ...cs(`Display.StatCard("Revenue", "$1.2M", color: "#4ec9b0", icon: "💰");`), columns: 4 };
+  const stat3 = { ...cs(`Display.StatCard("Uptime", "99.97%", color: "#b48ead", icon: "⏱");`), columns: 4 };
+  const stat4 = { ...cs(`Display.StatCard("Latency", "23ms", color: "#e0a040", icon: "⚡");`), columns: 4 };
+
+  // Progress bars in 2 columns
+  const prog1 = { ...cs(`Display.ProgressBar(78, "CPU Usage — 78%", color: "#569cd6");`), columns: 2 };
+  const prog2 = { ...cs(`Display.ProgressBar(42, "Memory — 42%", color: "#4ec9b0");`), columns: 2 };
+  const prog3 = { ...cs(`Display.ProgressBar(91, "Disk — 91%", color: "#e06070");`), columns: 2 };
+  const prog4 = { ...cs(`Display.ProgressBar(15, "Network — 15%", color: "#e0a040");`), columns: 2 };
+
+  // Charts in 2 columns
+  const chart1 = { ...cs(`Display.Graph(new {
+    type = "line",
+    data = new {
+        labels = new[] { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" },
+        datasets = new[] {
+            new { label = "Requests (k)", data = new[] { 12, 19, 15, 25, 22, 30, 28 },
+                  borderColor = "#569cd6", backgroundColor = "rgba(86,156,214,0.1)", fill = true, tension = 0.4 },
+            new { label = "Errors", data = new[] { 2, 1, 3, 1, 0, 2, 1 },
+                  borderColor = "#e06070", backgroundColor = "rgba(224,96,112,0.1)", fill = true, tension = 0.4 },
+        }
+    },
+    options = new { plugins = new { title = new { display = true, text = "Weekly Traffic" } } }
+});`, 'graph'), columns: 2 };
+
+  const chart2 = { ...cs(`Display.Graph(new {
+    type = "doughnut",
+    data = new {
+        labels = new[] { "API", "Web", "Mobile", "Internal" },
+        datasets = new[] {
+            new { data = new[] { 45, 25, 20, 10 },
+                  backgroundColor = new[] { "#569cd6", "#4ec9b0", "#e0a040", "#b48ead" },
+                  borderWidth = 0 }
+        }
+    },
+    options = new { plugins = new { title = new { display = true, text = "Traffic Sources" } } }
+});`, 'graph'), columns: 2 };
+
+  // Detail cards in 3 columns
+  const card1 = { ...cs(`Display.Html(@"<div style='background:#1a1a22;border:1px solid #333;border-radius:8px;padding:16px;height:100%'>
+  <div style='font-size:14px;font-weight:600;color:#569cd6;margin-bottom:10px'>🌐 API Gateway</div>
+  <div style='font-size:12px;color:#aaa;line-height:1.6'>
+    <div>Requests/sec: <span style=""color:#4ec9b0"">2,341</span></div>
+    <div>P99 Latency: <span style=""color:#e0a040"">45ms</span></div>
+    <div>Error Rate: <span style=""color:#4ec9b0"">0.02%</span></div>
+    <div>Active Connections: <span style=""color:#569cd6"">847</span></div>
+  </div>
+</div>");`, 'html'), columns: 3 };
+
+  const card2 = { ...cs(`Display.Html(@"<div style='background:#1a1a22;border:1px solid #333;border-radius:8px;padding:16px;height:100%'>
+  <div style='font-size:14px;font-weight:600;color:#4ec9b0;margin-bottom:10px'>🗄 Database</div>
+  <div style='font-size:12px;color:#aaa;line-height:1.6'>
+    <div>Queries/sec: <span style=""color:#4ec9b0"">1,204</span></div>
+    <div>Slow Queries: <span style=""color:#e06070"">3</span></div>
+    <div>Connections: <span style=""color:#569cd6"">48/100</span></div>
+    <div>Replication Lag: <span style=""color:#4ec9b0"">0.2s</span></div>
+  </div>
+</div>");`, 'html'), columns: 3 };
+
+  const card3 = { ...cs(`Display.Html(@"<div style='background:#1a1a22;border:1px solid #333;border-radius:8px;padding:16px;height:100%'>
+  <div style='font-size:14px;font-weight:600;color:#e0a040;margin-bottom:10px'>📦 Cache (Redis)</div>
+  <div style='font-size:12px;color:#aaa;line-height:1.6'>
+    <div>Hit Rate: <span style=""color:#4ec9b0"">94.7%</span></div>
+    <div>Memory: <span style=""color:#e0a040"">2.1 GB / 4 GB</span></div>
+    <div>Keys: <span style=""color:#569cd6"">142,391</span></div>
+    <div>Evictions/hr: <span style=""color:#4ec9b0"">12</span></div>
+  </div>
+</div>");`, 'html'), columns: 3 };
+
+  return [
+    md(`# Infrastructure Dashboard
+
+An infographic-style dashboard using **column layouts**, **stat cards**, **progress bars**, **charts**, and **marquees**. Run all cells to render the dashboard.
+
+> **New features used:** \`Display.StatCard()\`, \`Display.ProgressBar()\`, \`Display.Marquee()\`, and the \`columns\` cell property for side-by-side layout.`),
+
+    md('## Key Metrics'),
+    stat1, stat2, stat3, stat4,
+
+    cs(`Display.Marquee("  ●  SYSTEM STATUS: ALL SERVICES OPERATIONAL  ●  LAST DEPLOY: 2 hours ago  ●  NEXT MAINTENANCE WINDOW: Sunday 03:00 UTC  ●  ALERTS: 0 critical, 2 warning  ●  ", speed: 30, color: "#4ec9b0", background: "#0a0a12");`),
+
+    md('## Resource Utilization'),
+    prog1, prog2, prog3, prog4,
+
+    md('## Traffic Overview'),
+    chart1, chart2,
+
+    md('## Service Health'),
+    card1, card2, card3,
+
+    cs(`// Render an activity timeline
+Display.Html(@"<div style='border-left:2px solid #333;margin-left:12px;padding-left:16px'>
+  <div style='position:relative;padding:8px 0'>
+    <div style='position:absolute;left:-23px;top:10px;width:10px;height:10px;border-radius:50%;background:#4ec9b0'></div>
+    <div style='color:#4ec9b0;font-size:11px;font-family:monospace'>14:32 UTC</div>
+    <div style='color:#ddd;font-size:13px'>Auto-scaler added 2 instances to API cluster</div>
+  </div>
+  <div style='position:relative;padding:8px 0'>
+    <div style='position:absolute;left:-23px;top:10px;width:10px;height:10px;border-radius:50%;background:#569cd6'></div>
+    <div style='color:#569cd6;font-size:11px;font-family:monospace'>14:15 UTC</div>
+    <div style='color:#ddd;font-size:13px'>Deployment v2.14.3 completed successfully</div>
+  </div>
+  <div style='position:relative;padding:8px 0'>
+    <div style='position:absolute;left:-23px;top:10px;width:10px;height:10px;border-radius:50%;background:#e0a040'></div>
+    <div style='color:#e0a040;font-size:11px;font-family:monospace'>13:58 UTC</div>
+    <div style='color:#ddd;font-size:13px'>Cache hit rate dropped below 95% threshold — investigating</div>
+  </div>
+  <div style='position:relative;padding:8px 0'>
+    <div style='position:absolute;left:-23px;top:10px;width:10px;height:10px;border-radius:50%;background:#b48ead'></div>
+    <div style='color:#b48ead;font-size:11px;font-family:monospace'>13:30 UTC</div>
+    <div style='color:#ddd;font-size:13px'>SSL certificate renewed for api.example.com (expires in 90 days)</div>
+  </div>
+</div>");`, 'html'),
+
+    cs(`Display.Marquee("  📊  THROUGHPUT: 2,341 req/s  ●  P50: 12ms  ●  P95: 34ms  ●  P99: 45ms  ●  ERROR RATE: 0.02%  ●  CACHE HIT: 94.7%  ●  DB CONNECTIONS: 48/100  ●  ", speed: 35, color: "#569cd6", background: "#0a0a12");`),
+
+    md(`## Column Layout Reference
+
+Set the \`columns\` property on any cell to group consecutive cells with the same value into a CSS grid:
+
+| Property | Effect |
+|----------|--------|
+| \`columns: 2\` | Two cells side-by-side |
+| \`columns: 3\` | Three-column grid |
+| \`columns: 4\` | Four-column grid |
+
+### Display Helpers
+
+| Method | Description |
+|--------|-------------|
+| \`Display.StatCard(label, value, color?, icon?)\` | Large-value card with label |
+| \`Display.ProgressBar(percent, label?, color?)\` | Horizontal progress bar |
+| \`Display.Marquee(text, speed?, color?, background?)\` | Scrolling text ticker |
+| \`Display.Html(html)\` | Arbitrary HTML for custom layouts |
+
+Combine these with column layouts to create rich dashboards and infographics.`),
   ];
 }
 

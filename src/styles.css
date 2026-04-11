@@ -382,6 +382,15 @@ body {
   flex-direction: column;
 }
 
+/* ── Cell column layout ─────────────────────────────────────────────────── */
+.cell-columns {
+  display: grid; gap: 8px;
+}
+.cell-columns-2 { grid-template-columns: repeat(2, 1fr); }
+.cell-columns-3 { grid-template-columns: repeat(3, 1fr); }
+.cell-columns-4 { grid-template-columns: repeat(4, 1fr); }
+.cell-columns > .cell-wrapper { min-width: 0; }
+
 @keyframes cell-flash {
   0%   { background: rgba(0, 210, 255, 0.18); }
   60%  { background: rgba(0, 210, 255, 0.10); }
