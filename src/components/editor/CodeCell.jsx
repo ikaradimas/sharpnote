@@ -164,7 +164,7 @@ export function CodeCell({
   }, [presentRefreshOpen]);
 
   const histLen = outputHistory ? outputHistory.length : 0;
-  const [errorsHidden, setErrorsHidden] = useState(true);
+  const [errorsHidden, setErrorsHidden] = useState(false);
 
   const rawDisplayedOutputs = histIdx >= 0 && histLen > 0
     ? outputHistory[histIdx]
