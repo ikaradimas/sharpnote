@@ -89,11 +89,11 @@ function FishSwarm() {
         for (let i = 0; i < count; i++) {
           newFish.push({
             id: i,
-            variant: FISH_VARIANTS[1 + (i % 3)], // skip teal (original)
-            scale: 0.7 - i * 0.12,
-            offsetY: (i % 2 === 0 ? -1 : 1) * (2 + i * 1.5),
+            variant: FISH_VARIANTS[1 + (i % 3)],
+            scale: 0.65 - i * 0.15,   // 0.65, 0.50, 0.35 — clearly smaller each
+            offsetY: (i % 2 === 0 ? -1 : 1) * (3 + i * 2),
             driftDelay: 0.3 + i * 0.5,
-            wiggleSpeed: 0.7 + i * 0.15,
+            wiggleSpeed: 0.6 + i * 0.2,
             spawnDelay: i * 600,
           });
         }
@@ -130,8 +130,16 @@ function FishSwarm() {
     return () => clearTimeout(timerRef.current);
   }, []);
 
+  // Bubbles: 3 tiny circles that rise and fade, staggered
+  const bubbles = [0, 1, 2];
+
   return (
     <span className="status-fish-swarm">
+      <span className="fish-wave fish-wave-1" />
+      <span className="fish-wave fish-wave-2" />
+      {bubbles.map((i) => (
+        <span key={i} className={`fish-bubble fish-bubble-${i}`} />
+      ))}
       <OneFish variant={FISH_VARIANTS[0]} scale={1} offsetY={0} driftDelay={0} wiggleSpeed={0.8} />
       {swarm.map((f) => (
         <OneFish key={f.id} variant={f.variant} scale={f.scale} offsetY={f.offsetY}

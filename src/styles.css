@@ -3527,9 +3527,53 @@ body {
 /* ── Status bar fish ─────────────────────────────────────── */
 .status-fish-swarm {
   display: inline-flex; align-items: center; flex-shrink: 0;
-  width: 80px; height: 24px; position: relative;
+  width: 80px; height: 26px; position: relative;
   overflow: visible;
 }
+
+/* ── Waves ──────────────────────────────────────────────── */
+.fish-wave {
+  position: absolute; left: -4px; right: -4px;
+  height: 1px; pointer-events: none; opacity: 0.12;
+  background: #2ec4b6;
+}
+.fish-wave-1 {
+  top: 3px;
+  animation: fish-wave-drift 4s ease-in-out infinite;
+}
+.fish-wave-2 {
+  bottom: 3px;
+  animation: fish-wave-drift 4s ease-in-out infinite reverse;
+}
+@keyframes fish-wave-drift {
+  0%, 100% { transform: scaleX(1) translateX(0); opacity: 0.12; }
+  50%      { transform: scaleX(0.85) translateX(3px); opacity: 0.06; }
+}
+
+/* ── Bubbles ────────────────────────────────────────────── */
+.fish-bubble {
+  position: absolute; border-radius: 50%; pointer-events: none;
+  background: rgba(46, 196, 182, 0.25);
+  border: 0.5px solid rgba(46, 196, 182, 0.3);
+}
+.fish-bubble-0 {
+  width: 3px; height: 3px; left: 22px;
+  animation: fish-bubble-rise 3s ease-in infinite;
+}
+.fish-bubble-1 {
+  width: 2px; height: 2px; left: 42px;
+  animation: fish-bubble-rise 3.5s ease-in infinite 1s;
+}
+.fish-bubble-2 {
+  width: 2px; height: 2px; left: 58px;
+  animation: fish-bubble-rise 4s ease-in infinite 2s;
+}
+@keyframes fish-bubble-rise {
+  0%   { bottom: 2px; opacity: 0.4; }
+  60%  { opacity: 0.25; }
+  100% { bottom: 26px; opacity: 0; }
+}
+
 .status-fish {
   display: inline-flex; align-items: center; flex-shrink: 0;
   width: 20px; position: relative;
