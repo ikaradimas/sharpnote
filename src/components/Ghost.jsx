@@ -1,39 +1,56 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-const IDLE_THRESHOLD = 15_000;   // 15s → unhappy
-const DEEP_IDLE     = 60_000;    // 60s → chase pacman
+const IDLE_THRESHOLD = 15_000;
+const DEEP_IDLE     = 60_000;
 const FLICKER_MIN   = 3_000;
 const FLICKER_MAX   = 8_000;
 const SHOW_DURATION = 2_500;
 
 function randomBetween(a, b) { return a + Math.random() * (b - a); }
 
+// Prefer dark UI regions: sidebar edges, toolbar, status bar, panel borders
+function pickDarkSpot(mouseX, mouseY) {
+  const W = window.innerWidth, H = window.innerHeight;
+  const spots = [
+    // Near left sidebar edge
+    { x: randomBetween(8, 50), y: randomBetween(60, H - 60) },
+    // Near right edge (panel border zone)
+    { x: randomBetween(W - 60, W - 12), y: randomBetween(60, H - 60) },
+    // Toolbar area
+    { x: randomBetween(80, W - 80), y: randomBetween(4, 40) },
+    // Status bar area
+    { x: randomBetween(80, W - 80), y: randomBetween(H - 36, H - 8) },
+    // Near cursor but biased toward edges
+    { x: Math.max(20, Math.min(W - 40, mouseX + randomBetween(-150, 150))),
+      y: Math.max(20, Math.min(H - 40, mouseY + randomBetween(-120, 120))) },
+  ];
+  return spots[Math.floor(Math.random() * spots.length)];
+}
+
 export function Ghost() {
   const [visible, setVisible] = useState(false);
-  const [mood, setMood] = useState('happy');    // happy | idle | deepIdle
+  const [mood, setMood] = useState('happy');
   const [pos, setPos] = useState({ x: 200, y: 200 });
   const mouseRef = useRef({ x: 300, y: 300 });
   const lastActivityRef = useRef(Date.now());
   const flickerTimerRef = useRef(null);
   const hideTimerRef = useRef(null);
-  const pacmanRef = useRef({ x: 0, y: 0, angle: 0 });
   const chaseFrameRef = useRef(null);
 
-  // Track mouse position
+  // Track mouse + activity
   useEffect(() => {
     const onMove = (e) => {
       mouseRef.current = { x: e.clientX, y: e.clientY };
       lastActivityRef.current = Date.now();
     };
-    const onKey = () => { lastActivityRef.current = Date.now(); };
-    const onClick = () => { lastActivityRef.current = Date.now(); };
+    const onActivity = () => { lastActivityRef.current = Date.now(); };
     window.addEventListener('mousemove', onMove);
-    window.addEventListener('keydown', onKey);
-    window.addEventListener('mousedown', onClick);
+    window.addEventListener('keydown', onActivity);
+    window.addEventListener('mousedown', onActivity);
     return () => {
       window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('keydown', onKey);
-      window.removeEventListener('mousedown', onClick);
+      window.removeEventListener('keydown', onActivity);
+      window.removeEventListener('mousedown', onActivity);
     };
   }, []);
 
@@ -48,18 +65,13 @@ export function Ghost() {
     return () => clearInterval(id);
   }, []);
 
-  // Flicker timer — show ghost near cursor periodically
+  // Flicker near dark regions
   useEffect(() => {
     const scheduleFlicker = () => {
       const delay = randomBetween(FLICKER_MIN, FLICKER_MAX);
       flickerTimerRef.current = setTimeout(() => {
         const m = mouseRef.current;
-        const offsetX = randomBetween(-120, 120);
-        const offsetY = randomBetween(-100, 100);
-        setPos({
-          x: Math.max(20, Math.min(window.innerWidth - 40, m.x + offsetX)),
-          y: Math.max(20, Math.min(window.innerHeight - 40, m.y + offsetY)),
-        });
+        setPos(pickDarkSpot(m.x, m.y));
         setVisible(true);
         hideTimerRef.current = setTimeout(() => {
           setVisible(false);
@@ -74,7 +86,7 @@ export function Ghost() {
     };
   }, []);
 
-  // Deep idle: Pac-Man flees, ghost chases
+  // Deep idle: Pac-Man flees with swerving, ghost chases
   const [pacman, setPacman] = useState(null);
   useEffect(() => {
     if (mood !== 'deepIdle') {
@@ -83,40 +95,51 @@ export function Ghost() {
       return;
     }
 
-    // Start Pac-Man ahead of the ghost, both near last cursor position
     const m = mouseRef.current;
-    const startX = Math.max(40, Math.min(window.innerWidth - 40, m.x));
-    const startY = Math.max(40, Math.min(window.innerHeight - 60, m.y));
-    let px = startX + 70, py = startY;
-    let gx = startX, gy = startY;
-    let frame = 0;
+    const W = window.innerWidth, H = window.innerHeight;
+    let px = Math.max(40, Math.min(W - 40, m.x + 70));
+    let py = Math.max(40, Math.min(H - 60, m.y));
+    let gx = Math.max(40, Math.min(W - 40, m.x));
+    let gy = Math.max(40, Math.min(H - 60, m.y));
+    // Pac-Man has a heading that swerves randomly
+    let heading = Math.random() * Math.PI * 2;
+    let swerveTimer = 0;
+    let swerveTarget = heading;
 
     setPos({ x: gx, y: gy });
     setVisible(true);
 
     const chase = () => {
-      frame++;
-      // Pac-Man wanders in a wobbly path
-      px += Math.cos(frame * 0.025) * 1.8;
-      py += Math.sin(frame * 0.018) * 1.4;
-      // Bounce off screen edges
-      if (px < 30 || px > window.innerWidth - 30) px = Math.max(30, Math.min(window.innerWidth - 30, px));
-      if (py < 30 || py > window.innerHeight - 50) py = Math.max(30, Math.min(window.innerHeight - 50, py));
+      swerveTimer++;
+      // Pac-Man: pick a new random heading every ~80–200 frames
+      if (swerveTimer % (80 + Math.floor(Math.random() * 120)) === 0) {
+        swerveTarget = heading + randomBetween(-Math.PI * 0.7, Math.PI * 0.7);
+      }
+      // Smoothly steer toward swerve target
+      const angleDiff = swerveTarget - heading;
+      heading += angleDiff * 0.04;
 
-      // Ghost chases Pac-Man with a slight lag
+      const speed = 1.6;
+      px += Math.cos(heading) * speed;
+      py += Math.sin(heading) * speed;
+
+      // Bounce off edges by reversing heading component
+      if (px < 30) { px = 30; heading = Math.PI - heading; swerveTarget = heading; }
+      if (px > W - 30) { px = W - 30; heading = Math.PI - heading; swerveTarget = heading; }
+      if (py < 40) { py = 40; heading = -heading; swerveTarget = heading; }
+      if (py > H - 50) { py = H - 50; heading = -heading; swerveTarget = heading; }
+
+      // Ghost chases with slight lag
       const dx = px - gx, dy = py - gy;
       const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist > 20) {
-        const speed = 1.2;
-        gx += (dx / dist) * speed;
-        gy += (dy / dist) * speed;
+      if (dist > 22) {
+        gx += (dx / dist) * 1.3;
+        gy += (dy / dist) * 1.3;
       }
 
-      const angle = Math.atan2(py - gy, px - gx);
-      const mouthOpen = Math.sin(frame * 0.3) > 0;
-
+      const mouthOpen = Math.sin(swerveTimer * 0.3) > 0;
       setPos({ x: gx, y: gy });
-      setPacman({ x: px, y: py, mouthOpen, angle });
+      setPacman({ x: px, y: py, mouthOpen, angle: heading });
       chaseFrameRef.current = requestAnimationFrame(chase);
     };
 
@@ -126,7 +149,7 @@ export function Ghost() {
     };
   }, [mood]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const color = mood === 'happy' ? '#2ec4b6' : '#e0943a';
+  const color = mood === 'happy' ? '#38b6ff' : '#e0943a';
 
   return (
     <>
@@ -134,15 +157,13 @@ export function Ghost() {
         className={`ghost-sprite${visible ? ' ghost-visible' : ''}`}
         style={{ left: pos.x, top: pos.y, color }}
       >
-        <svg width="24" height="28" viewBox="0 0 24 28" fill="none">
-          {/* Ghost body */}
+        <svg width="28" height="32" viewBox="0 0 24 28" fill="none">
           <path d="M12 2C7 2 3 6 3 11v11l3-3 3 3 3-3 3 3 3-3 3 3V11c0-5-4-9-9-9z"
-                fill="currentColor" opacity="0.7" />
-          {/* Eyes */}
-          <circle cx="9" cy="11" r="2" fill="#0a0a10" />
-          <circle cx="15" cy="11" r="2" fill="#0a0a10" />
-          <circle cx="9.5" cy="10.5" r="0.8" fill="#fff" />
-          <circle cx="15.5" cy="10.5" r="0.8" fill="#fff" />
+                fill="currentColor" opacity="0.85" />
+          <circle cx="9" cy="11" r="2.2" fill="#0a0a10" />
+          <circle cx="15" cy="11" r="2.2" fill="#0a0a10" />
+          <circle cx="9.6" cy="10.4" r="0.9" fill="#fff" />
+          <circle cx="15.6" cy="10.4" r="0.9" fill="#fff" />
         </svg>
         {mood === 'idle' && (
           <span className="ghost-zzz">zzz</span>
@@ -161,7 +182,7 @@ export function Ghost() {
             transform: `rotate(${pacman.angle}rad)`,
           }}
         >
-          <svg width="18" height="18" viewBox="0 0 18 18">
+          <svg width="20" height="20" viewBox="0 0 18 18">
             {pacman.mouthOpen ? (
               <path d="M9 1a8 8 0 110 16 8 8 0 010-16zm0 0L17 9 9 17" fill="#e0e040" />
             ) : (

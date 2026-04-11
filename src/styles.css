@@ -3581,24 +3581,23 @@ body {
 /* ── Ghost character ─────────────────────────────────────── */
 .ghost-sprite {
   position: fixed; z-index: 8500; pointer-events: none;
-  opacity: 0; transition: opacity 0.6s ease-in-out;
-  filter: drop-shadow(0 0 6px currentColor);
+  opacity: 0; transition: opacity 0.5s ease-in-out;
+  filter: drop-shadow(0 0 8px currentColor);
   animation: ghost-hover 2s ease-in-out infinite;
 }
-.ghost-sprite.ghost-visible { opacity: 0.55; }
-.ghost-sprite.ghost-visible:hover { opacity: 0.8; }
+.ghost-sprite.ghost-visible { opacity: 0.75; }
 
 .ghost-zzz {
-  position: absolute; top: -10px; right: -14px;
-  font-size: 9px; font-weight: 700; font-family: var(--font-code);
-  color: #e0943a; opacity: 0.8;
+  position: absolute; top: -12px; right: -16px;
+  font-size: 10px; font-weight: 700; font-family: var(--font-code);
+  color: #e0943a; opacity: 0.9;
   animation: ghost-zzz-float 1.5s ease-in-out infinite;
 }
-.ghost-zzz-deep { font-size: 11px; color: #e06070; }
+.ghost-zzz-deep { font-size: 12px; color: #e06070; }
 
 .ghost-pacman {
   position: fixed; z-index: 8499; pointer-events: none;
-  opacity: 0.5;
+  opacity: 0.65;
 }
 
 @keyframes ghost-hover {
