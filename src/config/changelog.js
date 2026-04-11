@@ -4,9 +4,17 @@
 // gears: 1 = minor fix/tweak, 2 = notable feature, 3 = major feature/architecture
 
 export const CHANGELOG = [
-  { version: '1.84', date: '2026-04-11', title: 'Ghost companion', gears: 2, items: [
+  { version: '1.85', date: '2026-04-11', title: 'Idle skyline', gears: 2, items: [
+    'Futuristic city skyline builds slowly from right to left when idle for 20s',
+    'Three layered skylines in progressively lighter shades stack on top of each other',
+    'Sun rises after all layers complete, warming the buildings with golden light',
+    'Fades out over 3s when you return; toggle in Settings → Fun',
+  ]},
+  { version: '1.84', date: '2026-04-11', title: 'Ghost companion & game fixes', gears: 2, items: [
     'Friendly ghost that flickers near your cursor — cyan when active, orange when idle',
-    'Shows "zzz" speech balloon when idle; chases Pac-Man when deeply idle',
+    'Chases Pac-Man with bead trail when deeply idle (20s); slower pursuit',
+    'Breakout game: hover to play, pause on mouse leave, Play Again fixed',
+    'Fish swarm: up to 3 extra fish spawn and despawn in cycles; taller status bar',
     'Toggle in Settings → Appearance → Fun (on by default)',
   ]},
   { version: '1.83', date: '2026-04-11', title: 'Changelog tab', gears: 2, items: [

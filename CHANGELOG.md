@@ -2,10 +2,15 @@
 
 All notable changes to SharpNote, consolidated by minor version. Complexity: ⚙ fix, ⚙⚙ feature, ⚙⚙⚙ major.
 
+## 1.85 ⚙⚙
+- Idle skyline: futuristic city builds from right to left when idle 20s
+- Three layered skylines stack progressively; sun rises after completion
+- 3s fade-out on return; toggle in Settings → Fun
+
 ## 1.84 ⚙⚙
-- Ghost companion: friendly ghost that flickers near cursor, mood-reactive
-- Cyan when active, orange when idle, "zzz" balloon when idle, Pac-Man chase when deeply idle
-- Toggle in Settings → Fun
+- Ghost companion with mood-reactive colors, Pac-Man chase with bead trail
+- Breakout game: hover-to-play with pause; fish swarm cycles; taller status bar
+- All toggleable in Settings → Fun
 
 ## 1.83 ⚙⚙
 - In-app changelog panel (Help → Changelog) with search, sidebar index, and complexity gears

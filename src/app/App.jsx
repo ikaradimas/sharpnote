@@ -24,6 +24,7 @@ import { LibraryEditorPane } from '../components/panels/library/LibraryEditorPan
 import { DocsPanel } from '../components/panels/docs/DocsPanel.jsx';
 import { ChangelogPanel } from '../components/panels/ChangelogPanel.jsx';
 import { Ghost } from '../components/Ghost.jsx';
+import { IdleSkyline } from '../components/IdleSkyline.jsx';
 import { KafkaPanel } from '../components/panels/kafka/KafkaPanel.jsx';
 import { DockZone } from '../components/dock/DockZone.jsx';
 import { FloatPanel } from '../components/dock/FloatPanel.jsx';
@@ -70,6 +71,9 @@ export function App() {
   const [showGhost, setShowGhost] = useState(true);
   const showGhostRef = useRef(true);
   useEffect(() => { showGhostRef.current = showGhost; }, [showGhost]);
+  const [showSkyline, setShowSkyline] = useState(true);
+  const showSkylineRef = useRef(true);
+  useEffect(() => { showSkylineRef.current = showSkyline; }, [showSkyline]);
 
   const [tablePageSize, setTablePageSize] = useState(10);
   const tablePageSizeRef = useRef(10);
@@ -263,6 +267,7 @@ export function App() {
       showFish: showFishRef.current,
       showMinigame: showMinigameRef.current,
       showGhost: showGhostRef.current,
+      showSkyline: showSkylineRef.current,
       tablePageSize: tablePageSizeRef.current,
       customShortcuts: customShortcutsRef.current,
       pinnedTabs: [...pinnedPathsRef.current],
@@ -295,6 +300,7 @@ export function App() {
       if (typeof s?.showFish === 'boolean') setShowFish(s.showFish);
       if (typeof s?.showMinigame === 'boolean') setShowMinigame(s.showMinigame);
       if (typeof s?.showGhost === 'boolean') setShowGhost(s.showGhost);
+      if (typeof s?.showSkyline === 'boolean') setShowSkyline(s.showSkyline);
       if (typeof s?.tablePageSize === 'number') setTablePageSize(s.tablePageSize);
       if (s?.customShortcuts && typeof s.customShortcuts === 'object') {
         setCustomShortcuts(s.customShortcuts);
@@ -1287,6 +1293,7 @@ export function App() {
       </div>
       <StatusBar notebooks={notebooks} activeId={activeId} showFish={showFish} />
       {showGhost && <Ghost />}
+      {showSkyline && <IdleSkyline />}
       {Object.entries(dockLayout.assignments)
         .filter(([panelId, z]) => z === 'float' && !!openFlags[panelId])
         .map(([panelId]) => {
@@ -1333,6 +1340,8 @@ export function App() {
           onShowMinigameChange={setShowMinigame}
           showGhost={showGhost}
           onShowGhostChange={setShowGhost}
+          showSkyline={showSkyline}
+          onShowSkylineChange={setShowSkyline}
           tablePageSize={tablePageSize}
           onTablePageSizeChange={setTablePageSize}
           customShortcuts={customShortcuts}

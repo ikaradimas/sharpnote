@@ -3604,6 +3604,13 @@ body {
 }
 .ghost-zzz-deep { font-size: 12px; color: #e06070; }
 
+/* ── Idle skyline ─────────────────────────────────────────── */
+.idle-skyline {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  z-index: 9; pointer-events: none;
+  height: 120px;
+}
+
 .ghost-bead {
   position: fixed; z-index: 8498; pointer-events: none;
   width: 5px; height: 5px; border-radius: 50%;
