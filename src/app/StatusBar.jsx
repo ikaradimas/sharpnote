@@ -38,7 +38,7 @@ function MemorySparkline({ history }) {
   );
 }
 
-export function StatusBar({ notebooks, activeId }) {
+export function StatusBar({ notebooks, activeId, showFish = true }) {
   const nb = isNotebookId(activeId) ? notebooks.find((n) => n.id === activeId) : null;
   const history = nb?.memoryHistory ?? [];
   const current = history.length > 0 ? history[history.length - 1] : null;
@@ -54,13 +54,15 @@ export function StatusBar({ notebooks, activeId }) {
 
   return (
     <div className="status-bar">
-      <span className="status-fish" aria-hidden="true">
-        <span className="fish-body">
-          <span className="fish-eye" />
-          <span className="fish-tail" />
-          <span className="fish-fin" />
+      {showFish && (
+        <span className="status-fish" aria-hidden="true">
+          <span className="fish-body">
+            <span className="fish-eye" />
+            <span className="fish-tail" />
+            <span className="fish-fin" />
+          </span>
         </span>
-      </span>
+      )}
       <Cpu size={10} className="status-icon" />
       <span className="status-label">MEM</span>
       <MemorySparkline history={history} />

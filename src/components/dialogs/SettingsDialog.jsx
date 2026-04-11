@@ -11,7 +11,7 @@ const PANEL_FONT_SIZE_DEFAULT = 11.5;
 
 // ── Appearance section ────────────────────────────────────────────────────────
 
-function AppearanceSection({ theme, fontSize, onThemeChange, onFontSizeChange, panelFontSize, onPanelFontSizeChange, lineAltEnabled, onLineAltChange, lintEnabled, onLintEnabledChange, strongCuesEnabled, onStrongCuesChange, formatOnSave, onFormatOnSaveChange, tablePageSize = 10, onTablePageSizeChange }) {
+function AppearanceSection({ theme, fontSize, onThemeChange, onFontSizeChange, panelFontSize, onPanelFontSizeChange, lineAltEnabled, onLineAltChange, lintEnabled, onLintEnabledChange, strongCuesEnabled, onStrongCuesChange, formatOnSave, onFormatOnSaveChange, showFish, onShowFishChange, showMinigame, onShowMinigameChange, tablePageSize = 10, onTablePageSizeChange }) {
   return (
     <div className="settings-section">
       <div className="settings-group">
@@ -96,6 +96,26 @@ function AppearanceSection({ theme, fontSize, onThemeChange, onFontSizeChange, p
             onChange={(e) => onFormatOnSaveChange(e.target.checked)}
           />
           <span>Format and check code on save (reformats C# cells and reports errors)</span>
+        </label>
+      </div>
+
+      <div className="settings-group">
+        <div className="settings-group-label">Fun</div>
+        <label className="settings-toggle-row">
+          <input
+            type="checkbox"
+            checked={!!showFish}
+            onChange={(e) => onShowFishChange(e.target.checked)}
+          />
+          <span>Status bar fish (animated fish in the bottom bar)</span>
+        </label>
+        <label className="settings-toggle-row">
+          <input
+            type="checkbox"
+            checked={!!showMinigame}
+            onChange={(e) => onShowMinigameChange(e.target.checked)}
+          />
+          <span>Empty notebook minigame (breakout game when no cells exist)</span>
         </label>
       </div>
 
@@ -411,6 +431,10 @@ export function SettingsDialog({
   onStrongCuesChange,
   formatOnSave,
   onFormatOnSaveChange,
+  showFish,
+  onShowFishChange,
+  showMinigame,
+  onShowMinigameChange,
   tablePageSize = 10,
   onTablePageSizeChange,
   customShortcuts,
@@ -524,6 +548,10 @@ export function SettingsDialog({
                 onStrongCuesChange={onStrongCuesChange}
                 formatOnSave={formatOnSave}
                 onFormatOnSaveChange={onFormatOnSaveChange}
+                showFish={showFish}
+                onShowFishChange={onShowFishChange}
+                showMinigame={showMinigame}
+                onShowMinigameChange={onShowMinigameChange}
                 tablePageSize={tablePageSize}
                 onTablePageSizeChange={onTablePageSizeChange}
               />

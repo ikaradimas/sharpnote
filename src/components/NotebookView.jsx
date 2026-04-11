@@ -68,6 +68,7 @@ export function NotebookView({
   onDebugResume,
   onDebugStep,
   onToggleBreakpoint,
+  showMinigame = true,
 }) {
   const { cells, outputs, outputHistory, cellResults, running, kernelStatus,
           config, logPanelOpen, nugetPanelOpen, configPanelOpen, inlineDiagnostics,
@@ -243,7 +244,7 @@ export function NotebookView({
           <div className="empty-notebook">
             <h2>Empty Notebook</h2>
             <p>Add a markdown or code cell to get started.</p>
-            <PongGame />
+            {showMinigame && <PongGame />}
           </div>
         )}
 

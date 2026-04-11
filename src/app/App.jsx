@@ -59,6 +59,13 @@ export function App() {
   const formatOnSaveRef = useRef(false);
   useEffect(() => { formatOnSaveRef.current = formatOnSave; }, [formatOnSave]);
 
+  const [showFish, setShowFish] = useState(true);
+  const showFishRef = useRef(true);
+  useEffect(() => { showFishRef.current = showFish; }, [showFish]);
+  const [showMinigame, setShowMinigame] = useState(true);
+  const showMinigameRef = useRef(true);
+  useEffect(() => { showMinigameRef.current = showMinigame; }, [showMinigame]);
+
   const [tablePageSize, setTablePageSize] = useState(10);
   const tablePageSizeRef = useRef(10);
   useEffect(() => { tablePageSizeRef.current = tablePageSize; }, [tablePageSize]);
@@ -247,6 +254,8 @@ export function App() {
       lintEnabled: lintEnabledRef.current,
       strongCuesEnabled: strongCuesRef.current,
       formatOnSave: formatOnSaveRef.current,
+      showFish: showFishRef.current,
+      showMinigame: showMinigameRef.current,
       tablePageSize: tablePageSizeRef.current,
       customShortcuts: customShortcutsRef.current,
       pinnedTabs: [...pinnedPathsRef.current],
@@ -276,6 +285,8 @@ export function App() {
       if (typeof s?.lintEnabled === 'boolean') setLintEnabled(s.lintEnabled);
       if (typeof s?.strongCuesEnabled === 'boolean') setStrongCuesEnabled(s.strongCuesEnabled);
       if (typeof s?.formatOnSave === 'boolean') setFormatOnSave(s.formatOnSave);
+      if (typeof s?.showFish === 'boolean') setShowFish(s.showFish);
+      if (typeof s?.showMinigame === 'boolean') setShowMinigame(s.showMinigame);
       if (typeof s?.tablePageSize === 'number') setTablePageSize(s.tablePageSize);
       if (s?.customShortcuts && typeof s.customShortcuts === 'object') {
         setCustomShortcuts(s.customShortcuts);
@@ -1195,6 +1206,7 @@ export function App() {
                     onDebugResume={debugResume}
                     onDebugStep={debugStep}
                     onToggleBreakpoint={toggleBreakpoint}
+                    showMinigame={showMinigame}
                   />
                 </div>
               ))}
@@ -1236,7 +1248,7 @@ export function App() {
           <DockZone zone="bottom" {...dockZoneProps} />
         </div>
       </div>
-      <StatusBar notebooks={notebooks} activeId={activeId} />
+      <StatusBar notebooks={notebooks} activeId={activeId} showFish={showFish} />
       {Object.entries(dockLayout.assignments)
         .filter(([panelId, z]) => z === 'float' && !!openFlags[panelId])
         .map(([panelId]) => {
@@ -1277,6 +1289,10 @@ export function App() {
           onStrongCuesChange={setStrongCuesEnabled}
           formatOnSave={formatOnSave}
           onFormatOnSaveChange={setFormatOnSave}
+          showFish={showFish}
+          onShowFishChange={setShowFish}
+          showMinigame={showMinigame}
+          onShowMinigameChange={setShowMinigame}
           tablePageSize={tablePageSize}
           onTablePageSizeChange={setTablePageSize}
           customShortcuts={customShortcuts}
