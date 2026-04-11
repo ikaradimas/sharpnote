@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Play, Square, Monitor, Container, Clock, Wifi, X, ScrollText } from 'lucide-react';
 import { CellNameColor } from './CellNameColor.jsx';
 import { CellControls } from './CellControls.jsx';
@@ -79,28 +79,22 @@ export function DockerCell({
     return () => clearInterval(id);
   }, [presenting, containerId, containerState, notebookId, cell.id, onPollDockerStatus]);
 
-  const handleRun = useCallback(() => {
-    onRun?.();
-  }, [onRun]);
-
-  const handleStop = useCallback(() => {
+  const handleStop = () => {
     if (containerId) onStopDocker?.(notebookId, cell.id, containerId);
-  }, [containerId, notebookId, cell.id, onStopDocker]);
+  };
 
-  const updateField = useCallback((field, value) => {
-    onUpdate?.({ [field]: value });
-  }, [onUpdate]);
+  const updateField = (field, value) => onUpdate?.({ [field]: value });
 
-  const handleOpenLogs = useCallback(() => {
+  const handleOpenLogs = () => {
     if (containerId) {
       onFetchDockerLogs?.(notebookId, cell.id, containerId);
       setLogsOpen(true);
     }
-  }, [containerId, notebookId, cell.id, onFetchDockerLogs]);
+  };
 
-  const handleRefreshLogs = useCallback(() => {
+  const handleRefreshLogs = () => {
     if (containerId) onFetchDockerLogs?.(notebookId, cell.id, containerId);
-  }, [containerId, notebookId, cell.id, onFetchDockerLogs]);
+  };
 
   const logsButton = containerId ? (
     <button className="docker-logs-btn" onClick={handleOpenLogs} title="Container logs">
@@ -158,7 +152,7 @@ export function DockerCell({
           ) : (
             <button
               className="docker-btn docker-btn-start"
-              onClick={handleRun}
+              onClick={onRun}
               disabled={!cell.image || !kernelReady}
             >
               <Play size={14} /> Start
@@ -203,7 +197,7 @@ export function DockerCell({
           ) : (
             <button
               className="cell-run-btn"
-              onClick={handleRun}
+              onClick={onRun}
               disabled={anyRunning || !kernelReady || !cell.image}
               title="Start container"
             >

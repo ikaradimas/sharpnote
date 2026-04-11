@@ -182,18 +182,11 @@ function startMockServer(apiDef, port = 0) {
 }
 
 function stopMockServer(id) {
-  if (id) {
-    const entry = _servers.get(id);
-    if (entry) {
-      entry.server.close();
-      _servers.delete(id);
-    }
-  } else {
-    // Legacy: stop all
-    for (const [key, entry] of _servers) {
-      entry.server.close();
-      _servers.delete(key);
-    }
+  if (!id) return;
+  const entry = _servers.get(id);
+  if (entry) {
+    entry.server.close();
+    _servers.delete(id);
   }
 }
 

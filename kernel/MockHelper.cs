@@ -82,11 +82,13 @@ public class MockHelper
 
         try
         {
-            return await tcs.Task.WaitAsync(_currentToken);
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(_currentToken);
+            cts.CancelAfter(TimeSpan.FromSeconds(30));
+            return await tcs.Task.WaitAsync(cts.Token);
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (!_currentToken.IsCancellationRequested)
         {
-            throw;
+            throw new TimeoutException("Mock server request timed out after 30s");
         }
         finally
         {

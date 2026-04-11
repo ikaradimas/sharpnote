@@ -18,6 +18,8 @@ export function ChangelogPanel() {
     );
   }, [query]);
 
+  const matchingVersions = useMemo(() => new Set(filtered.map(e => e.version)), [filtered]);
+
   return (
     <div className="changelog-panel">
       <div className="changelog-sidebar">
@@ -34,14 +36,11 @@ export function ChangelogPanel() {
           )}
         </div>
         <div className="changelog-index">
-          {CHANGELOG.map((entry) => {
-            const matches = !query || entry.title.toLowerCase().includes(query) ||
-              entry.version.includes(query) || entry.items.some(i => i.toLowerCase().includes(query));
-            return (
+          {CHANGELOG.map((entry) => (
               <a
                 key={entry.version}
                 href={`#cl-${entry.version}`}
-                className={`changelog-index-item${!matches ? ' changelog-index-dim' : ''}${entry.gears >= 3 ? ' changelog-index-major' : ''}`}
+                className={`changelog-index-item${!matchingVersions.has(entry.version) ? ' changelog-index-dim' : ''}${entry.gears >= 3 ? ' changelog-index-major' : ''}`}
                 onClick={(e) => {
                   e.preventDefault();
                   document.getElementById(`cl-${entry.version}`)?.scrollIntoView({ behavior: 'smooth' });
@@ -50,8 +49,7 @@ export function ChangelogPanel() {
                 <span className="cl-idx-version">{entry.version}</span>
                 <Gears count={entry.gears} />
               </a>
-            );
-          })}
+          ))}
         </div>
       </div>
       <div className="changelog-content">

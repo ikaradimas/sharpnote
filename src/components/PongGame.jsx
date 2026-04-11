@@ -32,6 +32,8 @@ export function PongGame() {
   const [score, setScore] = useState(0);
   const [gameOver, setGameOver] = useState(false);
   const [won, setWon] = useState(false);
+  const gameOverRef = useRef(false);
+  const wonRef = useRef(false);
 
   const resetState = useCallback(() => {
     stateRef.current = {
@@ -45,6 +47,8 @@ export function PongGame() {
     setScore(0);
     setGameOver(false);
     setWon(false);
+    gameOverRef.current = false;
+    wonRef.current = false;
   }, []);
 
   useEffect(() => { resetState(); }, [resetState]);
@@ -137,6 +141,7 @@ export function PongGame() {
 
       // check win
       if (s.bricks.every(b => !b.alive)) {
+        wonRef.current = true;
         setWon(true);
         draw(ctx, s);
         return;
@@ -144,6 +149,7 @@ export function PongGame() {
 
       // ball out
       if (s.by - BALL_R > H) {
+        gameOverRef.current = true;
         setGameOver(true);
         draw(ctx, s);
         return;
@@ -153,12 +159,14 @@ export function PongGame() {
       animRef.current = requestAnimationFrame(loop);
     };
 
-    animRef.current = requestAnimationFrame(loop);
+    if (!gameOverRef.current && !wonRef.current) {
+      animRef.current = requestAnimationFrame(loop);
+    }
     return () => {
       canvas.removeEventListener('mousemove', onMove);
       if (animRef.current) cancelAnimationFrame(animRef.current);
     };
-  }, [draw, gameOver, won]);
+  }, [draw]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleRestart = () => {
     resetState();

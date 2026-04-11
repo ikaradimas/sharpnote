@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using SharpNoteKernel;
@@ -16,6 +17,19 @@ partial class Program
         lock (_trackedContainers) { return new HashSet<string>(_trackedContainers); }
     }
 
+    private static string TrackContainer(string fullId)
+    {
+        var shortId = fullId.Trim();
+        if (shortId.Length > 12) shortId = shortId[..12];
+        lock (_trackedContainers) { _trackedContainers.Add(shortId); }
+        return shortId;
+    }
+
+    private static void UntrackContainer(string id)
+    {
+        lock (_trackedContainers) { _trackedContainers.Remove(id); }
+    }
+
     internal static async Task HandleExecuteDocker(JsonElement msg, TextWriter realStdout)
     {
         var cellId        = msg.TryGetProperty("id",            out var p) ? p.GetString() : null;
@@ -24,7 +38,7 @@ partial class Program
         var portsStr      = msg.TryGetProperty("ports",         out var pp) ? pp.GetString()?.Trim() : "";
         var envStr        = msg.TryGetProperty("env",           out var pe) ? pe.GetString()?.Trim() : "";
         var volume        = msg.TryGetProperty("volume",        out var pv) ? pv.GetString()?.Trim() : "";
-        var command       = msg.TryGetProperty("command",       out var pc) ? pc.GetString()?.Trim() : "";
+        var command        = msg.TryGetProperty("command",       out var pc) ? pc.GetString()?.Trim() : "";
 
         if (string.IsNullOrEmpty(image))
         {
@@ -40,7 +54,7 @@ partial class Program
 
         try
         {
-            var containerId = await Task.Run(() =>
+            var fullId = await Task.Run(() =>
             {
                 // Parse ports: "8080:80, 3000:3000" → Dictionary
                 Dictionary<string, string>? ports = null;
@@ -68,34 +82,31 @@ partial class Program
                     }
                 }
 
-                // Build image + command
                 var fullImage = !string.IsNullOrEmpty(command) ? $"{image} {command}" : image;
 
-                return DockerHelper.RunDocker(BuildDockerRunArgs(
-                    fullImage,
+                // Reuse DockerHelper.Run which builds the same args
+                var docker = new DockerHelper(realStdout);
+                return docker.Run(fullImage,
                     string.IsNullOrEmpty(containerName) ? null : containerName,
                     ports, env,
-                    string.IsNullOrEmpty(volume) ? null : volume)).Trim();
+                    string.IsNullOrEmpty(volume) ? null : volume);
             });
 
-            lock (_trackedContainers) { _trackedContainers.Add(containerId); }
+            var containerId = TrackContainer(fullId);
 
-            // Send started notification
             lock (realStdout)
             {
                 realStdout.WriteLine(JsonSerializer.Serialize(new
                 {
                     type = "docker_started",
                     id = cellId,
-                    containerId = containerId.Length > 12 ? containerId[..12] : containerId,
+                    containerId,
                     containerImage = image,
-                    containerName = containerName,
+                    containerName,
                 }));
                 realStdout.WriteLine(JsonSerializer.Serialize(new
                     { type = "complete", id = cellId, success = true }));
             }
-
-            LogContext.WriteNotebook($"Docker: started {image} → {containerId[..Math.Min(12, containerId.Length)]}");
         }
         catch (Exception ex)
         {
@@ -107,25 +118,6 @@ partial class Program
                     { type = "complete", id = cellId, success = false }));
             }
         }
-    }
-
-    private static string BuildDockerRunArgs(
-        string image, string? name,
-        Dictionary<string, string>? ports,
-        Dictionary<string, string>? env,
-        string? volume)
-    {
-        var args = new System.Text.StringBuilder("run -d");
-        if (name != null) args.Append($" --name {name}");
-        if (ports != null)
-            foreach (var (host, container) in ports)
-                args.Append($" -p {host}:{container}");
-        if (env != null)
-            foreach (var (k, v) in env)
-                args.Append($" -e {k}={v}");
-        if (volume != null) args.Append($" -v {volume}");
-        args.Append($" {image}");
-        return args.ToString();
     }
 
     internal static async Task HandleStopDocker(JsonElement msg, TextWriter realStdout)
@@ -145,22 +137,13 @@ partial class Program
 
         try
         {
-            await Task.Run(() =>
-            {
-                try { DockerHelper.RunDocker($"stop {containerId}"); } catch { }
-                try { DockerHelper.RunDocker($"rm -f {containerId}"); } catch { }
-            });
-
-            lock (_trackedContainers) { _trackedContainers.Remove(containerId); }
+            await Task.Run(() => new DockerHelper(realStdout).StopAndRemove(containerId));
+            UntrackContainer(containerId);
 
             lock (realStdout)
             {
                 realStdout.WriteLine(JsonSerializer.Serialize(new
-                {
-                    type = "docker_stopped",
-                    id = cellId,
-                    containerId,
-                }));
+                    { type = "docker_stopped", id = cellId, containerId }));
                 realStdout.WriteLine(JsonSerializer.Serialize(new
                     { type = "complete", id = cellId, success = true }));
             }
@@ -191,17 +174,13 @@ partial class Program
                 if (string.IsNullOrEmpty(containerId)) return (false, "no container", "");
                 try
                 {
-                    var isRunning = DockerHelper.RunDocker(
-                        $"inspect -f {{{{.State.Running}}}} {containerId}").Trim()
-                        .Equals("true", StringComparison.OrdinalIgnoreCase);
+                    var docker = new DockerHelper(realStdout);
+                    var isRunning = docker.IsRunning(containerId);
+                    // Combine status + ports in as few CLI calls as possible
                     var statusStr = DockerHelper.RunDocker(
                         $"inspect -f {{{{.State.Status}}}} {containerId}").Trim();
                     var portsStr = "";
-                    try
-                    {
-                        portsStr = DockerHelper.RunDocker(
-                            $"port {containerId}").Trim();
-                    }
+                    try { portsStr = DockerHelper.RunDocker($"port {containerId}").Trim(); }
                     catch { }
                     return (isRunning, statusStr, portsStr);
                 }
@@ -211,14 +190,7 @@ partial class Program
             lock (realStdout)
             {
                 realStdout.WriteLine(JsonSerializer.Serialize(new
-                {
-                    type = "docker_status",
-                    id = cellId,
-                    containerId,
-                    running,
-                    status,
-                    ports,
-                }));
+                    { type = "docker_status", id = cellId, containerId, running, status, ports }));
             }
         }
         catch (Exception ex)
@@ -226,14 +198,7 @@ partial class Program
             lock (realStdout)
             {
                 realStdout.WriteLine(JsonSerializer.Serialize(new
-                {
-                    type = "docker_status",
-                    id = cellId,
-                    containerId,
-                    running = false,
-                    status = ex.Message,
-                    ports = "",
-                }));
+                    { type = "docker_status", id = cellId, containerId, running = false, status = ex.Message, ports = "" }));
             }
         }
     }
@@ -255,12 +220,7 @@ partial class Program
             lock (realStdout)
             {
                 realStdout.WriteLine(JsonSerializer.Serialize(new
-                {
-                    type = "docker_logs",
-                    id = cellId,
-                    containerId,
-                    logs,
-                }));
+                    { type = "docker_logs", id = cellId, containerId, logs }));
             }
         }
         catch (Exception ex)
@@ -268,12 +228,7 @@ partial class Program
             lock (realStdout)
             {
                 realStdout.WriteLine(JsonSerializer.Serialize(new
-                {
-                    type = "docker_logs",
-                    id = cellId,
-                    containerId,
-                    logs = $"Error fetching logs: {ex.Message}",
-                }));
+                    { type = "docker_logs", id = cellId, containerId, logs = $"Error: {ex.Message}" }));
             }
         }
     }
@@ -287,12 +242,12 @@ partial class Program
             _trackedContainers.Clear();
         }
 
+        var docker = new DockerHelper(realStdout);
         foreach (var id in snapshot)
         {
             try
             {
-                DockerHelper.RunDocker($"stop {id}");
-                DockerHelper.RunDocker($"rm -f {id}");
+                docker.StopAndRemove(id);
                 LogContext.WriteNotebook($"Docker: cleanup stopped {id}");
             }
             catch (Exception ex)

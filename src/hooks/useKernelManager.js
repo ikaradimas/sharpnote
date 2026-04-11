@@ -303,13 +303,18 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
           }));
           break;
 
-        case 'docker_status':
+        case 'docker_status': {
+          const newState = msg.running ? 'running' : 'stopped';
+          const newPorts = msg.ports || '';
           setNb(notebookId, (n) => ({
-            cells: n.cells.map((c) =>
-              c.id === msg.id ? { ...c, containerState: msg.running ? 'running' : 'stopped', containerPorts: msg.ports || '' } : c
-            ),
+            cells: n.cells.map((c) => {
+              if (c.id !== msg.id) return c;
+              if (c.containerState === newState && c.containerPorts === newPorts) return c;
+              return { ...c, containerState: newState, containerPorts: newPorts };
+            }),
           }));
           break;
+        }
 
         case 'docker_logs':
           setNb(notebookId, (n) => ({

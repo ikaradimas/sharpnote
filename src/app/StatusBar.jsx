@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Cpu, Loader2, Save, AlertTriangle, Container, Server } from 'lucide-react';
 import { isNotebookId } from '../utils.js';
 import { registerCursorPosSetter } from '../components/editor/CodeEditor.jsx';
@@ -52,15 +52,18 @@ export function StatusBar({ notebooks, activeId, showFish = true }) {
     return () => { registerCursorPosSetter(null); };
   }, []);
 
-  // Docker container count: count cells across all notebooks with containerState === 'running'
-  const dockerCount = notebooks.reduce((sum, n) =>
-    sum + (n.cells || []).filter((c) => c.type === 'docker' && c.containerState === 'running').length, 0);
+  const dockerCount = useMemo(() =>
+    notebooks.reduce((sum, n) =>
+      sum + (n.cells || []).filter((c) => c.type === 'docker' && c.containerState === 'running').length, 0),
+    [notebooks]);
 
-  // Mock server count: poll periodically
   const [mockCount, setMockCount] = useState(0);
   useEffect(() => {
     const poll = () => {
-      window.electronAPI?.listMockServers?.().then((list) => setMockCount(list?.length ?? 0)).catch(() => {});
+      window.electronAPI?.listMockServers?.().then((list) => {
+        const next = list?.length ?? 0;
+        setMockCount((prev) => prev === next ? prev : next);
+      }).catch(() => {});
     };
     poll();
     const id = setInterval(poll, 5000);
