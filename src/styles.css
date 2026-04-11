@@ -3606,9 +3606,9 @@ body {
 
 /* ── Idle skyline ─────────────────────────────────────────── */
 .idle-skyline {
-  position: fixed; bottom: 0; left: 0; right: 0;
+  position: fixed; bottom: 34px; left: 0; right: 0;
   z-index: 9; pointer-events: none;
-  height: 120px;
+  height: 140px;
 }
 
 .ghost-bead {
