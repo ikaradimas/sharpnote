@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { FilePlus, Save, Trash2, Database, FolderTree, Download, Play, Square, Plus } from 'lucide-react';
+import { FilePlus, Save, Trash2, Database, FolderTree, Download, Play, Square, Plus, Server, X } from 'lucide-react';
 import { ModelEditor } from './api-editor/ModelEditor.jsx';
 import { ControllerSection } from './api-editor/ControllerSection.jsx';
 
@@ -22,12 +22,17 @@ export function ApiEditorPanel({ onToggle }) {
   const [apiDef, setApiDef] = useState(emptyApiDef);
   const [savedApis, setSavedApis] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
-  const [mockStatus, setMockStatus] = useState(null); // { running, port }
+  const [runningServers, setRunningServers] = useState([]); // [{ id, port, title }]
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
 
-  // Load saved APIs on mount
+  // Load saved APIs and running servers on mount
   useEffect(() => {
     window.electronAPI?.loadApiSaved?.().then(list => setSavedApis(list ?? [])).catch(() => {});
+    refreshServerList();
+  }, []);
+
+  const refreshServerList = useCallback(() => {
+    window.electronAPI?.listMockServers?.().then(list => setRunningServers(list ?? [])).catch(() => {});
   }, []);
 
   const editorApis = savedApis.filter(a => a.type === 'editor');
@@ -93,15 +98,21 @@ export function ApiEditorPanel({ onToggle }) {
 
   // ── Mock Server ───────────────────────────────────────────────────────
 
+  const currentApiRunning = runningServers.find(s => s.id === apiDef.id);
+
   const toggleMock = async () => {
-    if (mockStatus?.running) {
-      await window.electronAPI?.stopMockServer?.();
-      setMockStatus(null);
+    if (currentApiRunning) {
+      await window.electronAPI?.stopMockServer?.(apiDef.id);
+      refreshServerList();
     } else {
-      const port = parseInt(new URL(apiDef.baseUrl || 'http://localhost:3000').port) || 3000;
-      const result = await window.electronAPI?.startMockServer?.({ apiDef, port });
-      if (result?.success) setMockStatus({ running: true, port: result.port });
+      const result = await window.electronAPI?.startMockServer?.({ apiDef, port: 0 });
+      if (result?.success) refreshServerList();
     }
+  };
+
+  const stopServer = async (id) => {
+    await window.electronAPI?.stopMockServer?.(id);
+    refreshServerList();
   };
 
   return (
@@ -171,6 +182,23 @@ export function ApiEditorPanel({ onToggle }) {
         </div>
       </div>
 
+      {/* Running servers list */}
+      {runningServers.length > 0 && (
+        <div className="api-ed-servers">
+          <div className="api-ed-servers-header">
+            <Server size={12} /> Running Mocks ({runningServers.length})
+          </div>
+          {runningServers.map(s => (
+            <div key={s.id} className={`api-ed-server-row${s.id === apiDef.id ? ' api-ed-server-current' : ''}`}>
+              <span className="api-ed-server-dot" />
+              <span className="api-ed-server-title">{s.title || s.id}</span>
+              <span className="api-ed-server-port">:{s.port}</span>
+              <button className="api-ed-server-stop" onClick={() => stopServer(s.id)} title="Stop"><X size={11} /></button>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Bottom action bar */}
       <div className="api-ed-actions">
         <div className="api-ed-export-wrap">
@@ -183,11 +211,11 @@ export function ApiEditorPanel({ onToggle }) {
           )}
         </div>
         <button
-          className={`api-ed-action-btn api-ed-mock-btn${mockStatus?.running ? ' api-ed-mock-active' : ''}`}
+          className={`api-ed-action-btn api-ed-mock-btn${currentApiRunning ? ' api-ed-mock-active' : ''}`}
           onClick={toggleMock}
         >
-          {mockStatus?.running
-            ? <><Square size={14} /> Mock :{mockStatus.port}</>
+          {currentApiRunning
+            ? <><Square size={14} /> Mock :{currentApiRunning.port}</>
             : <><Play size={14} /> Mock Server</>
           }
         </button>

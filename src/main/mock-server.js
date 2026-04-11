@@ -2,7 +2,8 @@
 
 const http = require('http');
 
-let _server = null;
+// Map of serverId → { server, port, title }
+const _servers = new Map();
 
 /**
  * Build a route table from an API definition.
@@ -135,10 +136,19 @@ function handleRequest(req, res, rawBody, routes) {
   res.end(respBody);
 }
 
+/** Pick a random port in the 9001–9999 range. */
+function randomPort() {
+  return 9001 + Math.floor(Math.random() * 999);
+}
+
 function startMockServer(apiDef, port = 0) {
-  if (_server) stopMockServer();
+  const id = apiDef.id || `mock_${Date.now()}`;
+
+  // Stop existing server for this ID if running
+  if (_servers.has(id)) stopMockServer(id);
 
   const routes = buildRoutes(apiDef);
+  const usePort = port || randomPort();
 
   const server = http.createServer((req, res) => {
     // Collect request body before handling
@@ -151,45 +161,87 @@ function startMockServer(apiDef, port = 0) {
   });
 
   return new Promise((resolve, reject) => {
-    server.listen(port, '127.0.0.1', () => {
+    server.listen(usePort, '127.0.0.1', () => {
       const actualPort = server.address().port;
-      _server = server;
-      resolve({ port: actualPort });
+      _servers.set(id, { server, port: actualPort, title: apiDef.title || id });
+      resolve({ port: actualPort, id });
     });
-    server.on('error', reject);
+    server.on('error', (err) => {
+      // If port collision, retry with another random port
+      if (err.code === 'EADDRINUSE' && port === 0) {
+        server.listen(0, '127.0.0.1', () => {
+          const actualPort = server.address().port;
+          _servers.set(id, { server, port: actualPort, title: apiDef.title || id });
+          resolve({ port: actualPort, id });
+        });
+      } else {
+        reject(err);
+      }
+    });
   });
 }
 
-function stopMockServer() {
-  if (_server) {
-    _server.close();
-    _server = null;
+function stopMockServer(id) {
+  if (id) {
+    const entry = _servers.get(id);
+    if (entry) {
+      entry.server.close();
+      _servers.delete(id);
+    }
+  } else {
+    // Legacy: stop all
+    for (const [key, entry] of _servers) {
+      entry.server.close();
+      _servers.delete(key);
+    }
   }
 }
 
-function isRunning() {
-  return _server !== null;
+function stopAll() {
+  for (const [, entry] of _servers) entry.server.close();
+  _servers.clear();
+}
+
+function isRunning(id) {
+  if (id) return _servers.has(id);
+  return _servers.size > 0;
+}
+
+function listServers() {
+  return [..._servers.entries()].map(([id, { port, title }]) => ({ id, port, title }));
 }
 
 function register(ipcMain) {
   ipcMain.handle('mock-server-start', async (_ev, { apiDef, port }) => {
     try {
       const result = await startMockServer(apiDef, port || 0);
-      return { success: true, port: result.port };
+      return { success: true, port: result.port, id: result.id };
     } catch (err) {
       return { success: false, error: err.message };
     }
   });
 
-  ipcMain.handle('mock-server-stop', async () => {
-    stopMockServer();
+  ipcMain.handle('mock-server-stop', async (_ev, data) => {
+    const id = typeof data === 'string' ? data : data?.id;
+    stopMockServer(id || undefined);
     return { success: true };
   });
 
-  ipcMain.handle('mock-server-status', () => ({
-    running: isRunning(),
-    port: _server?.address()?.port ?? null,
-  }));
+  ipcMain.handle('mock-server-status', (_ev, data) => {
+    const id = typeof data === 'string' ? data : data?.id;
+    if (id) {
+      const entry = _servers.get(id);
+      return { running: !!entry, port: entry?.port ?? null };
+    }
+    return { running: _servers.size > 0, servers: listServers() };
+  });
+
+  ipcMain.handle('mock-server-list', () => listServers());
+
+  ipcMain.handle('mock-server-stop-all', () => {
+    stopAll();
+    return { success: true };
+  });
 }
 
-module.exports = { startMockServer, stopMockServer, isRunning, buildRoutes, matchRoute, executeHandler, register };
+module.exports = { startMockServer, stopMockServer, stopAll, isRunning, listServers, buildRoutes, matchRoute, executeHandler, register };
