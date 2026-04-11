@@ -1100,7 +1100,7 @@ export const DOCS_SECTIONS = [
   {
     id: 'embedded-files', title: 'Embedded Files',
     content: [
-      { type: 'p', text: 'Store files inline in the notebook (.cnb) and access them from code. Open the Embedded Files panel from the Tools menu to manage files visually, or embed programmatically.' },
+      { type: 'p', text: 'Store files inline in the notebook (.cnb) and access them from code. Open the Embedded Files panel from the Tools menu or View > Embedded Files (Ctrl+Shift+E / Cmd+Shift+E) to manage files visually, or embed programmatically.' },
       { type: 'ul', items: [
         'Files["name"] — access by name (returns EmbeddedFile)',
         'Files["name"].ContentAsText — UTF-8 string content',

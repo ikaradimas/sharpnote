@@ -166,7 +166,7 @@ export function App() {
     const nbFlagMap = {
       log: 'logPanelOpen', nuget: 'nugetPanelOpen', config: 'configPanelOpen',
       db: 'dbPanelOpen', vars: 'varsPanelOpen', toc: 'tocPanelOpen',
-      graph: 'graphPanelOpen', todo: 'todoPanelOpen', regex: 'regexPanelOpen', history: 'historyPanelOpen', deps: 'depsPanelOpen',
+      graph: 'graphPanelOpen', todo: 'todoPanelOpen', regex: 'regexPanelOpen', history: 'historyPanelOpen', deps: 'depsPanelOpen', embed: 'embedPanelOpen',
     };
     if (globalSetters[panelId]) {
       globalSetters[panelId](open === null ? (v) => !v : open);
@@ -214,7 +214,7 @@ export function App() {
       setNb(nbId, () => ({
         logPanelOpen: false, nugetPanelOpen: false, configPanelOpen: false,
         dbPanelOpen: false, varsPanelOpen: false, tocPanelOpen: false,
-        graphPanelOpen: false, todoPanelOpen: false, regexPanelOpen: false, historyPanelOpen: false, depsPanelOpen: false,
+        graphPanelOpen: false, todoPanelOpen: false, regexPanelOpen: false, historyPanelOpen: false, depsPanelOpen: false, embedPanelOpen: false,
       }));
   }, [setNb, setLibraryPanelOpen, setFilesPanelOpen, setApiPanelOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -801,6 +801,7 @@ export function App() {
     'toggle-regex':    () => setPanelVisible('regex',   null),
     'toggle-history':  () => setPanelVisible('history', null),
     'toggle-deps':     () => setPanelVisible('deps', null),
+    'toggle-embed':    () => setPanelVisible('embed', null),
     about:             () => setAboutOpen(true),
     settings:          () => setSettingsOpen(true),
     'export-html':     handleExportHtml,

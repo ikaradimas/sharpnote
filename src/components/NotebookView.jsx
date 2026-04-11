@@ -80,7 +80,7 @@ export function NotebookView({
 }) {
   const { cells, outputs, outputHistory, cellResults, running, kernelStatus,
           config, logPanelOpen, nugetPanelOpen, configPanelOpen, inlineDiagnostics,
-          dbPanelOpen, varsPanelOpen, tocPanelOpen, graphPanelOpen, todoPanelOpen, regexPanelOpen, historyPanelOpen, depsPanelOpen,
+          dbPanelOpen, varsPanelOpen, tocPanelOpen, graphPanelOpen, todoPanelOpen, regexPanelOpen, historyPanelOpen, depsPanelOpen, embedPanelOpen,
           path: notebookPath, staleCellIds, attachedDbs, autoRun, breakpoints, debugState } = nb;
 
   const [findOpen, setFindOpen] = useState(false);
@@ -253,6 +253,8 @@ export function NotebookView({
       onToggleHistory={() => { if (!historyPanelOpen) onFocusPanel?.('history'); onSetNb((n) => ({ historyPanelOpen: !n.historyPanelOpen })); }}
       depsPanelOpen={depsPanelOpen}
       onToggleDeps={() => { if (!depsPanelOpen) onFocusPanel?.('deps'); onSetNb((n) => ({ depsPanelOpen: !n.depsPanelOpen })); }}
+      embedPanelOpen={embedPanelOpen}
+      onToggleEmbed={() => { if (!embedPanelOpen) onFocusPanel?.('embed'); onSetNb((n) => ({ embedPanelOpen: !n.embedPanelOpen })); }}
       onCloseAllPanels={onCloseAllPanels}
       onImportData={onImportData}
       theme={theme}

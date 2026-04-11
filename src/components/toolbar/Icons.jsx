@@ -218,3 +218,10 @@ export function IconFileSvg({ isNotebook }) {
     </svg>
   );
 }
+export function IconEmbed() {
+  return (
+    <svg {..._ic} stroke="currentColor" strokeWidth="1.1" fill="none" strokeLinecap="round">
+      <path d="M8.5,2.5 A2.5,2.5 0 0 1 8.5,7.5 L5,11 A2,2 0 0 1 2,8.5 L5.5,5 A1.5,1.5 0 0 1 8,6.5 L5,9.5" />
+    </svg>
+  );
+}
