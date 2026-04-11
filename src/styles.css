@@ -3901,6 +3901,15 @@ body {
 }
 
 .db-connstr-input { width: 100%; }
+.db-timeout-row {
+  display: flex; gap: 12px; margin-top: 4px;
+}
+.db-timeout-field {
+  display: flex; flex-direction: column; gap: 2px; flex: 1;
+}
+.db-timeout-input {
+  width: 100%; font-family: var(--font-code); text-align: center;
+}
 
 .db-form-error {
   color: #f44747;

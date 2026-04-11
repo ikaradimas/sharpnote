@@ -47,8 +47,10 @@ describe('DbConnectionDialog', () => {
     fireEvent.click(screen.getByText('Save'));
 
     expect(props.onSave).toHaveBeenCalledWith(
-      expect.objectContaining({ name: 'NewDB', provider: 'sqlite', connectionString: 'Data Source=new.db' })
+      expect.objectContaining({ name: 'NewDB', provider: 'sqlite' })
     );
+    // Connection string includes appended timeout params
+    expect(props.onSave.mock.calls[0][0].connectionString).toContain('Data Source=new.db');
     expect(props.onClose).toHaveBeenCalledOnce();
   });
 
@@ -122,7 +124,8 @@ describe('DbConnectionDialog', () => {
     });
     fireEvent.click(screen.getByText('Test'));
 
-    expect(onTest).toHaveBeenCalledWith('sqlite', 'Data Source=my.db');
+    // Connection string includes appended timeout params
+    expect(onTest).toHaveBeenCalledWith('sqlite', expect.stringContaining('Data Source=my.db'));
   });
 
   it('shows "Testing connection..." during test', async () => {

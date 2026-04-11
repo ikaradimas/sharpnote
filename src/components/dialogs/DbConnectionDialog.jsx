@@ -2,16 +2,54 @@ import React, { useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { DB_PROVIDERS, DB_CONNSTR_PLACEHOLDER } from '../../config/db-providers.js';
 
+// Append timeout params to connection string if not already present
+function applyTimeouts(connStr, provider, connTimeout, cmdTimeout) {
+  let cs = connStr.trim();
+  if (!cs) return cs;
+
+  if (provider === 'redis') {
+    // Redis: connectTimeout=N (milliseconds)
+    if (connTimeout && !cs.toLowerCase().includes('connecttimeout'))
+      cs += `,connectTimeout=${connTimeout * 1000}`;
+    return cs;
+  }
+
+  // Relational: semicolon-delimited key=value
+  if (!cs.endsWith(';') && cs.length > 0) cs += ';';
+
+  if (provider === 'postgresql') {
+    if (connTimeout && !cs.toLowerCase().includes('timeout='))
+      cs += `Timeout=${connTimeout};`;
+    if (cmdTimeout && !cs.toLowerCase().includes('command timeout'))
+      cs += `Command Timeout=${cmdTimeout};`;
+  } else if (provider === 'sqlserver') {
+    if (connTimeout && !cs.toLowerCase().includes('connection timeout') && !cs.toLowerCase().includes('connect timeout'))
+      cs += `Connection Timeout=${connTimeout};`;
+    if (cmdTimeout && !cs.toLowerCase().includes('command timeout'))
+      cs += `Command Timeout=${cmdTimeout};`;
+  } else {
+    // SQLite
+    if (connTimeout && !cs.toLowerCase().includes('default timeout'))
+      cs += `Default Timeout=${connTimeout};`;
+  }
+
+  return cs;
+}
+
 export function DbConnectionDialog({ connection, existingNames, onSave, onClose, onTestConnection }) {
   const isNew = !connection;
   const [name, setName] = useState(connection?.name ?? '');
   const [provider, setProvider] = useState(connection?.provider ?? 'sqlite');
   const [connStr, setConnStr] = useState(connection?.connectionString ?? '');
+  const [connTimeout, setConnTimeout] = useState(connection?.connTimeout ?? 30);
+  const [cmdTimeout, setCmdTimeout] = useState(connection?.cmdTimeout ?? 60);
   const [error, setError] = useState('');
-  const [testState, setTestState] = useState(null); // null | 'testing' | 'success' | 'error'
+  const [testState, setTestState] = useState(null);
   const [testMsg, setTestMsg] = useState('');
 
   const providerMeta = DB_PROVIDERS.find((p) => p.key === provider);
+  const isRedis = provider === 'redis';
+  const isMemory = provider === 'sqlite_memory';
 
   const handleSave = () => {
     const n  = name.trim();
@@ -27,7 +65,8 @@ export function DbConnectionDialog({ connection, existingNames, onSave, onClose,
     }
     setError('');
     const id = connection?.id ?? uuidv4();
-    onSave({ id, name: n, provider, connectionString: cs });
+    const finalCs = isMemory ? cs : applyTimeouts(cs, provider, connTimeout, cmdTimeout);
+    onSave({ id, name: n, provider, connectionString: finalCs, connTimeout, cmdTimeout });
     onClose();
   };
 
@@ -42,7 +81,8 @@ export function DbConnectionDialog({ connection, existingNames, onSave, onClose,
     setTestState('testing');
     setTestMsg('');
     try {
-      const result = await onTestConnection(provider, cs);
+      const testCs = isMemory ? cs : applyTimeouts(cs, provider, connTimeout, cmdTimeout);
+      const result = await onTestConnection(provider, testCs);
       if (result.success) {
         setTestState('success');
         setTestMsg('Connection successful.');
@@ -95,6 +135,36 @@ export function DbConnectionDialog({ connection, existingNames, onSave, onClose,
             onChange={(e) => { setConnStr(e.target.value); setTestState(null); }}
             spellCheck={false}
           />
+
+          {!isMemory && (
+            <div className="db-timeout-row">
+              <label className="db-timeout-field">
+                <span className="db-conn-dialog-label">Connection Timeout (s)</span>
+                <input
+                  className="nuget-input db-timeout-input"
+                  type="number"
+                  min="1"
+                  max="300"
+                  value={connTimeout}
+                  onChange={(e) => setConnTimeout(Math.max(1, parseInt(e.target.value) || 30))}
+                />
+              </label>
+              {!isRedis && (
+                <label className="db-timeout-field">
+                  <span className="db-conn-dialog-label">Command Timeout (s)</span>
+                  <input
+                    className="nuget-input db-timeout-input"
+                    type="number"
+                    min="1"
+                    max="600"
+                    value={cmdTimeout}
+                    onChange={(e) => setCmdTimeout(Math.max(1, parseInt(e.target.value) || 60))}
+                  />
+                </label>
+              )}
+            </div>
+          )}
+
           {error && <div className="db-form-error">{error}</div>}
           {testState && (
             <div className={`db-test-result db-test-${testState}`}>
