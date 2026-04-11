@@ -124,6 +124,9 @@ An interactive C# notebook. Press **Ctrl+Enter** to run a cell, or click **▶ R
 
 > **More examples:** File → New Notebook → choose a template topic.`),
 
+    { ...cs(`Display.StatCard("Cell Types", "Code · Markdown · SQL · HTTP · Shell · Docker", color: "#569cd6", icon: "📝");`), columns: 2 },
+    { ...cs(`Display.StatCard("Output Modes", "Auto · Table · HTML · Graph · Text", color: "#4ec9b0", icon: "📊");`), columns: 2 },
+
     md('## Variables, LINQ, and Auto-render'),
 
     cs(`// Variables, interpolation, LINQ
@@ -178,6 +181,10 @@ function makeDataChartsCells() {
 
 Load data from files, render tables, and build interactive charts.`),
 
+    { ...cs(`Display.StatCard("Chart Types", "Line · Doughnut · Scatter · Bar", color: "#569cd6", icon: "📊");`), columns: 3 },
+    { ...cs(`Display.StatCard("Data Sources", "CSV · TSV · Excel · Parquet", color: "#4ec9b0", icon: "📁");`), columns: 3 },
+    { ...cs(`Display.StatCard("Layouts", "Tables · Grids · Dashboards", color: "#e0a040", icon: "📐");`), columns: 3 },
+
     // ── CSV & Data Import ──────────────────────────────────────────────────
 
     md('## CSV & Data Import'),
@@ -228,9 +235,9 @@ tsv  // columns are named Col1, Col2, …`),
 
     md('## Charts'),
 
-    md('### Line Chart — Revenue vs Costs'),
+    md('### Charts — Side by Side'),
 
-    cs(`// Return a Chart.js config object — set output mode to "graph"
+    { ...cs(`// Return a Chart.js config object — set output mode to "graph"
 new {
   type = "line",
   data = new {
@@ -260,11 +267,9 @@ new {
       title = new { display = true, text = "Revenue vs Costs 2024" },
     },
   },
-}`, 'graph'),
+}`, 'graph'), columns: 3 },
 
-    md('### Doughnut Chart'),
-
-    cs(`// Doughnut — category share
+    { ...cs(`// Doughnut — category share
 new {
     type = "doughnut",
     data = new {
@@ -287,11 +292,9 @@ new {
             legend = new { position = "right" },
         },
     },
-}`, 'graph'),
+}`, 'graph'), columns: 3 },
 
-    md('### Scatter Chart'),
-
-    cs(`// Scatter — correlation between two variables
+    { ...cs(`// Scatter — correlation between two variables
 var rng = new Random(12);
 var points = Enumerable.Range(0, 45).Select(_ => {
     var x = Math.Round(rng.NextDouble() * 100, 1);
@@ -316,7 +319,9 @@ new {
             y = new { title = new { display = true, text = "Y" } },
         },
     },
-}`, 'graph'),
+}`, 'graph'), columns: 3 },
+
+    md(`> **Tip:** The three charts above use the \`columns: 3\` layout to render side-by-side. Any cell type supports column layout.`),
 
     // ── Display.Layout dashboards ──────────────────────────────────────────
 
@@ -514,7 +519,7 @@ All operations use the \`DbSet\` properties and EF Core change tracking — **no
 
 **Run the setup cell above first.**`),
 
-    cs(`// ── LINQ to SQL CRUD — no raw SQL ───────────────────────────────────────────
+    { ...cs(`// ── LINQ to SQL CRUD — no raw SQL ───────────────────────────────────────────
 // Uses the 'scratch' DbContext with its typed Products DbSet.
 
 // ── CREATE ───────────────────────────────────────────────────────────────────
@@ -576,7 +581,21 @@ scratch.Products.RemoveRange(outOfStock);
 scratch.SaveChanges();
 
 Display.Html("<h4 style='color:#e06c75;margin:8px 0 4px'>DELETE — Removed out-of-stock items</h4>");
-scratch.Products.OrderBy(p => p.Id).ToList().DisplayTable();`),
+scratch.Products.OrderBy(p => p.Id).ToList().DisplayTable();`), columns: 2 },
+
+    { ...cs(`Display.Html(@"<div style='background:#111118;border:1px solid #333;border-radius:6px;padding:14px;font-size:12px;color:#aaa;line-height:1.7'>
+<div style='color:#569cd6;font-weight:600;margin-bottom:8px'>📋 EF Core CRUD Reference</div>
+<div><strong style='color:#4ec9b0'>CREATE</strong> — <code>dbSet.Add(entity)</code> + <code>SaveChanges()</code></div>
+<div><strong style='color:#61afef'>READ</strong> — <code>dbSet.Where(...).ToList()</code>, <code>.First()</code>, <code>.Count()</code></div>
+<div><strong style='color:#e5c07b'>UPDATE</strong> — modify properties on tracked entity + <code>SaveChanges()</code></div>
+<div><strong style='color:#e06c75'>DELETE</strong> — <code>dbSet.Remove(entity)</code> or <code>RemoveRange()</code></div>
+<div style='margin-top:8px;border-top:1px solid #333;padding-top:8px'>
+<div>• All POCO types are auto-generated from the schema</div>
+<div>• Types are available unqualified: <code>new Orders { ... }</code></div>
+<div>• Use <code>await dbSet.ToListAsync()</code> for async queries</div>
+<div>• <code>SaveChanges()</code> persists all tracked changes in one transaction</div>
+</div>
+</div>");`, 'html'), columns: 2 },
 
     md('### Querying an External Database'),
 
@@ -1013,6 +1032,21 @@ for (int i = 0; i < 60; i++)
     Display.Plot("events", rng.Next(0, 5), type: ChartType.Bar);    // bars
     await Task.Delay(40);
 }`),
+
+    // ── Infographic helpers ───────────────────────────────────────────────
+
+    md(`## Infographic Helpers
+
+Quick one-liners for dashboard-style visuals. Combine with \`columns\` layout for side-by-side cards.`),
+
+    { ...cs(`Display.StatCard("Users", "12,847", color: "#569cd6", icon: "👥");`), columns: 3 },
+    { ...cs(`Display.StatCard("Revenue", "$1.2M", color: "#4ec9b0", icon: "💰");`), columns: 3 },
+    { ...cs(`Display.StatCard("Uptime", "99.97%", color: "#b48ead", icon: "⏱");`), columns: 3 },
+
+    { ...cs(`Display.ProgressBar(78, "CPU — 78%", color: "#569cd6");`), columns: 2 },
+    { ...cs(`Display.ProgressBar(42, "Memory — 42%", color: "#4ec9b0");`), columns: 2 },
+
+    cs(`Display.Marquee("  ●  SYSTEM STATUS: ALL SERVICES OPERATIONAL  ●  LAST DEPLOY: 2 hours ago  ●  ", speed: 30, color: "#4ec9b0", background: "#0a0a12");`),
   ];
 }
 
@@ -1389,8 +1423,9 @@ The \`Docker\` global lets you manage containers from code cells. Requires Docke
 | Method | Description |
 |--------|-------------|
 | \`Docker.Run(image, name?, ports?, env?)\` | Start a container; returns container ID |
-| \`Docker.Stop(nameOrId)\` | Stop a running container |
-| \`Docker.Remove(nameOrId)\` | Remove a container |
+| \`Docker.Stop(nameOrId)\` / \`Docker.Remove(nameOrId)\` | Stop / remove a container |
+| \`Docker.StopAndRemove(nameOrId)\` | Stop + remove in one call (ignores errors) |
+| \`Docker.StopAllTracked()\` | Stop all containers started by Docker cells |
 | \`Docker.Exec(nameOrId, cmd)\` | Run a command inside a container |
 | \`Docker.IsRunning(nameOrId)\` | Check if running |
 | \`Docker.List()\` | List all containers |`),
@@ -1400,10 +1435,59 @@ The \`Docker\` global lets you manage containers from code cells. Requires Docke
 //     ports: new() { ["6379"] = "6379" });
 // Console.WriteLine($"Started: {id[..12]}");
 // Docker.IsRunning("demo-redis").Display();
-// Docker.Stop("demo-redis");
-// Docker.Remove("demo-redis");
+// Docker.StopAndRemove("demo-redis");  // clean up in one call
 
 Docker.List().DisplayTable();  // List running containers`),
+
+    // ── Mock API ──────────────────────────────────────────────────────────
+
+    md(`## Mock API Servers
+
+The \`Mock\` global starts mock HTTP servers from code. Servers run on random ports above 9000.
+
+| Method | Description |
+|--------|-------------|
+| \`await Mock.StartAsync(apiDef, port?)\` | Start a mock, returns the assigned port |
+| \`await Mock.StopAsync(id)\` | Stop a mock by its ID |
+| \`await Mock.StopAllAsync()\` | Stop all running mocks |
+| \`await Mock.ListAsync()\` | List running mocks (\`Id\`, \`Port\`, \`Title\`) |`),
+
+    { ...cs(`// Start a mock API and call it
+var port = await Mock.StartAsync(new {
+    id = "demo-api",
+    title = "Demo API",
+    controllers = new[] { new {
+        basePath = "/api/items",
+        endpoints = new object[] {
+            new { method = "GET", path = "",
+                  mockResponse = new { status = 200, body = @"[{""id"":1,""name"":""Widget""},{""id"":2,""name"":""Gadget""}]" } },
+            new { method = "GET", path = "/{id}",
+                  mockResponse = new { status = 200, body = @"{""id"":{{id}},""name"":""Widget""}" } },
+        }
+    } }
+});
+
+// Call the mock from C#
+using var http = new HttpClient();
+var items = await http.GetStringAsync($"http://localhost:{port}/api/items");
+Display.Html($"<div style='color:#4ec9b0'>Mock on :{port}</div>");
+items.Display();`), columns: 2 },
+
+    { ...cs(`Display.Html(@"<div style='background:#111118;border:1px solid #333;border-radius:6px;padding:14px;font-size:12px;color:#aaa;line-height:1.7'>
+<div style='color:#4ec9b0;font-weight:600;margin-bottom:8px'>📋 Mock API Notes</div>
+<div>• Mocks run in the Electron main process — no external dependencies</div>
+<div>• Port 0 assigns a random port above 9000</div>
+<div>• Use <code>{{paramName}}</code> in response bodies for path param substitution</div>
+<div>• Add <code>mockHandler</code> for dynamic JS logic (instead of static <code>mockResponse</code>)</div>
+<div>• The API Editor panel provides a visual interface for designing mocks</div>
+<div style='margin-top:8px;color:#569cd6'>💡 See the <strong>Service Mesh</strong> template for a full multi-service example</div>
+</div>");`, 'html'), columns: 2 },
+
+    cs(`// List and clean up
+var mocks = await Mock.ListAsync();
+mocks.DisplayTable();
+await Mock.StopAllAsync();
+Display.Html("<div style='color:#4ec9b0'>✓ All mocks stopped</div>");`),
   ];
 }
 
@@ -1831,6 +1915,11 @@ function makeRaytracerCells() {
 
 Build a simple raytracer step by step, rendering directly into the notebook via base64 images.
 Each cell builds on the previous — run them in order.`),
+
+    { ...cs(`Display.StatCard("Resolution", "400 × 300", color: "#569cd6", icon: "🖼");`), columns: 4 },
+    { ...cs(`Display.StatCard("Spheres", "4 objects", color: "#4ec9b0", icon: "🔵");`), columns: 4 },
+    { ...cs(`Display.StatCard("Bounces", "3 max depth", color: "#e0a040", icon: "↩");`), columns: 4 },
+    { ...cs(`Display.StatCard("Render", "ParallelRender", color: "#c084d0", icon: "⚡");`), columns: 4 },
 
     md('## 1. Vector Math'),
 
