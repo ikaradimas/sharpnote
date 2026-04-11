@@ -3508,7 +3508,7 @@ body {
 /* ── Status Bar ──────────────────────────────────────────────────────────── */
 
 .status-bar {
-  height: 28px;
+  height: 34px;
   background: linear-gradient(180deg, #141418 0%, #111116 100%);
   border-top: 1px solid #222228;
   display: flex;
@@ -3522,10 +3522,16 @@ body {
   -webkit-app-region: no-drag;
 }
 /* ── Status bar fish ─────────────────────────────────────── */
+.status-fish-swarm {
+  display: inline-flex; align-items: center; flex-shrink: 0;
+  width: 80px; height: 24px; position: relative;
+  overflow: visible;
+}
 .status-fish {
   display: inline-flex; align-items: center; flex-shrink: 0;
-  width: 24px; position: relative;
+  width: 20px; position: relative;
   animation: fish-drift 3s ease-in-out infinite;
+  transition: opacity 0.5s, transform 0.5s;
 }
 .fish-body {
   position: absolute; display: block;

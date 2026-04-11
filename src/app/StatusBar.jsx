@@ -38,6 +38,109 @@ function MemorySparkline({ history }) {
   );
 }
 
+const FISH_VARIANTS = [
+  { color: '#2ec4b6', tailColor: '#2ec4b6', finColor: '#22a89c' },                   // teal (original)
+  { color: '#e0943a', tailColor: '#e0943a', finColor: '#c47a20' },                   // orange
+  { color: '#c084d0', tailColor: '#c084d0', finColor: '#a060b0' },                   // purple
+  { color: '#569cd6', tailColor: '#569cd6', finColor: '#4080b8' },                   // blue
+];
+
+function OneFish({ variant, scale, offsetY, driftDelay, wiggleSpeed }) {
+  const s = scale;
+  return (
+    <span
+      className="status-fish"
+      aria-hidden="true"
+      style={{
+        transform: `scale(${s})`,
+        transformOrigin: 'left center',
+        marginTop: offsetY,
+        animationDelay: `${driftDelay}s`,
+        opacity: Math.min(1, s + 0.2),
+      }}
+    >
+      <span className="fish-body" style={{ background: variant.color, animationDuration: `${wiggleSpeed}s` }}>
+        <span className="fish-eye" />
+        <span className="fish-tail" style={{ borderLeftColor: variant.tailColor }} />
+        <span className="fish-fin" style={{ borderTopColor: variant.finColor }} />
+      </span>
+    </span>
+  );
+}
+
+function FishSwarm() {
+  const [swarm, setSwarm] = useState([]);
+  const phaseRef = useRef('solo'); // solo → growing → full → shrinking → solo
+  const timerRef = useRef(null);
+
+  useEffect(() => {
+    const cycle = () => {
+      const phase = phaseRef.current;
+      if (phase === 'solo') {
+        // After 8-15s, start spawning
+        timerRef.current = setTimeout(() => {
+          phaseRef.current = 'growing';
+          cycle();
+        }, 8000 + Math.random() * 7000);
+      } else if (phase === 'growing') {
+        // Add fish one at a time, up to 3 extra
+        const count = Math.floor(Math.random() * 3) + 1; // 1-3 extra fish
+        const newFish = [];
+        for (let i = 0; i < count; i++) {
+          newFish.push({
+            id: i,
+            variant: FISH_VARIANTS[1 + (i % 3)], // skip teal (original)
+            scale: 0.7 - i * 0.12,
+            offsetY: (i % 2 === 0 ? -1 : 1) * (2 + i * 1.5),
+            driftDelay: 0.3 + i * 0.5,
+            wiggleSpeed: 0.7 + i * 0.15,
+            spawnDelay: i * 600,
+          });
+        }
+        // Stagger spawns
+        newFish.forEach((f) => {
+          setTimeout(() => setSwarm((prev) => [...prev, f]), f.spawnDelay);
+        });
+        // Stay full for 6-10s
+        timerRef.current = setTimeout(() => {
+          phaseRef.current = 'shrinking';
+          cycle();
+        }, (newFish.length * 600) + 6000 + Math.random() * 4000);
+      } else if (phase === 'shrinking') {
+        // Remove fish one at a time
+        const shrink = (remaining) => {
+          if (remaining <= 0) {
+            setSwarm([]);
+            phaseRef.current = 'solo';
+            cycle();
+            return;
+          }
+          setTimeout(() => {
+            setSwarm((prev) => prev.slice(0, -1));
+            shrink(remaining - 1);
+          }, 800);
+        };
+        setSwarm((prev) => {
+          shrink(prev.length);
+          return prev;
+        });
+      }
+    };
+    cycle();
+    return () => clearTimeout(timerRef.current);
+  }, []);
+
+  return (
+    <span className="status-fish-swarm">
+      <OneFish variant={FISH_VARIANTS[0]} scale={1} offsetY={0} driftDelay={0} wiggleSpeed={0.8} />
+      {swarm.map((f) => (
+        <OneFish key={f.id} variant={f.variant} scale={f.scale} offsetY={f.offsetY}
+                 driftDelay={f.driftDelay} wiggleSpeed={f.wiggleSpeed} />
+      ))}
+    </span>
+  );
+}
+
 export function StatusBar({ notebooks, activeId, showFish = true }) {
   const nb = isNotebookId(activeId) ? notebooks.find((n) => n.id === activeId) : null;
   const history = nb?.memoryHistory ?? [];
@@ -72,15 +175,7 @@ export function StatusBar({ notebooks, activeId, showFish = true }) {
 
   return (
     <div className="status-bar">
-      {showFish && (
-        <span className="status-fish" aria-hidden="true">
-          <span className="fish-body">
-            <span className="fish-eye" />
-            <span className="fish-tail" />
-            <span className="fish-fin" />
-          </span>
-        </span>
-      )}
+      {showFish && <FishSwarm />}
       <Cpu size={10} className="status-icon" />
       <span className="status-label">MEM</span>
       <MemorySparkline history={history} />
