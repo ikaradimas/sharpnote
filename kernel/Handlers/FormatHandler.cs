@@ -15,10 +15,8 @@ partial class Program
         // Strip #r nuget directives — the workspace already has loaded package
         // references; leaving the directives causes spurious parse errors.
         var (cleanCode, nugetRefs) = ParseNugetDirectives(code);
-        _workspaceManager.UpdateDocument(cleanCode);
 
-        var formatted   = await _workspaceManager.FormatDocumentAsync();
-        var diagnostics = await _workspaceManager.GetDiagnosticsAsync();
+        var (formatted, diagnostics) = await _workspaceManager.FormatCodeAsync(cleanCode);
 
         // Re-prepend #r directives so they aren't lost from the cell
         if (nugetRefs.Count > 0)
