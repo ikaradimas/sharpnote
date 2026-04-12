@@ -260,6 +260,7 @@ export function CodeCell({
           onChange={(val) => onUpdate(val)}
           language="csharp"
           notebookId={notebookId}
+          cellId={cell.id}
           onCtrlEnter={kernelReady && !anyRunning ? onRun : undefined}
           readOnly={locked}
           cellIndex={cellIndex}

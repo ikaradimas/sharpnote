@@ -135,8 +135,8 @@ function buildSigHelpListener(documentUri) {
 //      that fires textDocument/signatureHelp on ( and , and shows the result
 //      in a CodeMirror tooltip.
 
-function buildLspExtensions(notebookId) {
-  const documentUri = `file:///script-${notebookId}.csx`;
+function buildLspExtensions(notebookId, cellId) {
+  const documentUri = `file:///cell-${notebookId}-${cellId}.csx`;
   const client = new LanguageServerClient({
     transport: new ElectronLspTransport(notebookId),
     rootUri: null,
@@ -513,7 +513,7 @@ function inlineDiagsTooltip() {
 }
 
 export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
-                      notebookId, readOnly = false, cellIndex = null, sqlSchema = null,
+                      notebookId, cellId = null, readOnly = false, cellIndex = null, sqlSchema = null,
                       breakpoints = null, onToggleBreakpoint = null, pausedLine = null,
                       inlineDiagnostics = null }) {
   const containerRef = useRef(null);
@@ -610,7 +610,7 @@ export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
 
     if (language === 'csharp' && notebookId) {
       extensions.push(
-        ...buildLspExtensions(notebookId),
+        ...buildLspExtensions(notebookId, cellId),
         Prec.highest(keymap.of([
           { key: 'Tab',   run: acceptCompletion },
           { key: 'Enter', run: acceptCompletion },
