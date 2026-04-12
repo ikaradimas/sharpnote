@@ -928,7 +928,7 @@ export function App() {
       if (dirty.length === 0) {
         window.electronAPI.confirmQuit();
       } else {
-        setQuitDirtyNbs(dirty.map((n) => ({ id: n.id, title: n.title, path: n.path })));
+        setQuitDirtyNbs(dirty.map((n) => ({ id: n.id, title: getNotebookDisplayName(n.path, n.title), path: n.path })));
       }
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
