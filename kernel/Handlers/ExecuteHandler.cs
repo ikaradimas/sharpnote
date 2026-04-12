@@ -111,7 +111,6 @@ partial class Program
         UtilContext.Current.SetCancellationToken(execToken);
         globals.Mock.SetCancellationToken(execToken);
         var interrupted = false;
-        var isCompilationError = false;
 
         // Inject FormData variable when the execute message contains form submission data.
         if (msg.TryGetProperty("formData", out var formDataProp) && formDataProp.ValueKind == JsonValueKind.Object)
@@ -201,7 +200,6 @@ partial class Program
         catch (Microsoft.CodeAnalysis.Scripting.CompilationErrorException ex)
         {
             success = false;
-            isCompilationError = true;
             errorMessage = string.Join("\n", ex.Diagnostics);
             // Send structured diagnostics with positions for inline display
             var inlineDiags = ex.Diagnostics
@@ -254,7 +252,7 @@ partial class Program
             RenderReturnValue(display, script.ReturnValue, outputMode, id, realStdout);
         }
 
-        if (!success && errorMessage != "Execution interrupted" && !isCompilationError)
+        if (!success && errorMessage != "Execution interrupted")
         {
             realStdout.WriteLine(JsonSerializer.Serialize(new
             { type = "error", id, message = errorMessage, stackTrace }));
