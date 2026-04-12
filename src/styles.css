@@ -2785,7 +2785,7 @@ body {
 }
 .tab.tab-active::before {
   content: ''; position: absolute; top: 2px; left: 4px; right: 4px;
-  height: 1.5px; background: var(--accent-primary); border-radius: 1px;
+  height: 1px; background: var(--accent-primary); border-radius: 0;
 }
 
 .tab-title {
