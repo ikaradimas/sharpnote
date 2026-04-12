@@ -6800,11 +6800,11 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 .cell-name-input {
   font-family: var(--font-ui); font-size: 13.2px; color: var(--text-primary);
   background: var(--bg-deepest); border: 1px solid var(--border-default);
-  border-radius: 3px; padding: 1px 4px; outline: none; width: 208px; max-width: 100%;
+  border-radius: 3px; padding: 1px 4px; outline: none; width: 312px; max-width: 100%;
 }
 .cell-name-label {
   font-family: var(--font-ui); font-size: 13.2px; font-weight: 500;
-  color: var(--text-secondary); cursor: pointer; max-width: 260px;
+  color: var(--text-secondary); cursor: pointer; max-width: 390px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .cell-name-label:hover { color: var(--text-primary); }
