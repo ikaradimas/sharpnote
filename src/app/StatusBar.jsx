@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Cpu, Loader2, Save, AlertTriangle, Container, Server } from 'lucide-react';
+import { Cpu, Loader2, Save, AlertTriangle, Container, Server, Building2 } from 'lucide-react';
 import { isNotebookId } from '../utils.js';
 import { registerCursorPosSetter } from '../components/editor/CodeEditor.jsx';
 
@@ -149,7 +149,7 @@ function FishSwarm() {
   );
 }
 
-export function StatusBar({ notebooks, activeId, showFish = true }) {
+export function StatusBar({ notebooks, activeId, showFish = true, showSkyline = true, onTriggerSkyline }) {
   const nb = isNotebookId(activeId) ? notebooks.find((n) => n.id === activeId) : null;
   const history = nb?.memoryHistory ?? [];
   const current = history.length > 0 ? history[history.length - 1] : null;
@@ -210,6 +210,11 @@ export function StatusBar({ notebooks, activeId, showFish = true }) {
       {nb && (
         <Save size={10} className={`status-save-icon${nb.isDirty ? ' status-save-unsaved' : ''}`}
               title={nb.isDirty ? 'Unsaved changes' : 'Saved'} />
+      )}
+      {showSkyline && onTriggerSkyline && (
+        <button className="status-skyline-btn" onClick={onTriggerSkyline} title="Trigger cityscape">
+          <Building2 size={11} />
+        </button>
       )}
       {anyRunning && <Loader2 size={11} className="status-running-icon" title="Cell executing" />}
       {cursorPos && (

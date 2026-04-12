@@ -74,6 +74,7 @@ export function App() {
   const [showSkyline, setShowSkyline] = useState(true);
   const showSkylineRef = useRef(true);
   useEffect(() => { showSkylineRef.current = showSkyline; }, [showSkyline]);
+  const skylineTriggerRef = useRef(null);
 
   const [tablePageSize, setTablePageSize] = useState(10);
   const tablePageSizeRef = useRef(10);
@@ -1343,9 +1344,10 @@ export function App() {
           <DockZone zone="bottom" {...dockZoneProps} />
         </div>
       </div>
-      <StatusBar notebooks={notebooks} activeId={activeId} showFish={showFish} />
+      <StatusBar notebooks={notebooks} activeId={activeId} showFish={showFish}
+        showSkyline={showSkyline} onTriggerSkyline={() => skylineTriggerRef.current?.()} />
       {showGhost && <Ghost />}
-      {showSkyline && <IdleSkyline />}
+      {showSkyline && <IdleSkyline triggerRef={skylineTriggerRef} />}
       {Object.entries(dockLayout.assignments)
         .filter(([panelId, z]) => z === 'float' && !!openFlags[panelId])
         .map(([panelId]) => {

@@ -74,7 +74,7 @@ function makeWindows(bw, bh) {
   return wins;
 }
 
-export function IdleSkyline() {
+export function IdleSkyline({ triggerRef }) {
   const canvasRef = useRef(null);
   const animRef = useRef(null);
   const lastActivityRef = useRef(Date.now());
@@ -111,6 +111,12 @@ export function IdleSkyline() {
       window.removeEventListener('keydown', handleDismiss);
     };
   }, [handleDismiss]);
+
+  useEffect(() => {
+    if (triggerRef) triggerRef.current = () => {
+      lastActivityRef.current = Date.now() - IDLE_START - 1;
+    };
+  }, [triggerRef]);
 
   useEffect(() => {
     const canvas = canvasRef.current;

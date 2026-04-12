@@ -3812,7 +3812,7 @@ body {
 /* ── Idle skyline ─────────────────────────────────────────── */
 .idle-skyline {
   position: fixed; bottom: 34px; left: 0; right: 0;
-  z-index: 9; pointer-events: none;
+  z-index: 25; pointer-events: none;
   height: 160px;
 }
 .idle-skyline.idle-skyline-active {
@@ -3865,6 +3865,12 @@ body {
 
 .status-save-icon { color: #4ec9b0; flex-shrink: 0; }
 .status-save-icon.status-save-unsaved { color: #e0a040; }
+.status-skyline-btn {
+  background: none; border: none; cursor: pointer; padding: 0 2px;
+  color: var(--text-dim); display: flex; align-items: center; flex-shrink: 0;
+  transition: color 0.15s;
+}
+.status-skyline-btn:hover { color: var(--accent-secondary); }
 .status-running-icon {
   color: var(--accent-primary); flex-shrink: 0;
   animation: spin 0.8s linear infinite;
