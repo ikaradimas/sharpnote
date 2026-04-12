@@ -116,6 +116,19 @@ public class DockerHelper
         return "docker"; // fall back to PATH
     }
 
+    private static readonly string ExtendedPath = BuildExtendedPath();
+
+    private static string BuildExtendedPath()
+    {
+        var current = Environment.GetEnvironmentVariable("PATH") ?? "";
+        if (OperatingSystem.IsWindows()) return current;
+        var extras = new[] { "/usr/local/bin", "/opt/homebrew/bin" };
+        var parts = new HashSet<string>(current.Split(':'));
+        foreach (var p in extras)
+            if (!parts.Contains(p)) current = $"{current}:{p}";
+        return current;
+    }
+
     internal static string RunDocker(string args)
     {
         var psi = new ProcessStartInfo
@@ -127,6 +140,7 @@ public class DockerHelper
             UseShellExecute = false,
             CreateNoWindow = true,
         };
+        psi.Environment["PATH"] = ExtendedPath;
         using var proc = Process.Start(psi)!;
         var stdout = proc.StandardOutput.ReadToEnd();
         var stderr = proc.StandardError.ReadToEnd();
