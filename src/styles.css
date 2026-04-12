@@ -846,7 +846,8 @@ body {
 .cell.cell-presenting .cell-run-group,
 .cell.cell-presenting .cell-stale-banner,
 .cell.cell-presenting .cell-debug-controls,
-.cell.cell-presenting .output-toggle-row { display: none !important; }
+.cell.cell-presenting .output-toggle-row,
+.cell.cell-presenting .cell-header-timer { display: none !important; }
 .cell.cell-presenting .code-cell-header {
   background: transparent; border-bottom: none; border-left-color: transparent;
   padding: 2px 8px;
