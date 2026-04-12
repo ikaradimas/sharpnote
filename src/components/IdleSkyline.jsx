@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 
-const IDLE_START = 20_000;
+const IDLE_START = 40_000;
 const FADE_MS = 3000;
 const BUILD_SPEED = 0.75;
 const LAYER_OFFSETS = [0, 40, 75]; // bigger gaps between layers
