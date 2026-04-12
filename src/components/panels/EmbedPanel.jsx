@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { File, Plus, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
+import { File, Plus, Trash2, ChevronDown, ChevronRight, Pencil, Plus as PlusIcon, X } from 'lucide-react';
 
 function formatSize(bytes) {
   if (bytes < 1024) return `${bytes} B`;
@@ -7,8 +7,110 @@ function formatSize(bytes) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export function EmbedPanel({ files = [], onAdd, onDelete, onUpdateVars, onToggle }) {
+function EditDialog({ file, onSave, onCancel }) {
+  const [name, setName] = useState(file.name);
+  const [filename, setFilename] = useState(file.filename);
+  const [mimeType, setMimeType] = useState(file.mimeType);
+  const isText = file.encoding !== 'base64';
+  const [content, setContent] = useState(isText ? (file.content || '') : '');
+  const [vars, setVars] = useState(() => Object.entries(file.variables || {}).map(([k, v]) => ({ k, v })));
+  const [newVarKey, setNewVarKey] = useState('');
+
+  const handleSave = () => {
+    const variables = {};
+    for (const { k, v } of vars) {
+      if (k.trim()) variables[k.trim()] = v;
+    }
+    onSave({
+      ...file,
+      name: name.trim() || file.name,
+      filename: filename.trim() || file.filename,
+      mimeType: mimeType.trim() || file.mimeType,
+      ...(isText ? { content } : {}),
+      variables,
+    });
+  };
+
+  const addVar = () => {
+    const key = newVarKey.trim();
+    if (!key || vars.some(v => v.k === key)) return;
+    setVars([...vars, { k: key, v: '' }]);
+    setNewVarKey('');
+  };
+
+  const removeVar = (idx) => setVars(vars.filter((_, i) => i !== idx));
+  const updateVarVal = (idx, v) => setVars(vars.map((item, i) => i === idx ? { ...item, v } : item));
+
+  return (
+    <div className="embed-edit-overlay" onClick={onCancel}>
+      <div className="embed-edit-dialog" onClick={(e) => e.stopPropagation()}>
+        <div className="embed-edit-header">Edit Embedded File</div>
+        <div className="embed-edit-body">
+          <label className="embed-edit-field">
+            <span className="embed-edit-label">Name (code access key)</span>
+            <input value={name} onChange={(e) => setName(e.target.value)} spellCheck={false} />
+          </label>
+          <label className="embed-edit-field">
+            <span className="embed-edit-label">Filename</span>
+            <input value={filename} onChange={(e) => setFilename(e.target.value)} spellCheck={false} />
+          </label>
+          <label className="embed-edit-field">
+            <span className="embed-edit-label">MIME type</span>
+            <input value={mimeType} onChange={(e) => setMimeType(e.target.value)} spellCheck={false} />
+          </label>
+          {isText && (
+            <label className="embed-edit-field">
+              <span className="embed-edit-label">Content</span>
+              <textarea
+                className="embed-edit-content"
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                spellCheck={false}
+                rows={8}
+              />
+            </label>
+          )}
+          {!isText && (
+            <div className="embed-edit-binary-note">Binary file — content cannot be edited inline. Re-embed to replace.</div>
+          )}
+          <div className="embed-edit-vars-section">
+            <span className="embed-edit-label">Variables</span>
+            {vars.map(({ k, v }, idx) => (
+              <div key={idx} className="embed-edit-var-row">
+                <span className="embed-edit-var-key">{k}</span>
+                <input
+                  className="embed-edit-var-input"
+                  value={v}
+                  onChange={(e) => updateVarVal(idx, e.target.value)}
+                  spellCheck={false}
+                />
+                <button className="embed-edit-var-del" onClick={() => removeVar(idx)} title="Remove variable"><X size={10} /></button>
+              </div>
+            ))}
+            <div className="embed-edit-add-var">
+              <input
+                placeholder="New variable key"
+                value={newVarKey}
+                onChange={(e) => setNewVarKey(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') addVar(); }}
+                spellCheck={false}
+              />
+              <button onClick={addVar} disabled={!newVarKey.trim()} title="Add variable"><PlusIcon size={10} /></button>
+            </div>
+          </div>
+        </div>
+        <div className="embed-edit-actions">
+          <button className="embed-edit-btn embed-edit-cancel" onClick={onCancel}>Cancel</button>
+          <button className="embed-edit-btn embed-edit-save" onClick={handleSave}>Save</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function EmbedPanel({ files = [], onAdd, onDelete, onUpdateVars, onUpdate, onToggle }) {
   const [openFile, setOpenFile] = useState(null);
+  const [editingFile, setEditingFile] = useState(null);
 
   return (
     <div className="embed-panel">
@@ -31,6 +133,7 @@ export function EmbedPanel({ files = [], onAdd, onDelete, onUpdateVars, onToggle
                 {isOpen ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
                 <span className="embed-file-name">{f.name}</span>
                 <span className="embed-file-meta">{formatSize(size)}</span>
+                <button className="embed-file-edit" onClick={(e) => { e.stopPropagation(); setEditingFile(f); }} title="Edit"><Pencil size={10} /></button>
                 <button className="embed-file-del" onClick={(e) => { e.stopPropagation(); onDelete?.(f.name); }} title="Remove"><Trash2 size={10} /></button>
               </div>
               {isOpen && (
@@ -78,6 +181,16 @@ export function EmbedPanel({ files = [], onAdd, onDelete, onUpdateVars, onToggle
           </div>
         )}
       </div>
+      {editingFile && (
+        <EditDialog
+          file={editingFile}
+          onCancel={() => setEditingFile(null)}
+          onSave={(updated) => {
+            onUpdate?.(editingFile.name, updated);
+            setEditingFile(null);
+          }}
+        />
+      )}
     </div>
   );
 }
