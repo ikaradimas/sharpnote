@@ -1105,6 +1105,9 @@ export const DOCS_SECTIONS = [
         'Files["name"] — access by name (returns EmbeddedFile)',
         'Files["name"].ContentAsText — UTF-8 string content',
         'Files["name"].Content — raw byte array',
+        'Files["name"].ContentCsv — parse as CSV (same format as Data.LoadCsv)',
+        'Files["name"].ContentTsv — parse as TSV',
+        'Files["name"].ParseCsvContent(delimiter, hasHeader) — parse with options',
         'Files["name"].OpenRead() — readable Stream',
         'Files.Embed(name, bytes, filename, mimeType) — embed from code',
         'Files.EmbedText(name, text, filename, mimeType?) — embed text',
@@ -1113,7 +1116,7 @@ export const DOCS_SECTIONS = [
         'Files.List() — all embedded files',
         'Files.Contains(name) — check existence',
       ]},
-      { type: 'code', text: '// Embed a CSV\nFiles.EmbedText("data", "Name,Score\\nAlice,95\\nBob,82", "data.csv", "text/csv");\n\n// Read it back\nvar csv = Files["data"].ContentAsText;\ncsv.Display();\n\n// Set metadata\nFiles["data"].SetVariable("source", "manual");\nFiles["data"].GetVariable("source").Display();' },
+      { type: 'code', text: '// Embed a CSV\nFiles.EmbedText("data", "Name,Score\\nAlice,95\\nBob,82", "data.csv", "text/csv");\n\n// Parse as CSV (same format as Data.LoadCsv)\nvar rows = Files["data"].ContentCsv;\nrows.Display(); // List<Dictionary<string, object>>\n\n// Or read raw text\nvar csv = Files["data"].ContentAsText;\ncsv.Display();\n\n// Set metadata\nFiles["data"].SetVariable("source", "manual");\nFiles["data"].GetVariable("source").Display();' },
     ],
   },
   {

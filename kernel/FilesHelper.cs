@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -33,6 +34,47 @@ public class EmbeddedFile
 
     /// <summary>Opens a readable stream over the content.</summary>
     public Stream OpenRead() => new MemoryStream(Content, writable: false);
+
+    /// <summary>Parses the content as CSV into the same format as Data.LoadCsv().</summary>
+    public List<Dictionary<string, object>> ContentCsv => ParseCsvContent(',', true);
+
+    /// <summary>Parses the content as TSV into the same format as Data.LoadCsv().</summary>
+    public List<Dictionary<string, object>> ContentTsv => ParseCsvContent('\t', true);
+
+    /// <summary>Parses content as delimited text with options.</summary>
+    public List<Dictionary<string, object>> ParseCsvContent(char delimiter = ',', bool hasHeader = true)
+    {
+        var text = ContentAsText;
+        var records = DataHelper.ParseCsv(text, delimiter);
+        if (records.Count == 0)
+            return new List<Dictionary<string, object>>();
+
+        string[] headers;
+        int dataStart;
+        if (hasHeader)
+        {
+            headers = records[0];
+            dataStart = 1;
+        }
+        else
+        {
+            headers = new string[records[0].Length];
+            for (int i = 0; i < headers.Length; i++)
+                headers[i] = $"Col{i + 1}";
+            dataStart = 0;
+        }
+
+        var result = new List<Dictionary<string, object>>(records.Count - dataStart);
+        for (int r = dataStart; r < records.Count; r++)
+        {
+            var row = records[r];
+            var dict = new Dictionary<string, object>(headers.Length);
+            for (int c = 0; c < headers.Length; c++)
+                dict[headers[c]] = c < row.Length ? DataHelper.InferType(row[c]) : "";
+            result.Add(dict);
+        }
+        return result;
+    }
 
     /// <summary>Read-only view of variables.</summary>
     public IReadOnlyDictionary<string, string> Variables => _variables;
