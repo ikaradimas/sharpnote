@@ -589,6 +589,9 @@ ${cellsHtml}
           attachedDbs: (r.value.data.attachedDbIds || []).map((id) => ({
             connectionId: id, status: 'connecting', varName: '', schema: null, error: undefined,
           })),
+          retainedResults: r.value.data.retainedResults || {},
+          embeddedFiles: r.value.data.embeddedFiles || [],
+          autoRun: r.value.data.autoRun || false,
           isDirty: false,
         },
       });

@@ -850,7 +850,7 @@ body {
 .cell.cell-presenting .cell-header-timer { display: none !important; }
 .cell.cell-presenting .code-cell-header {
   background: transparent; border-bottom: none; border-left-color: transparent;
-  padding: 2px 8px;
+  padding: 2px 8px; pointer-events: none;
 }
 .cell.cell-presenting { border: none; margin: 4px 0; position: relative; min-height: 36px; }
 .cell.cell-presenting .cell-output { padding: 8px 12px; }
