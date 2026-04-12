@@ -59,8 +59,8 @@ export function CodeCell({
   onRunFrom,
   onRunTo,
   onDelete, onCopy,
-  onMoveUp,
-  onMoveDown,
+  onMoveUp, onMoveDown,
+  columns = 0, onColumnsChange,
   onOutputModeChange,
   onToggleLock,
   onToggleFold,
@@ -247,7 +247,7 @@ export function CodeCell({
               <option value="graph">graph</option>
             </select>
           </div>
-          <CellControls onCopy={onCopy} onMoveUp={onMoveUp} onMoveDown={onMoveDown} onDelete={onDelete} />
+          <CellControls onCopy={onCopy} onMoveUp={onMoveUp} onMoveDown={onMoveDown} onDelete={onDelete} columns={columns} onColumnsChange={onColumnsChange} />
         </div>
       </div>
       {codeFolded ? (

@@ -23,6 +23,7 @@ export function DecisionCell({
   onDelete, onCopy,
   onMoveUp,
   onMoveDown,
+  columns = 0, onColumnsChange,
 }) {
   const result = decisionResult?.result;
   const message = decisionResult?.message;
@@ -134,7 +135,7 @@ export function DecisionCell({
           >
             ▶
           </button>
-          <CellControls onCopy={onCopy} onMoveUp={onMoveUp} onMoveDown={onMoveDown} onDelete={onDelete} />
+          <CellControls onCopy={onCopy} onMoveUp={onMoveUp} onMoveDown={onMoveDown} onDelete={onDelete} columns={columns} onColumnsChange={onColumnsChange} />
         </div>
       </div>
     </div>

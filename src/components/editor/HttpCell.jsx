@@ -17,6 +17,7 @@ export function HttpCell({
   onDelete, onCopy,
   onMoveUp,
   onMoveDown,
+  columns = 0, onColumnsChange,
   onNameChange,
   onColorChange,
 }) {
@@ -42,7 +43,7 @@ export function HttpCell({
           )}
         </div>
         <div className="header-right">
-          <CellControls onCopy={onCopy} onMoveUp={onMoveUp} onMoveDown={onMoveDown} onDelete={onDelete} />
+          <CellControls onCopy={onCopy} onMoveUp={onMoveUp} onMoveDown={onMoveDown} onDelete={onDelete} columns={columns} onColumnsChange={onColumnsChange} />
         </div>
       </div>
       <CodeEditor

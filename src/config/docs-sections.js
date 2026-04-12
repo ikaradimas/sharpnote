@@ -269,7 +269,7 @@ export const DOCS_SECTIONS = [
         'Display.NewImage(src) — live-updating image handle; use handle.UpdateImage(src) or handle.UpdateImageBytes(rgb, w, h)',
       ]},
       { type: 'h3', text: 'Infographic Helpers' },
-      { type: 'p', text: 'Convenience methods for dashboard-style infographics. Combine with cell column layout (set the columns property on cells) for side-by-side arrangements.' },
+      { type: 'p', text: 'Convenience methods for dashboard-style infographics. Combine with cell column layout (click the columns icon in the cell controls to set 2/3/4-column grids) for side-by-side arrangements.' },
       { type: 'ul', items: [
         'Display.StatCard(label, value, color?, icon?) — large-value card with label and optional emoji icon',
         'Display.ProgressBar(percent, label?, color?) — horizontal progress bar (0–100)',

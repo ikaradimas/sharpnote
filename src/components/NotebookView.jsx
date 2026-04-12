@@ -283,7 +283,8 @@ export function NotebookView({
         onUpdate={(val) => updateCell(cell.id, val)}
         onDelete={() => deleteCell(cell.id)}
         onCopy={() => copyCell(cell.id)}
-        onMoveUp={() => moveCell(cell.id, -1)} onMoveDown={() => moveCell(cell.id, 1)} />
+        onMoveUp={() => moveCell(cell.id, -1)} onMoveDown={() => moveCell(cell.id, 1)}
+        columns={cell.columns || 0} onColumnsChange={(v) => updateCellProp(cell.id, 'columns', v || undefined)} />
     );
     if (cell.type === 'sql') return (
       <SqlCell cell={cell} cellIndex={index} outputs={outputs[cell.id]} notebookId={nb.id}
@@ -294,6 +295,7 @@ export function NotebookView({
         onDelete={() => deleteCell(cell.id)}
         onCopy={() => copyCell(cell.id)}
         onMoveUp={() => moveCell(cell.id, -1)} onMoveDown={() => moveCell(cell.id, 1)}
+        columns={cell.columns || 0} onColumnsChange={(v) => updateCellProp(cell.id, 'columns', v || undefined)}
         onNameChange={(name) => updateCellProp(cell.id, 'name', name)}
         onColorChange={(color) => updateCellProp(cell.id, 'color', color)} />
     );
@@ -304,6 +306,7 @@ export function NotebookView({
         onRun={() => onRunHttpCell(nb.id, cell)} onDelete={() => deleteCell(cell.id)}
         onCopy={() => copyCell(cell.id)}
         onMoveUp={() => moveCell(cell.id, -1)} onMoveDown={() => moveCell(cell.id, 1)}
+        columns={cell.columns || 0} onColumnsChange={(v) => updateCellProp(cell.id, 'columns', v || undefined)}
         onNameChange={(name) => updateCellProp(cell.id, 'name', name)}
         onColorChange={(color) => updateCellProp(cell.id, 'color', color)} />
     );
@@ -314,6 +317,7 @@ export function NotebookView({
         onRun={() => onRunShellCell(nb.id, cell)} onDelete={() => deleteCell(cell.id)}
         onCopy={() => copyCell(cell.id)}
         onMoveUp={() => moveCell(cell.id, -1)} onMoveDown={() => moveCell(cell.id, 1)}
+        columns={cell.columns || 0} onColumnsChange={(v) => updateCellProp(cell.id, 'columns', v || undefined)}
         onNameChange={(name) => updateCellProp(cell.id, 'name', name)}
         onColorChange={(color) => updateCellProp(cell.id, 'color', color)} />
     );
@@ -330,6 +334,7 @@ export function NotebookView({
         onDelete={() => deleteCell(cell.id)}
         onCopy={() => copyCell(cell.id)}
         onMoveUp={() => moveCell(cell.id, -1)} onMoveDown={() => moveCell(cell.id, 1)}
+        columns={cell.columns || 0} onColumnsChange={(v) => updateCellProp(cell.id, 'columns', v || undefined)}
         onNameChange={(name) => updateCellProp(cell.id, 'name', name)}
         onColorChange={(color) => updateCellProp(cell.id, 'color', color)} />
     );
@@ -341,6 +346,7 @@ export function NotebookView({
         onRun={() => onRunCheckCell(nb.id, cell)} onDelete={() => deleteCell(cell.id)}
         onCopy={() => copyCell(cell.id)}
         onMoveUp={() => moveCell(cell.id, -1)} onMoveDown={() => moveCell(cell.id, 1)}
+        columns={cell.columns || 0} onColumnsChange={(v) => updateCellProp(cell.id, 'columns', v || undefined)}
         onNameChange={(name) => updateCellProp(cell.id, 'name', name)}
         onColorChange={(color) => updateCellProp(cell.id, 'color', color)} />
     );
@@ -358,7 +364,8 @@ export function NotebookView({
         onSwitchPathsChange={(paths) => updateCellProp(cell.id, 'switchPaths', paths)}
         onRun={() => onRunDecisionCell(nb.id, cell)} onDelete={() => deleteCell(cell.id)}
         onCopy={() => copyCell(cell.id)}
-        onMoveUp={() => moveCell(cell.id, -1)} onMoveDown={() => moveCell(cell.id, 1)} />
+        onMoveUp={() => moveCell(cell.id, -1)} onMoveDown={() => moveCell(cell.id, 1)}
+        columns={cell.columns || 0} onColumnsChange={(v) => updateCellProp(cell.id, 'columns', v || undefined)} />
     );
     return (
       <CodeCell cell={cell} cellIndex={index} outputs={outputs[cell.id]}
@@ -371,6 +378,7 @@ export function NotebookView({
         onDelete={() => deleteCell(cell.id)}
         onCopy={() => copyCell(cell.id)}
         onMoveUp={() => moveCell(cell.id, -1)} onMoveDown={() => moveCell(cell.id, 1)}
+        columns={cell.columns || 0} onColumnsChange={(v) => updateCellProp(cell.id, 'columns', v || undefined)}
         isScheduled={scheduledCells?.has(cell.id) || false}
         onOutputModeChange={(mode) => updateCellProp(cell.id, 'outputMode', mode)}
         onToggleLock={() => updateCellProp(cell.id, 'locked', !(cell.locked || false))}
