@@ -164,15 +164,14 @@ export function CodeCell({
   }, [presentRefreshOpen]);
 
   const histLen = outputHistory ? outputHistory.length : 0;
-  const [errorsHidden, setErrorsHidden] = useState(false);
+  const [showErrors, setShowErrors] = useState(false);
 
   const rawDisplayedOutputs = histIdx >= 0 && histLen > 0
     ? outputHistory[histIdx]
     : outputs;
-  const errorCount = (rawDisplayedOutputs || []).filter((o) => o.type === 'error').length;
-  const displayedOutputs = errorsHidden
-    ? (rawDisplayedOutputs || []).filter((o) => o.type !== 'error')
-    : rawDisplayedOutputs;
+  const errorMessages = (rawDisplayedOutputs || []).filter((o) => o.type === 'error');
+  const normalMessages = (rawDisplayedOutputs || []).filter((o) => o.type !== 'error');
+  const errorCount = errorMessages.length;
 
   return (
     <div className={`cell code-cell${isRunning ? ' running' : ''}${locked ? ' cell-locked' : ''}${isStale ? ' cell-stale' : ''}${codeFolded ? ' cell-folded' : ''}${isScheduled ? ' cell-scheduled' : ''}${presenting ? ' cell-presenting' : ''}${debugState?.cellId === cell.id && debugState.paused ? ' debug-paused' : ''}`}>
@@ -270,24 +269,24 @@ export function CodeCell({
           inlineDiagnostics={inlineDiagnostics}
         />
       )}
-      {(displayedOutputs?.length > 0 || errorCount > 0) && (
+      {(normalMessages.length > 0 || errorCount > 0) && (
         <div className="output-toggle-row">
-          {displayedOutputs?.length > 0 && (
+          {normalMessages.length > 0 && (
             <button
-              className="output-toggle-btn"
-              onClick={() => setOutputCollapsed((v) => !v)}
-              title={outputCollapsed ? 'Show output' : 'Hide output'}
+              className={`output-toggle-btn${!showErrors ? ' output-tab-active' : ''}`}
+              onClick={() => { setShowErrors(false); setOutputCollapsed((v) => showErrors ? false : !v); }}
+              title={outputCollapsed && !showErrors ? 'Show output' : 'Hide output'}
             >
-              {outputCollapsed ? <><ChevronRight size={12} /> Output</> : <><ChevronDown size={12} /> Output</>}
+              {outputCollapsed && !showErrors ? <><ChevronRight size={12} /> Output</> : <><ChevronDown size={12} /> Output</>}
             </button>
           )}
           {errorCount > 0 && (
             <button
-              className={`output-error-badge${errorsHidden ? '' : ' active'}`}
-              onClick={() => setErrorsHidden((v) => !v)}
-              title={errorsHidden ? `${errorCount} error(s) hidden — click to show` : 'Hide errors'}
+              className={`output-error-badge${showErrors ? ' active' : ''}`}
+              onClick={() => setShowErrors((v) => !v)}
+              title={showErrors ? 'Hide errors' : `Show ${errorCount} error(s)`}
             >
-              <AlertTriangle size={11} /> {errorCount}
+              <AlertTriangle size={11} /> {errorCount} {errorCount === 1 ? 'Error' : 'Errors'}
             </button>
           )}
           <button className="output-clear-btn" onClick={onClearOutput} title="Clear output">
@@ -322,8 +321,9 @@ export function CodeCell({
           )}
         </div>
       )}
-      {!outputCollapsed && <CellOutput messages={displayedOutputs} notebookId={notebookId} allCells={allCells} onRunCellByName={onRunCellByName} />}
-      {!outputCollapsed && !displayedOutputs?.length && retainedResult && (
+      {showErrors && <CellOutput messages={errorMessages} notebookId={notebookId} allCells={allCells} onRunCellByName={onRunCellByName} />}
+      {!showErrors && !outputCollapsed && <CellOutput messages={normalMessages} notebookId={notebookId} allCells={allCells} onRunCellByName={onRunCellByName} />}
+      {!showErrors && !outputCollapsed && !normalMessages.length && retainedResult && (
         <div className="retained-result">
           <div className="retained-header">
             <span className="retained-badge">Retained</span>
@@ -333,7 +333,7 @@ export function CodeCell({
           <CellOutput messages={retainedResult.outputs} notebookId={notebookId} allCells={allCells} onRunCellByName={onRunCellByName} />
         </div>
       )}
-      {!outputCollapsed && displayedOutputs?.length > 0 && (
+      {!showErrors && !outputCollapsed && normalMessages.length > 0 && (
         <div className="retain-controls">
           <button
             className={`retain-btn${retainedResult ? ' retain-btn-active' : ''}`}

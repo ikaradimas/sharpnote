@@ -6529,17 +6529,20 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
   display: inline-flex; align-items: center; gap: 3px;
   background: none; border: none; cursor: pointer; padding: 2px 6px;
   font-size: 11px; color: var(--text-muted); font-family: inherit;
+  border-bottom: 2px solid transparent;
 }
 .output-toggle-btn:hover { color: var(--text-secondary); }
+.output-toggle-btn.output-tab-active { color: var(--text-secondary); border-bottom-color: var(--accent-secondary); }
 .output-error-badge {
   display: inline-flex; align-items: center; gap: 3px;
-  background: none; border: none; cursor: pointer; padding: 2px 6px;
+  background: rgba(224,108,117,0.10); border: 1px solid rgba(224,108,117,0.3);
+  cursor: pointer; padding: 2px 8px;
   font-family: var(--font-ui); font-size: 10px; font-weight: 600;
-  color: #e06c75; opacity: 0.7; transition: opacity 0.15s;
-  border-radius: 3px;
+  color: #e06c75; border-radius: 3px;
+  transition: background 0.15s, border-color 0.15s;
 }
-.output-error-badge:hover { opacity: 1; background: rgba(224,108,117,0.08); }
-.output-error-badge.active { opacity: 1; background: rgba(224,108,117,0.12); }
+.output-error-badge:hover { background: rgba(224,108,117,0.18); border-color: rgba(224,108,117,0.5); }
+.output-error-badge.active { background: rgba(224,108,117,0.15); border-color: #e06c75; }
 .output-clear-btn {
   display: inline-flex; align-items: center; margin-left: auto;
   background: none; border: none; cursor: pointer; padding: 2px 4px;
