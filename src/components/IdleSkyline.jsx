@@ -105,7 +105,11 @@ export function IdleSkyline() {
 
   useEffect(() => {
     window.addEventListener('click', handleDismiss);
-    return () => window.removeEventListener('click', handleDismiss);
+    window.addEventListener('keydown', handleDismiss);
+    return () => {
+      window.removeEventListener('click', handleDismiss);
+      window.removeEventListener('keydown', handleDismiss);
+    };
   }, [handleDismiss]);
 
   useEffect(() => {
