@@ -115,17 +115,7 @@ export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef, for
           }));
         }
 
-        // Report errors as a brief flash in the cell output
-        const errors = (result.diagnostics || []).filter((d) => d.severity === 'error');
-        if (errors.length > 0) {
-          const msg = errors.map((d) => d.message).join('\n');
-          setNb(notebookId, (n) => ({
-            outputs: {
-              ...n.outputs,
-              [cell.id]: [{ type: 'error', id: cell.id, message: `Format check: ${errors.length} error(s)\n${msg}` }],
-            },
-          }));
-        }
+        // Diagnostics are handled per-cell by the LSP on change — skip on save
       } catch {
         // Timeout or other error — skip this cell silently
       }
