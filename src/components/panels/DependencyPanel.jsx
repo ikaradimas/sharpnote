@@ -33,67 +33,54 @@ const PAD = 24;
 const HEADER_H = 30;
 
 function layerNodes(nodes, edges) {
-  // Build adjacency and in-degree
-  const outEdges = {}; // id → [targetId, ...]
-  const inEdges = {};  // id → [sourceId, ...]
-  for (const n of nodes) { outEdges[n.id] = []; inEdges[n.id] = []; }
-  for (const e of edges) {
-    outEdges[e.from]?.push(e.to);
-    inEdges[e.to]?.push(e.from);
-  }
+  const outAdj = {}, inAdj = {};
+  for (const n of nodes) { outAdj[n.id] = []; inAdj[n.id] = []; }
+  for (const e of edges) { outAdj[e.from]?.push(e.to); inAdj[e.to]?.push(e.from); }
 
-  // Standard topological layering
-  const inDegree = {};
-  for (const n of nodes) inDegree[n.id] = inEdges[n.id].length;
-  const layers = {};
-  const queue = nodes.filter((n) => inDegree[n.id] === 0).map((n) => n.id);
-  for (const id of queue) layers[id] = 0;
-
+  // Longest-path layering (topological)
+  const inDeg = {};
+  for (const n of nodes) inDeg[n.id] = inAdj[n.id].length;
+  const layer = {};
+  const queue = nodes.filter((n) => inDeg[n.id] === 0).map((n) => n.id);
+  for (const id of queue) layer[id] = 0;
   let head = 0;
   while (head < queue.length) {
     const id = queue[head++];
-    for (const to of outEdges[id] || []) {
-      layers[to] = Math.max(layers[to] || 0, (layers[id] || 0) + 1);
-      inDegree[to]--;
-      if (inDegree[to] === 0) queue.push(to);
+    for (const to of outAdj[id]) {
+      layer[to] = Math.max(layer[to] || 0, layer[id] + 1);
+      if (--inDeg[to] === 0) queue.push(to);
     }
   }
-  for (const n of nodes) { if (!(n.id in layers)) layers[n.id] = 0; }
+  for (const n of nodes) { if (!(n.id in layer)) layer[n.id] = 0; }
 
-  // Collapse linear chains: if A has exactly 1 outgoing edge to B, and B has
-  // exactly 1 incoming edge from A, place B in the same layer as A (below it).
-  const collapsed = new Set(); // nodes pulled into a predecessor's layer
+  // Promote nodes left to reduce width: move each node to the earliest
+  // layer that is still >= all predecessors + 1 (or 0 if no predecessors).
+  // This packs the graph tighter horizontally.
   for (const n of nodes) {
-    if (collapsed.has(n.id)) continue;
-    const outs = outEdges[n.id];
-    if (outs.length !== 1) continue;
-    const targetId = outs[0];
-    const ins = inEdges[targetId];
-    if (ins.length !== 1) continue;
-    // Target has exactly 1 incoming (from this node) — collapse into same layer
-    layers[targetId] = layers[n.id];
-    collapsed.add(targetId);
+    const preds = inAdj[n.id];
+    if (preds.length === 0) { layer[n.id] = 0; continue; }
+    layer[n.id] = Math.max(...preds.map((p) => layer[p] + 1));
   }
 
-  // Group by layer and compact (remove empty layers)
-  const rawByLayer = {};
-  for (const n of nodes) {
-    const l = layers[n.id];
-    if (!rawByLayer[l]) rawByLayer[l] = [];
-    rawByLayer[l].push(n);
-  }
-  const sortedKeys = Object.keys(rawByLayer).map(Number).sort((a, b) => a - b);
+  // Group by layer
   const byLayer = {};
-  const remap = {};
-  sortedKeys.forEach((k, i) => { byLayer[i] = rawByLayer[k]; remap[k] = i; });
-  for (const n of nodes) layers[n.id] = remap[layers[n.id]];
+  for (const n of nodes) {
+    const l = layer[n.id];
+    if (!byLayer[l]) byLayer[l] = [];
+    byLayer[l].push(n);
+  }
+
+  // Compact — remove empty layers
+  const keys = Object.keys(byLayer).map(Number).sort((a, b) => a - b);
+  const compacted = {};
+  keys.forEach((k, i) => { compacted[i] = byLayer[k]; });
 
   // Compute positions
   const positions = {};
-  const maxLayer = Math.max(0, ...Object.keys(byLayer).map(Number));
+  const maxLayer = Math.max(0, ...Object.keys(compacted).map(Number));
   const topY = PAD + HEADER_H;
   for (let l = 0; l <= maxLayer; l++) {
-    const items = byLayer[l] || [];
+    const items = compacted[l] || [];
     for (let i = 0; i < items.length; i++) {
       positions[items[i].id] = {
         x: PAD + l * (NODE_W + H_GAP),
@@ -103,29 +90,34 @@ function layerNodes(nodes, edges) {
   }
 
   const totalW = PAD * 2 + (maxLayer + 1) * (NODE_W + H_GAP) - H_GAP;
-  const maxPerLayer = Math.max(1, ...Object.values(byLayer).map((a) => a.length));
+  const maxPerLayer = Math.max(1, ...Object.values(compacted).map((a) => a.length));
   const totalH = topY + PAD + maxPerLayer * (NODE_H + V_GAP) - V_GAP;
 
   return { positions, totalW, totalH, maxLayer };
 }
 
-const DIAMOND_R = DIAMOND_SIZE * Math.SQRT2 / 2; // distance from center to tip
+const DIAMOND_R = DIAMOND_SIZE * Math.SQRT2 / 2;
+const ARROW_PAD = 6; // space for arrowhead to be visible outside node
 
 function getNodeRight(pos, node) {
-  if (node.type === 'decision') return { x: pos.x + NODE_W / 2 + DIAMOND_R, y: pos.y + NODE_H / 2 };
-  return { x: pos.x + NODE_W, y: pos.y + NODE_H / 2 };
+  const cx = pos.x + NODE_W / 2, cy = pos.y + NODE_H / 2;
+  if (node.type === 'decision') return { x: cx + DIAMOND_R, y: cy };
+  return { x: pos.x + NODE_W, y: cy };
 }
 function getNodeLeft(pos, node) {
-  if (node.type === 'decision') return { x: pos.x + NODE_W / 2 - DIAMOND_R, y: pos.y + NODE_H / 2 };
-  return { x: pos.x, y: pos.y + NODE_H / 2 };
+  const cx = pos.x + NODE_W / 2, cy = pos.y + NODE_H / 2;
+  if (node.type === 'decision') return { x: cx - DIAMOND_R - ARROW_PAD, y: cy };
+  return { x: pos.x - ARROW_PAD, y: cy };
 }
 function getNodeBottom(pos, node) {
-  if (node.type === 'decision') return { x: pos.x + NODE_W / 2, y: pos.y + NODE_H / 2 + DIAMOND_R };
-  return { x: pos.x + NODE_W / 2, y: pos.y + NODE_H };
+  const cx = pos.x + NODE_W / 2, cy = pos.y + NODE_H / 2;
+  if (node.type === 'decision') return { x: cx, y: cy + DIAMOND_R };
+  return { x: cx, y: pos.y + NODE_H };
 }
 function getNodeTop(pos, node) {
-  if (node.type === 'decision') return { x: pos.x + NODE_W / 2, y: pos.y + NODE_H / 2 - DIAMOND_R };
-  return { x: pos.x + NODE_W / 2, y: pos.y };
+  const cx = pos.x + NODE_W / 2, cy = pos.y + NODE_H / 2;
+  if (node.type === 'decision') return { x: cx, y: cy - DIAMOND_R - ARROW_PAD };
+  return { x: cx, y: pos.y - ARROW_PAD };
 }
 
 function getNodeColor(node) {
