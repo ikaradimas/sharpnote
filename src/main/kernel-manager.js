@@ -78,9 +78,10 @@ function startKernelForId(notebookId) {
   const rl = readline.createInterface({ input: kernelProcess.stdout });
 
   const lineHandler = (line) => {
-    if (!line.trim()) return;
+    const trimmed = line.trim();
+    if (!trimmed || trimmed[0] !== '{') return; // skip non-JSON lines (e.g. MSBuild output from dotnet run)
     try {
-      const msg = JSON.parse(line);
+      const msg = JSON.parse(trimmed);
 
       if (msg.type === 'ready') {
         entry.ready = true;
