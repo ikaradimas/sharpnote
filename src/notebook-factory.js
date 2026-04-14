@@ -1684,6 +1684,19 @@ function makeOrchestrationCells() {
     'default':  [defaultRouteCell.id],
   };
 
+  // Wire explicit execution order
+  loadCell.nextCells      = [checkCell.id];
+  checkCell.prevCells     = [loadCell.id];
+  checkCell.nextCells     = [statsCell.id];
+  statsCell.prevCells     = [checkCell.id];
+  statsCell.nextCells     = [decisionCell.id];
+  decisionCell.prevCells  = [statsCell.id];
+  passCell.nextCells      = [chartCell.id];
+  failCell.nextCells      = [chartCell.id];
+  chartCell.prevCells     = [passCell.id, failCell.id];
+  chartCell.nextCells     = [switchCell.id];
+  switchCell.prevCells    = [chartCell.id];
+
   return [
     md(`# Cell Orchestration
 
