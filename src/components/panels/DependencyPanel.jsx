@@ -32,7 +32,7 @@ const V_GAP = 40;
 const PAD = 24;
 const HEADER_H = 30;
 
-function layerNodes(nodes, edges) {
+function layerNodes(nodes, edges, availableH = 600) {
   const outAdj = {}, inAdj = {};
   for (const n of nodes) { outAdj[n.id] = []; inAdj[n.id] = []; }
   for (const e of edges) { outAdj[e.from]?.push(e.to); inAdj[e.to]?.push(e.from); }
@@ -75,23 +75,57 @@ function layerNodes(nodes, edges) {
   const compacted = {};
   keys.forEach((k, i) => { compacted[i] = byLayer[k]; });
 
-  // Compute positions
+  // Compute positions with wrapping
   const positions = {};
   const maxLayer = Math.max(0, ...Object.keys(compacted).map(Number));
   const topY = PAD + HEADER_H;
+
+  // Determine how many nodes fit vertically before wrapping needs a new row
+  const usableH = Math.max(availableH - topY - PAD, NODE_H + V_GAP);
+  const maxNodesPerCol = Math.max(1, Math.floor((usableH + V_GAP) / (NODE_H + V_GAP)));
+
+  let col = 0;        // current visual column
+  let rowOffset = 0;  // vertical offset for wrapped rows
+
   for (let l = 0; l <= maxLayer; l++) {
     const items = compacted[l] || [];
+
+    // If this layer has more items than fit, they stack normally (overflow is ok within a layer)
     for (let i = 0; i < items.length; i++) {
       positions[items[i].id] = {
-        x: PAD + l * (NODE_W + H_GAP),
-        y: topY + i * (NODE_H + V_GAP),
+        x: PAD + col * (NODE_W + H_GAP),
+        y: topY + rowOffset + i * (NODE_H + V_GAP),
       };
+    }
+    col++;
+
+    // Check if next layer should wrap: if current column reached the edge
+    // and there's room to start a new row below
+    const nextItems = compacted[l + 1] || [];
+    if (nextItems.length > 0) {
+      const nextLayerH = nextItems.length * (NODE_H + V_GAP);
+      const currentMaxY = items.length * (NODE_H + V_GAP);
+      const rowH = Math.max(currentMaxY, nextLayerH);
+      // Wrap if we've used enough horizontal space (more than 4 columns)
+      // and the next layer would fit starting a new row
+      if (col >= 4 && rowH <= usableH) {
+        rowOffset += Math.max(...Array.from({ length: col }, (_, c) => {
+          const layerIdx = l - col + 1 + c;
+          return (compacted[layerIdx]?.length || 0) * (NODE_H + V_GAP);
+        })) + V_GAP;
+        col = 0;
+      }
     }
   }
 
-  const totalW = PAD * 2 + (maxLayer + 1) * (NODE_W + H_GAP) - H_GAP;
-  const maxPerLayer = Math.max(1, ...Object.values(compacted).map((a) => a.length));
-  const totalH = topY + PAD + maxPerLayer * (NODE_H + V_GAP) - V_GAP;
+  // Compute total bounds from actual positions
+  let maxX = 0, maxY = 0;
+  for (const p of Object.values(positions)) {
+    maxX = Math.max(maxX, p.x + NODE_W);
+    maxY = Math.max(maxY, p.y + NODE_H);
+  }
+  const totalW = maxX + PAD;
+  const totalH = maxY + PAD;
 
   return { positions, totalW, totalH, maxLayer };
 }
@@ -167,10 +201,21 @@ export function DependencyPanel({
 }) {
   const { nodes, edges } = useCellDependencies(notebook);
 
+  const scrollRef = useRef(null);
+  const [scrollH, setScrollH] = useState(600);
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => setScrollH(entry.contentRect.height));
+    ro.observe(el);
+    setScrollH(el.clientHeight);
+    return () => ro.disconnect();
+  }, []);
+
   const explicitEdges = useMemo(() => edges.filter((e) => !e.implicit), [edges]);
   const { positions, totalW, totalH, maxLayer } = useMemo(
-    () => layerNodes(nodes, explicitEdges),
-    [nodes, explicitEdges]
+    () => layerNodes(nodes, explicitEdges, scrollH),
+    [nodes, explicitEdges, scrollH]
   );
 
   // Zoom/pan state
@@ -271,6 +316,7 @@ export function DependencyPanel({
         </div>
       </div>
       <div
+        ref={scrollRef}
         className="dependency-panel-scroll"
         onWheel={handleWheel}
         onMouseDown={handleMouseDown}
