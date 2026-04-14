@@ -13,16 +13,15 @@ function MemorySparkline({ history }) {
     return <svg width={W} height={H} style={{ display: 'block', opacity: 0.2 }}><rect x={0} y={H/2} width={W} height={1} fill="currentColor"/></svg>;
   }
 
-  const values = slice.map((h) => h.mb);
-  const max = Math.max(...values);
-  const min = Math.min(...values);
-  const range = max - min || 1;
+  const values = slice.map((h) => h.mb || 0);
+  const max = Math.max(...values) || 1;
   const isLatest = (i) => i === slice.length - 1;
 
   return (
     <svg width={W} height={H} style={{ display: 'block' }}>
       {slice.map((h, i) => {
-        const barH = Math.max(2, ((h.mb - min) / range) * (H - PAD * 2));
+        const mb = h.mb || 0;
+        const barH = Math.max(2, (mb / max) * (H - PAD * 2));
         const x = PAD + i * (BAR_W + GAP);
         const y = H - PAD - barH;
         return (
