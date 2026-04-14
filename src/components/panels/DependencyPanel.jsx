@@ -125,9 +125,10 @@ export function DependencyPanel({
 }) {
   const { nodes, edges } = useCellDependencies(notebook);
 
+  const explicitEdges = useMemo(() => edges.filter((e) => !e.implicit), [edges]);
   const { positions, totalW, totalH } = useMemo(
-    () => layerNodes(nodes, edges),
-    [nodes, edges]
+    () => layerNodes(nodes, explicitEdges),
+    [nodes, explicitEdges]
   );
 
   // Zoom/pan state
