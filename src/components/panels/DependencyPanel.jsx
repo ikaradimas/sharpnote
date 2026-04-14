@@ -180,14 +180,14 @@ export function DependencyPanel({
       });
       return;
     }
-    // Single click runs the cell
-    const cell = notebook?.cells.find((c) => c.id === node.id);
-    if (cell && notebookId) dispatchRun?.(notebookId, cell);
-  }, [selectionMode, notebook, notebookId, dispatchRun]);
+    // Single click navigates to the cell
+    onNavigateToCell?.(node.id);
+  }, [selectionMode, onNavigateToCell]);
 
   const handleNodeDblClick = useCallback((e, node) => {
-    onNavigateToCell?.(node.id);
-  }, [onNavigateToCell]);
+    const cell = notebook?.cells.find((c) => c.id === node.id);
+    if (cell && notebookId) dispatchRun?.(notebookId, cell);
+  }, [notebook, notebookId, dispatchRun]);
 
   const handleContextMenu = useCallback((e, node) => {
     e.preventDefault();
