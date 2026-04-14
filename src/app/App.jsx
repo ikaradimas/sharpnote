@@ -971,7 +971,9 @@ export function App() {
       log: {
         onToggle: nbId ? () => setNb(nbId, (n) => ({ logPanelOpen: !n.logPanelOpen })) : () => {},
         currentMemoryMb: activeNb?.memoryHistory?.length
-          ? activeNb.memoryHistory[activeNb.memoryHistory.length - 1] : null,
+          ? (typeof activeNb.memoryHistory[activeNb.memoryHistory.length - 1] === 'number'
+            ? activeNb.memoryHistory[activeNb.memoryHistory.length - 1]
+            : activeNb.memoryHistory[activeNb.memoryHistory.length - 1]?.mb) : null,
         cells: activeNb?.cells ?? [],
         onNavigateToCell: nbId ? (cellId) => handleNavigateToCell(nbId, cellId) : () => {},
       },

@@ -13,25 +13,28 @@ function MemorySparkline({ history }) {
     return <svg width={W} height={H} style={{ display: 'block', opacity: 0.2 }}><rect x={0} y={H/2} width={W} height={1} fill="currentColor"/></svg>;
   }
 
-  const max = Math.max(...slice);
-  const min = Math.min(...slice);
+  const values = slice.map((h) => h.mb);
+  const max = Math.max(...values);
+  const min = Math.min(...values);
   const range = max - min || 1;
   const isLatest = (i) => i === slice.length - 1;
 
   return (
     <svg width={W} height={H} style={{ display: 'block' }}>
-      {slice.map((v, i) => {
-        const barH = Math.max(2, ((v - min) / range) * (H - PAD * 2));
+      {slice.map((h, i) => {
+        const barH = Math.max(2, ((h.mb - min) / range) * (H - PAD * 2));
         const x = PAD + i * (BAR_W + GAP);
         const y = H - PAD - barH;
         return (
-          <rect
-            key={i}
-            x={x} y={y} width={BAR_W} height={barH}
-            fill="var(--accent-primary)"
-            opacity={isLatest(i) ? 1 : 0.45}
-            rx="0.5"
-          />
+          <g key={i}>
+            <rect
+              x={x} y={y} width={BAR_W} height={barH}
+              fill={h.gc ? '#c586c0' : 'var(--accent-primary)'}
+              opacity={isLatest(i) ? 1 : h.gc ? 0.7 : 0.45}
+              rx="0.5"
+            />
+            {h.gc && <line x1={x + 1} y1={PAD} x2={x + 1} y2={H - PAD} stroke="#c586c0" strokeWidth="0.5" opacity="0.3" />}
+          </g>
         );
       })}
     </svg>
@@ -151,9 +154,11 @@ function FishSwarm() {
 
 export function StatusBar({ notebooks, activeId, showFish = true, showSkyline = true, onTriggerSkyline }) {
   const nb = isNotebookId(activeId) ? notebooks.find((n) => n.id === activeId) : null;
-  const history = nb?.memoryHistory ?? [];
-  const current = history.length > 0 ? history[history.length - 1] : null;
-  const peak    = history.length > 0 ? Math.max(...history) : null;
+  const rawHistory = nb?.memoryHistory ?? [];
+  // Support both legacy (number) and new ({ mb, gc }) formats
+  const history = rawHistory.map((v) => typeof v === 'number' ? { mb: v, gc: false } : v);
+  const current = history.length > 0 ? history[history.length - 1].mb : null;
+  const peak    = history.length > 0 ? Math.max(...history.map((h) => h.mb)) : null;
   const anyRunning = nb ? nb.running?.size > 0 : false;
   const totalCells = nb ? nb.cells?.length : 0;
 

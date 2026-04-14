@@ -261,12 +261,19 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
           }));
           break;
 
-        case 'memory_mb':
-          setNb(notebookId, (n) => ({
-            memoryHistory: [...n.memoryHistory.slice(-59), msg.mb],
-            memoryWarning: msg.mb > 1024 ? `Kernel memory: ${Math.round(msg.mb)}MB` : null,
-          }));
+        case 'memory_mb': {
+          const gc = msg.gc ?? 0;
+          setNb(notebookId, (n) => {
+            const prevGc = n._lastGcCount ?? 0;
+            const gcHappened = gc > prevGc;
+            return {
+              memoryHistory: [...n.memoryHistory.slice(-59), { mb: msg.mb, gc: gcHappened }],
+              memoryWarning: msg.mb > 1024 ? `Kernel memory: ${Math.round(msg.mb)}MB` : null,
+              _lastGcCount: gc,
+            };
+          });
           break;
+        }
 
         case 'var_point':
           setNb(notebookId, (n) => {

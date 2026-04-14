@@ -126,7 +126,8 @@ partial class Program
                     await Task.Delay(3000, memCts.Token);
                     proc.Refresh();
                     var mb = Math.Round(proc.WorkingSet64 / (1024.0 * 1024.0), 1);
-                    var json = JsonSerializer.Serialize(new { type = "memory_mb", mb });
+                    var gcTotal = GC.CollectionCount(0) + GC.CollectionCount(1) + GC.CollectionCount(2);
+                    var json = JsonSerializer.Serialize(new { type = "memory_mb", mb, gc = gcTotal });
                     lock (realStdout) { realStdout.WriteLine(json); }
                 }
                 catch (OperationCanceledException) { break; }
