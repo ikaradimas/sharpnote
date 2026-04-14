@@ -4,6 +4,7 @@ import { CodeEditor } from './CodeEditor.jsx';
 import { CellOutput } from '../output/OutputBlock.jsx';
 import { CellControls } from './CellControls.jsx';
 import { CellNameColor } from './CellNameColor.jsx';
+import { CellLinkPicker } from './CellLinkPicker.jsx';
 
 function formatElapsed(ms) {
   if (ms < 60_000) {
@@ -82,6 +83,8 @@ export function CodeCell({
   retainedResult,
   onRetain,
   onUnretain,
+  onNextCellsChange,
+  onPrevCellsChange,
 }) {
   const outputMode = cell.outputMode || 'auto';
   const locked = cell.locked || false;
@@ -420,6 +423,12 @@ export function CodeCell({
             </div>
           )}
         </div>
+        {onPrevCellsChange && (
+          <CellLinkPicker label="← Prev" selected={cell.prevCells || []} allCells={allCells} cellId={cell.id} onChange={onPrevCellsChange} />
+        )}
+        {onNextCellsChange && (
+          <CellLinkPicker label="Next →" selected={cell.nextCells || []} allCells={allCells} cellId={cell.id} onChange={onNextCellsChange} />
+        )}
         <div className="cell-present-group" ref={presentRefreshRef}>
           <button
             className={`cell-present-btn${presenting ? ' cell-present-btn-on' : ''}`}

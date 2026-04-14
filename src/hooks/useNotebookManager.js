@@ -59,11 +59,13 @@ export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef, for
       config: nb.config.filter((e) => e.key.trim()),
       attachedDbIds: nb.attachedDbs.filter((d) => d.status === 'ready').map((d) => d.connectionId),
       autoRun: nb.autoRun || false,
-      cells: nb.cells.map(({ id, type, content, name, color, columns, outputMode, locked, codeFolded, presenting, presentInterval, db, label, mode, truePath, falsePath, switchPaths, image, containerName, ports, env, volume, command, runOnStartup, runOnShutdown }) => ({
+      cells: nb.cells.map(({ id, type, content, name, color, columns, nextCells, prevCells, outputMode, locked, codeFolded, presenting, presentInterval, db, label, mode, truePath, falsePath, switchPaths, image, containerName, ports, env, volume, command, runOnStartup, runOnShutdown }) => ({
         id, type, content,
         ...(name ? { name } : {}),
         ...(color ? { color } : {}),
         ...(columns ? { columns } : {}),
+        ...(nextCells?.length ? { nextCells } : {}),
+        ...(prevCells?.length ? { prevCells } : {}),
         ...(type === 'code' ? { outputMode: outputMode || 'auto', locked: locked || false, ...(codeFolded ? { codeFolded: true } : {}), ...(presenting ? { presenting: true } : {}), ...(presentInterval ? { presentInterval } : {}) } : {}),
         ...(type === 'sql'  ? { db: db || '' } : {}),
         ...(type === 'check' || type === 'decision' ? { label: label || '' } : {}),

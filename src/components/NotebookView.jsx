@@ -397,7 +397,9 @@ export function NotebookView({
         inlineDiagnostics={inlineDiagnostics?.[cell.id] || null}
         retainedResult={nb.retainedResults?.[cell.id] || null}
         onRetain={() => onRetainOutput?.(nb.id, cell.id)}
-        onUnretain={() => onUnretainOutput?.(nb.id, cell.id)} />
+        onUnretain={() => onUnretainOutput?.(nb.id, cell.id)}
+        onNextCellsChange={(ids) => updateCellProp(cell.id, 'nextCells', ids.length ? ids : undefined)}
+        onPrevCellsChange={(ids) => updateCellProp(cell.id, 'prevCells', ids.length ? ids : undefined)} />
     );
   };
 

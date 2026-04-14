@@ -132,6 +132,26 @@ export function useCellDependencies(notebook) {
       }
     }
 
+    // Add explicit next/prev cell edges
+    for (const cell of cells) {
+      for (const targetId of cell.nextCells || []) {
+        if (!cellIdSet.has(targetId)) continue;
+        const key = `${cell.id}->${targetId}`;
+        if (!edgeSet.has(key)) {
+          edgeSet.add(key);
+          edges.push({ from: cell.id, to: targetId, vars: [], link: 'next' });
+        }
+      }
+      for (const sourceId of cell.prevCells || []) {
+        if (!cellIdSet.has(sourceId)) continue;
+        const key = `${sourceId}->${cell.id}`;
+        if (!edgeSet.has(key)) {
+          edgeSet.add(key);
+          edges.push({ from: sourceId, to: cell.id, vars: [], link: 'prev' });
+        }
+      }
+    }
+
     // Add implicit sequential edges between consecutive cells with no explicit connection
     for (let i = 0; i < cells.length - 1; i++) {
       const fromId = cells[i].id;
