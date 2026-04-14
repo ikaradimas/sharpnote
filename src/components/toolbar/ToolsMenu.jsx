@@ -85,7 +85,7 @@ export function ToolsMenu({
     { icon: <IconTodo />,      label: 'To Do',             action: onToggleTodo,     active: todoPanelOpen },
     { icon: <IconRegex />,     label: 'Regex',             action: onToggleRegex,    active: regexPanelOpen },
     { icon: <IconKafka />,     label: 'Kafka',             action: onToggleKafka,    active: kafkaPanelOpen },
-    { icon: <IconDeps />,      label: 'Dependencies',      action: onToggleDeps,     active: depsPanelOpen },
+    { icon: <IconDeps />,      label: 'Orchestration',     action: onToggleDeps,     active: depsPanelOpen },
     { icon: <IconHistory />,   label: 'History',            action: onToggleHistory,  active: historyPanelOpen },
     { icon: <IconEmbed />,    label: 'Embedded Files',     action: onToggleEmbed,    active: embedPanelOpen },
   ];

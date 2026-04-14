@@ -1238,10 +1238,10 @@ export const DOCS_SECTIONS = [
       ]},
       { type: 'p', text: 'Decision cells appear as diamond-shaped nodes in the dependency graph.' },
       { type: 'h3', text: 'Dependency Graph (Orchestration Panel)' },
-      { type: 'p', text: 'The Dependencies panel (Ctrl+Shift+Y) is an interactive orchestration view of cell relationships. Nodes represent cells; edges represent execution dependencies and decision branches.' },
+      { type: 'p', text: 'The Orchestration panel (Ctrl+Shift+Y) is an interactive view of cell relationships. Nodes represent cells; edges represent execution dependencies and decision branches.' },
       { type: 'ul', items: [
         'Click a node to select and scroll to the corresponding cell',
-        'Right-click a node for a context menu: Run, Run with Dependencies, Run Downstream, Edit Dependencies',
+        'Right-click a node for a context menu: Run, Run with Upstream, Run Downstream',
         'Click the ▶ button on a node to run that cell directly from the graph',
         'Zoom and pan with scroll wheel and drag; fit-to-view button resets the viewport',
         'Decision nodes show two labeled outgoing edges (true / false)',
@@ -1257,7 +1257,7 @@ export const DOCS_SECTIONS = [
       ]},
       { type: 'h3', text: 'Execution Modes' },
       { type: 'ul', items: [
-        'Run with Dependencies — runs all upstream cells first (in topological order), then the selected cell',
+        'Run with Upstream — runs all upstream cells first (in topological order), then the selected cell',
         'Run Downstream — runs the selected cell, then all cells that depend on it',
         'Run Pipeline — runs every cell in the named pipeline in dependency order',
       ]},

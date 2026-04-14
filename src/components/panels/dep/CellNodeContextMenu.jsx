@@ -17,7 +17,7 @@ export function CellNodeContextMenu({ x, y, node, pipelines, onClose, actions })
         ▶ Run
       </button>
       <button className="dep-context-item" onClick={() => { actions.onRunWithDeps(); onClose(); }}>
-        ▶▶ Run with dependencies
+        ▶▶ Run with upstream
       </button>
       <button className="dep-context-item" onClick={() => { actions.onRunDownstream(); onClose(); }}>
         ▶▼ Run downstream

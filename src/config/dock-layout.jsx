@@ -168,7 +168,7 @@ export const PANEL_META = {
   todo:    { label: 'To Do',      icon: <IconTodo /> },
   regex:   { label: 'Regex',      icon: <IconRegex /> },
   history: { label: 'History',    icon: <IconHistory /> },
-  deps:    { label: 'Dependencies', icon: <IconDeps /> },
+  deps:    { label: 'Orchestration', icon: <IconDeps /> },
   git:  { label: 'Git', icon: <IconGit /> },
   'api-editor': { label: 'API Editor', icon: <IconApiEditor /> },
   embed: { label: 'Embedded Files', icon: <IconFiles /> },

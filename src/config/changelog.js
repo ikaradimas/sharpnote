@@ -151,7 +151,7 @@ export const CHANGELOG = [
   ]},
   { version: '1.59', date: '2026-04-11', title: 'Cell orchestration', gears: 3, items: [
     'Cell naming, color coding, decision cells, and pipeline execution',
-    'Dependencies panel with cell graph visualization',
+    'Orchestration panel with cell graph visualization',
   ]},
   { version: '1.58', date: '2026-04-11', title: 'Scheduled execution', gears: 2, items: [
     'Scheduled notebook execution with preset intervals',

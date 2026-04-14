@@ -1692,10 +1692,10 @@ decision branching, and the interactive dependency graph.
 
 ## How to use
 
-1. Open the **Dependencies** panel (Tools → Dependencies, or **Ctrl+Shift+Y**)
+1. Open the **Orchestration** panel (Tools → Orchestration, or **Ctrl+Shift+Y**)
 2. Run the cells below — the graph will light up with execution status
 3. **Click a node** in the graph to run it, **double-click** to navigate
-4. **Right-click** a node for: *Run with deps*, *Run downstream*, *Add to pipeline*
+4. **Right-click** a node for: *Run with upstream*, *Run downstream*, *Add to pipeline*
 5. Use **zoom** (scroll) and **pan** (drag empty space) to navigate the graph
 6. Create **pipelines** in the bottom section to group and re-run cells`),
 
@@ -1718,7 +1718,7 @@ They appear as nodes in the dependency graph.`),
     md(`## 3. Computed Dependencies
 
 This cell references \`orders\` from the Load cell — creating a dependency edge in the graph.
-Open the Dependencies panel to see the edge from *Load Orders* → *Compute Stats*.`),
+Open the Orchestration panel to see the edge from *Load Orders* → *Compute Stats*.`),
 
     statsCell,
 
@@ -1761,7 +1761,7 @@ This cell also depends on \`orders\`, creating another edge in the graph.`),
 
     md(`## 7. Pipelines
 
-Open the Dependencies panel and use the **Pipelines** section at the bottom:
+Open the Orchestration panel and use the **Pipelines** section at the bottom:
 
 1. Click **+ Select** to enter selection mode
 2. Click nodes in the graph to add them to the pipeline
@@ -1773,7 +1773,7 @@ Open the Dependencies panel and use the **Pipelines** section at the bottom:
 | Mode | What it does |
 |------|-------------|
 | **Click node** | Runs that single cell |
-| **Run with deps** | Runs all upstream cells first, then the target |
+| **Run with upstream** | Runs all upstream cells first, then the target |
 | **Run downstream** | Runs the target, then everything that depends on it |
 | **Run pipeline** | Runs a named group of cells in topological order |
 
