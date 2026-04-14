@@ -6989,7 +6989,12 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
   font-family: var(--font-ui); font-size: 9px; color: var(--text-muted);
   background: var(--bg-deepest); border: 1px solid var(--border-subtle); border-radius: 3px;
   padding: 1px 4px; cursor: pointer; outline: none;
+  -webkit-appearance: none; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 0l4 4 4-4' fill='none' stroke='%235a7080' stroke-width='1.2'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 3px center; background-size: 8px 5px;
+  padding-right: 14px;
 }
+.decision-mode-select option { font-size: 11px; }
 .decision-cell-matched { border-left-color: #c586c0; background: rgba(197,134,192,0.04); }
 .decision-diamond-switch { color: #c586c0; }
 
