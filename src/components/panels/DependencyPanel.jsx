@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { useCellDependencies } from '../../hooks/useCellDependencies.js';
 import { CELL_COLORS } from '../../notebook-factory.js';
 import { CellNodeContextMenu } from './dep/CellNodeContextMenu.jsx';
