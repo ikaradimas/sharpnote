@@ -28,7 +28,7 @@ const NODE_W = 140;
 const NODE_H = 36;
 const DIAMOND_SIZE = 38;
 const H_GAP = 50;
-const V_GAP = 24;
+const V_GAP = 40;
 const PAD = 24;
 
 function layerNodes(nodes, edges) {
@@ -215,7 +215,7 @@ export function DependencyPanel({
     <div className="dependency-panel">
       <div className="dependency-panel-header">
         <span className="dependency-panel-title">Orchestration</span>
-        <span className="dependency-panel-info">{nodes.length} cells · {edges.length} edges</span>
+        <span className="dependency-panel-info">{nodes.length} cells · {edges.filter((e) => !e.implicit).length} edges</span>
         <div className="dep-zoom-controls">
           <button className="dep-zoom-btn" onClick={() => setZoom((z) => Math.min(3, z + 0.2))} title="Zoom in">+</button>
           <span className="dep-zoom-label">{Math.round(zoom * 100)}%</span>
@@ -254,6 +254,10 @@ export function DependencyPanel({
                       markerWidth="6" markerHeight="6" orient="auto-start-reverse">
                 <path d="M 0 0 L 10 5 L 0 10 z" fill="#e05050" />
               </marker>
+              <marker id="dep-arrow-implicit" viewBox="0 0 10 10" refX="9" refY="5"
+                      markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#2a3545" />
+              </marker>
             </defs>
 
             {/* Edges */}
@@ -261,15 +265,35 @@ export function DependencyPanel({
               const from = positions[e.from];
               const to = positions[e.to];
               if (!from || !to) return null;
+
+              const isFlowing = executionProgress && completedSet.has(e.from) &&
+                (executionProgress.activeCellId === e.to || executionProgress.queue?.includes(e.to));
+              const isComplete = completedSet.has(e.from) && completedSet.has(e.to);
+
+              // Implicit sequential edges: draw a straight vertical dotted arrow
+              if (e.implicit) {
+                const cx = from.x + NODE_W / 2;
+                const y1 = from.y + NODE_H;
+                const y2 = to.y;
+                return (
+                  <g key={`e-${i}`}>
+                    <line
+                      x1={cx} y1={y1 + 2} x2={cx} y2={y2 - 2}
+                      stroke={isComplete ? '#4ec9b040' : '#2a3545'}
+                      strokeWidth={1}
+                      strokeDasharray="3 3"
+                      markerEnd="url(#dep-arrow-implicit)"
+                    />
+                  </g>
+                );
+              }
+
               const x1 = from.x + NODE_W;
               const y1 = from.y + NODE_H / 2;
               const x2 = to.x;
               const y2 = to.y + NODE_H / 2;
               const mx = (x1 + x2) / 2;
 
-              const isFlowing = executionProgress && completedSet.has(e.from) &&
-                (executionProgress.activeCellId === e.to || executionProgress.queue?.includes(e.to));
-              const isComplete = completedSet.has(e.from) && completedSet.has(e.to);
               const isBranch = !!e.branch;
               const branchColor = e.branch === 'true' ? '#4ec9b0'
                 : e.branch === 'false' ? '#e05050'

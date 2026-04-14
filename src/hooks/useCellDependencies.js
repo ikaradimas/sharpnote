@@ -132,6 +132,17 @@ export function useCellDependencies(notebook) {
       }
     }
 
+    // Add implicit sequential edges between consecutive cells with no explicit connection
+    for (let i = 0; i < cells.length - 1; i++) {
+      const fromId = cells[i].id;
+      const toId = cells[i + 1].id;
+      const key = `${fromId}->${toId}`;
+      if (!edgeSet.has(key)) {
+        edgeSet.add(key);
+        edges.push({ from: fromId, to: toId, vars: [], implicit: true });
+      }
+    }
+
     return { nodes, edges };
   }, [notebook?.cells, notebook?.vars]);
 }
