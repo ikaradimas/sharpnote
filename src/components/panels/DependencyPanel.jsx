@@ -30,6 +30,7 @@ const DIAMOND_SIZE = 38;
 const H_GAP = 50;
 const V_GAP = 40;
 const PAD = 24;
+const HEADER_H = 20;
 
 function layerNodes(nodes, edges) {
   const inDegree = {};
@@ -61,21 +62,41 @@ function layerNodes(nodes, edges) {
 
   const positions = {};
   const maxLayer = Math.max(0, ...Object.keys(byLayer).map(Number));
+  const topY = PAD + HEADER_H;
   for (let l = 0; l <= maxLayer; l++) {
     const items = byLayer[l] || [];
     for (let i = 0; i < items.length; i++) {
       positions[items[i].id] = {
         x: PAD + l * (NODE_W + H_GAP),
-        y: PAD + i * (NODE_H + V_GAP),
+        y: topY + i * (NODE_H + V_GAP),
       };
     }
   }
 
   const totalW = PAD * 2 + (maxLayer + 1) * (NODE_W + H_GAP) - H_GAP;
   const maxPerLayer = Math.max(1, ...Object.values(byLayer).map((a) => a.length));
-  const totalH = PAD * 2 + maxPerLayer * (NODE_H + V_GAP) - V_GAP;
+  const totalH = topY + PAD + maxPerLayer * (NODE_H + V_GAP) - V_GAP;
 
-  return { positions, totalW, totalH };
+  return { positions, totalW, totalH, maxLayer };
+}
+
+const DIAMOND_R = DIAMOND_SIZE * Math.SQRT2 / 2; // distance from center to tip
+
+function getNodeRight(pos, node) {
+  if (node.type === 'decision') return { x: pos.x + NODE_W / 2 + DIAMOND_R, y: pos.y + NODE_H / 2 };
+  return { x: pos.x + NODE_W, y: pos.y + NODE_H / 2 };
+}
+function getNodeLeft(pos, node) {
+  if (node.type === 'decision') return { x: pos.x + NODE_W / 2 - DIAMOND_R, y: pos.y + NODE_H / 2 };
+  return { x: pos.x, y: pos.y + NODE_H / 2 };
+}
+function getNodeBottom(pos, node) {
+  if (node.type === 'decision') return { x: pos.x + NODE_W / 2, y: pos.y + NODE_H / 2 + DIAMOND_R };
+  return { x: pos.x + NODE_W / 2, y: pos.y + NODE_H };
+}
+function getNodeTop(pos, node) {
+  if (node.type === 'decision') return { x: pos.x + NODE_W / 2, y: pos.y + NODE_H / 2 - DIAMOND_R };
+  return { x: pos.x + NODE_W / 2, y: pos.y };
 }
 
 function getNodeColor(node) {
@@ -126,7 +147,7 @@ export function DependencyPanel({
   const { nodes, edges } = useCellDependencies(notebook);
 
   const explicitEdges = useMemo(() => edges.filter((e) => !e.implicit), [edges]);
-  const { positions, totalW, totalH } = useMemo(
+  const { positions, totalW, totalH, maxLayer } = useMemo(
     () => layerNodes(nodes, explicitEdges),
     [nodes, explicitEdges]
   );
@@ -211,6 +232,7 @@ export function DependencyPanel({
   }
 
   const completedSet = new Set(executionProgress?.completed || []);
+  const nodeMap = useMemo(() => Object.fromEntries(nodes.map((n) => [n.id, n])), [nodes]);
 
   return (
     <div className="dependency-panel">
@@ -261,6 +283,22 @@ export function DependencyPanel({
               </marker>
             </defs>
 
+            {/* Layer backgrounds and labels */}
+            {Array.from({ length: maxLayer + 1 }, (_, l) => {
+              const lx = PAD + l * (NODE_W + H_GAP) - 8;
+              const lw = NODE_W + 16;
+              return (
+                <g key={`layer-${l}`}>
+                  <rect x={lx} y={PAD} width={lw} height={totalH - PAD * 2}
+                    rx="6" fill={l % 2 === 0 ? 'rgba(255,255,255,0.015)' : 'rgba(255,255,255,0.03)'}
+                    stroke="rgba(255,255,255,0.04)" strokeWidth="1" />
+                  <text x={lx + lw / 2} y={PAD + 12} textAnchor="middle" className="dep-layer-label">
+                    {l === 0 ? 'Entry' : `Layer ${l}`}
+                  </text>
+                </g>
+              );
+            })}
+
             {/* Edges */}
             {edges.map((e, i) => {
               const from = positions[e.from];
@@ -271,15 +309,17 @@ export function DependencyPanel({
                 (executionProgress.activeCellId === e.to || executionProgress.queue?.includes(e.to));
               const isComplete = completedSet.has(e.from) && completedSet.has(e.to);
 
+              const fromNode = nodeMap[e.from];
+              const toNode = nodeMap[e.to];
+
               // Implicit sequential edges: draw a straight vertical dotted arrow
               if (e.implicit) {
-                const cx = from.x + NODE_W / 2;
-                const y1 = from.y + NODE_H;
-                const y2 = to.y;
+                const p1 = getNodeBottom(from, fromNode);
+                const p2 = getNodeTop(to, toNode);
                 return (
                   <g key={`e-${i}`}>
                     <line
-                      x1={cx} y1={y1 + 2} x2={cx} y2={y2 - 2}
+                      x1={p1.x} y1={p1.y + 2} x2={p2.x} y2={p2.y - 2}
                       stroke={isComplete ? '#4ec9b040' : '#2a3545'}
                       strokeWidth={1}
                       strokeDasharray="3 3"
@@ -289,10 +329,9 @@ export function DependencyPanel({
                 );
               }
 
-              const x1 = from.x + NODE_W;
-              const y1 = from.y + NODE_H / 2;
-              const x2 = to.x;
-              const y2 = to.y + NODE_H / 2;
+              const p1 = getNodeRight(from, fromNode);
+              const p2 = getNodeLeft(to, toNode);
+              const x1 = p1.x, y1 = p1.y, x2 = p2.x, y2 = p2.y;
               const mx = (x1 + x2) / 2;
 
               const isBranch = !!e.branch;

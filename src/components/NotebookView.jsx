@@ -407,8 +407,8 @@ export function NotebookView({
         retainedResult={nb.retainedResults?.[cell.id] || null}
         onRetain={() => onRetainOutput?.(nb.id, cell.id)}
         onUnretain={() => onUnretainOutput?.(nb.id, cell.id)}
-        onNextCellsChange={(ids) => updateCellProp(cell.id, 'nextCells', ids.length ? ids : undefined)}
-        onPrevCellsChange={(ids) => updateCellProp(cell.id, 'prevCells', ids.length ? ids : undefined)} />
+        onNextCellsChange={(ids) => updateCellProp(cell.id, 'nextCells', ids === null ? undefined : ids)}
+        onPrevCellsChange={(ids) => updateCellProp(cell.id, 'prevCells', ids === null ? undefined : ids)} />
     );
   };
 

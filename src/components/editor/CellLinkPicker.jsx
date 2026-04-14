@@ -1,10 +1,18 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { useOutsideClick } from '../../hooks/useOutsideClick.js';
 
-export function CellLinkPicker({ label, selected = [], allCells, cellId, onChange }) {
+// selected: undefined/null = implicit (default notebook order)
+//           []             = explicitly none (break the chain)
+//           ['id1', ...]   = explicit cell links
+
+export function CellLinkPicker({ label, selected, allCells, cellId, onChange }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   useOutsideClick(ref, () => setOpen(false), open);
+
+  const isImplicit = selected == null;
+  const isNone = Array.isArray(selected) && selected.length === 0;
+  const explicitIds = Array.isArray(selected) ? selected : [];
 
   const options = useMemo(() =>
     (allCells || [])
@@ -14,24 +22,35 @@ export function CellLinkPicker({ label, selected = [], allCells, cellId, onChang
   );
 
   const toggle = (id) => {
-    if (selected.includes(id)) onChange(selected.filter((x) => x !== id));
-    else onChange([...selected, id]);
+    const ids = explicitIds.includes(id) ? explicitIds.filter((x) => x !== id) : [...explicitIds, id];
+    onChange(ids.length > 0 ? ids : []);
   };
+
+  const summary = isImplicit ? 'implicit' : isNone ? 'none' : `${explicitIds.length}`;
 
   return (
     <div className="cell-link-picker" ref={ref}>
       <button className="cell-link-btn" onClick={() => setOpen((v) => !v)} title={label}>
         <span className="cell-link-label">{label}</span>
-        <span className="cell-link-count">
-          {selected.length === 0 ? 'none' : `${selected.length}`}
+        <span className={`cell-link-count${isImplicit ? ' cell-link-implicit' : isNone ? ' cell-link-none' : ''}`}>
+          {summary}
         </span>
       </button>
       {open && (
         <div className="cell-link-dropdown">
-          {options.length === 0 && <span className="cell-link-empty">No cells available</span>}
+          <label className="cell-link-option cell-link-mode-option">
+            <input type="radio" name={`link-${cellId}-${label}`} checked={isImplicit} onChange={() => onChange(null)} />
+            <span className="cell-link-option-label">Next in notebook order</span>
+          </label>
+          <label className="cell-link-option cell-link-mode-option">
+            <input type="radio" name={`link-${cellId}-${label}`} checked={isNone} onChange={() => onChange([])} />
+            <span className="cell-link-option-label">None (break chain)</span>
+          </label>
+          <div className="cell-link-sep" />
           {options.map((opt) => (
             <label key={opt.id} className="cell-link-option">
-              <input type="checkbox" checked={selected.includes(opt.id)} onChange={() => toggle(opt.id)} />
+              <input type="checkbox" checked={explicitIds.includes(opt.id)}
+                onChange={() => toggle(opt.id)} />
               <span className="cell-link-option-label">{opt.label}</span>
             </label>
           ))}
