@@ -75,13 +75,18 @@ function layerNodes(nodes, edges) {
     collapsed.add(targetId);
   }
 
-  // Group by layer
-  const byLayer = {};
+  // Group by layer and compact (remove empty layers)
+  const rawByLayer = {};
   for (const n of nodes) {
     const l = layers[n.id];
-    if (!byLayer[l]) byLayer[l] = [];
-    byLayer[l].push(n);
+    if (!rawByLayer[l]) rawByLayer[l] = [];
+    rawByLayer[l].push(n);
   }
+  const sortedKeys = Object.keys(rawByLayer).map(Number).sort((a, b) => a - b);
+  const byLayer = {};
+  const remap = {};
+  sortedKeys.forEach((k, i) => { byLayer[i] = rawByLayer[k]; remap[k] = i; });
+  for (const n of nodes) layers[n.id] = remap[layers[n.id]];
 
   // Compute positions
   const positions = {};
