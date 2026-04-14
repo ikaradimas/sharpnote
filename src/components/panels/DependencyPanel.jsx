@@ -10,7 +10,18 @@ const TYPE_COLORS = {
   check:    '#4ec9b0',
   http:     '#e0a040',
   shell:    '#4ec9b0',
+  docker:   '#0db7ed',
   decision: '#c586c0',
+};
+
+const TYPE_ICONS = {
+  code:     'C#',
+  sql:      'SQL',
+  http:     '⇄',
+  shell:    '>_',
+  docker:   '🐳',
+  check:    '✓',
+  decision: '◇',
 };
 
 const NODE_W = 140;
@@ -336,11 +347,12 @@ export function DependencyPanel({
                       strokeDasharray={isSelected ? '4 2' : 'none'}
                     />
                   )}
-                  <text x={pos.x + 8} y={pos.y + NODE_H / 2 + 4} className="dep-node-label">
-                    {n.label.length > 16 ? n.label.slice(0, 16) + '…' : n.label}
+                  <text x={pos.x + 22} y={pos.y + NODE_H / 2 + 4} className="dep-node-label">
+                    {n.label.length > 14 ? n.label.slice(0, 14) + '…' : n.label}
                   </text>
-                  <text x={pos.x + NODE_W - 6} y={pos.y + 12} textAnchor="end" className="dep-node-type">
-                    {n.type}
+                  <rect x={pos.x + 3} y={pos.y + NODE_H / 2 - 7} width={16} height={14} rx="3" fill={color} fillOpacity="0.2" />
+                  <text x={pos.x + 11} y={pos.y + NODE_H / 2 + 3} textAnchor="middle" className="dep-node-type-icon" fill={color}>
+                    {TYPE_ICONS[n.type] || n.type[0].toUpperCase()}
                   </text>
                   {statusFill && (
                     <circle

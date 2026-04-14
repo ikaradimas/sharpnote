@@ -7044,6 +7044,7 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 .dependency-svg { display: block; }
 .dep-node-label { font-family: var(--font-code); font-size: 10px; fill: #cdd6e0; }
 .dep-node-type { font-family: var(--font-ui); font-size: 8px; fill: #5a7080; text-transform: uppercase; letter-spacing: 0.1em; }
+.dep-node-type-icon { font-family: var(--font-code); font-size: 7px; font-weight: 700; pointer-events: none; }
 .dep-edge-label { font-family: var(--font-code); font-size: 8px; fill: #5a7080; }
 
 /* Node status indicators */

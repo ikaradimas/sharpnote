@@ -14,7 +14,7 @@ export function useCellDependencies(notebook) {
 
     const cells = notebook.cells.filter((c) =>
       c.type === 'code' || c.type === 'sql' || c.type === 'check' ||
-      c.type === 'http' || c.type === 'shell' || c.type === 'decision'
+      c.type === 'http' || c.type === 'shell' || c.type === 'docker' || c.type === 'decision'
     );
     const vars = notebook.vars || [];
     const varNames = vars.map((v) => v.name);
