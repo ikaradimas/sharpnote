@@ -221,6 +221,7 @@ export function DependencyPanel({
   }, []);
 
   const fitAll = useCallback(() => { setZoom(1); setPan({ x: 0, y: 0 }); }, []);
+  const nodeMap = useMemo(() => Object.fromEntries(nodes.map((n) => [n.id, n])), [nodes]);
 
   if (nodes.length === 0) {
     return (
@@ -232,7 +233,6 @@ export function DependencyPanel({
   }
 
   const completedSet = new Set(executionProgress?.completed || []);
-  const nodeMap = useMemo(() => Object.fromEntries(nodes.map((n) => [n.id, n])), [nodes]);
 
   return (
     <div className="dependency-panel">
