@@ -33,11 +33,18 @@ const PAD = 24;
 const HEADER_H = 30;
 
 function layerNodes(nodes, edges) {
-  const inDegree = {};
-  const adj = {};
-  for (const n of nodes) { inDegree[n.id] = 0; adj[n.id] = []; }
-  for (const e of edges) { inDegree[e.to] = (inDegree[e.to] || 0) + 1; adj[e.from]?.push(e.to); }
+  // Build adjacency and in-degree
+  const outEdges = {}; // id → [targetId, ...]
+  const inEdges = {};  // id → [sourceId, ...]
+  for (const n of nodes) { outEdges[n.id] = []; inEdges[n.id] = []; }
+  for (const e of edges) {
+    outEdges[e.from]?.push(e.to);
+    inEdges[e.to]?.push(e.from);
+  }
 
+  // Standard topological layering
+  const inDegree = {};
+  for (const n of nodes) inDegree[n.id] = inEdges[n.id].length;
   const layers = {};
   const queue = nodes.filter((n) => inDegree[n.id] === 0).map((n) => n.id);
   for (const id of queue) layers[id] = 0;
@@ -45,7 +52,7 @@ function layerNodes(nodes, edges) {
   let head = 0;
   while (head < queue.length) {
     const id = queue[head++];
-    for (const to of adj[id] || []) {
+    for (const to of outEdges[id] || []) {
       layers[to] = Math.max(layers[to] || 0, (layers[id] || 0) + 1);
       inDegree[to]--;
       if (inDegree[to] === 0) queue.push(to);
@@ -53,6 +60,22 @@ function layerNodes(nodes, edges) {
   }
   for (const n of nodes) { if (!(n.id in layers)) layers[n.id] = 0; }
 
+  // Collapse linear chains: if A has exactly 1 outgoing edge to B, and B has
+  // exactly 1 incoming edge from A, place B in the same layer as A (below it).
+  const collapsed = new Set(); // nodes pulled into a predecessor's layer
+  for (const n of nodes) {
+    if (collapsed.has(n.id)) continue;
+    const outs = outEdges[n.id];
+    if (outs.length !== 1) continue;
+    const targetId = outs[0];
+    const ins = inEdges[targetId];
+    if (ins.length !== 1) continue;
+    // Target has exactly 1 incoming (from this node) — collapse into same layer
+    layers[targetId] = layers[n.id];
+    collapsed.add(targetId);
+  }
+
+  // Group by layer
   const byLayer = {};
   for (const n of nodes) {
     const l = layers[n.id];
@@ -60,6 +83,7 @@ function layerNodes(nodes, edges) {
     byLayer[l].push(n);
   }
 
+  // Compute positions
   const positions = {};
   const maxLayer = Math.max(0, ...Object.keys(byLayer).map(Number));
   const topY = PAD + HEADER_H;
