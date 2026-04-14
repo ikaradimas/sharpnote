@@ -30,7 +30,7 @@ const DIAMOND_SIZE = 38;
 const H_GAP = 50;
 const V_GAP = 40;
 const PAD = 24;
-const HEADER_H = 20;
+const HEADER_H = 30;
 
 function layerNodes(nodes, edges) {
   const inDegree = {};

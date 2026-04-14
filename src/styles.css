@@ -7082,7 +7082,7 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 .dep-node-type { font-family: var(--font-ui); font-size: 8px; fill: #5a7080; text-transform: uppercase; letter-spacing: 0.1em; }
 .dep-node-type-icon { font-family: var(--font-code); font-size: 7px; font-weight: 700; pointer-events: none; }
 .dep-edge-label { font-family: var(--font-code); font-size: 8px; fill: #5a7080; }
-.dep-layer-label { font-family: var(--font-ui); font-size: 8px; fill: #3a4a5a; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+.dep-layer-label { font-family: var(--font-ui); font-size: 8px; fill: #6a8090; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
 
 /* Node status indicators */
 .dep-status-running { animation: dep-pulse 1s ease-in-out infinite; }
