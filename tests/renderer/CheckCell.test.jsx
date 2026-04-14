@@ -53,18 +53,18 @@ describe('CheckCell', () => {
   it('run button calls onRun', () => {
     const onRun = vi.fn();
     render(<CheckCell {...defaultProps({ onRun })} />);
-    fireEvent.click(screen.getByTitle(/Run check/));
+    fireEvent.click(screen.getByTitle(/Run \(Ctrl\+Enter\)/));
     expect(onRun).toHaveBeenCalledOnce();
   });
 
   it('run button is disabled when anyRunning', () => {
     render(<CheckCell {...defaultProps({ anyRunning: true })} />);
-    expect(screen.getByTitle(/Run check/)).toBeDisabled();
+    expect(screen.getByTitle(/Run \(Ctrl\+Enter\)/)).toBeDisabled();
   });
 
   it('run button is disabled when expression is empty', () => {
     render(<CheckCell {...defaultProps({ cell: { id: 'c1', type: 'check', content: '', label: '' } })} />);
-    expect(screen.getByTitle(/Run check/)).toBeDisabled();
+    expect(screen.getByTitle(/Run \(Ctrl\+Enter\)/)).toBeDisabled();
   });
 
   it('applies check-cell-pass class when passed', () => {

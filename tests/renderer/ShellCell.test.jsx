@@ -33,25 +33,25 @@ describe('ShellCell', () => {
 
   it('renders Run button', () => {
     render(<ShellCell {...defaultProps()} />);
-    const btn = screen.getByTitle('Run command (Ctrl+Enter)');
+    const btn = screen.getByTitle('Run (Ctrl+Enter)');
     expect(btn).toBeInTheDocument();
     expect(btn.textContent).toContain('Run');
   });
 
   it('Run button is disabled when anyRunning=true', () => {
     render(<ShellCell {...defaultProps({ anyRunning: true })} />);
-    expect(screen.getByTitle('Run command (Ctrl+Enter)')).toBeDisabled();
+    expect(screen.getByTitle('Run (Ctrl+Enter)')).toBeDisabled();
   });
 
   it('Run button is disabled when kernelReady=false', () => {
     render(<ShellCell {...defaultProps({ kernelReady: false })} />);
-    expect(screen.getByTitle('Run command (Ctrl+Enter)')).toBeDisabled();
+    expect(screen.getByTitle('Run (Ctrl+Enter)')).toBeDisabled();
   });
 
   it('shows Running button when isRunning=true', () => {
     render(<ShellCell {...defaultProps({ isRunning: true })} />);
     expect(screen.getByText(/Running/)).toBeInTheDocument();
-    expect(screen.queryByTitle('Run command (Ctrl+Enter)')).toBeNull();
+    expect(screen.queryByTitle('Run (Ctrl+Enter)')).toBeNull();
   });
 
   it('renders CellOutput with provided outputs', () => {

@@ -291,6 +291,7 @@ export function NotebookView({
         attachedDbs={attachedDbs} isRunning={running.has(cell.id)} anyRunning={running.size > 0}
         kernelReady={kernelStatus === 'ready'} onUpdate={(val) => updateCell(cell.id, val)}
         onRun={() => onRunSqlCell(nb.id, cell)}
+        onRunFrom={() => onRunFrom(nb.id, cell.id)} onRunTo={() => onRunTo(nb.id, cell.id)}
         onDbChange={(connectionId) => updateCellProp(cell.id, 'db', connectionId)}
         onDelete={() => deleteCell(cell.id)}
         onCopy={() => copyCell(cell.id)}
@@ -303,7 +304,9 @@ export function NotebookView({
       <HttpCell cell={cell} cellIndex={index} outputs={outputs[cell.id]} notebookId={nb.id}
         isRunning={running.has(cell.id)} anyRunning={running.size > 0}
         kernelReady={kernelStatus === 'ready'} onUpdate={(val) => updateCell(cell.id, val)}
-        onRun={() => onRunHttpCell(nb.id, cell)} onDelete={() => deleteCell(cell.id)}
+        onRun={() => onRunHttpCell(nb.id, cell)}
+        onRunFrom={() => onRunFrom(nb.id, cell.id)} onRunTo={() => onRunTo(nb.id, cell.id)}
+        onDelete={() => deleteCell(cell.id)}
         onCopy={() => copyCell(cell.id)}
         onMoveUp={() => moveCell(cell.id, -1)} onMoveDown={() => moveCell(cell.id, 1)}
         columns={cell.columns || 0} onColumnsChange={(v) => updateCellProp(cell.id, 'columns', v || undefined)}
@@ -314,7 +317,9 @@ export function NotebookView({
       <ShellCell cell={cell} cellIndex={index} outputs={outputs[cell.id]} notebookId={nb.id}
         isRunning={running.has(cell.id)} anyRunning={running.size > 0}
         kernelReady={kernelStatus === 'ready'} onUpdate={(val) => updateCell(cell.id, val)}
-        onRun={() => onRunShellCell(nb.id, cell)} onDelete={() => deleteCell(cell.id)}
+        onRun={() => onRunShellCell(nb.id, cell)}
+        onRunFrom={() => onRunFrom(nb.id, cell.id)} onRunTo={() => onRunTo(nb.id, cell.id)}
+        onDelete={() => deleteCell(cell.id)}
         onCopy={() => copyCell(cell.id)}
         onMoveUp={() => moveCell(cell.id, -1)} onMoveDown={() => moveCell(cell.id, 1)}
         columns={cell.columns || 0} onColumnsChange={(v) => updateCellProp(cell.id, 'columns', v || undefined)}
@@ -343,7 +348,9 @@ export function NotebookView({
         notebookId={nb.id} isRunning={running.has(cell.id)} anyRunning={running.size > 0}
         kernelReady={kernelStatus === 'ready'} onUpdate={(val) => updateCell(cell.id, val)}
         onLabelChange={(label) => updateCellProp(cell.id, 'label', label)}
-        onRun={() => onRunCheckCell(nb.id, cell)} onDelete={() => deleteCell(cell.id)}
+        onRun={() => onRunCheckCell(nb.id, cell)}
+        onRunFrom={() => onRunFrom(nb.id, cell.id)} onRunTo={() => onRunTo(nb.id, cell.id)}
+        onDelete={() => deleteCell(cell.id)}
         onCopy={() => copyCell(cell.id)}
         onMoveUp={() => moveCell(cell.id, -1)} onMoveDown={() => moveCell(cell.id, 1)}
         columns={cell.columns || 0} onColumnsChange={(v) => updateCellProp(cell.id, 'columns', v || undefined)}
@@ -362,7 +369,9 @@ export function NotebookView({
         onTruePathChange={(ids) => updateCellProp(cell.id, 'truePath', ids)}
         onFalsePathChange={(ids) => updateCellProp(cell.id, 'falsePath', ids)}
         onSwitchPathsChange={(paths) => updateCellProp(cell.id, 'switchPaths', paths)}
-        onRun={() => onRunDecisionCell(nb.id, cell)} onDelete={() => deleteCell(cell.id)}
+        onRun={() => onRunDecisionCell(nb.id, cell)}
+        onRunFrom={() => onRunFrom(nb.id, cell.id)} onRunTo={() => onRunTo(nb.id, cell.id)}
+        onDelete={() => deleteCell(cell.id)}
         onCopy={() => copyCell(cell.id)}
         onMoveUp={() => moveCell(cell.id, -1)} onMoveDown={() => moveCell(cell.id, 1)}
         columns={cell.columns || 0} onColumnsChange={(v) => updateCellProp(cell.id, 'columns', v || undefined)} />

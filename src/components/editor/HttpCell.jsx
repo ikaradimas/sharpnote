@@ -3,6 +3,7 @@ import { CodeEditor } from './CodeEditor.jsx';
 import { CellOutput } from '../output/OutputBlock.jsx';
 import { CellControls } from './CellControls.jsx';
 import { CellNameColor } from './CellNameColor.jsx';
+import { CellRunGroup } from './CellRunGroup.jsx';
 
 export function HttpCell({
   cell,
@@ -14,6 +15,7 @@ export function HttpCell({
   kernelReady = true,
   onUpdate,
   onRun,
+  onRunFrom, onRunTo,
   onDelete, onCopy,
   onMoveUp,
   onMoveDown,
@@ -28,20 +30,7 @@ export function HttpCell({
         <CellNameColor name={cell.name} color={cell.color} onNameChange={onNameChange} onColorChange={onColorChange} />
         <span className="cell-lang-label http-label">HTTP</span>
         <span className="cell-id-label" title={`Cell ID: ${cell.id}`}>{cell.id}</span>
-        <div className="cell-run-group">
-          {isRunning ? (
-            <button className="cell-stop-btn" disabled title="Running…">⏳ Running</button>
-          ) : (
-            <button
-              className="run-btn"
-              onClick={onRun}
-              disabled={anyRunning || !kernelReady}
-              title="Send request (Ctrl+Enter)"
-            >
-              ▶ Send
-            </button>
-          )}
-        </div>
+        <CellRunGroup onRun={onRun} onRunFrom={onRunFrom} onRunTo={onRunTo} isRunning={isRunning} disabled={anyRunning || !kernelReady} />
         <div className="header-right">
           <CellControls onCopy={onCopy} onMoveUp={onMoveUp} onMoveDown={onMoveDown} onDelete={onDelete} columns={columns} onColumnsChange={onColumnsChange} />
         </div>

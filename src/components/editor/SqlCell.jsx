@@ -3,6 +3,7 @@ import { CodeEditor } from './CodeEditor.jsx';
 import { CellOutput } from '../output/OutputBlock.jsx';
 import { CellControls } from './CellControls.jsx';
 import { CellNameColor } from './CellNameColor.jsx';
+import { CellRunGroup } from './CellRunGroup.jsx';
 
 export function SqlCell({
   cell,
@@ -15,6 +16,7 @@ export function SqlCell({
   kernelReady = true,
   onUpdate,
   onRun,
+  onRunFrom, onRunTo,
   onDbChange,
   onDelete, onCopy,
   onMoveUp,
@@ -46,20 +48,7 @@ export function SqlCell({
             <option key={d.connectionId} value={d.connectionId}>{d.varName}</option>
           ))}
         </select>
-        <div className="cell-run-group">
-          {isRunning ? (
-            <button className="cell-stop-btn" disabled title="Running…">⏳ Running</button>
-          ) : (
-            <button
-              className="run-btn"
-              onClick={onRun}
-              disabled={anyRunning || !kernelReady || readyDbs.length === 0 || !selectedDb}
-              title="Run query (Ctrl+Enter)"
-            >
-              ▶ Run
-            </button>
-          )}
-        </div>
+        <CellRunGroup onRun={onRun} onRunFrom={onRunFrom} onRunTo={onRunTo} isRunning={isRunning} disabled={anyRunning || !kernelReady || readyDbs.length === 0 || !selectedDb} />
         <div className="header-right">
           <CellControls onCopy={onCopy} onMoveUp={onMoveUp} onMoveDown={onMoveDown} onDelete={onDelete} columns={columns} onColumnsChange={onColumnsChange} />
         </div>

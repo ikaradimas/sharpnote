@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Play, Square, ChevronRight, ChevronDown, ChevronsRight, ChevronsUp, Lock, Unlock, Timer, Check, X, SkipForward, Monitor, RefreshCw, Eraser, AlertTriangle } from 'lucide-react';
+import { ChevronRight, ChevronDown, Lock, Unlock, Timer, Check, X, SkipForward, Monitor, RefreshCw, Eraser, AlertTriangle } from 'lucide-react';
 import { CodeEditor } from './CodeEditor.jsx';
 import { CellOutput } from '../output/OutputBlock.jsx';
 import { CellControls } from './CellControls.jsx';
 import { CellNameColor } from './CellNameColor.jsx';
 import { CellLinkPicker } from './CellLinkPicker.jsx';
+import { CellRunGroup } from './CellRunGroup.jsx';
 
 function formatElapsed(ms) {
   if (ms < 60_000) {
@@ -94,8 +95,6 @@ export function CodeCell({
   const [presentRefreshOpen, setPresentRefreshOpen] = useState(false);
   const presentRefreshRef = useRef(null);
   const [outputCollapsed, setOutputCollapsed] = useState(false);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const dropdownRef = useRef(null);
   const [scheduleDropdownOpen, setScheduleDropdownOpen] = useState(false);
   const scheduleDropdownRef = useRef(null);
   const [elapsed, setElapsed] = useState(0);
@@ -135,16 +134,6 @@ export function CodeCell({
       setLastRanAt(new Date());
     };
   }, [isRunning]);
-
-  useEffect(() => {
-    if (!dropdownOpen) return;
-    const handler = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target))
-        setDropdownOpen(false);
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [dropdownOpen]);
 
   useEffect(() => {
     if (!scheduleDropdownOpen) return;
@@ -206,33 +195,8 @@ export function CodeCell({
         <CellNameColor name={cell.name} color={cell.color} onNameChange={onNameChange} onColorChange={onColorChange} />
         <span className="cell-lang-label">C#</span>
         <span className="cell-id-label" title={`Cell ID: ${cell.id}`}>{cell.id}</span>
-        <div className="cell-run-group" ref={dropdownRef}>
-          {isRunning ? (
-            <button className="cell-stop-btn" onClick={onInterrupt}
-                    title="Interrupt (stops async ops; use Reset for tight loops)">
-              <Square size={12} /> Stop
-            </button>
-          ) : (
-            <>
-              <button className="run-btn" onClick={onRun} disabled={anyRunning || !kernelReady} title="Run (Ctrl+Enter)"><Play size={12} /> Run</button>
-              <button className="cell-run-chevron" onClick={() => setDropdownOpen((v) => !v)}
-                      disabled={anyRunning || !kernelReady} title="More run options">▾</button>
-            </>
-          )}
-          {dropdownOpen && !isRunning && (
-            <div className="cell-run-dropdown">
-              <button className="cell-run-dropdown-item" onClick={() => { onRun(); setDropdownOpen(false); }}>
-                <Play size={12} /> Run this cell
-              </button>
-              <button className="cell-run-dropdown-item" onClick={() => { onRunFrom(); setDropdownOpen(false); }}>
-                <ChevronsRight size={12} /> Run from here
-              </button>
-              <button className="cell-run-dropdown-item" onClick={() => { onRunTo(); setDropdownOpen(false); }}>
-                <ChevronsUp size={12} /> Run to here
-              </button>
-            </div>
-          )}
-        </div>
+        <CellRunGroup onRun={onRun} onInterrupt={onInterrupt} onRunFrom={onRunFrom} onRunTo={onRunTo}
+          isRunning={isRunning} disabled={anyRunning || !kernelReady} />
         {!isRunning && lastDuration !== null && (
           <span className={`cell-header-timer${lastDuration > 5000 ? ' cell-timer-very-slow' : lastDuration > 1000 ? ' cell-timer-slow' : ''}`}>
             {formatElapsed(lastDuration)}
