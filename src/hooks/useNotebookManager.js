@@ -115,7 +115,6 @@ export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef, for
           }));
         }
 
-        // Diagnostics are handled per-cell by the LSP on change — skip on save
       } catch {
         // Timeout or other error — skip this cell silently
       }

@@ -35,11 +35,16 @@ public class EmbeddedFile
     /// <summary>Opens a readable stream over the content.</summary>
     public Stream OpenRead() => new MemoryStream(Content, writable: false);
 
-    /// <summary>Parses the content as CSV into the same format as Data.LoadCsv().</summary>
-    public List<Dictionary<string, object>> ContentCsv => ParseCsvContent(',', true);
+    private Lazy<List<Dictionary<string, object>>>? _csvCache;
+    private Lazy<List<Dictionary<string, object>>>? _tsvCache;
 
-    /// <summary>Parses the content as TSV into the same format as Data.LoadCsv().</summary>
-    public List<Dictionary<string, object>> ContentTsv => ParseCsvContent('\t', true);
+    /// <summary>Parses the content as CSV into the same format as Data.LoadCsv(). Cached after first access.</summary>
+    public List<Dictionary<string, object>> ContentCsv =>
+        (_csvCache ??= new(() => ParseCsvContent(',', true))).Value;
+
+    /// <summary>Parses the content as TSV into the same format as Data.LoadCsv(). Cached after first access.</summary>
+    public List<Dictionary<string, object>> ContentTsv =>
+        (_tsvCache ??= new(() => ParseCsvContent('\t', true))).Value;
 
     /// <summary>Parses content as delimited text with options.</summary>
     public List<Dictionary<string, object>> ParseCsvContent(char delimiter = ',', bool hasHeader = true)

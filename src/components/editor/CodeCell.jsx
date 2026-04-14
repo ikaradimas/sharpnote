@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Play, Square, ChevronRight, ChevronDown, ChevronsRight, ChevronsUp, Lock, Unlock, Timer, Check, X, SkipForward, Monitor, RefreshCw, Eraser, AlertTriangle } from 'lucide-react';
 import { CodeEditor } from './CodeEditor.jsx';
 import { CellOutput } from '../output/OutputBlock.jsx';
@@ -169,8 +169,12 @@ export function CodeCell({
   const rawDisplayedOutputs = histIdx >= 0 && histLen > 0
     ? outputHistory[histIdx]
     : outputs;
-  const errorMessages = (rawDisplayedOutputs || []).filter((o) => o.type === 'error');
-  const normalMessages = (rawDisplayedOutputs || []).filter((o) => o.type !== 'error');
+  const { errorMessages, normalMessages } = useMemo(() => {
+    const errors = [], normal = [];
+    for (const o of rawDisplayedOutputs || [])
+      (o.type === 'error' ? errors : normal).push(o);
+    return { errorMessages: errors, normalMessages: normal };
+  }, [rawDisplayedOutputs]);
   const errorCount = errorMessages.length;
 
   return (

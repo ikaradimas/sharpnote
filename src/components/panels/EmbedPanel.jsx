@@ -1,11 +1,6 @@
 import React, { useState } from 'react';
-import { File, Plus, Trash2, ChevronDown, ChevronRight, Pencil, Plus as PlusIcon, X } from 'lucide-react';
-
-function formatSize(bytes) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
+import { File, Plus, Trash2, ChevronDown, ChevronRight, Pencil, X } from 'lucide-react';
+import { formatFileSize } from '../../utils.js';
 
 function EditDialog({ file, onSave, onCancel }) {
   const [name, setName] = useState(file.name);
@@ -95,7 +90,7 @@ function EditDialog({ file, onSave, onCancel }) {
                 onKeyDown={(e) => { if (e.key === 'Enter') addVar(); }}
                 spellCheck={false}
               />
-              <button onClick={addVar} disabled={!newVarKey.trim()} title="Add variable"><PlusIcon size={10} /></button>
+              <button onClick={addVar} disabled={!newVarKey.trim()} title="Add variable"><Plus size={10} /></button>
             </div>
           </div>
         </div>
@@ -132,7 +127,7 @@ export function EmbedPanel({ files = [], onAdd, onDelete, onUpdateVars, onUpdate
               <div className="embed-file-row" onClick={() => setOpenFile(isOpen ? null : f.name)}>
                 {isOpen ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
                 <span className="embed-file-name">{f.name}</span>
-                <span className="embed-file-meta">{formatSize(size)}</span>
+                <span className="embed-file-meta">{formatFileSize(size)}</span>
                 <button className="embed-file-edit" onClick={(e) => { e.stopPropagation(); setEditingFile(f); }} title="Edit"><Pencil size={10} /></button>
                 <button className="embed-file-del" onClick={(e) => { e.stopPropagation(); onDelete?.(f.name); }} title="Remove"><Trash2 size={10} /></button>
               </div>

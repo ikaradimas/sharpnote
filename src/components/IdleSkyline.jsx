@@ -113,9 +113,9 @@ export function IdleSkyline({ triggerRef }) {
   }, [handleDismiss]);
 
   useEffect(() => {
-    if (triggerRef) triggerRef.current = () => {
-      lastActivityRef.current = Date.now() - IDLE_START - 1;
-    };
+    if (!triggerRef) return;
+    triggerRef.current = () => { lastActivityRef.current = Date.now() - IDLE_START - 1; };
+    return () => { triggerRef.current = null; };
   }, [triggerRef]);
 
   useEffect(() => {

@@ -1146,14 +1146,9 @@ export function App() {
         },
         onUpdate: (oldName, updated) => {
           if (!nbId) return;
-          setNbDirty(nbId, (n) => ({
-            embeddedFiles: (n.embeddedFiles || []).map(f =>
-              f.name === oldName ? updated : f
-            ),
-          }));
+          const newFiles = (activeNb?.embeddedFiles || []).map(f => f.name === oldName ? updated : f);
+          setNbDirty(nbId, () => ({ embeddedFiles: newFiles }));
           if (activeNb?.kernelStatus === 'ready') {
-            const nb = notebooksRef.current.find(nb => nb.id === nbId);
-            const newFiles = (nb?.embeddedFiles || []).map(f => f.name === oldName ? updated : f);
             window.electronAPI?.sendToKernel(nbId, { type: 'set_embedded_files', files: newFiles });
           }
         },

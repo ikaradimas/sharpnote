@@ -1,23 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowUp, ArrowDown, Trash2, Check, X, Copy, Columns2 } from 'lucide-react';
+import { useOutsideClick } from '../../hooks/useOutsideClick.js';
+
+const COLUMN_OPTIONS = [
+  { value: 0, label: 'Full width', icon: [1] },
+  { value: 2, label: '2 columns',  icon: [1, 1] },
+  { value: 3, label: '3 columns',  icon: [1, 1, 1] },
+  { value: 4, label: '4 columns',  icon: [1, 1, 1, 1] },
+];
 
 function ColumnPicker({ columns, onChange }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [open]);
-
-  const options = [
-    { value: 0, label: 'Full width', icon: [1] },
-    { value: 2, label: '2 columns',  icon: [1, 1] },
-    { value: 3, label: '3 columns',  icon: [1, 1, 1] },
-    { value: 4, label: '4 columns',  icon: [1, 1, 1, 1] },
-  ];
+  useOutsideClick(ref, () => setOpen(false), open);
 
   return (
     <div className="col-picker-wrap" ref={ref}>
@@ -30,7 +25,7 @@ function ColumnPicker({ columns, onChange }) {
       </button>
       {open && (
         <div className="col-picker-popup">
-          {options.map(({ value, label, icon }) => (
+          {COLUMN_OPTIONS.map(({ value, label, icon }) => (
             <button
               key={value}
               className={`col-picker-option${columns === value ? ' col-picker-selected' : ''}`}
