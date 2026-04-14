@@ -388,10 +388,10 @@ export function CodeCell({
           )}
         </div>
         {onPrevCellsChange && (
-          <CellLinkPicker label="← Prev" selected={cell.prevCells || []} allCells={allCells} cellId={cell.id} onChange={onPrevCellsChange} />
+          <CellLinkPicker label="← Prev" selected={cell.prevCells} allCells={allCells} cellId={cell.id} onChange={onPrevCellsChange} />
         )}
         {onNextCellsChange && (
-          <CellLinkPicker label="Next →" selected={cell.nextCells || []} allCells={allCells} cellId={cell.id} onChange={onNextCellsChange} />
+          <CellLinkPicker label="Next →" selected={cell.nextCells} allCells={allCells} cellId={cell.id} onChange={onNextCellsChange} />
         )}
         <div className="cell-present-group" ref={presentRefreshRef}>
           <button
