@@ -154,24 +154,37 @@ function IconHistory() {
     <polyline points="6.5,3.5 6.5,6.5 9,8" />
   </svg>;
 }
+function IconKafka() {
+  return <svg {..._ic} stroke="currentColor" strokeWidth="1.1" fill="none" strokeLinecap="round">
+    <circle cx="6.5" cy="4" r="2.5" />
+    <circle cx="6.5" cy="9.5" r="2" />
+    <line x1="6.5" y1="6.5" x2="6.5" y2="7.5" />
+  </svg>;
+}
+function IconEmbed() {
+  return <svg {..._ic} stroke="currentColor" strokeWidth="1.1" fill="none" strokeLinecap="round">
+    <path d="M8.5,2.5 A2.5,2.5 0 0 1 8.5,7.5 L5,11 A2,2 0 0 1 2,8.5 L5.5,5 A1.5,1.5 0 0 1 8,6.5 L5,9.5" />
+  </svg>;
+}
 export const PANEL_META = {
-  log:     { label: 'Logs',       icon: <IconLogs /> },
-  nuget:   { label: 'Packages',   icon: <IconPackages /> },
-  config:  { label: 'Config',     icon: <IconConfig /> },
-  db:      { label: 'DB',         icon: <IconDB /> },
-  library: { label: 'Library',    icon: <IconLibrary /> },
-  vars:    { label: 'Variables',  icon: <IconVars /> },
-  toc:     { label: 'Table of Contents', icon: <IconToC /> },
-  files:   { label: 'Files',      icon: <IconFiles /> },
-  api:     { label: 'API Browser', icon: <IconApi /> },
-  graph:   { label: 'Graph',      icon: <IconGraph /> },
-  todo:    { label: 'To Do',      icon: <IconTodo /> },
-  regex:   { label: 'Regex',      icon: <IconRegex /> },
-  history: { label: 'History',    icon: <IconHistory /> },
-  deps:    { label: 'Orchestration', icon: <IconDeps /> },
-  git:  { label: 'Git', icon: <IconGit /> },
-  'api-editor': { label: 'API Editor', icon: <IconApiEditor /> },
-  embed: { label: 'Embedded Files', icon: <IconFiles /> },
+  log:          { label: 'Logs',              icon: <IconLogs /> },
+  nuget:        { label: 'Packages',          icon: <IconPackages /> },
+  config:       { label: 'Config',            icon: <IconConfig /> },
+  db:           { label: 'Database',          icon: <IconDB /> },
+  library:      { label: 'Library',           icon: <IconLibrary /> },
+  vars:         { label: 'Variables',         icon: <IconVars /> },
+  toc:          { label: 'Table of Contents', icon: <IconToC /> },
+  files:        { label: 'File Explorer',     icon: <IconFiles /> },
+  api:          { label: 'API Browser',       icon: <IconApi /> },
+  'api-editor': { label: 'API Editor',       icon: <IconApiEditor /> },
+  git:          { label: 'Git',               icon: <IconGit /> },
+  graph:        { label: 'Graph',             icon: <IconGraph /> },
+  todo:         { label: 'To Do',             icon: <IconTodo /> },
+  regex:        { label: 'Regex',             icon: <IconRegex /> },
+  kafka:        { label: 'Kafka',             icon: <IconKafka /> },
+  deps:         { label: 'Orchestration',     icon: <IconDeps /> },
+  history:      { label: 'History',           icon: <IconHistory /> },
+  embed:        { label: 'Embedded Files',    icon: <IconEmbed /> },
 };
 
 // ── Dock drop zones ───────────────────────────────────────────────────────────
