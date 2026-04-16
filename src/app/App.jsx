@@ -5,9 +5,9 @@ import React, {
   useCallback,
   useMemo,
 } from 'react';
-import { DOCS_TAB_ID, CHANGELOG_TAB_ID, KAFKA_TAB_ID } from '../constants.js';
+import { DOCS_TAB_ID, CHANGELOG_TAB_ID, KAFKA_TAB_ID, PANEL_TAB_PREFIX } from '../constants.js';
 import {
-  makeLibEditorId, isLibEditorId, isNotebookId, getNotebookDisplayName, generateDockerCompose,
+  makeLibEditorId, isLibEditorId, isNotebookId, getNotebookDisplayName, generateDockerCompose, makePanelTabId,
 } from '../utils.js';
 import { DEFAULT_DOCK_LAYOUT, DEFAULT_FLOAT_W, DEFAULT_FLOAT_H } from '../config/dock-layout.jsx';
 import { TablePageSizeContext } from '../config/table-page-size-context.js';
@@ -153,6 +153,8 @@ export function App() {
     handleSaveLayout, handleLoadLayout, handleDeleteLayout,
   } = useDockLayout({ saveSettingsRef });
 
+  const [panelTabs, setPanelTabs] = useState(new Set());
+
   // ── Panel visibility and layout (shared by close button, menu, and kernel messages) ──
 
   const setPanelVisible = useCallback((panelId, open) => {
@@ -218,6 +220,30 @@ export function App() {
         graphPanelOpen: false, todoPanelOpen: false, regexPanelOpen: false, historyPanelOpen: false, depsPanelOpen: false, embedPanelOpen: false,
       }));
   }, [setNb, setLibraryPanelOpen, setFilesPanelOpen, setApiPanelOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Panel-as-tab ──────────────────────────────────────────────────────────
+  const detachPanelToTab = useCallback((panelId) => {
+    setPanelVisible(panelId, false);
+    setPanelTabs((prev) => new Set([...prev, panelId]));
+    setActiveId(makePanelTabId(panelId));
+  }, [setPanelVisible, setActiveId]);
+
+  const returnPanelFromTab = useCallback((panelId) => {
+    setPanelTabs((prev) => { const next = new Set(prev); next.delete(panelId); return next; });
+    setPanelVisible(panelId, true);
+    if (activeIdRef.current === makePanelTabId(panelId)) {
+      const first = notebooksRef.current[0];
+      if (first) setActiveId(first.id);
+    }
+  }, [setPanelVisible, setActiveId]);
+
+  const closePanelTab = useCallback((panelId) => {
+    setPanelTabs((prev) => { const next = new Set(prev); next.delete(panelId); return next; });
+    if (activeIdRef.current === makePanelTabId(panelId)) {
+      const first = notebooksRef.current[0];
+      if (first) setActiveId(first.id);
+    }
+  }, [setActiveId]);
 
   const { runCell, runCellWithFormData, runSqlCell, runHttpCell, runShellCell, runDockerCell, stopDockerCell, pollDockerStatus, fetchDockerLogs, runCheckCell, runDecisionCell, runAll, runFrom, runTo, handleInterrupt, handleReset,
           cancelPendingCells, debugResume, debugStep, toggleBreakpoint } =
@@ -965,6 +991,14 @@ export function App() {
     embed:   isNotebookId(activeId) ? (activeNb?.embedPanelOpen   ?? false) : false,
   }), [activeId, activeNb, libraryPanelOpen, filesPanelOpen, apiPanelOpen, apiEditorPanelOpen, gitPanelOpen]);
 
+  // Suppress dock rendering for panels open as tabs
+  const effectiveOpenFlags = useMemo(() => {
+    if (panelTabs.size === 0) return openFlags;
+    const flags = { ...openFlags };
+    for (const pid of panelTabs) flags[pid] = false;
+    return flags;
+  }, [openFlags, panelTabs]);
+
   const panelPropsMap = useMemo(() => {
     const nbId = activeNb?.id ?? null;
     return {
@@ -1163,10 +1197,11 @@ export function App() {
 
   const dockZoneProps = {
     dockLayout,
-    openFlags,
+    openFlags: effectiveOpenFlags,
     panelProps: panelPropsMap,
     onTabChange:  handleZoneTabChange,
     onPanelClose: handlePanelClose,
+    onDetachToTab: detachPanelToTab,
     onStartDrag:  handleStartDrag,
     onResizeEnd:  handleZoneResizeEnd,
     flashingPanel,
@@ -1198,6 +1233,10 @@ export function App() {
         onCloseLibEditor={handleCloseLibEditor}
         pinnedPaths={pinnedPaths}
         onTogglePin={handleTogglePin}
+        panelTabs={panelTabs}
+        onActivatePanelTab={(pid) => setActiveId(makePanelTabId(pid))}
+        onClosePanelTab={closePanelTab}
+        onReturnPanelToPanel={returnPanelFromTab}
       />
       <div id="toolbar-portal-root" />
       <div className="dock-workspace" key={layoutKey}>
@@ -1335,6 +1374,14 @@ export function App() {
                   />
                 </div>
               )}
+              {[...panelTabs].map((panelId) => {
+                const tabId = makePanelTabId(panelId);
+                return (
+                  <div key={tabId} className="notebook-pane" style={activeId === tabId ? undefined : { display: 'none' }}>
+                    {renderPanelContent(panelId, panelPropsMap[panelId])}
+                  </div>
+                );
+              })}
             </div>
             <DockZone zone="right" {...dockZoneProps} />
           </div>
@@ -1346,7 +1393,7 @@ export function App() {
       {showGhost && <Ghost />}
       {showSkyline && <IdleSkyline triggerRef={skylineTriggerRef} />}
       {Object.entries(dockLayout.assignments)
-        .filter(([panelId, z]) => z === 'float' && !!openFlags[panelId])
+        .filter(([panelId, z]) => z === 'float' && !!effectiveOpenFlags[panelId])
         .map(([panelId]) => {
           const p = panelPropsMap[panelId];
           if (!p) return null;

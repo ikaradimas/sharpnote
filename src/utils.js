@@ -1,10 +1,13 @@
-import { DOCS_TAB_ID, LIB_EDITOR_ID_PREFIX } from './constants.js';
+import { DOCS_TAB_ID, LIB_EDITOR_ID_PREFIX, PANEL_TAB_PREFIX } from './constants.js';
 import katex from 'katex';
 
 // ── Tab ID helpers ─────────────────────────────────────────────────────────────
 export const makeLibEditorId = (fullPath) => `${LIB_EDITOR_ID_PREFIX}${fullPath}`;
 export const isLibEditorId  = (id) => id?.startsWith(LIB_EDITOR_ID_PREFIX) ?? false;
-export const isNotebookId   = (id) => !!(id && id !== DOCS_TAB_ID && !isLibEditorId(id));
+export const isPanelTabId    = (id) => id?.startsWith(PANEL_TAB_PREFIX) ?? false;
+export const panelIdFromTabId = (id) => id?.slice(PANEL_TAB_PREFIX.length);
+export const makePanelTabId  = (panelId) => `${PANEL_TAB_PREFIX}${panelId}`;
+export const isNotebookId   = (id) => !!(id && id !== DOCS_TAB_ID && !isLibEditorId(id) && !isPanelTabId(id));
 
 // ── Notebook display name ──────────────────────────────────────────────────────
 // Returns the human-readable name for a notebook given its saved path and/or title.

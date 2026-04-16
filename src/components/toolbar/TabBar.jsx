@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { DOCS_TAB_ID, CHANGELOG_TAB_ID, KAFKA_TAB_ID } from '../../constants.js';
+import { DOCS_TAB_ID, CHANGELOG_TAB_ID, KAFKA_TAB_ID, PANEL_TAB_PREFIX } from '../../constants.js';
 import { isLibEditorId, getNotebookDisplayName } from '../../utils.js';
 import { Tab } from './Tab.jsx';
 import { TabSection } from './TabSection.jsx';
+import { PixelSpaceshipIcon } from './PixelSpaceshipIcon.jsx';
+import { PANEL_META } from '../../config/dock-layout.jsx';
 
 export function TabBar({ notebooks, activeId, onActivate, onClose, onNew, onRename,
                   onReorder, onSetColor, activeTabColor,
@@ -10,7 +12,8 @@ export function TabBar({ notebooks, activeId, onActivate, onClose, onNew, onRena
                   changelogOpen, onActivateChangelog, onCloseChangelog,
                   kafkaTabOpen, onActivateKafka, onCloseKafka,
                   libEditors, onCloseLibEditor,
-                  pinnedPaths, onTogglePin }) {
+                  pinnedPaths, onTogglePin,
+                  panelTabs, onActivatePanelTab, onClosePanelTab, onReturnPanelToPanel }) {
   const [dragId, setDragId] = useState(null);
   const [dragOverId, setDragOverId] = useState(null);
 
@@ -26,6 +29,20 @@ export function TabBar({ notebooks, activeId, onActivate, onClose, onNew, onRena
   const regularNbs = notebooks.filter((nb) => !nb.path || !pinnedPaths?.has(nb.path));
 
   const renderItem = (item) => {
+    if (item._panelId) {
+      const panelId = item._panelId;
+      const tabId = `${PANEL_TAB_PREFIX}${panelId}`;
+      const meta = PANEL_META[panelId];
+      const seed = [...panelId].reduce((a, c) => a + c.charCodeAt(0), 0);
+      return (
+        <div className={`tab tab-panel-tab${activeId === tabId ? ' tab-active' : ''}`} onClick={() => onActivatePanelTab?.(panelId)}>
+          <PixelSpaceshipIcon seed={seed} />
+          <span className="tab-title">{meta?.label || panelId}</span>
+          <button className="tab-panel-return" onClick={(e) => { e.stopPropagation(); onReturnPanelToPanel?.(panelId); }} title="Return to panel">⊟</button>
+          <button className="tab-close" onClick={(e) => { e.stopPropagation(); onClosePanelTab?.(panelId); }} title="Close">×</button>
+        </div>
+      );
+    }
     if (item.id === DOCS_TAB_ID) return (
       <div
         className={`tab${activeId === DOCS_TAB_ID ? ' tab-active' : ''}`}
@@ -129,6 +146,23 @@ export function TabBar({ notebooks, activeId, onActivate, onClose, onNew, onRena
         onMoveToFront={onReorder}
       />
       <button className="tab-new" onClick={onNew} title="New notebook">+</button>
+      {panelTabs?.size > 0 && (
+        <>
+          <div className="tab-bar-panel-spacer" />
+          <TabSection
+            items={[...panelTabs].map((panelId) => ({
+              id: `${PANEL_TAB_PREFIX}${panelId}`,
+              isDirty: false,
+              _panelId: panelId,
+              _label: PANEL_META[panelId]?.label || panelId,
+              _onActivate: () => onActivatePanelTab?.(panelId),
+            }))}
+            className="tab-section-panels"
+            activeId={activeId}
+            renderItem={renderItem}
+          />
+        </>
+      )}
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { PANEL_META } from '../../config/dock-layout.jsx';
 import { renderPanelContent } from './renderPanelContent.jsx';
 
 export function DockZone({ zone, dockLayout, openFlags, panelProps,
-                    onTabChange, onPanelClose, onStartDrag, onResizeEnd, flashingPanel }) {
+                    onTabChange, onPanelClose, onDetachToTab, onStartDrag, onResizeEnd, flashingPanel }) {
   const resizeSide = zone === 'left' ? 'right' : zone === 'right' ? 'left' : 'top';
   const [size, onResizeMouseDown] = useResize(
     dockLayout.sizes[zone] ?? 300,
@@ -103,6 +103,13 @@ export function DockZone({ zone, dockLayout, openFlags, panelProps,
                 onClick={(e) => { e.stopPropagation(); panelProps[id].onTabAction(); }}
                 title={panelProps[id].onTabActionTitle ?? ''}
               >{panelProps[id].onTabActionIcon ?? '↗'}</span>
+            )}
+            {onDetachToTab && (
+              <span
+                className="dock-zone-tab-detach"
+                onClick={(e) => { e.stopPropagation(); onDetachToTab(id); }}
+                title="Open as tab"
+              >⊞</span>
             )}
             <span
               className="dock-zone-tab-close"
