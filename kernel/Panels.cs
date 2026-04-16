@@ -6,17 +6,26 @@ namespace SharpNoteKernel;
 /// <summary>Panel ID constants — pass to <see cref="PanelsHelper"/> methods.</summary>
 public static class PanelId
 {
-    public const string Log       = "log";
-    public const string Packages  = "nuget";
-    public const string Config    = "config";
-    public const string Db        = "db";
-    public const string Library   = "library";
-    public const string Variables = "vars";
-    public const string Toc       = "toc";
-    public const string Files     = "files";
-    public const string Api       = "api";
-    public const string Graph     = "graph";
-    public const string Todo      = "todo";
+    public const string Log           = "log";
+    public const string Packages      = "nuget";
+    public const string Config        = "config";
+    public const string Database      = "db";
+    public const string Library       = "library";
+    public const string Variables     = "vars";
+    public const string Toc           = "toc";
+    public const string Files         = "files";
+    public const string Api           = "api";
+    public const string ApiEditor     = "api-editor";
+    public const string Git           = "git";
+    public const string Graph         = "graph";
+    public const string Todo          = "todo";
+    public const string Regex         = "regex";
+    public const string Kafka         = "kafka";
+    public const string Orchestration = "deps";
+    public const string History       = "history";
+    public const string Embed         = "embed";
+
+    [System.Obsolete("Use Database instead")] public const string Db = "db";
 }
 
 /// <summary>Dock zone constants — pass as the <c>zone</c> argument to <see cref="PanelsHelper.Dock"/>.</summary>
