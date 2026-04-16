@@ -3405,6 +3405,7 @@ body {
   min-height: 0;
   overflow: hidden;
 }
+.notebook-pane > * { flex: 1; min-height: 0; }
 
 /* ── Library Panel ─────────────────────────────────────────────────────────── */
 
