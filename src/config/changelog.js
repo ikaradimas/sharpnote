@@ -1,0 +1,200 @@
+// ── Changelog data ───────────────────────────────────────────────────────────
+// Each entry: { version, date, title, gears (1-3), items[] }
+// Consolidated by minor version. Gears = highest complexity in the release.
+// gears: 1 = minor fix/tweak, 2 = notable feature, 3 = major feature/architecture
+
+export const CHANGELOG = [
+  { version: '1.89', date: '2026-04-11', title: 'Notebook v2: embedded files & retained results', gears: 3, items: [
+    'File format bumped to v2 (backward compatible with v1)',
+    'Embedded files: store files inline in .cnb with variables; Files API in kernel',
+    'Files["name"].ContentAsText, .OpenRead(), .SetVariable(), .Embed() from code',
+    'Retainable results: pin cell outputs to persist across sessions with timestamp',
+    'Embedded files UI section with add/delete/variables management',
+  ]},
+  { version: '1.88', date: '2026-04-11', title: 'Copy/paste cells & scaled output', gears: 2, items: [
+    'Copy button on all cell types; paste in AddBar inserts clone below',
+    'Output results scale with notebook font size setting',
+    'MAINTAINER-INSTRUCTIONS.md with architecture guide',
+  ]},
+  { version: '1.87', date: '2026-04-11', title: 'Ambient skyline & circuit board', gears: 2, items: [
+    'Idle skyline: ambient day-night cycle, layered depth, billboards, screens',
+    'Circuit board animation replaces breakout minigame on empty notebooks',
+    'Sun/moon at fixed horizon, higher contrast layers',
+    'DB connection dialog: connection and command timeout fields',
+  ]},
+  { version: '1.86', date: '2026-04-11', title: 'Moon/sun arcs & ghost symbols', gears: 2, items: [
+    'Moon arcs right-to-left, sun left-to-right over the skyline, cycling',
+    'Ghost drops glowing symbols instead of Pac-Man chase',
+    'Fish swarm: waves, bubbles, steeper size progression',
+  ]},
+  { version: '1.85', date: '2026-04-11', title: 'Idle skyline', gears: 2, items: [
+    'Futuristic city skyline builds slowly from right to left when idle for 20s',
+    'Three layered skylines in progressively lighter shades stack on top of each other',
+    'Sun rises after all layers complete, warming the buildings with golden light',
+    'Fades out over 3s when you return; toggle in Settings → Fun',
+  ]},
+  { version: '1.84', date: '2026-04-11', title: 'Ghost companion & game fixes', gears: 2, items: [
+    'Friendly ghost that flickers near your cursor — cyan when active, orange when idle',
+    'Chases Pac-Man with bead trail when deeply idle (20s); slower pursuit',
+    'Breakout game: hover to play, pause on mouse leave, Play Again fixed',
+    'Fish swarm: up to 3 extra fish spawn and despawn in cycles; taller status bar',
+    'Toggle in Settings → Appearance → Fun (on by default)',
+  ]},
+  { version: '1.83', date: '2026-04-11', title: 'Changelog tab', gears: 2, items: [
+    'In-app changelog panel (Help → Changelog) with search, sidebar index, and complexity gears',
+    'Major releases (3 gears) highlighted with gold accent',
+    'CHANGELOG.md maintained alongside in-app data',
+  ]},
+  { version: '1.82', date: '2026-04-11', title: 'Mock & Docker scripting APIs', gears: 3, items: [
+    'Mock.StartAsync / StopAsync / StopAllAsync / ListAsync — control mock servers from C# code',
+    'Docker.StopAndRemove and Docker.StopAllTracked convenience methods',
+    'Kernel ↔ main process request-response protocol for mock server bridge',
+    'All templates enriched with column layouts, stat cards, and sidebar notes',
+    'Raytracer optimized: depth 5→3, RenderRows API, fewer flush roundtrips',
+  ]},
+  { version: '1.81', date: '2026-04-11', title: 'Cell column layout & infographic helpers', gears: 3, items: [
+    'Cell columns property (2/3/4) for side-by-side layout via CSS grid',
+    'Display.StatCard, Display.ProgressBar, Display.Marquee helpers',
+    'Infographic Dashboard template showcasing all new layout features',
+  ]},
+  { version: '1.80', date: '2026-04-11', title: 'Multiple mock servers & Service Mesh', gears: 2, items: [
+    'Run multiple mock servers simultaneously on random ports (9001–9999)',
+    'Running Mocks list in API Editor with per-server stop controls',
+    'Docker and mock server count badges in status bar',
+    'Service Mesh template: Docker + mock APIs simulating a microservice topology',
+  ]},
+  { version: '1.79', date: '2026-04-11', title: 'Docker Compose export & container logs', gears: 2, items: [
+    'File → Export as Docker Compose… generates YAML from Docker cells',
+    'Container logs popup with refresh (ScrollText button on Docker cells)',
+  ]},
+  { version: '1.78', date: '2026-04-11', title: 'Docker cell type', gears: 3, items: [
+    'New Docker cell with visual form-based container management',
+    'Image, ports, env, volume, command configuration fields',
+    'Run-on-startup/shutdown lifecycle hooks and presentation mode dashboard',
+    'Containers tracked and cleaned up on kernel exit',
+  ]},
+  { version: '1.77', date: '2026-04-11', title: 'Fun: fish & minigame', gears: 2, items: [
+    'Animated teal fish in status bar with swim and drift animations',
+    'Breakout minigame in empty notebook view (4×8 bricks, mouse paddle)',
+    'Settings toggles to show/hide both',
+  ]},
+  { version: '1.76', date: '2026-04-11', title: 'Canvas primitives & visual polish', gears: 2, items: [
+    'Canvas shape drawing: DrawLine, DrawRect, FillRect, DrawCircle, FillCircle',
+    'ParallelRender for multi-core pixel rendering',
+    'Opaque sticky cell headers, orange active accent, bigger fonts',
+    'DB POCO types resolve unqualified (no DynDb_ prefix needed)',
+    'Flaky test fix via global React async flush',
+  ]},
+  { version: '1.75', date: '2026-04-11', title: 'Pixel rendering API', gears: 3, items: [
+    'Display.ImageBytes — one-shot raw RGB pixel rendering',
+    'Display.Canvas — pixel buffer with live Flush and progressive preview',
+    'Display.NewImage — live-updating image handle',
+    'BmpEncoder: minimal BMP encoding without System.Drawing',
+  ]},
+  { version: '1.74', date: '2026-04-11', title: 'Raytracer template', gears: 2, items: [
+    'Step-by-step raytracer: Vec3, Ray, Sphere, Scene, Trace, live render',
+  ]},
+  { version: '1.73', date: '2026-04-11', title: 'Inline error diagnostics', gears: 2, items: [
+    'Wavy underlines for errors with hover tooltips (replaces output errors)',
+    'Filterable error badge in output, hidden by default',
+  ]},
+  { version: '1.72', date: '2026-04-11', title: 'Rainbow brackets & editor improvements', gears: 2, items: [
+    '7-color rainbow bracket colorization with matching highlight',
+    'Auto-close brackets, indent on closing bracket, 4-space tabs',
+  ]},
+  { version: '1.71', date: '2026-04-11', title: 'Presentation mode & command palette', gears: 3, items: [
+    'Per-cell presentation mode with auto-refresh intervals',
+    'Double-shift command palette with tabbed Search/Commands/Tools',
+    'Full-text search across notebook content',
+  ]},
+  { version: '1.70', date: '2026-04-11', title: 'Cell presentation basics', gears: 2, items: [
+    'Presentation view toggle (hide code, show output only)',
+    'Auto-execute presenting cells on kernel ready',
+  ]},
+  { version: '1.69', date: '2026-04-11', title: 'Format on save & cross-cell types', gears: 2, items: [
+    'Format and check C# cells on save via Roslyn Formatter',
+    'Cross-cell type resolution via accumulated workspace preamble',
+  ]},
+  { version: '1.68', date: '2026-04-11', title: 'JSONB & DB context fixes', gears: 1, items: [
+    'PostgreSQL json/jsonb mapped to JsonDocument',
+    'Unique namespace suffix for DbContext recompilation (no CS0433)',
+  ]},
+  { version: '1.67', date: '2026-04-11', title: 'Debugger', gears: 3, items: [
+    'Breakpoints with click-to-toggle gutter markers',
+    'Pause, resume, and step-through execution',
+    'Variable inspection at breakpoints',
+  ]},
+  { version: '1.66', date: '2026-04-11', title: 'Custom mock handlers', gears: 2, items: [
+    'User-defined JavaScript handler functions for mock endpoints',
+  ]},
+  { version: '1.65', date: '2026-04-11', title: 'UI overhaul with lucide icons', gears: 2, items: [
+    'All UI icons replaced with lucide-react',
+    'Stronger visual cues setting, log filter, Google Docs export',
+  ]},
+  { version: '1.64', date: '2026-04-11', title: 'Interactive forms', gears: 3, items: [
+    'Display.Form() with auto-inferred and custom field types',
+    'Submit-to-cell execution for form-driven workflows',
+  ]},
+  { version: '1.63', date: '2026-04-11', title: 'Git integration', gears: 3, items: [
+    'Git panel: status, staging, commit, branch switching, history',
+    'Visual diff viewer with unified and split modes',
+  ]},
+  { version: '1.62', date: '2026-04-11', title: 'API Editor & mock server', gears: 3, items: [
+    'Visual API editor with models, controllers, and endpoints',
+    'OpenAPI 3.x export (JSON/YAML) and one-click mock server',
+  ]},
+  { version: '1.61', date: '2026-04-11', title: 'Export as executable', gears: 2, items: [
+    'Export notebook code cells as standalone .NET console app',
+  ]},
+  { version: '1.60', date: '2026-04-11', title: 'Decision cells', gears: 2, items: [
+    'Switch mode for decision cells with multi-path branching',
+  ]},
+  { version: '1.59', date: '2026-04-11', title: 'Cell orchestration', gears: 3, items: [
+    'Cell naming, color coding, decision cells, and pipeline execution',
+    'Orchestration panel with cell graph visualization',
+  ]},
+  { version: '1.58', date: '2026-04-11', title: 'Scheduled execution', gears: 2, items: [
+    'Scheduled notebook execution with preset intervals',
+    'Collapsible data tables',
+  ]},
+  { version: '1.57', date: '2026-04-11', title: 'Cell dependencies', gears: 2, items: [
+    'Cell dependency graph visualization and notebook versioning',
+  ]},
+  { version: '1.55', date: '2026-04-11', title: 'CLI headless execution', gears: 2, items: [
+    'Run notebooks from command line with config overrides and file output',
+  ]},
+  { version: '1.54', date: '2026-04-11', title: 'Health check cells', gears: 2, items: [
+    'Boolean assertion cells with pass/fail badges and labels',
+  ]},
+  { version: '1.53', date: '2026-04-11', title: 'Docker global', gears: 2, items: [
+    'Docker.Run/Stop/Remove/Exec/IsRunning/List from code cells',
+  ]},
+  { version: '1.52', date: '2026-04-11', title: 'Dashboard mode', gears: 2, items: [
+    'Presentation view showing only cell outputs, hiding code',
+  ]},
+  { version: '1.50', date: '2026-04-11', title: 'Shell cells', gears: 2, items: [
+    'Shell cell type with live-streaming stdout (cross-platform)',
+  ]},
+  { version: '1.49', date: '2026-04-11', title: 'HTTP cells', gears: 2, items: [
+    'HTTP cell type with .http syntax and {{variable}} substitution',
+  ]},
+  { version: '1.48', date: '2026-04-11', title: 'Parameterized SQL', gears: 1, items: [
+    'SQL cells bind @ParamName from Config panel values',
+  ]},
+  { version: '1.47', date: '2026-04-11', title: 'DB improvements', gears: 1, items: [
+    'Test Connection button and schema search/filter',
+  ]},
+  { version: '1.46', date: '2026-04-11', title: 'SQL enhancements', gears: 1, items: [
+    'Tabbed SQL result sets and autocomplete from schema',
+  ]},
+  { version: '1.44', date: '2026-04-11', title: 'Data table export', gears: 1, items: [
+    'Copy, CSV, and TSV export buttons on data tables',
+  ]},
+  { version: '1.43', date: '2026-04-11', title: 'Mixed chart types', gears: 1, items: [
+    'Per-series chart types in Graph panel (line + bar mixing)',
+  ]},
+  { version: '1.42', date: '2026-04-11', title: 'UI polish & command palette', gears: 2, items: [
+    'Icons, status bar, theme preview, shortcuts overlay, DataTable resize',
+    'Command palette with categorized actions',
+  ]},
+];

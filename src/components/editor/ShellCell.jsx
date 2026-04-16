@@ -3,6 +3,7 @@ import { CodeEditor } from './CodeEditor.jsx';
 import { CellOutput } from '../output/OutputBlock.jsx';
 import { CellControls } from './CellControls.jsx';
 import { CellNameColor } from './CellNameColor.jsx';
+import { CellRunGroup } from './CellRunGroup.jsx';
 
 export function ShellCell({
   cell,
@@ -14,9 +15,11 @@ export function ShellCell({
   kernelReady = true,
   onUpdate,
   onRun,
-  onDelete,
+  onRunFrom, onRunTo,
+  onDelete, onCopy,
   onMoveUp,
   onMoveDown,
+  columns = 0, onColumnsChange,
   onNameChange,
   onColorChange,
 }) {
@@ -27,22 +30,9 @@ export function ShellCell({
         <CellNameColor name={cell.name} color={cell.color} onNameChange={onNameChange} onColorChange={onColorChange} />
         <span className="cell-lang-label shell-label">Shell</span>
         <span className="cell-id-label" title={`Cell ID: ${cell.id}`}>{cell.id}</span>
-        <div className="cell-run-group">
-          {isRunning ? (
-            <button className="cell-stop-btn" disabled title="Running…">⏳ Running</button>
-          ) : (
-            <button
-              className="run-btn"
-              onClick={onRun}
-              disabled={anyRunning || !kernelReady}
-              title="Run command (Ctrl+Enter)"
-            >
-              ▶ Run
-            </button>
-          )}
-        </div>
+        <CellRunGroup onRun={onRun} onRunFrom={onRunFrom} onRunTo={onRunTo} isRunning={isRunning} disabled={anyRunning || !kernelReady} />
         <div className="header-right">
-          <CellControls onMoveUp={onMoveUp} onMoveDown={onMoveDown} onDelete={onDelete} />
+          <CellControls onCopy={onCopy} onMoveUp={onMoveUp} onMoveDown={onMoveDown} onDelete={onDelete} columns={columns} onColumnsChange={onColumnsChange} />
         </div>
       </div>
       <CodeEditor

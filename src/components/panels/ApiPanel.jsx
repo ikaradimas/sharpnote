@@ -901,7 +901,7 @@ export function ApiPanel({ onToggle }) {
   }, []);
 
   async function loadSpec() {
-    const trimmed = url.trim();
+    const trimmed = (url || '').trim();
     if (!trimmed) return;
     setLoading(true);
     setError(null);
@@ -981,7 +981,7 @@ export function ApiPanel({ onToggle }) {
   const groups  = spec ? groupOperations(spec) : {};
   const specBaseUrl = spec ? getBaseUrl(spec) : '';
   let baseUrl = specBaseUrl;
-  if (!baseUrl && url.trim()) {
+  if (!baseUrl && (url || '').trim()) {
     try { baseUrl = new URL(url.trim()).origin; } catch { /* keep empty */ }
   }
   const totalOps = Object.values(groups).reduce((n, ops) => n + ops.length, 0);
@@ -1010,7 +1010,7 @@ export function ApiPanel({ onToggle }) {
           onKeyDown={(e) => { if (e.key === 'Enter') loadSpec(); }}
           spellCheck={false}
         />
-        <button className="api-fetch-btn" onClick={loadSpec} disabled={loading || !url.trim()}>
+        <button className="api-fetch-btn" onClick={loadSpec} disabled={loading || !(url || '').trim()}>
           {loading ? '…' : 'Load'}
         </button>
       </div>

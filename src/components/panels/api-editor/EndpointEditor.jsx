@@ -114,6 +114,8 @@ export function EndpointEditor({ endpoint, modelNames, onUpdate, onDelete }) {
             <select className="api-ed-reqbody-model" value={endpoint.requestBody?.schema || ''} onChange={(e) => set('requestBody', { ...(endpoint.requestBody || {}), schema: e.target.value, contentType: endpoint.requestBody?.contentType || 'application/json' })}>
               <option value="">None</option>
               {modelNames.map(n => <option key={n} value={n}>{n}</option>)}
+              {modelNames.length > 0 && <option disabled>──────</option>}
+              {modelNames.map(n => <option key={`list-${n}`} value={`List<${n}>`}>List&lt;{n}&gt;</option>)}
             </select>
             <input className="api-ed-param-desc api-ed-flex" value={endpoint.requestBody?.description || ''} onChange={(e) => set('requestBody', { ...(endpoint.requestBody || {}), description: e.target.value })} placeholder="Body description" />
           </div>
@@ -126,6 +128,8 @@ export function EndpointEditor({ endpoint, modelNames, onUpdate, onDelete }) {
               <select className="api-ed-reqbody-model" value={r.schema || ''} onChange={(e) => updateResponse(i, 'schema', e.target.value)}>
                 <option value="">No body</option>
                 {modelNames.map(n => <option key={n} value={n}>{n}</option>)}
+                {modelNames.length > 0 && <option disabled>──────</option>}
+                {modelNames.map(n => <option key={`list-${n}`} value={`List<${n}>`}>List&lt;{n}&gt;</option>)}
               </select>
               <input className="api-ed-param-desc api-ed-flex" value={r.description || ''} onChange={(e) => updateResponse(i, 'description', e.target.value)} placeholder="description" />
               <button className="api-ed-remove-btn" onClick={() => removeResponse(i)}><X size={12} /></button>

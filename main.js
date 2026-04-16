@@ -107,6 +107,7 @@ function createWindow() {
     mainWindow = null;
     kernelManager.killAllKernels();
     kafka.stopAll().catch(() => {});
+    try { require('./src/main/mock-server.js').stopAll(); } catch (_) {}
   });
 
   // Propagate new window reference to all sub-modules.

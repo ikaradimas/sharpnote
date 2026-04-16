@@ -120,6 +120,7 @@ function buildMenu(customShortcuts = {}) {
       { label: 'Export as HTML…', click: () => send('export-html') },
       { label: 'Export as PDF…',        click: () => send('export-pdf') },
       { label: 'Export as Executable…', click: () => send('export-exe') },
+      { label: 'Export as Docker Compose…', click: () => send('export-docker-compose') },
       { label: 'Export for Google Docs…', submenu: [
         { label: 'Code + Results', click: () => send('export-gdoc-all') },
         { label: 'Code Only',     click: () => send('export-gdoc-code') },
@@ -180,7 +181,8 @@ function buildMenu(customShortcuts = {}) {
       { label: 'Regex',             accelerator: accel('panel-regex',    'Ctrl+Shift+X'), click: () => send('toggle-regex') },
       { label: 'Kafka',             accelerator: accel('panel-kafka',    'Ctrl+Shift+K'), click: () => send('toggle-kafka') },
       { label: 'History',            accelerator: accel('panel-history',  'Ctrl+Shift+H'), click: () => send('toggle-history') },
-      { label: 'Dependencies',      accelerator: accel('panel-deps',     'Ctrl+Shift+Y'), click: () => send('toggle-deps') },
+      { label: 'Orchestration',     accelerator: accel('panel-deps',     'Ctrl+Shift+Y'), click: () => send('toggle-deps') },
+      { label: 'Embedded Files',    accelerator: accel('panel-embed',    'Ctrl+Shift+E'), click: () => send('toggle-embed') },
       { type: 'separator' },
       { label: 'Command Palette',   accelerator: accel('app-palette',  'Ctrl+K'), click: () => send('command-palette') },
       { type: 'separator' },
@@ -210,6 +212,7 @@ function buildMenu(customShortcuts = {}) {
     label: 'Help',
     submenu: [
       { label: 'Documentation', accelerator: accel('app-docs', 'F1'), click: () => send('docs') },
+      { label: 'Changelog',     click: () => send('changelog') },
       { type: 'separator' },
       { label: 'About SharpNote…', click: () => send('about') },
     ],

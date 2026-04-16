@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { FilePlus, Save, Trash2, Database, FolderTree, Download, Play, Square, Plus } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { FilePlus, Save, Trash2, Database, FolderTree, Download, Play, Square, Plus, Server, X } from 'lucide-react';
 import { ModelEditor } from './api-editor/ModelEditor.jsx';
 import { ControllerSection } from './api-editor/ControllerSection.jsx';
 
@@ -18,16 +18,35 @@ function emptyApiDef() {
   };
 }
 
-export function ApiEditorPanel({ onToggle }) {
+export function ApiEditorPanel({ onToggle, requestedApiId, onRequestedApiHandled }) {
   const [apiDef, setApiDef] = useState(emptyApiDef);
   const [savedApis, setSavedApis] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
-  const [mockStatus, setMockStatus] = useState(null); // { running, port }
+  const [runningServers, setRunningServers] = useState([]); // [{ id, port, title }]
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const cleanSnapshotRef = useRef(JSON.stringify(apiDef));
+  const isDirty = JSON.stringify(apiDef) !== cleanSnapshotRef.current;
 
-  // Load saved APIs on mount
+  // Load saved APIs and running servers on mount
   useEffect(() => {
     window.electronAPI?.loadApiSaved?.().then(list => setSavedApis(list ?? [])).catch(() => {});
+    refreshServerList();
+  }, []);
+
+  // Load a specific API when requested externally (e.g. Panels.LoadApiEditor)
+  useEffect(() => {
+    if (!requestedApiId || savedApis.length === 0) return;
+    const match = savedApis.find(a => a.id === requestedApiId || a.title === requestedApiId);
+    if (match) {
+      setSelectedId(match.id);
+      setApiDef(match);
+      cleanSnapshotRef.current = JSON.stringify(match);
+    }
+    onRequestedApiHandled?.();
+  }, [requestedApiId, savedApis]);
+
+  const refreshServerList = useCallback(() => {
+    window.electronAPI?.listMockServers?.().then(list => setRunningServers(list ?? [])).catch(() => {});
   }, []);
 
   const editorApis = savedApis.filter(a => a.type === 'editor');
@@ -46,14 +65,15 @@ export function ApiEditorPanel({ onToggle }) {
       : [...savedApis, entry];
     setSavedApis(updated);
     setSelectedId(entry.id);
+    cleanSnapshotRef.current = JSON.stringify(entry);
     window.electronAPI?.saveApiSaved?.(updated);
   }, [apiDef, selectedId, savedApis]);
 
   const loadApi = useCallback((id) => {
     setSelectedId(id);
-    if (!id) { setApiDef(emptyApiDef()); return; }
+    if (!id) { const fresh = emptyApiDef(); setApiDef(fresh); cleanSnapshotRef.current = JSON.stringify(fresh); return; }
     const saved = savedApis.find(a => a.id === id);
-    if (saved) setApiDef(saved);
+    if (saved) { setApiDef(saved); cleanSnapshotRef.current = JSON.stringify(saved); }
   }, [savedApis]);
 
   const deleteApi = useCallback(() => {
@@ -67,7 +87,9 @@ export function ApiEditorPanel({ onToggle }) {
 
   const newApi = useCallback(() => {
     setSelectedId(null);
-    setApiDef(emptyApiDef());
+    const fresh = emptyApiDef();
+    setApiDef(fresh);
+    cleanSnapshotRef.current = JSON.stringify(fresh);
   }, []);
 
   // ── Models ────────────────────────────────────────────────────────────
@@ -93,15 +115,21 @@ export function ApiEditorPanel({ onToggle }) {
 
   // ── Mock Server ───────────────────────────────────────────────────────
 
+  const currentApiRunning = runningServers.find(s => s.id === apiDef.id);
+
   const toggleMock = async () => {
-    if (mockStatus?.running) {
-      await window.electronAPI?.stopMockServer?.();
-      setMockStatus(null);
+    if (currentApiRunning) {
+      await window.electronAPI?.stopMockServer?.(apiDef.id);
+      refreshServerList();
     } else {
-      const port = parseInt(new URL(apiDef.baseUrl || 'http://localhost:3000').port) || 3000;
-      const result = await window.electronAPI?.startMockServer?.({ apiDef, port });
-      if (result?.success) setMockStatus({ running: true, port: result.port });
+      const result = await window.electronAPI?.startMockServer?.({ apiDef, port: 0 });
+      if (result?.success) refreshServerList();
     }
+  };
+
+  const stopServer = async (id) => {
+    await window.electronAPI?.stopMockServer?.(id);
+    refreshServerList();
   };
 
   return (
@@ -117,7 +145,7 @@ export function ApiEditorPanel({ onToggle }) {
           <option value="">— select saved —</option>
           {editorApis.map(a => <option key={a.id} value={a.id}>{a.title || 'Untitled'}</option>)}
         </select>
-        <button className="api-ed-toolbar-btn api-ed-save-btn" onClick={saveApi} title="Save"><Save size={14} /></button>
+        <button className={`api-ed-toolbar-btn api-ed-save-btn${isDirty ? ' api-ed-save-dirty' : ''}`} onClick={saveApi} title={isDirty ? 'Save (unsaved changes)' : 'Save'}><Save size={14} />{isDirty && <span className="api-ed-dirty-dot" />}</button>
         <button className="api-ed-toolbar-btn api-ed-del-btn" onClick={deleteApi} disabled={!selectedId} title="Delete"><Trash2 size={14} /></button>
       </div>
 
@@ -171,6 +199,23 @@ export function ApiEditorPanel({ onToggle }) {
         </div>
       </div>
 
+      {/* Running servers list */}
+      {runningServers.length > 0 && (
+        <div className="api-ed-servers">
+          <div className="api-ed-servers-header">
+            <Server size={12} /> Running Mocks ({runningServers.length})
+          </div>
+          {runningServers.map(s => (
+            <div key={s.id} className={`api-ed-server-row${s.id === apiDef.id ? ' api-ed-server-current' : ''}`}>
+              <span className="api-ed-server-dot" />
+              <span className="api-ed-server-title">{s.title || s.id}</span>
+              <span className="api-ed-server-port">:{s.port}</span>
+              <button className="api-ed-server-stop" onClick={() => stopServer(s.id)} title="Stop"><X size={11} /></button>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Bottom action bar */}
       <div className="api-ed-actions">
         <div className="api-ed-export-wrap">
@@ -183,11 +228,11 @@ export function ApiEditorPanel({ onToggle }) {
           )}
         </div>
         <button
-          className={`api-ed-action-btn api-ed-mock-btn${mockStatus?.running ? ' api-ed-mock-active' : ''}`}
+          className={`api-ed-action-btn api-ed-mock-btn${currentApiRunning ? ' api-ed-mock-active' : ''}`}
           onClick={toggleMock}
         >
-          {mockStatus?.running
-            ? <><Square size={14} /> Mock :{mockStatus.port}</>
+          {currentApiRunning
+            ? <><Square size={14} /> Mock :{currentApiRunning.port}</>
             : <><Play size={14} /> Mock Server</>
           }
         </button>

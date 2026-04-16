@@ -48,6 +48,27 @@ public class DockerHelper
     /// <summary>Remove a container (force).</summary>
     public void Remove(string nameOrId) => RunDocker($"rm -f {nameOrId}");
 
+    /// <summary>Stop and remove a container, ignoring errors.</summary>
+    public void StopAndRemove(string nameOrId)
+    {
+        try { Stop(nameOrId); } catch { }
+        try { Remove(nameOrId); } catch { }
+    }
+
+    /// <summary>Stop and remove all containers tracked by Docker cells in this session.</summary>
+    public int StopAllTracked()
+    {
+        // Delegate to the handler's tracked set
+        var snapshot = Program.GetTrackedContainers();
+        int count = 0;
+        foreach (var id in snapshot)
+        {
+            try { StopAndRemove(id); count++; }
+            catch { }
+        }
+        return count;
+    }
+
     /// <summary>Execute a command inside a running container.</summary>
     public string Exec(string nameOrId, string command)
         => RunDocker($"exec {nameOrId} {command}");
@@ -81,17 +102,45 @@ public class DockerHelper
             }).ToList();
     }
 
+    private static readonly string DockerPath = ResolveDocker();
+
+    private static string ResolveDocker()
+    {
+        string[] candidates = OperatingSystem.IsWindows()
+            ? new[] { @"C:\Program Files\Docker\Docker\resources\bin\docker.exe" }
+            : new[] { "/usr/local/bin/docker", "/opt/homebrew/bin/docker" };
+
+        foreach (var p in candidates)
+            if (File.Exists(p)) return p;
+
+        return "docker"; // fall back to PATH
+    }
+
+    private static readonly string ExtendedPath = BuildExtendedPath();
+
+    private static string BuildExtendedPath()
+    {
+        var current = Environment.GetEnvironmentVariable("PATH") ?? "";
+        if (OperatingSystem.IsWindows()) return current;
+        var extras = new[] { "/usr/local/bin", "/opt/homebrew/bin" };
+        var parts = new HashSet<string>(current.Split(':'));
+        foreach (var p in extras)
+            if (!parts.Contains(p)) current = $"{current}:{p}";
+        return current;
+    }
+
     internal static string RunDocker(string args)
     {
         var psi = new ProcessStartInfo
         {
-            FileName = "docker",
+            FileName = DockerPath,
             Arguments = args,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
             CreateNoWindow = true,
         };
+        psi.Environment["PATH"] = ExtendedPath;
         using var proc = Process.Start(psi)!;
         var stdout = proc.StandardOutput.ReadToEnd();
         var stderr = proc.StandardError.ReadToEnd();

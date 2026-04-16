@@ -40,7 +40,7 @@ const TOOLS = [
   { id: 'toggle-graph',      label: 'Graph',             keys: '⌘⇧R',  icon: <IconGraph /> },
   { id: 'toggle-todo',       label: 'To Do',             keys: '⌘⇧O',  icon: <IconTodo /> },
   { id: 'toggle-regex',      label: 'Regex',             keys: '⌘⇧X',  icon: <IconRegex /> },
-  { id: 'toggle-deps',       label: 'Dependencies',                     icon: <IconDeps /> },
+  { id: 'toggle-deps',       label: 'Orchestration',                    icon: <IconDeps /> },
   { id: 'toggle-history',    label: 'History',                          icon: <IconHistory /> },
   { id: 'toggle-kafka',      label: 'Kafka',             keys: '⌘⇧K',  icon: <IconKafka /> },
 ];

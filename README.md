@@ -114,6 +114,7 @@
 - **Export as Executable** — File → Export as Executable… generates a standalone .NET console project (Program.cs + ConsoleStubs.cs + .csproj) from notebook code cells; NuGet packages and config values are included; run with `dotnet run` or publish as a native binary
 - **API Editor** — visual REST API design tool with controllers, endpoints, typed models, OpenAPI 3.0 export, and built-in mock HTTP server with custom JavaScript handlers for dynamic responses; shares saved APIs with API Browser
 - **Debugger** — click the gutter to set breakpoints (red dots); execution pauses at breakpoints with a gold line highlight, debug controls for Resume/Step, and variable inspection at each pause point
+- **Canvas & pixel rendering** — `Display.Canvas(w, h)` creates a pixel buffer with `SetPixel` and live progressive `Flush()`; `Display.ImageBytes(rgb, w, h)` renders raw pixels; `Display.NewImage()` enables live-updating images
 - **Memory sparkline** — kernel reports heap usage every 3 s; rendered as an SVG bar chart in the status bar
 
 ### Panels
@@ -139,7 +140,7 @@
 - **Code Library** — file-based snippet library stored in `~/Documents/SharpNote Notebooks/Library/`; subfolder navigation, syntax-highlighted preview, insert-as-cell with animation
 - **API Browser** — enter any OpenAPI 3.x or Swagger 2.0 spec URL (JSON or YAML) to explore endpoints grouped by tag; expandable detail shows parameters, request body, and response schema types; **Try it** form sends live requests with path/query/body inputs; supports Bearer, API Key, and Basic auth applied to every request; save and recall multiple APIs with their auth config; all requests proxied through the main process for http:// local dev servers
 - **Kafka Browser** — save named broker connections (with SSL and SASL-PLAIN/SCRAM support); click → to list all topics via the admin API; click ▶ per topic to start a live consumer feed (multiple topics simultaneously); configurable max-messages cap; click C# to copy a ready-to-run `Confluent.Kafka` consumer snippet to the clipboard (Ctrl+Shift+K)
-- **Docker integration** — the `Docker` kernel global manages containers from code cells via `Docker.Run()`, `Docker.Stop()`, `Docker.Remove()`, `Docker.Exec()`, `Docker.IsRunning()`, and `Docker.List()`; requires Docker to be installed
+- **Docker integration** — the `Docker` kernel global manages containers from code cells via `Docker.Run()`, `Docker.Stop()`, `Docker.Remove()`, `Docker.Exec()`, `Docker.IsRunning()`, and `Docker.List()`; dedicated Docker cells provide a visual form-based interface with configurable image, ports, env vars, volumes, and commands; supports run-on-startup/shutdown lifecycle hooks and a presentation mode dashboard; all spawned containers are gracefully cleaned up on app exit; requires Docker to be installed
 - **Git integration** — built-in Git panel with status view, staging, commit, branch switching, commit history, and visual diff viewer (unified + split mode)
 
 ### Developer Experience

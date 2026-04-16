@@ -1,9 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Play, Square, ChevronRight, ChevronDown, ChevronsRight, ChevronsUp, Lock, Unlock, Timer, Check, X, SkipForward, Monitor, RefreshCw, Eraser, AlertTriangle } from 'lucide-react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { ChevronRight, ChevronDown, Lock, Unlock, Timer, Check, X, SkipForward, Monitor, RefreshCw, Eraser, AlertTriangle } from 'lucide-react';
 import { CodeEditor } from './CodeEditor.jsx';
 import { CellOutput } from '../output/OutputBlock.jsx';
 import { CellControls } from './CellControls.jsx';
 import { CellNameColor } from './CellNameColor.jsx';
+import { CellLinkPicker } from './CellLinkPicker.jsx';
+import { CellRunGroup } from './CellRunGroup.jsx';
 
 function formatElapsed(ms) {
   if (ms < 60_000) {
@@ -58,9 +60,9 @@ export function CodeCell({
   onInterrupt,
   onRunFrom,
   onRunTo,
-  onDelete,
-  onMoveUp,
-  onMoveDown,
+  onDelete, onCopy,
+  onMoveUp, onMoveDown,
+  columns = 0, onColumnsChange,
   onOutputModeChange,
   onToggleLock,
   onToggleFold,
@@ -79,6 +81,11 @@ export function CodeCell({
   onPresentIntervalChange,
   onClearOutput,
   inlineDiagnostics,
+  retainedResult,
+  onRetain,
+  onUnretain,
+  onNextCellsChange,
+  onPrevCellsChange,
 }) {
   const outputMode = cell.outputMode || 'auto';
   const locked = cell.locked || false;
@@ -88,8 +95,6 @@ export function CodeCell({
   const [presentRefreshOpen, setPresentRefreshOpen] = useState(false);
   const presentRefreshRef = useRef(null);
   const [outputCollapsed, setOutputCollapsed] = useState(false);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const dropdownRef = useRef(null);
   const [scheduleDropdownOpen, setScheduleDropdownOpen] = useState(false);
   const scheduleDropdownRef = useRef(null);
   const [elapsed, setElapsed] = useState(0);
@@ -131,16 +136,6 @@ export function CodeCell({
   }, [isRunning]);
 
   useEffect(() => {
-    if (!dropdownOpen) return;
-    const handler = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target))
-        setDropdownOpen(false);
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [dropdownOpen]);
-
-  useEffect(() => {
     if (!scheduleDropdownOpen) return;
     const handler = (e) => {
       if (scheduleDropdownRef.current && !scheduleDropdownRef.current.contains(e.target))
@@ -161,15 +156,18 @@ export function CodeCell({
   }, [presentRefreshOpen]);
 
   const histLen = outputHistory ? outputHistory.length : 0;
-  const [errorsHidden, setErrorsHidden] = useState(true);
+  const [showErrors, setShowErrors] = useState(false);
 
   const rawDisplayedOutputs = histIdx >= 0 && histLen > 0
     ? outputHistory[histIdx]
     : outputs;
-  const errorCount = (rawDisplayedOutputs || []).filter((o) => o.type === 'error').length;
-  const displayedOutputs = errorsHidden
-    ? (rawDisplayedOutputs || []).filter((o) => o.type !== 'error')
-    : rawDisplayedOutputs;
+  const { errorMessages, normalMessages } = useMemo(() => {
+    const errors = [], normal = [];
+    for (const o of rawDisplayedOutputs || [])
+      (o.type === 'error' ? errors : normal).push(o);
+    return { errorMessages: errors, normalMessages: normal };
+  }, [rawDisplayedOutputs]);
+  const errorCount = errorMessages.length;
 
   return (
     <div className={`cell code-cell${isRunning ? ' running' : ''}${locked ? ' cell-locked' : ''}${isStale ? ' cell-stale' : ''}${codeFolded ? ' cell-folded' : ''}${isScheduled ? ' cell-scheduled' : ''}${presenting ? ' cell-presenting' : ''}${debugState?.cellId === cell.id && debugState.paused ? ' debug-paused' : ''}`}>
@@ -197,33 +195,8 @@ export function CodeCell({
         <CellNameColor name={cell.name} color={cell.color} onNameChange={onNameChange} onColorChange={onColorChange} />
         <span className="cell-lang-label">C#</span>
         <span className="cell-id-label" title={`Cell ID: ${cell.id}`}>{cell.id}</span>
-        <div className="cell-run-group" ref={dropdownRef}>
-          {isRunning ? (
-            <button className="cell-stop-btn" onClick={onInterrupt}
-                    title="Interrupt (stops async ops; use Reset for tight loops)">
-              <Square size={12} /> Stop
-            </button>
-          ) : (
-            <>
-              <button className="run-btn" onClick={onRun} disabled={anyRunning || !kernelReady} title="Run (Ctrl+Enter)"><Play size={12} /> Run</button>
-              <button className="cell-run-chevron" onClick={() => setDropdownOpen((v) => !v)}
-                      disabled={anyRunning || !kernelReady} title="More run options">▾</button>
-            </>
-          )}
-          {dropdownOpen && !isRunning && (
-            <div className="cell-run-dropdown">
-              <button className="cell-run-dropdown-item" onClick={() => { onRun(); setDropdownOpen(false); }}>
-                <Play size={12} /> Run this cell
-              </button>
-              <button className="cell-run-dropdown-item" onClick={() => { onRunFrom(); setDropdownOpen(false); }}>
-                <ChevronsRight size={12} /> Run from here
-              </button>
-              <button className="cell-run-dropdown-item" onClick={() => { onRunTo(); setDropdownOpen(false); }}>
-                <ChevronsUp size={12} /> Run to here
-              </button>
-            </div>
-          )}
-        </div>
+        <CellRunGroup onRun={onRun} onInterrupt={onInterrupt} onRunFrom={onRunFrom} onRunTo={onRunTo}
+          isRunning={isRunning} disabled={anyRunning || !kernelReady} />
         {!isRunning && lastDuration !== null && (
           <span className={`cell-header-timer${lastDuration > 5000 ? ' cell-timer-very-slow' : lastDuration > 1000 ? ' cell-timer-slow' : ''}`}>
             {formatElapsed(lastDuration)}
@@ -245,7 +218,7 @@ export function CodeCell({
               <option value="graph">graph</option>
             </select>
           </div>
-          <CellControls onMoveUp={onMoveUp} onMoveDown={onMoveDown} onDelete={onDelete} />
+          <CellControls onCopy={onCopy} onMoveUp={onMoveUp} onMoveDown={onMoveDown} onDelete={onDelete} columns={columns} onColumnsChange={onColumnsChange} />
         </div>
       </div>
       {codeFolded ? (
@@ -258,6 +231,7 @@ export function CodeCell({
           onChange={(val) => onUpdate(val)}
           language="csharp"
           notebookId={notebookId}
+          cellId={cell.id}
           onCtrlEnter={kernelReady && !anyRunning ? onRun : undefined}
           readOnly={locked}
           cellIndex={cellIndex}
@@ -267,24 +241,24 @@ export function CodeCell({
           inlineDiagnostics={inlineDiagnostics}
         />
       )}
-      {(displayedOutputs?.length > 0 || errorCount > 0) && (
+      {(normalMessages.length > 0 || errorCount > 0) && (
         <div className="output-toggle-row">
-          {displayedOutputs?.length > 0 && (
+          {normalMessages.length > 0 && (
             <button
-              className="output-toggle-btn"
-              onClick={() => setOutputCollapsed((v) => !v)}
-              title={outputCollapsed ? 'Show output' : 'Hide output'}
+              className={`output-toggle-btn${!showErrors ? ' output-tab-active' : ''}`}
+              onClick={() => { setShowErrors(false); setOutputCollapsed((v) => showErrors ? false : !v); }}
+              title={outputCollapsed && !showErrors ? 'Show output' : 'Hide output'}
             >
-              {outputCollapsed ? <><ChevronRight size={12} /> Output</> : <><ChevronDown size={12} /> Output</>}
+              {outputCollapsed && !showErrors ? <><ChevronRight size={12} /> Output</> : <><ChevronDown size={12} /> Output</>}
             </button>
           )}
           {errorCount > 0 && (
             <button
-              className={`output-error-badge${errorsHidden ? '' : ' active'}`}
-              onClick={() => setErrorsHidden((v) => !v)}
-              title={errorsHidden ? `${errorCount} error(s) hidden — click to show` : 'Hide errors'}
+              className={`output-error-badge${showErrors ? ' active' : ''}`}
+              onClick={() => setShowErrors((v) => !v)}
+              title={showErrors ? 'Hide errors' : `Show ${errorCount} error(s)`}
             >
-              <AlertTriangle size={11} /> {errorCount}
+              <AlertTriangle size={11} /> {errorCount} {errorCount === 1 ? 'Error' : 'Errors'}
             </button>
           )}
           <button className="output-clear-btn" onClick={onClearOutput} title="Clear output">
@@ -319,7 +293,29 @@ export function CodeCell({
           )}
         </div>
       )}
-      {!outputCollapsed && <CellOutput messages={displayedOutputs} notebookId={notebookId} allCells={allCells} onRunCellByName={onRunCellByName} />}
+      {showErrors && <CellOutput messages={errorMessages} notebookId={notebookId} allCells={allCells} onRunCellByName={onRunCellByName} />}
+      {!showErrors && !outputCollapsed && <CellOutput messages={normalMessages} notebookId={notebookId} allCells={allCells} onRunCellByName={onRunCellByName} />}
+      {!showErrors && !outputCollapsed && !normalMessages.length && retainedResult && (
+        <div className="retained-result">
+          <div className="retained-header">
+            <span className="retained-badge">Retained</span>
+            <span className="retained-time">{new Date(retainedResult.retainedAt).toLocaleString()}</span>
+            <button className="retained-unpin" onClick={onUnretain} title="Remove retained result">x</button>
+          </div>
+          <CellOutput messages={retainedResult.outputs} notebookId={notebookId} allCells={allCells} onRunCellByName={onRunCellByName} />
+        </div>
+      )}
+      {!showErrors && !outputCollapsed && normalMessages.length > 0 && (
+        <div className="retain-controls">
+          <button
+            className={`retain-btn${retainedResult ? ' retain-btn-active' : ''}`}
+            onClick={retainedResult ? onUnretain : onRetain}
+            title={retainedResult ? 'Unpin results' : 'Pin results (persist across sessions)'}
+          >
+            {retainedResult ? '📌' : '📍'}
+          </button>
+        </div>
+      )}
       <div className="code-cell-footer">
         {(isRunning || lastDuration !== null) && (
           <span className="cell-execution-timer">
@@ -391,6 +387,12 @@ export function CodeCell({
             </div>
           )}
         </div>
+        {onPrevCellsChange && (
+          <CellLinkPicker label="← Prev" selected={cell.prevCells} allCells={allCells} cellId={cell.id} onChange={onPrevCellsChange} />
+        )}
+        {onNextCellsChange && (
+          <CellLinkPicker label="Next →" selected={cell.nextCells} allCells={allCells} cellId={cell.id} onChange={onNextCellsChange} />
+        )}
         <div className="cell-present-group" ref={presentRefreshRef}>
           <button
             className={`cell-present-btn${presenting ? ' cell-present-btn-on' : ''}`}

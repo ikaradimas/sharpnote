@@ -163,8 +163,187 @@ public class DisplayHandle
     public void UpdateGraph(object config) =>
         _display.SendUpdate("graph", config, HandleId);
 
+    /// <summary>Updates a live image display (created via <see cref="DisplayHelper.NewImage"/>).</summary>
+    public void UpdateImage(string src, string? alt = null, int? width = null, int? height = null) =>
+        _display.SendUpdate("image", new { src, alt, width, height }, HandleId);
+
+    /// <summary>Updates a live image with raw RGB bytes.</summary>
+    public void UpdateImageBytes(byte[] rgb, int width, int height) =>
+        UpdateImage(BmpEncoder.EncodeBase64DataUri(rgb, width, height), width: width, height: height);
+
     public void Clear() =>
         _display.SendUpdate("html", (object)"", HandleId);
+}
+
+// ── CanvasHandle ─────────────────────────────────────────────────────────────
+
+/// <summary>
+/// A pixel buffer that renders as a live-updating image. Write pixels with
+/// <see cref="SetPixel"/> and call <see cref="Flush"/> to push the update.
+/// </summary>
+public class CanvasHandle
+{
+    private readonly byte[] _pixels;
+    private readonly int _width;
+    private readonly int _height;
+    private readonly DisplayHelper _display;
+    private readonly string _handleId;
+
+    internal CanvasHandle(DisplayHelper display, string handleId, int width, int height)
+    {
+        _display  = display;
+        _handleId = handleId;
+        _width    = width;
+        _height   = height;
+        _pixels   = new byte[width * height * 3];
+    }
+
+    /// <summary>Width in pixels.</summary>
+    public int Width => _width;
+
+    /// <summary>Height in pixels.</summary>
+    public int Height => _height;
+
+    /// <summary>Sets a pixel using byte values (0–255).</summary>
+    public void SetPixel(int x, int y, byte r, byte g, byte b)
+    {
+        if ((uint)x >= (uint)_width || (uint)y >= (uint)_height) return;
+        int i = (y * _width + x) * 3;
+        _pixels[i] = r; _pixels[i + 1] = g; _pixels[i + 2] = b;
+    }
+
+    /// <summary>Sets a pixel using double values (0.0–1.0), clamped.</summary>
+    public void SetPixel(int x, int y, double r, double g, double b)
+    {
+        SetPixel(x, y,
+            (byte)(Math.Clamp(r, 0, 1) * 255),
+            (byte)(Math.Clamp(g, 0, 1) * 255),
+            (byte)(Math.Clamp(b, 0, 1) * 255));
+    }
+
+    /// <summary>Fills the entire canvas with a solid colour.</summary>
+    public void Fill(byte r, byte g, byte b)
+    {
+        for (int i = 0; i < _pixels.Length; i += 3)
+        { _pixels[i] = r; _pixels[i + 1] = g; _pixels[i + 2] = b; }
+    }
+
+    /// <summary>Returns the raw RGB pixel buffer (3 bytes per pixel, row-major).</summary>
+    public byte[] Pixels => _pixels;
+
+    // ── Shape primitives ─────────────────────────────────────────────────────
+
+    /// <summary>Draws a line from (x0,y0) to (x1,y1) using Bresenham's algorithm.</summary>
+    public void DrawLine(int x0, int y0, int x1, int y1, byte r, byte g, byte b)
+    {
+        int dx = Math.Abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
+        int dy = -Math.Abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
+        int err = dx + dy;
+        while (true)
+        {
+            SetPixel(x0, y0, r, g, b);
+            if (x0 == x1 && y0 == y1) break;
+            int e2 = 2 * err;
+            if (e2 >= dy) { err += dy; x0 += sx; }
+            if (e2 <= dx) { err += dx; y0 += sy; }
+        }
+    }
+
+    /// <summary>Draws an axis-aligned rectangle outline.</summary>
+    public void DrawRect(int x, int y, int w, int h, byte r, byte g, byte b)
+    {
+        DrawLine(x, y, x + w - 1, y, r, g, b);
+        DrawLine(x + w - 1, y, x + w - 1, y + h - 1, r, g, b);
+        DrawLine(x + w - 1, y + h - 1, x, y + h - 1, r, g, b);
+        DrawLine(x, y + h - 1, x, y, r, g, b);
+    }
+
+    /// <summary>Fills an axis-aligned rectangle.</summary>
+    public void FillRect(int x, int y, int w, int h, byte r, byte g, byte b)
+    {
+        for (int py = y; py < y + h; py++)
+            for (int px = x; px < x + w; px++)
+                SetPixel(px, py, r, g, b);
+    }
+
+    /// <summary>Draws a circle outline using the midpoint algorithm.</summary>
+    public void DrawCircle(int cx, int cy, int radius, byte r, byte g, byte b)
+    {
+        int x = radius, y = 0, err = 1 - radius;
+        while (x >= y)
+        {
+            SetPixel(cx + x, cy + y, r, g, b); SetPixel(cx - x, cy + y, r, g, b);
+            SetPixel(cx + x, cy - y, r, g, b); SetPixel(cx - x, cy - y, r, g, b);
+            SetPixel(cx + y, cy + x, r, g, b); SetPixel(cx - y, cy + x, r, g, b);
+            SetPixel(cx + y, cy - x, r, g, b); SetPixel(cx - y, cy - x, r, g, b);
+            y++;
+            if (err < 0) { err += 2 * y + 1; }
+            else { x--; err += 2 * (y - x) + 1; }
+        }
+    }
+
+    /// <summary>Fills a circle using the midpoint algorithm with horizontal spans.</summary>
+    public void FillCircle(int cx, int cy, int radius, byte r, byte g, byte b)
+    {
+        int x = radius, y = 0, err = 1 - radius;
+        while (x >= y)
+        {
+            for (int px = cx - x; px <= cx + x; px++) { SetPixel(px, cy + y, r, g, b); SetPixel(px, cy - y, r, g, b); }
+            for (int px = cx - y; px <= cx + y; px++) { SetPixel(px, cy + x, r, g, b); SetPixel(px, cy - x, r, g, b); }
+            y++;
+            if (err < 0) { err += 2 * y + 1; }
+            else { x--; err += 2 * (y - x) + 1; }
+        }
+    }
+
+    // ── Parallel rendering ───────────────────────────────────────────────────
+
+    /// <summary>
+    /// Renders every pixel in parallel using the provided function.
+    /// The function receives (x, y) and returns (r, g, b) as doubles in 0–1.
+    /// </summary>
+    public void ParallelRender(Func<int, int, (double r, double g, double b)> colorFn)
+    {
+        System.Threading.Tasks.Parallel.For(0, _height, y =>
+        {
+            for (int x = 0; x < _width; x++)
+            {
+                var (cr, cg, cb) = colorFn(x, y);
+                int i = (y * _width + x) * 3;
+                _pixels[i]     = (byte)(Math.Clamp(cr, 0, 1) * 255);
+                _pixels[i + 1] = (byte)(Math.Clamp(cg, 0, 1) * 255);
+                _pixels[i + 2] = (byte)(Math.Clamp(cb, 0, 1) * 255);
+            }
+        });
+    }
+
+    /// <summary>Encodes the current pixel buffer as BMP and pushes the update to the display.</summary>
+    public void Flush()
+    {
+        var uri = BmpEncoder.EncodeBase64DataUri(_pixels, _width, _height);
+        _display.SendUpdate("image", new { src = uri, width = _width, height = _height }, _handleId);
+    }
+
+    /// <summary>
+    /// Renders row-by-row with automatic flush every N rows for live preview.
+    /// Faster than manual SetPixel loops because it minimizes flush overhead.
+    /// </summary>
+    public void RenderRows(Func<int, int, (double r, double g, double b)> colorFn, int flushEvery = 50)
+    {
+        for (int y = 0; y < _height; y++)
+        {
+            for (int x = 0; x < _width; x++)
+            {
+                var (cr, cg, cb) = colorFn(x, y);
+                int i = (y * _width + x) * 3;
+                _pixels[i]     = (byte)(Math.Clamp(cr, 0, 1) * 255);
+                _pixels[i + 1] = (byte)(Math.Clamp(cg, 0, 1) * 255);
+                _pixels[i + 2] = (byte)(Math.Clamp(cb, 0, 1) * 255);
+            }
+            if (flushEvery > 0 && y % flushEvery == 0) Flush();
+        }
+        Flush();
+    }
 }
 
 // ── DisplayHelper ─────────────────────────────────────────────────────────────
@@ -218,6 +397,43 @@ public class DisplayHelper
 
     public void Graph(object chartConfig, string? title = null) =>
         Send(new { type = "display", id = _currentId, format = "graph", content = chartConfig, title });
+
+    /// <summary>Display a scrolling marquee ticker.</summary>
+    public void Marquee(string text, int speed = 40, string? color = null, string? background = null, string? title = null)
+    {
+        var c = color ?? "#4ec9b0";
+        var bg = background ?? "transparent";
+        var html = $@"<div style=""overflow:hidden;white-space:nowrap;font-family:monospace;font-size:13px;color:{c};background:{bg};padding:4px 0;border-top:1px solid #333;border-bottom:1px solid #333"">
+  <div style=""display:inline-block;animation:sn-marquee {speed}s linear infinite"">{System.Net.WebUtility.HtmlEncode(text)}</div>
+  <style>@keyframes sn-marquee {{ from {{ transform: translateX(100%); }} to {{ transform: translateX(-100%); }} }}</style>
+</div>";
+        Html(html, title);
+    }
+
+    /// <summary>Display a stat card with large value and label.</summary>
+    public void StatCard(string label, string value, string? color = null, string? icon = null, string? title = null)
+    {
+        var c = color ?? "#4ec9b0";
+        var iconHtml = icon != null ? $"<div style=\"font-size:24px;margin-bottom:4px\">{System.Net.WebUtility.HtmlEncode(icon)}</div>" : "";
+        var html = $@"<div style=""background:#1a1a22;border:1px solid #333;border-left:3px solid {c};border-radius:6px;padding:14px 18px;text-align:center"">
+  {iconHtml}<div style=""font-size:28px;font-weight:700;color:{c};font-family:monospace;line-height:1.2"">{System.Net.WebUtility.HtmlEncode(value)}</div>
+  <div style=""font-size:11px;color:#888;margin-top:4px;text-transform:uppercase;letter-spacing:0.08em"">{System.Net.WebUtility.HtmlEncode(label)}</div>
+</div>";
+        Html(html, title);
+    }
+
+    /// <summary>Display a horizontal progress bar.</summary>
+    public void ProgressBar(double percent, string? label = null, string? color = null, string? title = null)
+    {
+        var c = color ?? "#4ec9b0";
+        var pct = Math.Clamp(percent, 0, 100);
+        var lbl = label ?? $"{pct:F0}%";
+        var html = $@"<div style=""background:#1a1a22;border-radius:4px;overflow:hidden;border:1px solid #333;position:relative;height:22px"">
+  <div style=""width:{pct:F1}%;height:100%;background:{c};transition:width 0.5s;opacity:0.8""></div>
+  <div style=""position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;color:#ddd;font-family:monospace"">{System.Net.WebUtility.HtmlEncode(lbl)}</div>
+</div>";
+        Html(html, title);
+    }
 
     // ── Updateable display handles ────────────────────────────────────────────
 
@@ -380,6 +596,46 @@ public class DisplayHelper
     public void Image(string source, string? alt = null, int? width = null, int? height = null) =>
         Send(new { type = "display", id = _currentId, format = "image",
                    content = new { src = source, alt, width, height } });
+
+    /// <summary>
+    /// Renders an image from raw RGB pixel data (3 bytes per pixel, row-major).
+    /// Encodes as BMP internally — no manual encoding needed.
+    /// </summary>
+    public void ImageBytes(byte[] rgb, int width, int height, string? title = null)
+    {
+        var uri = BmpEncoder.EncodeBase64DataUri(rgb, width, height);
+        Send(new { type = "display", id = _currentId, format = "image",
+                   content = new { src = uri, width, height }, title });
+    }
+
+    /// <summary>
+    /// Creates a live-updating image display. Use the returned handle's
+    /// <see cref="DisplayHandle.UpdateImage"/> or <see cref="DisplayHandle.UpdateImageBytes"/>
+    /// to replace the image in-place.
+    /// </summary>
+    public DisplayHandle NewImage(string initialSrc, string? alt = null, int? width = null, int? height = null, string? title = null)
+    {
+        var h = NewHandle();
+        Send(new { type = "display", id = _currentId, format = "image",
+                   content = new { src = initialSrc, alt, width, height },
+                   handleId = h.HandleId, title });
+        return h;
+    }
+
+    /// <summary>
+    /// Creates a pixel canvas of the given size. Call <see cref="CanvasHandle.SetPixel"/>
+    /// to draw pixels and <see cref="CanvasHandle.Flush"/> to push the update.
+    /// </summary>
+    public CanvasHandle Canvas(int width, int height, string? title = null)
+    {
+        var handleId = NewHandle().HandleId;
+        // Send initial blank image
+        var uri = BmpEncoder.EncodeBase64DataUri(new byte[width * height * 3], width, height);
+        Send(new { type = "display", id = _currentId, format = "image",
+                   content = new { src = uri, width, height },
+                   handleId, title });
+        return new CanvasHandle(this, handleId, width, height);
+    }
 
     /// <summary>
     /// Renders a live-updating progress bar. Call <see cref="ProgressHandle.Report"/> to

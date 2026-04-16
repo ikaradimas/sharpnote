@@ -122,7 +122,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // API Editor — OpenAPI export + mock server
   exportOpenApi: (data) => ipcRenderer.invoke('export-openapi', data),
   startMockServer: (data) => ipcRenderer.invoke('mock-server-start', data),
-  stopMockServer: () => ipcRenderer.invoke('mock-server-stop'),
+  stopMockServer: (idOrData) => ipcRenderer.invoke('mock-server-stop', idOrData),
+  listMockServers: () => ipcRenderer.invoke('mock-server-list'),
+  stopAllMockServers: () => ipcRenderer.invoke('mock-server-stop-all'),
 
   // Git
   gitIsRepo:     (cwd) => ipcRenderer.invoke('git-is-repo', cwd),
@@ -182,6 +184,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   fsMkdir:    (dirPath)           => ipcRenderer.invoke('fs-mkdir', dirPath),
   fsOpenPath: (filePath)          => ipcRenderer.invoke('fs-open-path', filePath),
   fsGetHome:  ()                  => ipcRenderer.invoke('fs-get-home'),
+  pickEmbedFile: ()               => ipcRenderer.invoke('pick-embed-file'),
   getEnvVar:  (name)              => ipcRenderer.invoke('get-env-var', name),
 
   // Code library

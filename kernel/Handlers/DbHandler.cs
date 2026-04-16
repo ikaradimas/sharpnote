@@ -43,8 +43,10 @@ partial class Program
             // In-memory SQLite: open a keeper connection to prevent the shared-cache DB from vanishing,
             // then create a DbContext that reuses that same connection.
             var ctx       = info.ContextTypeName ?? DbCodeGen.ContextTypeName(info.Name);
+            var ns        = ctx[..ctx.LastIndexOf('.')];
             var keeperVar = $"__{info.VarName}_conn";
-            code = $"{decl}{keeperVar} = {cast}new Microsoft.Data.Sqlite.SqliteConnection({S(info.ConnectionString)});\n" +
+            code = $"using {ns};\n" +
+                   $"{decl}{keeperVar} = {cast}new Microsoft.Data.Sqlite.SqliteConnection({S(info.ConnectionString)});\n" +
                    $"{keeperVar}.Open();\n" +
                    $"{decl}{info.VarName} = {cast}new {ctx}({keeperVar});";
         }
@@ -52,7 +54,9 @@ partial class Program
         {
             // Regular relational: string-based DbContext
             var ctx = info.ContextTypeName ?? DbCodeGen.ContextTypeName(info.Name);
-            code = $"{decl}{info.VarName} = {cast}new {ctx}({S(info.ConnectionString)}, {S(info.Provider)});";
+            var ns  = ctx[..ctx.LastIndexOf('.')];
+            code = $"using {ns};\n" +
+                   $"{decl}{info.VarName} = {cast}new {ctx}({S(info.ConnectionString)}, {S(info.Provider)});";
         }
 
         script = script == null
@@ -66,6 +70,18 @@ partial class Program
     private static string BuildDbPreamble()
     {
         var sb = new StringBuilder();
+        // Add using directives for each relational DB's namespace so POCO types
+        // (e.g. Contacts, Users) are accessible without full qualification.
+        foreach (var info in attachedDbs.Values)
+        {
+            var provider = DbProviders.Get(info.Provider);
+            if (provider.IsRelational)
+            {
+                var ctx = info.ContextTypeName ?? DbCodeGen.ContextTypeName(info.Name);
+                var ns  = ctx[..ctx.LastIndexOf('.')];
+                sb.AppendLine($"using {ns};");
+            }
+        }
         foreach (var info in attachedDbs.Values)
         {
             var provider = DbProviders.Get(info.Provider);

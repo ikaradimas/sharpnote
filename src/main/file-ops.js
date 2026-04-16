@@ -73,6 +73,30 @@ function register(ipcMain, { app, shell }) {
   });
 
   handle('fs-get-home', () => app.getPath('home'));
+
+  handle('pick-embed-file', async () => {
+    const { dialog } = require('electron');
+    const result = await dialog.showOpenDialog({
+      title: 'Embed File',
+      properties: ['openFile'],
+    });
+    if (result.canceled || !result.filePaths.length) return null;
+    const filePath = result.filePaths[0];
+    const path = require('path');
+    const fs = require('fs');
+    const filename = path.basename(filePath);
+    const ext = path.extname(filename).toLowerCase();
+    const mimeMap = { '.csv': 'text/csv', '.json': 'application/json', '.txt': 'text/plain', '.xml': 'text/xml', '.html': 'text/html', '.md': 'text/markdown', '.yaml': 'text/yaml', '.yml': 'text/yaml' };
+    const mimeType = mimeMap[ext] || 'application/octet-stream';
+    const isText = mimeType.startsWith('text/') || mimeType === 'application/json';
+    const raw = fs.readFileSync(filePath);
+    return {
+      filename,
+      mimeType,
+      content: isText ? raw.toString('utf-8') : raw.toString('base64'),
+      encoding: isText ? 'text' : 'base64',
+    };
+  });
   handle('get-env-var', (_event, name) => {
     if (typeof name !== 'string' || !name) return '';
     return process.env[name] ?? '';

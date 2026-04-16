@@ -33,25 +33,25 @@ describe('HttpCell', () => {
 
   it('renders Send button', () => {
     render(<HttpCell {...defaultProps()} />);
-    const btn = screen.getByTitle('Send request (Ctrl+Enter)');
+    const btn = screen.getByTitle('Run (Ctrl+Enter)');
     expect(btn).toBeInTheDocument();
-    expect(btn.textContent).toContain('Send');
+    expect(btn.textContent).toContain('Run');
   });
 
   it('Run button is disabled when anyRunning=true', () => {
     render(<HttpCell {...defaultProps({ anyRunning: true })} />);
-    expect(screen.getByTitle('Send request (Ctrl+Enter)')).toBeDisabled();
+    expect(screen.getByTitle('Run (Ctrl+Enter)')).toBeDisabled();
   });
 
   it('Run button is disabled when kernelReady=false', () => {
     render(<HttpCell {...defaultProps({ kernelReady: false })} />);
-    expect(screen.getByTitle('Send request (Ctrl+Enter)')).toBeDisabled();
+    expect(screen.getByTitle('Run (Ctrl+Enter)')).toBeDisabled();
   });
 
   it('shows Running button when isRunning=true', () => {
     render(<HttpCell {...defaultProps({ isRunning: true })} />);
     expect(screen.getByText(/Running/)).toBeInTheDocument();
-    expect(screen.queryByTitle('Send request (Ctrl+Enter)')).toBeNull();
+    expect(screen.queryByTitle('Run (Ctrl+Enter)')).toBeNull();
   });
 
   it('renders CellOutput with provided outputs', () => {

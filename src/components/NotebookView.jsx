@@ -10,8 +10,10 @@ import { HttpCell } from './editor/HttpCell.jsx';
 import { ShellCell } from './editor/ShellCell.jsx';
 import { CheckCell } from './editor/CheckCell.jsx';
 import { DecisionCell } from './editor/DecisionCell.jsx';
+import { DockerCell } from './editor/DockerCell.jsx';
 import { AddBar } from './editor/AddBar.jsx';
 import { FindBar } from './FindBar.jsx';
+import { CircuitBoard } from './CircuitBoard.jsx';
 
 export function NotebookView({
   nb,
@@ -22,6 +24,10 @@ export function NotebookView({
   onRunSqlCell,
   onRunHttpCell,
   onRunShellCell,
+  onRunDockerCell,
+  onStopDockerCell,
+  onPollDockerStatus,
+  onFetchDockerLogs,
   onRunCheckCell,
   onRunDecisionCell,
   onRunCellByName,
@@ -56,6 +62,7 @@ export function NotebookView({
   onLoadLayout,
   onDeleteLayout,
   onCloseAllPanels,
+  onImportData,
   scheduledCells,
   onScheduleStart,
   onScheduleStop,
@@ -67,10 +74,13 @@ export function NotebookView({
   onDebugResume,
   onDebugStep,
   onToggleBreakpoint,
+  onRetainOutput,
+  onUnretainOutput,
+  showCircuit = true,
 }) {
   const { cells, outputs, outputHistory, cellResults, running, kernelStatus,
           config, logPanelOpen, nugetPanelOpen, configPanelOpen, inlineDiagnostics,
-          dbPanelOpen, varsPanelOpen, tocPanelOpen, graphPanelOpen, todoPanelOpen, regexPanelOpen, historyPanelOpen, depsPanelOpen,
+          dbPanelOpen, varsPanelOpen, tocPanelOpen, graphPanelOpen, todoPanelOpen, regexPanelOpen, historyPanelOpen, depsPanelOpen, embedPanelOpen,
           path: notebookPath, staleCellIds, attachedDbs, autoRun, breakpoints, debugState } = nb;
 
   const [findOpen, setFindOpen] = useState(false);
@@ -107,6 +117,38 @@ export function NotebookView({
     setTimeout(() => {
       const wrapper = document.querySelector(
         `.notebook-pane[data-nb="${nb.id}"] .cell-wrapper[data-cell-id="${newCell.id}"]`
+      );
+      wrapper?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }, 50);
+  };
+
+  // Cell clipboard
+  const [clipCell, setClipCell] = useState(null);
+
+  const copyCell = (id) => {
+    const cell = cells.find((c) => c.id === id);
+    if (cell) setClipCell({ ...cell });
+  };
+
+  const pasteCell = (afterIndex) => {
+    if (!clipCell) return;
+    const newId = Math.random().toString(36).slice(2, 10);
+    const cloned = { ...clipCell, id: newId };
+    // Strip transient runtime state
+    delete cloned.containerId;
+    delete cloned.containerState;
+    delete cloned.containerLogs;
+    delete cloned.containerPorts;
+    onSetNbDirty((n) => {
+      const next = [...n.cells];
+      const idx = afterIndex === null || afterIndex === undefined ? next.length
+                : afterIndex < 0 ? 0 : afterIndex + 1;
+      next.splice(idx, 0, cloned);
+      return { cells: next };
+    });
+    setTimeout(() => {
+      const wrapper = document.querySelector(
+        `.notebook-pane[data-nb="${nb.id}"] .cell-wrapper[data-cell-id="${cloned.id}"]`
       );
       wrapper?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }, 50);
@@ -168,6 +210,7 @@ export function NotebookView({
       onAddSql={() => addCell('sql')}
       onAddHttp={() => addCell('http')}
       onAddShell={() => addCell('shell')}
+      onAddDocker={() => addCell('docker')}
       onAddCheck={() => addCell('check')}
       onAddDecision={() => addCell('decision')}
       autoRun={autoRun || false}
@@ -210,7 +253,10 @@ export function NotebookView({
       onToggleHistory={() => { if (!historyPanelOpen) onFocusPanel?.('history'); onSetNb((n) => ({ historyPanelOpen: !n.historyPanelOpen })); }}
       depsPanelOpen={depsPanelOpen}
       onToggleDeps={() => { if (!depsPanelOpen) onFocusPanel?.('deps'); onSetNb((n) => ({ depsPanelOpen: !n.depsPanelOpen })); }}
+      embedPanelOpen={embedPanelOpen}
+      onToggleEmbed={() => { if (!embedPanelOpen) onFocusPanel?.('embed'); onSetNb((n) => ({ embedPanelOpen: !n.embedPanelOpen })); }}
       onCloseAllPanels={onCloseAllPanels}
+      onImportData={onImportData}
       theme={theme}
       onThemeChange={onThemeChange}
       lineAltEnabled={lineAltEnabled}
@@ -227,6 +273,145 @@ export function NotebookView({
     />
   );
 
+  // eslint-disable-next-line react/no-unstable-nested-components
+  const renderCell = (cell, index) => {
+    if (cell.type === 'markdown') return (
+      <MarkdownCell cell={cell} cellIndex={index}
+        isSectionHeader={getSectionHeadingLevel(cell) !== null}
+        onToggleCollapse={() => updateCellProp(cell.id, 'collapsed', !(cell.collapsed || false))}
+        collapsedCount={collapsedCounts.get(cell.id) ?? 0}
+        onUpdate={(val) => updateCell(cell.id, val)}
+        onDelete={() => deleteCell(cell.id)}
+        onCopy={() => copyCell(cell.id)}
+        onMoveUp={() => moveCell(cell.id, -1)} onMoveDown={() => moveCell(cell.id, 1)}
+        columns={cell.columns || 0} onColumnsChange={(v) => updateCellProp(cell.id, 'columns', v || undefined)} />
+    );
+    if (cell.type === 'sql') return (
+      <SqlCell cell={cell} cellIndex={index} outputs={outputs[cell.id]} notebookId={nb.id}
+        attachedDbs={attachedDbs} isRunning={running.has(cell.id)} anyRunning={running.size > 0}
+        kernelReady={kernelStatus === 'ready'} onUpdate={(val) => updateCell(cell.id, val)}
+        onRun={() => onRunSqlCell(nb.id, cell)}
+        onRunFrom={() => onRunFrom(nb.id, cell.id)} onRunTo={() => onRunTo(nb.id, cell.id)}
+        onDbChange={(connectionId) => updateCellProp(cell.id, 'db', connectionId)}
+        onDelete={() => deleteCell(cell.id)}
+        onCopy={() => copyCell(cell.id)}
+        onMoveUp={() => moveCell(cell.id, -1)} onMoveDown={() => moveCell(cell.id, 1)}
+        columns={cell.columns || 0} onColumnsChange={(v) => updateCellProp(cell.id, 'columns', v || undefined)}
+        onNameChange={(name) => updateCellProp(cell.id, 'name', name)}
+        onColorChange={(color) => updateCellProp(cell.id, 'color', color)} />
+    );
+    if (cell.type === 'http') return (
+      <HttpCell cell={cell} cellIndex={index} outputs={outputs[cell.id]} notebookId={nb.id}
+        isRunning={running.has(cell.id)} anyRunning={running.size > 0}
+        kernelReady={kernelStatus === 'ready'} onUpdate={(val) => updateCell(cell.id, val)}
+        onRun={() => onRunHttpCell(nb.id, cell)}
+        onRunFrom={() => onRunFrom(nb.id, cell.id)} onRunTo={() => onRunTo(nb.id, cell.id)}
+        onDelete={() => deleteCell(cell.id)}
+        onCopy={() => copyCell(cell.id)}
+        onMoveUp={() => moveCell(cell.id, -1)} onMoveDown={() => moveCell(cell.id, 1)}
+        columns={cell.columns || 0} onColumnsChange={(v) => updateCellProp(cell.id, 'columns', v || undefined)}
+        onNameChange={(name) => updateCellProp(cell.id, 'name', name)}
+        onColorChange={(color) => updateCellProp(cell.id, 'color', color)} />
+    );
+    if (cell.type === 'shell') return (
+      <ShellCell cell={cell} cellIndex={index} outputs={outputs[cell.id]} notebookId={nb.id}
+        isRunning={running.has(cell.id)} anyRunning={running.size > 0}
+        kernelReady={kernelStatus === 'ready'} onUpdate={(val) => updateCell(cell.id, val)}
+        onRun={() => onRunShellCell(nb.id, cell)}
+        onRunFrom={() => onRunFrom(nb.id, cell.id)} onRunTo={() => onRunTo(nb.id, cell.id)}
+        onDelete={() => deleteCell(cell.id)}
+        onCopy={() => copyCell(cell.id)}
+        onMoveUp={() => moveCell(cell.id, -1)} onMoveDown={() => moveCell(cell.id, 1)}
+        columns={cell.columns || 0} onColumnsChange={(v) => updateCellProp(cell.id, 'columns', v || undefined)}
+        onNameChange={(name) => updateCellProp(cell.id, 'name', name)}
+        onColorChange={(color) => updateCellProp(cell.id, 'color', color)} />
+    );
+    if (cell.type === 'docker') return (
+      <DockerCell cell={cell} cellIndex={index} outputs={outputs[cell.id]} notebookId={nb.id}
+        isRunning={running.has(cell.id)} anyRunning={running.size > 0}
+        kernelReady={kernelStatus === 'ready'}
+        onUpdate={(fields) => {
+          if (typeof fields === 'string') updateCell(cell.id, fields);
+          else onSetNbDirty((n) => ({ cells: n.cells.map((c) => c.id === cell.id ? { ...c, ...fields } : c) }));
+        }}
+        onRun={() => onRunDockerCell(nb.id, cell)} onStopDocker={onStopDockerCell}
+        onPollDockerStatus={onPollDockerStatus} onFetchDockerLogs={onFetchDockerLogs}
+        onDelete={() => deleteCell(cell.id)}
+        onCopy={() => copyCell(cell.id)}
+        onMoveUp={() => moveCell(cell.id, -1)} onMoveDown={() => moveCell(cell.id, 1)}
+        columns={cell.columns || 0} onColumnsChange={(v) => updateCellProp(cell.id, 'columns', v || undefined)}
+        onNameChange={(name) => updateCellProp(cell.id, 'name', name)}
+        onColorChange={(color) => updateCellProp(cell.id, 'color', color)} />
+    );
+    if (cell.type === 'check') return (
+      <CheckCell cell={cell} cellIndex={index} checkResult={nb.checkResults?.[cell.id] ?? null}
+        notebookId={nb.id} isRunning={running.has(cell.id)} anyRunning={running.size > 0}
+        kernelReady={kernelStatus === 'ready'} onUpdate={(val) => updateCell(cell.id, val)}
+        onLabelChange={(label) => updateCellProp(cell.id, 'label', label)}
+        onRun={() => onRunCheckCell(nb.id, cell)}
+        onRunFrom={() => onRunFrom(nb.id, cell.id)} onRunTo={() => onRunTo(nb.id, cell.id)}
+        onDelete={() => deleteCell(cell.id)}
+        onCopy={() => copyCell(cell.id)}
+        onMoveUp={() => moveCell(cell.id, -1)} onMoveDown={() => moveCell(cell.id, 1)}
+        columns={cell.columns || 0} onColumnsChange={(v) => updateCellProp(cell.id, 'columns', v || undefined)}
+        onNameChange={(name) => updateCellProp(cell.id, 'name', name)}
+        onColorChange={(color) => updateCellProp(cell.id, 'color', color)} />
+    );
+    if (cell.type === 'decision') return (
+      <DecisionCell cell={cell} cellIndex={index} decisionResult={nb.decisionResults?.[cell.id] ?? null}
+        notebookId={nb.id} isRunning={running.has(cell.id)} anyRunning={running.size > 0}
+        kernelReady={kernelStatus === 'ready'} allCells={cells}
+        onUpdate={(val) => updateCell(cell.id, val)}
+        onLabelChange={(label) => updateCellProp(cell.id, 'label', label)}
+        onNameChange={(name) => updateCellProp(cell.id, 'name', name)}
+        onColorChange={(color) => updateCellProp(cell.id, 'color', color)}
+        onModeChange={(mode) => updateCellProp(cell.id, 'mode', mode)}
+        onTruePathChange={(ids) => updateCellProp(cell.id, 'truePath', ids)}
+        onFalsePathChange={(ids) => updateCellProp(cell.id, 'falsePath', ids)}
+        onSwitchPathsChange={(paths) => updateCellProp(cell.id, 'switchPaths', paths)}
+        onRun={() => onRunDecisionCell(nb.id, cell)}
+        onRunFrom={() => onRunFrom(nb.id, cell.id)} onRunTo={() => onRunTo(nb.id, cell.id)}
+        onDelete={() => deleteCell(cell.id)}
+        onCopy={() => copyCell(cell.id)}
+        onMoveUp={() => moveCell(cell.id, -1)} onMoveDown={() => moveCell(cell.id, 1)}
+        columns={cell.columns || 0} onColumnsChange={(v) => updateCellProp(cell.id, 'columns', v || undefined)} />
+    );
+    return (
+      <CodeCell cell={cell} cellIndex={index} outputs={outputs[cell.id]}
+        outputHistory={outputHistory?.[cell.id] ?? []} notebookId={nb.id}
+        isStale={(staleCellIds || []).includes(cell.id)} lastResult={cellResults?.[cell.id] ?? null}
+        isRunning={running.has(cell.id)} anyRunning={running.size > 0}
+        kernelReady={kernelStatus === 'ready'} onUpdate={(val) => updateCell(cell.id, val)}
+        onRun={() => onRunCell(nb.id, cell)} onInterrupt={() => onInterrupt(nb.id)}
+        onRunFrom={() => onRunFrom(nb.id, cell.id)} onRunTo={() => onRunTo(nb.id, cell.id)}
+        onDelete={() => deleteCell(cell.id)}
+        onCopy={() => copyCell(cell.id)}
+        onMoveUp={() => moveCell(cell.id, -1)} onMoveDown={() => moveCell(cell.id, 1)}
+        columns={cell.columns || 0} onColumnsChange={(v) => updateCellProp(cell.id, 'columns', v || undefined)}
+        isScheduled={scheduledCells?.has(cell.id) || false}
+        onOutputModeChange={(mode) => updateCellProp(cell.id, 'outputMode', mode)}
+        onToggleLock={() => updateCellProp(cell.id, 'locked', !(cell.locked || false))}
+        onToggleFold={() => toggleFold(cell.id)}
+        onScheduleStart={(ms) => { updateCellProp(cell.id, 'scheduleInterval', ms); onScheduleStart?.(nb.id, cell.id, ms); }}
+        onScheduleStop={() => onScheduleStop?.(cell.id)}
+        onNameChange={(name) => updateCellProp(cell.id, 'name', name)}
+        onColorChange={(color) => updateCellProp(cell.id, 'color', color)}
+        allCells={cells} onRunCellByName={onRunCellByName}
+        breakpoints={breakpoints?.[cell.id] || []}
+        onToggleBreakpoint={(line) => onToggleBreakpoint?.(nb.id, cell.id, line)}
+        debugState={debugState} onDebugResume={() => onDebugResume?.(nb.id)} onDebugStep={() => onDebugStep?.(nb.id)}
+        onTogglePresent={() => updateCellProp(cell.id, 'presenting', !(cell.presenting || false))}
+        onPresentIntervalChange={(ms) => updateCellProp(cell.id, 'presentInterval', ms || undefined)}
+        onClearOutput={() => onSetNb((n) => ({ outputs: { ...n.outputs, [cell.id]: [] } }))}
+        inlineDiagnostics={inlineDiagnostics?.[cell.id] || null}
+        retainedResult={nb.retainedResults?.[cell.id] || null}
+        onRetain={() => onRetainOutput?.(nb.id, cell.id)}
+        onUnretain={() => onUnretainOutput?.(nb.id, cell.id)}
+        onNextCellsChange={(ids) => updateCellProp(cell.id, 'nextCells', ids === null ? undefined : ids)}
+        onPrevCellsChange={(ids) => updateCellProp(cell.id, 'prevCells', ids === null ? undefined : ids)} />
+    );
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
       {isActive && (toolbarPortalRoot ? createPortal(toolbar, toolbarPortalRoot) : toolbar)}
@@ -242,6 +427,7 @@ export function NotebookView({
           <div className="empty-notebook">
             <h2>Empty Notebook</h2>
             <p>Add a markdown or code cell to get started.</p>
+            {showCircuit && <CircuitBoard />}
           </div>
         )}
 
@@ -252,8 +438,10 @@ export function NotebookView({
             onAddSql={() => addCell('sql', -1)}
             onAddHttp={() => addCell('http', -1)}
             onAddShell={() => addCell('shell', -1)}
+            onAddDocker={() => addCell('docker', -1)}
             onAddCheck={() => addCell('check', -1)}
             onAddDecision={() => addCell('decision', -1)}
+            onPaste={clipCell ? () => pasteCell(-1) : undefined}
           />
         )}
 
@@ -267,159 +455,40 @@ export function NotebookView({
           const isHidden = collapsedCellIds.has(cell.id);
           const sectionLevel = getSectionHeadingLevel(cell);
           const isHighlighted = findHighlighted.has(cell.id);
+          const cols = cell.columns || 0;
+
+          // Column grouping: if this cell has columns and the previous cell had the same,
+          // skip rendering (it was already included in the group started by the first cell).
+          if (cols > 0 && index > 0 && cells[index - 1].columns === cols) return null;
+
+          // If this cell starts a column group, collect consecutive cells with the same columns value
+          if (cols > 0) {
+            const group = [{ cell, index }];
+            for (let j = index + 1; j < cells.length && cells[j].columns === cols; j++) {
+              group.push({ cell: cells[j], index: j });
+            }
+            return (
+              <div key={cell.id} className={`cell-columns cell-columns-${cols}`}>
+                {group.map(({ cell: gc, index: gi }) => (
+                  <div
+                    key={gc.id}
+                    className={`cell-wrapper${collapsedCellIds.has(gc.id) ? ' cell-section-hidden' : ''}${findHighlighted.has(gc.id) ? ' cell-find-match' : ''}`}
+                    data-cell-id={gc.id}
+                  >
+                    {renderCell(gc, gi)}
+                  </div>
+                ))}
+              </div>
+            );
+          }
+
           return (
           <div
             key={cell.id}
             className={`cell-wrapper${isHidden ? ' cell-section-hidden' : ''}${isHighlighted ? ' cell-find-match' : ''}`}
             data-cell-id={cell.id}
           >
-            {cell.type === 'markdown' ? (
-              <MarkdownCell
-                cell={cell}
-                cellIndex={index}
-                isSectionHeader={sectionLevel !== null}
-                onToggleCollapse={() => updateCellProp(cell.id, 'collapsed', !(cell.collapsed || false))}
-                collapsedCount={collapsedCounts.get(cell.id) ?? 0}
-                onUpdate={(val) => updateCell(cell.id, val)}
-                onDelete={() => deleteCell(cell.id)}
-                onMoveUp={() => moveCell(cell.id, -1)}
-                onMoveDown={() => moveCell(cell.id, 1)}
-              />
-            ) : cell.type === 'sql' ? (
-              <SqlCell
-                cell={cell}
-                cellIndex={index}
-                outputs={outputs[cell.id]}
-                notebookId={nb.id}
-                attachedDbs={attachedDbs}
-                isRunning={running.has(cell.id)}
-                anyRunning={running.size > 0}
-                kernelReady={kernelStatus === 'ready'}
-                onUpdate={(val) => updateCell(cell.id, val)}
-                onRun={() => onRunSqlCell(nb.id, cell)}
-                onDbChange={(connectionId) => updateCellProp(cell.id, 'db', connectionId)}
-                onDelete={() => deleteCell(cell.id)}
-                onMoveUp={() => moveCell(cell.id, -1)}
-                onMoveDown={() => moveCell(cell.id, 1)}
-                onNameChange={(name) => updateCellProp(cell.id, 'name', name)}
-                onColorChange={(color) => updateCellProp(cell.id, 'color', color)}
-              />
-            ) : cell.type === 'http' ? (
-              <HttpCell
-                cell={cell}
-                cellIndex={index}
-                outputs={outputs[cell.id]}
-                notebookId={nb.id}
-                isRunning={running.has(cell.id)}
-                anyRunning={running.size > 0}
-                kernelReady={kernelStatus === 'ready'}
-                onUpdate={(val) => updateCell(cell.id, val)}
-                onRun={() => onRunHttpCell(nb.id, cell)}
-                onDelete={() => deleteCell(cell.id)}
-                onMoveUp={() => moveCell(cell.id, -1)}
-                onMoveDown={() => moveCell(cell.id, 1)}
-                onNameChange={(name) => updateCellProp(cell.id, 'name', name)}
-                onColorChange={(color) => updateCellProp(cell.id, 'color', color)}
-              />
-            ) : cell.type === 'shell' ? (
-              <ShellCell
-                cell={cell}
-                cellIndex={index}
-                outputs={outputs[cell.id]}
-                notebookId={nb.id}
-                isRunning={running.has(cell.id)}
-                anyRunning={running.size > 0}
-                kernelReady={kernelStatus === 'ready'}
-                onUpdate={(val) => updateCell(cell.id, val)}
-                onRun={() => onRunShellCell(nb.id, cell)}
-                onDelete={() => deleteCell(cell.id)}
-                onMoveUp={() => moveCell(cell.id, -1)}
-                onMoveDown={() => moveCell(cell.id, 1)}
-                onNameChange={(name) => updateCellProp(cell.id, 'name', name)}
-                onColorChange={(color) => updateCellProp(cell.id, 'color', color)}
-              />
-            ) : cell.type === 'check' ? (
-              <CheckCell
-                cell={cell}
-                cellIndex={index}
-                checkResult={nb.checkResults?.[cell.id] ?? null}
-                notebookId={nb.id}
-                isRunning={running.has(cell.id)}
-                anyRunning={running.size > 0}
-                kernelReady={kernelStatus === 'ready'}
-                onUpdate={(val) => updateCell(cell.id, val)}
-                onLabelChange={(label) => updateCellProp(cell.id, 'label', label)}
-                onRun={() => onRunCheckCell(nb.id, cell)}
-                onDelete={() => deleteCell(cell.id)}
-                onMoveUp={() => moveCell(cell.id, -1)}
-                onMoveDown={() => moveCell(cell.id, 1)}
-                onNameChange={(name) => updateCellProp(cell.id, 'name', name)}
-                onColorChange={(color) => updateCellProp(cell.id, 'color', color)}
-              />
-            ) : cell.type === 'decision' ? (
-              <DecisionCell
-                cell={cell}
-                cellIndex={index}
-                decisionResult={nb.decisionResults?.[cell.id] ?? null}
-                notebookId={nb.id}
-                isRunning={running.has(cell.id)}
-                anyRunning={running.size > 0}
-                kernelReady={kernelStatus === 'ready'}
-                allCells={cells}
-                onUpdate={(val) => updateCell(cell.id, val)}
-                onLabelChange={(label) => updateCellProp(cell.id, 'label', label)}
-                onNameChange={(name) => updateCellProp(cell.id, 'name', name)}
-                onColorChange={(color) => updateCellProp(cell.id, 'color', color)}
-                onModeChange={(mode) => updateCellProp(cell.id, 'mode', mode)}
-                onTruePathChange={(ids) => updateCellProp(cell.id, 'truePath', ids)}
-                onFalsePathChange={(ids) => updateCellProp(cell.id, 'falsePath', ids)}
-                onSwitchPathsChange={(paths) => updateCellProp(cell.id, 'switchPaths', paths)}
-                onRun={() => onRunDecisionCell(nb.id, cell)}
-                onDelete={() => deleteCell(cell.id)}
-                onMoveUp={() => moveCell(cell.id, -1)}
-                onMoveDown={() => moveCell(cell.id, 1)}
-              />
-            ) : (
-              <CodeCell
-                cell={cell}
-                cellIndex={index}
-                outputs={outputs[cell.id]}
-                outputHistory={outputHistory?.[cell.id] ?? []}
-                notebookId={nb.id}
-                isStale={(staleCellIds || []).includes(cell.id)}
-                lastResult={cellResults?.[cell.id] ?? null}
-                isRunning={running.has(cell.id)}
-                anyRunning={running.size > 0}
-                kernelReady={kernelStatus === 'ready'}
-                onUpdate={(val) => updateCell(cell.id, val)}
-                onRun={() => onRunCell(nb.id, cell)}
-                onInterrupt={() => onInterrupt(nb.id)}
-                onRunFrom={() => onRunFrom(nb.id, cell.id)}
-                onRunTo={() => onRunTo(nb.id, cell.id)}
-                onDelete={() => deleteCell(cell.id)}
-                onMoveUp={() => moveCell(cell.id, -1)}
-                onMoveDown={() => moveCell(cell.id, 1)}
-                isScheduled={scheduledCells?.has(cell.id) || false}
-                onOutputModeChange={(mode) => updateCellProp(cell.id, 'outputMode', mode)}
-                onToggleLock={() => updateCellProp(cell.id, 'locked', !(cell.locked || false))}
-                onToggleFold={() => toggleFold(cell.id)}
-                onScheduleStart={(ms) => { updateCellProp(cell.id, 'scheduleInterval', ms); onScheduleStart?.(nb.id, cell.id, ms); }}
-                onScheduleStop={() => onScheduleStop?.(cell.id)}
-                onNameChange={(name) => updateCellProp(cell.id, 'name', name)}
-                onColorChange={(color) => updateCellProp(cell.id, 'color', color)}
-                allCells={cells}
-                onRunCellByName={onRunCellByName}
-                breakpoints={breakpoints?.[cell.id] || []}
-                onToggleBreakpoint={(line) => onToggleBreakpoint?.(nb.id, cell.id, line)}
-                debugState={debugState}
-                onDebugResume={() => onDebugResume?.(nb.id)}
-                onDebugStep={() => onDebugStep?.(nb.id)}
-                onTogglePresent={() => updateCellProp(cell.id, 'presenting', !(cell.presenting || false))}
-                onPresentIntervalChange={(ms) => updateCellProp(cell.id, 'presentInterval', ms || undefined)}
-                onClearOutput={() => onSetNb((n) => ({ outputs: { ...n.outputs, [cell.id]: [] } }))}
-                inlineDiagnostics={inlineDiagnostics?.[cell.id] || null}
-              />
-            )}
+            {renderCell(cell, index)}
             {!dashboardMode && (
               <AddBar
                 onAddMarkdown={() => addCell('markdown', index)}
@@ -427,8 +496,10 @@ export function NotebookView({
                 onAddSql={() => addCell('sql', index)}
                 onAddHttp={() => addCell('http', index)}
                 onAddShell={() => addCell('shell', index)}
+                onAddDocker={() => addCell('docker', index)}
                 onAddCheck={() => addCell('check', index)}
                 onAddDecision={() => addCell('decision', index)}
+                onPaste={clipCell ? () => pasteCell(index) : undefined}
               />
             )}
           </div>

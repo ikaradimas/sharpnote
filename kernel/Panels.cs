@@ -6,17 +6,26 @@ namespace SharpNoteKernel;
 /// <summary>Panel ID constants — pass to <see cref="PanelsHelper"/> methods.</summary>
 public static class PanelId
 {
-    public const string Log       = "log";
-    public const string Packages  = "nuget";
-    public const string Config    = "config";
-    public const string Db        = "db";
-    public const string Library   = "library";
-    public const string Variables = "vars";
-    public const string Toc       = "toc";
-    public const string Files     = "files";
-    public const string Api       = "api";
-    public const string Graph     = "graph";
-    public const string Todo      = "todo";
+    public const string Log           = "log";
+    public const string Packages      = "nuget";
+    public const string Config        = "config";
+    public const string Database      = "db";
+    public const string Library       = "library";
+    public const string Variables     = "vars";
+    public const string Toc           = "toc";
+    public const string Files         = "files";
+    public const string Api           = "api";
+    public const string ApiEditor     = "api-editor";
+    public const string Git           = "git";
+    public const string Graph         = "graph";
+    public const string Todo          = "todo";
+    public const string Regex         = "regex";
+    public const string Kafka         = "kafka";
+    public const string Orchestration = "deps";
+    public const string History       = "history";
+    public const string Embed         = "embed";
+
+    [System.Obsolete("Use Database instead")] public const string Db = "db";
 }
 
 /// <summary>Dock zone constants — pass as the <c>zone</c> argument to <see cref="PanelsHelper.Dock"/>.</summary>
@@ -76,6 +85,15 @@ public class PanelsHelper
     /// <param name="height">Panel height in pixels (minimum 150).</param>
     public void Float(string panelId, int? x = null, int? y = null, int? width = null, int? height = null) =>
         _out.WriteLine(JsonSerializer.Serialize(new { type = "panel_float", panel = panelId, x, y, w = width, h = height }));
+
+    /// <summary>
+    /// Opens the API Editor panel and loads a saved API by its ID or title.
+    /// </summary>
+    public void LoadApiEditor(string apiIdOrTitle)
+    {
+        Open(PanelId.ApiEditor);
+        _out.WriteLine(JsonSerializer.Serialize(new { type = "api_editor_load", apiIdOrTitle }));
+    }
 
     private void Send(string type, string panel) =>
         _out.WriteLine(JsonSerializer.Serialize(new { type, panel }));

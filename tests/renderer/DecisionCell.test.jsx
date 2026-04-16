@@ -96,18 +96,18 @@ describe('DecisionCell', () => {
   it('run button calls onRun', () => {
     const onRun = vi.fn();
     render(<DecisionCell {...defaultProps({ onRun })} />);
-    fireEvent.click(screen.getByTitle(/Evaluate/));
+    fireEvent.click(screen.getByTitle(/Run \(Ctrl\+Enter\)/));
     expect(onRun).toHaveBeenCalledOnce();
   });
 
   it('run button is disabled when anyRunning', () => {
     render(<DecisionCell {...defaultProps({ anyRunning: true })} />);
-    expect(screen.getByTitle(/Evaluate/)).toBeDisabled();
+    expect(screen.getByTitle(/Run \(Ctrl\+Enter\)/)).toBeDisabled();
   });
 
   it('run button is disabled when expression is empty', () => {
     render(<DecisionCell {...defaultProps({ cell: { id: 'd1', type: 'decision', content: '  ', label: '', truePath: [], falsePath: [] } })} />);
-    expect(screen.getByTitle(/Evaluate/)).toBeDisabled();
+    expect(screen.getByTitle(/Run \(Ctrl\+Enter\)/)).toBeDisabled();
   });
 
   it('shows spinner when running', () => {

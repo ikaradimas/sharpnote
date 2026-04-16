@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { CellControls } from './CellControls.jsx';
 import { CellNameColor } from './CellNameColor.jsx';
+import { CellRunGroup } from './CellRunGroup.jsx';
 
 export function DecisionCell({
   cell,
@@ -20,9 +21,11 @@ export function DecisionCell({
   onFalsePathChange,
   onSwitchPathsChange,
   onRun,
-  onDelete,
+  onRunFrom, onRunTo,
+  onDelete, onCopy,
   onMoveUp,
   onMoveDown,
+  columns = 0, onColumnsChange,
 }) {
   const result = decisionResult?.result;
   const message = decisionResult?.message;
@@ -126,15 +129,8 @@ export function DecisionCell({
           )}
         </div>
         <div className="decision-cell-actions">
-          <button
-            className="run-btn decision-run-btn"
-            onClick={onRun}
-            disabled={anyRunning || !kernelReady || !cell.content.trim()}
-            title="Evaluate (Enter)"
-          >
-            ▶
-          </button>
-          <CellControls onMoveUp={onMoveUp} onMoveDown={onMoveDown} onDelete={onDelete} />
+          <CellRunGroup onRun={onRun} onRunFrom={onRunFrom} onRunTo={onRunTo} isRunning={isRunning} disabled={anyRunning || !kernelReady || !cell.content.trim()} />
+          <CellControls onCopy={onCopy} onMoveUp={onMoveUp} onMoveDown={onMoveDown} onDelete={onDelete} columns={columns} onColumnsChange={onColumnsChange} />
         </div>
       </div>
     </div>

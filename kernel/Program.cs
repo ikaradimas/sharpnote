@@ -71,9 +71,11 @@ partial class Program
         var db      = new DbHelper(realStdout);
         var data    = new DataHelper();
         var docker  = new DockerHelper(realStdout);
+        var mock    = new MockHelper(realStdout);
+        var files   = new FilesHelper(realStdout);
         var util    = new UtilHelper(realStdout);
         UtilContext.Current = util;
-        var globals = new ScriptGlobals { Display = display, Panels = panels, Db = db, Data = data, Docker = docker };
+        var globals = new ScriptGlobals { Display = display, Panels = panels, Db = db, Data = data, Docker = docker, Mock = mock, Files = files };
 
         var options = ScriptOptions.Default
             .AddImports(
@@ -124,7 +126,8 @@ partial class Program
                     await Task.Delay(3000, memCts.Token);
                     proc.Refresh();
                     var mb = Math.Round(proc.WorkingSet64 / (1024.0 * 1024.0), 1);
-                    var json = JsonSerializer.Serialize(new { type = "memory_mb", mb });
+                    var gcTotal = GC.CollectionCount(0) + GC.CollectionCount(1) + GC.CollectionCount(2);
+                    var json = JsonSerializer.Serialize(new { type = "memory_mb", mb, gc = gcTotal });
                     lock (realStdout) { realStdout.WriteLine(json); }
                 }
                 catch (OperationCanceledException) { break; }
@@ -209,6 +212,15 @@ partial class Program
                                 var confirmed = root.TryGetProperty("confirmed", out var confProp)
                                     && confProp.GetBoolean();
                                 util.ReceiveConfirmResponse(requestId, confirmed);
+                            }
+                            else if (msgType == "mock_response"
+                                && root.TryGetProperty("requestId", out var mRidProp))
+                            {
+                                var requestId = mRidProp.GetString()!;
+                                var data = root.TryGetProperty("data", out var dataProp)
+                                    ? dataProp.Clone()
+                                    : default;
+                                mock.ReceiveResponse(requestId, data);
                             }
                             else if (msgType == "prompt_response"
                                 && root.TryGetProperty("requestId", out var pRidProp))
@@ -320,6 +332,37 @@ partial class Program
                     break;
                 }
 
+                case "execute_docker":
+                {
+                    await HandleExecuteDocker(msg, realStdout);
+                    break;
+                }
+
+                case "stop_docker":
+                {
+                    await HandleStopDocker(msg, realStdout);
+                    break;
+                }
+
+                case "docker_status":
+                {
+                    await HandleDockerStatus(msg, realStdout);
+                    break;
+                }
+
+                case "docker_logs":
+                {
+                    await HandleDockerLogs(msg, realStdout);
+                    break;
+                }
+
+                case "set_embedded_files":
+                {
+                    if (msg.TryGetProperty("files", out var filesArr))
+                        files.LoadAll(filesArr);
+                    break;
+                }
+
                 case "execute_check":
                 {
                     await HandleExecuteCheck(msg, options, globals, realStdout);
@@ -362,6 +405,7 @@ partial class Program
                 }
 
                 case "exit":
+                    CleanupAllDockerContainers(realStdout);
                     memCts.Cancel();
                     return;
             }

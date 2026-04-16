@@ -26,6 +26,7 @@ export function makeCell(type = 'code', content = '') {
     ...(type === 'sql'      ? { db: '' } : {}),
     ...(type === 'check'    ? { label: '' } : {}),
     ...(type === 'decision' ? { label: '', mode: 'bool', truePath: [], falsePath: [], switchPaths: {} } : {}),
+    ...(type === 'docker'   ? { image: '', containerName: '', ports: '', env: '', volume: '', command: '', runOnStartup: false, runOnShutdown: false, presenting: false } : {}),
   };
 }
 
@@ -41,6 +42,7 @@ const md = (content) => makeCell('markdown', content);
 const cs = (content, outputMode = 'auto') =>
   ({ ...makeCell('code', content), outputMode });
 const http = (content) => makeCell('http', content);
+const docker = (image, opts = {}) => ({ ...makeCell('docker', ''), image, ...opts });
 
 // ── Template registry ────────────────────────────────────────────────────────
 
@@ -53,6 +55,9 @@ export const NOTEBOOK_TEMPLATES = [
   { key: 'workspace-panels', label: 'Workspace & Panels',      description: 'Panels API, dock/float, layout scripting' },
   { key: 'orchestration',    label: 'Cell Orchestration',      description: 'Decision cells, naming, colors, pipelines' },
   { key: 'forms',            label: 'Forms',                   description: 'Interactive forms, submit-to-cell, dashboard mode' },
+  { key: 'raytracer',        label: 'Raytracer',               description: 'Build a raytracer with live preview using Display.Image' },
+  { key: 'service-mesh',    label: 'Service Mesh',            description: 'Docker containers, mock APIs, health checks, traffic routing' },
+  { key: 'infographic',     label: 'Infographic Dashboard',   description: 'Column layouts, stat cards, marquees, progress bars, CSS animations' },
 ];
 
 function cellsForTemplate(key) {
@@ -65,6 +70,9 @@ function cellsForTemplate(key) {
     case 'workspace-panels': return makeWorkspacePanelsCells();
     case 'orchestration':    return makeOrchestrationCells();
     case 'forms':            return makeFormsCells();
+    case 'raytracer':        return makeRaytracerCells();
+    case 'service-mesh':    return makeServiceMeshCells();
+    case 'infographic':     return makeInfographicCells();
     default:                 return [];
   }
 }
@@ -115,6 +123,9 @@ An interactive C# notebook. Press **Ctrl+Enter** to run a cell, or click **▶ R
 | Auto-render | Return a value — type is detected automatically |
 
 > **More examples:** File → New Notebook → choose a template topic.`),
+
+    { ...cs(`Display.StatCard("Cell Types", "Code · Markdown · SQL · HTTP · Shell · Docker", color: "#569cd6", icon: "📝");`), columns: 2 },
+    { ...cs(`Display.StatCard("Output Modes", "Auto · Table · HTML · Graph · Text", color: "#4ec9b0", icon: "📊");`), columns: 2 },
 
     md('## Variables, LINQ, and Auto-render'),
 
@@ -170,6 +181,10 @@ function makeDataChartsCells() {
 
 Load data from files, render tables, and build interactive charts.`),
 
+    { ...cs(`Display.StatCard("Chart Types", "Line · Doughnut · Scatter · Bar", color: "#569cd6", icon: "📊");`), columns: 3 },
+    { ...cs(`Display.StatCard("Data Sources", "CSV · TSV · Excel · Parquet", color: "#4ec9b0", icon: "📁");`), columns: 3 },
+    { ...cs(`Display.StatCard("Layouts", "Tables · Grids · Dashboards", color: "#e0a040", icon: "📐");`), columns: 3 },
+
     // ── CSV & Data Import ──────────────────────────────────────────────────
 
     md('## CSV & Data Import'),
@@ -220,9 +235,9 @@ tsv  // columns are named Col1, Col2, …`),
 
     md('## Charts'),
 
-    md('### Line Chart — Revenue vs Costs'),
+    md('### Charts — Side by Side'),
 
-    cs(`// Return a Chart.js config object — set output mode to "graph"
+    { ...cs(`// Return a Chart.js config object — set output mode to "graph"
 new {
   type = "line",
   data = new {
@@ -252,11 +267,9 @@ new {
       title = new { display = true, text = "Revenue vs Costs 2024" },
     },
   },
-}`, 'graph'),
+}`, 'graph'), columns: 3 },
 
-    md('### Doughnut Chart'),
-
-    cs(`// Doughnut — category share
+    { ...cs(`// Doughnut — category share
 new {
     type = "doughnut",
     data = new {
@@ -279,11 +292,9 @@ new {
             legend = new { position = "right" },
         },
     },
-}`, 'graph'),
+}`, 'graph'), columns: 3 },
 
-    md('### Scatter Chart'),
-
-    cs(`// Scatter — correlation between two variables
+    { ...cs(`// Scatter — correlation between two variables
 var rng = new Random(12);
 var points = Enumerable.Range(0, 45).Select(_ => {
     var x = Math.Round(rng.NextDouble() * 100, 1);
@@ -308,7 +319,9 @@ new {
             y = new { title = new { display = true, text = "Y" } },
         },
     },
-}`, 'graph'),
+}`, 'graph'), columns: 3 },
+
+    md(`> **Tip:** The three charts above use the \`columns: 3\` layout to render side-by-side. Any cell type supports column layout.`),
 
     // ── Display.Layout dashboards ──────────────────────────────────────────
 
@@ -506,7 +519,7 @@ All operations use the \`DbSet\` properties and EF Core change tracking — **no
 
 **Run the setup cell above first.**`),
 
-    cs(`// ── LINQ to SQL CRUD — no raw SQL ───────────────────────────────────────────
+    { ...cs(`// ── LINQ to SQL CRUD — no raw SQL ───────────────────────────────────────────
 // Uses the 'scratch' DbContext with its typed Products DbSet.
 
 // ── CREATE ───────────────────────────────────────────────────────────────────
@@ -568,7 +581,21 @@ scratch.Products.RemoveRange(outOfStock);
 scratch.SaveChanges();
 
 Display.Html("<h4 style='color:#e06c75;margin:8px 0 4px'>DELETE — Removed out-of-stock items</h4>");
-scratch.Products.OrderBy(p => p.Id).ToList().DisplayTable();`),
+scratch.Products.OrderBy(p => p.Id).ToList().DisplayTable();`), columns: 2 },
+
+    { ...cs(`Display.Html(@"<div style='background:#111118;border:1px solid #333;border-radius:6px;padding:14px;font-size:12px;color:#aaa;line-height:1.7'>
+<div style='color:#569cd6;font-weight:600;margin-bottom:8px'>📋 EF Core CRUD Reference</div>
+<div><strong style='color:#4ec9b0'>CREATE</strong> — <code>dbSet.Add(entity)</code> + <code>SaveChanges()</code></div>
+<div><strong style='color:#61afef'>READ</strong> — <code>dbSet.Where(...).ToList()</code>, <code>.First()</code>, <code>.Count()</code></div>
+<div><strong style='color:#e5c07b'>UPDATE</strong> — modify properties on tracked entity + <code>SaveChanges()</code></div>
+<div><strong style='color:#e06c75'>DELETE</strong> — <code>dbSet.Remove(entity)</code> or <code>RemoveRange()</code></div>
+<div style='margin-top:8px;border-top:1px solid #333;padding-top:8px'>
+<div>• All POCO types are auto-generated from the schema</div>
+<div>• Types are available unqualified: <code>new Orders { ... }</code></div>
+<div>• Use <code>await dbSet.ToListAsync()</code> for async queries</div>
+<div>• <code>SaveChanges()</code> persists all tracked changes in one transaction</div>
+</div>
+</div>");`, 'html'), columns: 2 },
 
     md('### Querying an External Database'),
 
@@ -730,6 +757,34 @@ pie title Revenue by Category
     "Software" : 29
     "Services" : 18
     "Support"  : 11
+\`\`\`
+
+\`\`\`mermaid
+mindmap
+  root((SharpNote))
+    Cells
+      Code C#
+      SQL
+      HTTP
+      Shell
+      Docker
+      Decision
+    Output
+      Tables
+      Charts
+      Mermaid
+      KaTeX
+      Images
+    Tools
+      Orchestration
+      Git
+      API Editor
+      Kafka
+    Features
+      Embedded Files
+      Retained Results
+      Column Layout
+      Presentation Mode
 \`\`\``),
 
     md(`## Math Formulas (KaTeX)
@@ -1005,6 +1060,21 @@ for (int i = 0; i < 60; i++)
     Display.Plot("events", rng.Next(0, 5), type: ChartType.Bar);    // bars
     await Task.Delay(40);
 }`),
+
+    // ── Infographic helpers ───────────────────────────────────────────────
+
+    md(`## Infographic Helpers
+
+Quick one-liners for dashboard-style visuals. Combine with \`columns\` layout for side-by-side cards.`),
+
+    { ...cs(`Display.StatCard("Users", "12,847", color: "#569cd6", icon: "👥");`), columns: 3 },
+    { ...cs(`Display.StatCard("Revenue", "$1.2M", color: "#4ec9b0", icon: "💰");`), columns: 3 },
+    { ...cs(`Display.StatCard("Uptime", "99.97%", color: "#b48ead", icon: "⏱");`), columns: 3 },
+
+    { ...cs(`Display.ProgressBar(78, "CPU — 78%", color: "#569cd6");`), columns: 2 },
+    { ...cs(`Display.ProgressBar(42, "Memory — 42%", color: "#4ec9b0");`), columns: 2 },
+
+    cs(`Display.Marquee("  ●  SYSTEM STATUS: ALL SERVICES OPERATIONAL  ●  LAST DEPLOY: 2 hours ago  ●  ", speed: 30, color: "#4ec9b0", background: "#0a0a12");`),
   ];
 }
 
@@ -1381,8 +1451,9 @@ The \`Docker\` global lets you manage containers from code cells. Requires Docke
 | Method | Description |
 |--------|-------------|
 | \`Docker.Run(image, name?, ports?, env?)\` | Start a container; returns container ID |
-| \`Docker.Stop(nameOrId)\` | Stop a running container |
-| \`Docker.Remove(nameOrId)\` | Remove a container |
+| \`Docker.Stop(nameOrId)\` / \`Docker.Remove(nameOrId)\` | Stop / remove a container |
+| \`Docker.StopAndRemove(nameOrId)\` | Stop + remove in one call (ignores errors) |
+| \`Docker.StopAllTracked()\` | Stop all containers started by Docker cells |
 | \`Docker.Exec(nameOrId, cmd)\` | Run a command inside a container |
 | \`Docker.IsRunning(nameOrId)\` | Check if running |
 | \`Docker.List()\` | List all containers |`),
@@ -1392,10 +1463,102 @@ The \`Docker\` global lets you manage containers from code cells. Requires Docke
 //     ports: new() { ["6379"] = "6379" });
 // Console.WriteLine($"Started: {id[..12]}");
 // Docker.IsRunning("demo-redis").Display();
-// Docker.Stop("demo-redis");
-// Docker.Remove("demo-redis");
+// Docker.StopAndRemove("demo-redis");  // clean up in one call
 
 Docker.List().DisplayTable();  // List running containers`),
+
+    // ── Mock API ──────────────────────────────────────────────────────────
+
+    md(`## Mock API Servers
+
+The \`Mock\` global starts mock HTTP servers from code. Servers run on random ports above 9000.
+
+| Method | Description |
+|--------|-------------|
+| \`await Mock.StartAsync(apiDef, port?)\` | Start a mock, returns the assigned port |
+| \`await Mock.StopAsync(id)\` | Stop a mock by its ID |
+| \`await Mock.StopAllAsync()\` | Stop all running mocks |
+| \`await Mock.ListAsync()\` | List running mocks (\`Id\`, \`Port\`, \`Title\`) |`),
+
+    { ...cs(`// Start a mock API and call it
+var port = await Mock.StartAsync(new {
+    id = "demo-api",
+    title = "Demo API",
+    controllers = new[] { new {
+        basePath = "/api/items",
+        endpoints = new object[] {
+            new { method = "GET", path = "",
+                  mockResponse = new { status = 200, body = @"[{""id"":1,""name"":""Widget""},{""id"":2,""name"":""Gadget""}]" } },
+            new { method = "GET", path = "/{id}",
+                  mockResponse = new { status = 200, body = @"{""id"":{{id}},""name"":""Widget""}" } },
+        }
+    } }
+});
+
+// Call the mock from C#
+using var http = new HttpClient();
+var items = await http.GetStringAsync($"http://localhost:{port}/api/items");
+Display.Html($"<div style='color:#4ec9b0'>Mock on :{port}</div>");
+items.Display();`), columns: 2 },
+
+    { ...cs(`Display.Html(@"<div style='background:#111118;border:1px solid #333;border-radius:6px;padding:14px;font-size:12px;color:#aaa;line-height:1.7'>
+<div style='color:#4ec9b0;font-weight:600;margin-bottom:8px'>📋 Mock API Notes</div>
+<div>• Mocks run in the Electron main process — no external dependencies</div>
+<div>• Port 0 assigns a random port above 9000</div>
+<div>• Use <code>{{paramName}}</code> in response bodies for path param substitution</div>
+<div>• Add <code>mockHandler</code> for dynamic JS logic (instead of static <code>mockResponse</code>)</div>
+<div>• The API Editor panel provides a visual interface for designing mocks</div>
+<div style='margin-top:8px;color:#569cd6'>💡 See the <strong>Service Mesh</strong> template for a full multi-service example</div>
+</div>");`, 'html'), columns: 2 },
+
+    cs(`// List and clean up
+var mocks = await Mock.ListAsync();
+mocks.DisplayTable();
+await Mock.StopAllAsync();
+Display.Html("<div style='color:#4ec9b0'>✓ All mocks stopped</div>");`),
+
+    // ── Embedded Files ────────────────────────────────────────────────────
+
+    md(`## Embedded Files
+
+Files can be stored inline in the notebook and accessed from code. Use the **Embedded Files** panel (dock it from the Tools menu) to add files, or embed programmatically:
+
+| Method | Description |
+|--------|-------------|
+| \`Files["name"]\` | Access an embedded file by name |
+| \`Files["name"].ContentAsText\` | Get file content as a UTF-8 string |
+| \`Files["name"].Content\` | Get raw byte array |
+| \`Files["name"].OpenRead()\` | Get a readable Stream |
+| \`Files.Embed("name", bytes, "file.csv", "text/csv")\` | Embed a file from code |
+| \`Files.EmbedText("name", text, "file.txt")\` | Embed a text file |
+| \`Files["name"].SetVariable("key", "val")\` | Set a variable on a file |
+| \`Files["name"].GetVariable("key")\` | Get a variable value |
+| \`Files.List()\` | List all embedded files |
+| \`Files.Contains("name")\` | Check if a file exists |`),
+
+    { ...cs(`// Embed a CSV file programmatically
+Files.EmbedText("sample", "Name,Score\\nAlice,95\\nBob,82\\nCharlie,78", "sample.csv", "text/csv");
+
+// Read it back
+var csv = Files["sample"].ContentAsText;
+Display.Html($"<pre style='color:#4ec9b0'>{csv}</pre>");
+
+// Set metadata
+Files["sample"].SetVariable("source", "manual entry");
+Files["sample"].SetVariable("rows", "3");
+
+// List all embedded files
+Files.List().Select(f => new { f.Name, f.Filename, f.MimeType, Vars = f.Variables.Count }).DisplayTable();`), columns: 2 },
+
+    { ...cs(`Display.Html(@"<div style='background:#111118;border:1px solid #333;border-radius:6px;padding:14px;font-size:12px;color:#aaa;line-height:1.7'>
+<div style='color:#569cd6;font-weight:600;margin-bottom:8px'>📎 Embedded Files Notes</div>
+<div>• Files are stored inline in the .cnb notebook file</div>
+<div>• Binary files are base64 encoded; text files stored as-is</div>
+<div>• Variables are key-value metadata stored on each file</div>
+<div>• Open the <strong>Embedded Files</strong> panel to manage files visually</div>
+<div>• Code completion knows about <code>Files</code> — type <code>Files.</code> to see methods</div>
+<div style='margin-top:8px;color:#4ec9b0'>💡 Use embedded files to ship data alongside your notebook without external file dependencies</div>
+</div>");`, 'html'), columns: 2 },
   ];
 }
 
@@ -1549,6 +1712,19 @@ function makeOrchestrationCells() {
     'default':  [defaultRouteCell.id],
   };
 
+  // Wire explicit execution order
+  loadCell.nextCells      = [checkCell.id];
+  checkCell.prevCells     = [loadCell.id];
+  checkCell.nextCells     = [statsCell.id];
+  statsCell.prevCells     = [checkCell.id];
+  statsCell.nextCells     = [decisionCell.id];
+  decisionCell.prevCells  = [statsCell.id];
+  passCell.nextCells      = [chartCell.id];
+  failCell.nextCells      = [chartCell.id];
+  chartCell.prevCells     = [passCell.id, failCell.id];
+  chartCell.nextCells     = [switchCell.id];
+  switchCell.prevCells    = [chartCell.id];
+
   return [
     md(`# Cell Orchestration
 
@@ -1557,10 +1733,10 @@ decision branching, and the interactive dependency graph.
 
 ## How to use
 
-1. Open the **Dependencies** panel (Tools → Dependencies, or **Ctrl+Shift+Y**)
+1. Open the **Orchestration** panel (Tools → Orchestration, or **Ctrl+Shift+Y**)
 2. Run the cells below — the graph will light up with execution status
 3. **Click a node** in the graph to run it, **double-click** to navigate
-4. **Right-click** a node for: *Run with deps*, *Run downstream*, *Add to pipeline*
+4. **Right-click** a node for: *Run with upstream*, *Run downstream*, *Add to pipeline*
 5. Use **zoom** (scroll) and **pan** (drag empty space) to navigate the graph
 6. Create **pipelines** in the bottom section to group and re-run cells`),
 
@@ -1583,7 +1759,7 @@ They appear as nodes in the dependency graph.`),
     md(`## 3. Computed Dependencies
 
 This cell references \`orders\` from the Load cell — creating a dependency edge in the graph.
-Open the Dependencies panel to see the edge from *Load Orders* → *Compute Stats*.`),
+Open the Orchestration panel to see the edge from *Load Orders* → *Compute Stats*.`),
 
     statsCell,
 
@@ -1626,7 +1802,7 @@ This cell also depends on \`orders\`, creating another edge in the graph.`),
 
     md(`## 7. Pipelines
 
-Open the Dependencies panel and use the **Pipelines** section at the bottom:
+Open the Orchestration panel and use the **Pipelines** section at the bottom:
 
 1. Click **+ Select** to enter selection mode
 2. Click nodes in the graph to add them to the pipeline
@@ -1638,7 +1814,7 @@ Open the Dependencies panel and use the **Pipelines** section at the bottom:
 | Mode | What it does |
 |------|-------------|
 | **Click node** | Runs that single cell |
-| **Run with deps** | Runs all upstream cells first, then the target |
+| **Run with upstream** | Runs all upstream cells first, then the target |
 | **Run downstream** | Runs the target, then everything that depends on it |
 | **Run pipeline** | Runs a named group of cells in topological order |
 
@@ -1813,6 +1989,581 @@ and the handler cell processes the response:`),
 
 // ── Notebook factory ──────────────────────────────────────────────────────────
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// Template 9 — Raytracer
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function makeRaytracerCells() {
+  return [
+    md(`# Raytracer
+
+Build a simple raytracer step by step, rendering directly into the notebook via base64 images.
+Each cell builds on the previous — run them in order.`),
+
+    { ...cs(`Display.StatCard("Resolution", "400 × 300", color: "#569cd6", icon: "🖼");`), columns: 4 },
+    { ...cs(`Display.StatCard("Spheres", "4 objects", color: "#4ec9b0", icon: "🔵");`), columns: 4 },
+    { ...cs(`Display.StatCard("Bounces", "3 depth", color: "#e0a040", icon: "↩");`), columns: 4 },
+    { ...cs(`Display.StatCard("Render", "ParallelRender", color: "#c084d0", icon: "⚡");`), columns: 4 },
+
+    md('## 1. Vector Math'),
+
+    cs([
+      '// ── Vec3: immutable 3D vector with operator overloads ─────────────────────────',
+      'record struct Vec3(double X, double Y, double Z) {',
+      '    public double Length    => Math.Sqrt(X*X + Y*Y + Z*Z);',
+      '    public double LengthSq => X*X + Y*Y + Z*Z;',
+      '    public Vec3 Normalized => this / Length;',
+      '    public double Dot(Vec3 b) => X*b.X + Y*b.Y + Z*b.Z;',
+      '    public Vec3 Cross(Vec3 b) => new(Y*b.Z - Z*b.Y, Z*b.X - X*b.Z, X*b.Y - Y*b.X);',
+      '    public Vec3 Reflect(Vec3 n) => this - 2 * Dot(n) * n;',
+      '    public static Vec3 operator +(Vec3 a, Vec3 b) => new(a.X+b.X, a.Y+b.Y, a.Z+b.Z);',
+      '    public static Vec3 operator -(Vec3 a, Vec3 b) => new(a.X-b.X, a.Y-b.Y, a.Z-b.Z);',
+      '    public static Vec3 operator -(Vec3 a)         => new(-a.X, -a.Y, -a.Z);',
+      '    public static Vec3 operator *(double s, Vec3 a) => new(s*a.X, s*a.Y, s*a.Z);',
+      '    public static Vec3 operator *(Vec3 a, double s) => new(s*a.X, s*a.Y, s*a.Z);',
+      '    public static Vec3 operator *(Vec3 a, Vec3 b)   => new(a.X*b.X, a.Y*b.Y, a.Z*b.Z);',
+      '    public static Vec3 operator /(Vec3 a, double s) => new(a.X/s, a.Y/s, a.Z/s);',
+      '}',
+      '',
+      '// Quick test',
+      'var v = new Vec3(1, 2, 3);',
+      'new { v, normalized = v.Normalized, length = v.Length, dot = v.Dot(new Vec3(0,1,0)) }.Display();',
+    ].join('\n')),
+
+    md('## 2. Ray, Sphere, and Hit Record'),
+
+    cs([
+      '// ── Ray + Sphere + HitRecord ─────────────────────────────────────────────────',
+      'record struct Ray(Vec3 Origin, Vec3 Dir);',
+      '',
+      'record struct HitRecord(double T, Vec3 Point, Vec3 Normal, Vec3 Color, double Reflectivity);',
+      '',
+      'record Sphere(Vec3 Center, double Radius, Vec3 Color, double Reflectivity = 0) {',
+      '    public HitRecord? Hit(Ray ray, double tMin, double tMax) {',
+      '        var oc = ray.Origin - Center;',
+      '        var a  = ray.Dir.Dot(ray.Dir);',
+      '        var h  = oc.Dot(ray.Dir);',
+      '        var c  = oc.Dot(oc) - Radius * Radius;',
+      '        var disc = h * h - a * c;',
+      '        if (disc < 0) return null;',
+      '        var sqrtD = Math.Sqrt(disc);',
+      '        var t = (-h - sqrtD) / a;',
+      '        if (t < tMin || t > tMax) { t = (-h + sqrtD) / a; if (t < tMin || t > tMax) return null; }',
+      '        var p = ray.Origin + t * ray.Dir;',
+      '        var n = (p - Center) / Radius;',
+      '        return new HitRecord(t, p, n, Color, Reflectivity);',
+      '    }',
+      '}',
+      '',
+      '"Sphere + Ray types ready".Display();',
+    ].join('\n')),
+
+    md('## 3. Scene and Camera'),
+
+    cs([
+      '// ── Scene definition ──────────────────────────────────────────────────────────',
+      'var spheres = new Sphere[] {',
+      '    new(new Vec3( 0,   -0.2, -1.2), 0.5,  new Vec3(0.8, 0.3, 0.3), 0.05),  // red',
+      '    new(new Vec3(-1.1,  0,   -1.5), 0.5,  new Vec3(0.3, 0.8, 0.3), 0.3),   // green (reflective)',
+      '    new(new Vec3( 1.1,  0,   -1.5), 0.5,  new Vec3(0.3, 0.3, 0.8), 0.8),   // blue (mirror)',
+      '    new(new Vec3( 0, -100.7, -1),  100.0, new Vec3(0.6, 0.6, 0.6), 0.02),  // ground',
+      '};',
+      '',
+      'var lightDir = new Vec3(-0.5, 0.8, -0.3).Normalized;',
+      'var lightColor = new Vec3(1, 0.95, 0.8);',
+      'var ambient = new Vec3(0.08, 0.08, 0.12);',
+      'var skyTop = new Vec3(0.3, 0.5, 1.0);',
+      'var skyBottom = new Vec3(0.8, 0.85, 1.0);',
+      '',
+      'int W = 400, H = 250;',
+      'double aspect = (double)W / H;',
+      'double fov = 1.0;  // tan(half-angle)',
+      '',
+      'Display.Html($"<p style=\'color:#4ec9b0\'>Scene: {spheres.Length} spheres, {W}×{H} image</p>");',
+    ].join('\n')),
+
+    md('## 4. Trace Function'),
+
+    cs([
+      '// ── Trace: cast a ray and compute color ──────────────────────────────────────',
+      'Vec3 Sky(Ray ray) {',
+      '    var t = 0.5 * (ray.Dir.Normalized.Y + 1);',
+      '    return (1 - t) * skyBottom + t * skyTop;',
+      '}',
+      '',
+      'HitRecord? SceneHit(Ray ray, double tMin, double tMax) {',
+      '    HitRecord? closest = null;',
+      '    foreach (var s in spheres) {',
+      '        var hit = s.Hit(ray, tMin, closest?.T ?? tMax);',
+      '        if (hit != null) closest = hit;',
+      '    }',
+      '    return closest;',
+      '}',
+      '',
+      'Vec3 Trace(Ray ray, int depth) {',
+      '    if (depth <= 0) return new Vec3(0, 0, 0);',
+      '    var hit = SceneHit(ray, 0.001, 1e20);',
+      '    if (hit == null) return Sky(ray);',
+      '    var h = hit.Value;',
+      '',
+      '    // Diffuse (Lambertian)',
+      '    var diff = Math.Max(0, h.Normal.Dot(lightDir));',
+      '    // Shadow test',
+      '    var shadowRay = new Ray(h.Point + 0.001 * h.Normal, lightDir);',
+      '    if (SceneHit(shadowRay, 0.001, 1e20) != null) diff *= 0.15;',
+      '',
+      '    var color = h.Color * (ambient + diff * lightColor);',
+      '',
+      '    // Reflection',
+      '    if (h.Reflectivity > 0) {',
+      '        var refl = ray.Dir.Normalized.Reflect(h.Normal);',
+      '        var reflColor = Trace(new Ray(h.Point + 0.001 * h.Normal, refl), depth - 1);',
+      '        color = (1 - h.Reflectivity) * color + h.Reflectivity * reflColor;',
+      '    }',
+      '    return color;',
+      '}',
+      '',
+      '"Trace function ready".Display();',
+    ].join('\n')),
+
+    md('## 5. Render with Live Preview'),
+
+    cs([
+      '// ── Render using RenderRows with automatic live preview ──────────────────────',
+      'var canvas = Display.Canvas(W, H, "Raytracer Output");',
+      '',
+      '// RenderRows handles the loop + periodic Flush for you (every 50 rows)',
+      'canvas.RenderRows((x, y) => {',
+      '    double u = (2.0 * (x + 0.5) / W - 1) * aspect * fov;',
+      '    double v = (1 - 2.0 * (y + 0.5) / H) * fov;',
+      '    var ray = new Ray(new Vec3(0, 0, 0), new Vec3(u, v, -1).Normalized);',
+      '    var c = Trace(ray, 3);',
+      '    return (c.X, c.Y, c.Z);',
+      '}, flushEvery: 50);',
+      '',
+      'Display.Html($"<p style=\'color:#5a7080;margin-top:8px\'>{W}×{H} — {spheres.Length} spheres, 3 bounces</p>");',
+    ].join('\n')),
+
+    md('## 6. Parallel Render + Shape Overlay'),
+
+    cs([
+      '// ── ParallelRender: render all pixels using all CPU cores ─────────────────────',
+      'var fast = Display.Canvas(W, H, "Parallel Render");',
+      '',
+      'fast.ParallelRender((x, y) => {',
+      '    double u = (2.0 * (x + 0.5) / W - 1) * aspect * fov;',
+      '    double v = (1 - 2.0 * (y + 0.5) / H) * fov;',
+      '    var ray = new Ray(new Vec3(0, 0, 0), new Vec3(u, v, -1).Normalized);',
+      '    var c = Trace(ray, 3);',
+      '    return (c.X, c.Y, c.Z);',
+      '});',
+      '',
+      '// Draw shape overlays on the rendered image',
+      'fast.DrawRect(10, 10, 100, 20, 255, 255, 255);      // white border rectangle',
+      'fast.FillRect(12, 12, 96, 16, 40, 40, 50);           // dark fill inside',
+      'fast.DrawCircle(W - 30, 30, 15, 255, 200, 60);       // gold circle marker',
+      'fast.FillCircle(W - 30, 30, 12, 60, 50, 30);         // dark fill',
+      'fast.DrawLine(0, H - 1, W - 1, H - 1, 100, 100, 120); // bottom border line',
+      '',
+      'fast.Flush();',
+      'Display.Html("<p style=\'color:#4ec9b0;margin-top:4px\'>Rendered with ParallelRender + shape overlays</p>");',
+    ].join('\n')),
+
+    md(`## 7. Experiment
+
+Try modifying the scene in cell 3:
+- Change sphere positions, colors, and reflectivity
+- Adjust \`lightDir\` for different lighting angles
+- Increase \`W\` and \`H\` for higher resolution (slower)
+- Add more spheres to the array
+
+Then re-run cells 3 → 5 to see the result.
+
+---
+
+### API Used in This Example
+
+| Method | Purpose |
+|--------|---------|
+| \`Display.Canvas(w, h)\` | Creates a pixel buffer with live-updating image output |
+| \`canvas.SetPixel(x, y, r, g, b)\` | Writes a pixel (double 0–1 or byte 0–255 overloads) |
+| \`canvas.Flush()\` | Encodes the buffer to BMP and pushes the update |
+| \`Display.ImageBytes(rgb, w, h)\` | One-shot: renders raw RGB bytes as an image |
+| \`Display.NewImage(src)\` | Creates a live-updating image handle |
+| \`handle.UpdateImage(src)\` | Updates the image in-place |
+| \`handle.UpdateImageBytes(rgb, w, h)\` | Updates with raw RGB bytes |
+| \`canvas.DrawLine(x0, y0, x1, y1, r, g, b)\` | Bresenham line drawing |
+| \`canvas.DrawRect / FillRect(x, y, w, h, ...)\` | Rectangle outline / fill |
+| \`canvas.DrawCircle / FillCircle(cx, cy, r, ...)\` | Circle outline / fill |
+| \`canvas.ParallelRender((x, y) => (r, g, b))\` | Render all pixels using all CPU cores |
+| \`canvas.RenderRows((x, y) => (r, g, b), flushEvery)\` | Sequential render with auto-flush for live preview |`),
+  ];
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Template 11 — Infographic Dashboard
+
+function makeInfographicCells() {
+  // Stat cards in a 4-column layout
+  const stat1 = { ...cs(`Display.StatCard("Active Users", "12,847", color: "#569cd6", icon: "👥");`), columns: 4 };
+  const stat2 = { ...cs(`Display.StatCard("Revenue", "$1.2M", color: "#4ec9b0", icon: "💰");`), columns: 4 };
+  const stat3 = { ...cs(`Display.StatCard("Uptime", "99.97%", color: "#b48ead", icon: "⏱");`), columns: 4 };
+  const stat4 = { ...cs(`Display.StatCard("Latency", "23ms", color: "#e0a040", icon: "⚡");`), columns: 4 };
+
+  // Progress bars in 2 columns
+  const prog1 = { ...cs(`Display.ProgressBar(78, "CPU Usage — 78%", color: "#569cd6");`), columns: 2 };
+  const prog2 = { ...cs(`Display.ProgressBar(42, "Memory — 42%", color: "#4ec9b0");`), columns: 2 };
+  const prog3 = { ...cs(`Display.ProgressBar(91, "Disk — 91%", color: "#e06070");`), columns: 2 };
+  const prog4 = { ...cs(`Display.ProgressBar(15, "Network — 15%", color: "#e0a040");`), columns: 2 };
+
+  // Charts in 2 columns
+  const chart1 = { ...cs(`Display.Graph(new {
+    type = "line",
+    data = new {
+        labels = new[] { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" },
+        datasets = new[] {
+            new { label = "Requests (k)", data = new[] { 12, 19, 15, 25, 22, 30, 28 },
+                  borderColor = "#569cd6", backgroundColor = "rgba(86,156,214,0.1)", fill = true, tension = 0.4 },
+            new { label = "Errors", data = new[] { 2, 1, 3, 1, 0, 2, 1 },
+                  borderColor = "#e06070", backgroundColor = "rgba(224,96,112,0.1)", fill = true, tension = 0.4 },
+        }
+    },
+    options = new { plugins = new { title = new { display = true, text = "Weekly Traffic" } } }
+});`, 'graph'), columns: 2 };
+
+  const chart2 = { ...cs(`Display.Graph(new {
+    type = "doughnut",
+    data = new {
+        labels = new[] { "API", "Web", "Mobile", "Internal" },
+        datasets = new[] {
+            new { data = new[] { 45, 25, 20, 10 },
+                  backgroundColor = new[] { "#569cd6", "#4ec9b0", "#e0a040", "#b48ead" },
+                  borderWidth = 0 }
+        }
+    },
+    options = new { plugins = new { title = new { display = true, text = "Traffic Sources" } } }
+});`, 'graph'), columns: 2 };
+
+  // Detail cards in 3 columns
+  const card1 = { ...cs(`Display.Html(@"<div style='background:#1a1a22;border:1px solid #333;border-radius:8px;padding:16px;height:100%'>
+  <div style='font-size:14px;font-weight:600;color:#569cd6;margin-bottom:10px'>🌐 API Gateway</div>
+  <div style='font-size:12px;color:#aaa;line-height:1.6'>
+    <div>Requests/sec: <span style=""color:#4ec9b0"">2,341</span></div>
+    <div>P99 Latency: <span style=""color:#e0a040"">45ms</span></div>
+    <div>Error Rate: <span style=""color:#4ec9b0"">0.02%</span></div>
+    <div>Active Connections: <span style=""color:#569cd6"">847</span></div>
+  </div>
+</div>");`, 'html'), columns: 3 };
+
+  const card2 = { ...cs(`Display.Html(@"<div style='background:#1a1a22;border:1px solid #333;border-radius:8px;padding:16px;height:100%'>
+  <div style='font-size:14px;font-weight:600;color:#4ec9b0;margin-bottom:10px'>🗄 Database</div>
+  <div style='font-size:12px;color:#aaa;line-height:1.6'>
+    <div>Queries/sec: <span style=""color:#4ec9b0"">1,204</span></div>
+    <div>Slow Queries: <span style=""color:#e06070"">3</span></div>
+    <div>Connections: <span style=""color:#569cd6"">48/100</span></div>
+    <div>Replication Lag: <span style=""color:#4ec9b0"">0.2s</span></div>
+  </div>
+</div>");`, 'html'), columns: 3 };
+
+  const card3 = { ...cs(`Display.Html(@"<div style='background:#1a1a22;border:1px solid #333;border-radius:8px;padding:16px;height:100%'>
+  <div style='font-size:14px;font-weight:600;color:#e0a040;margin-bottom:10px'>📦 Cache (Redis)</div>
+  <div style='font-size:12px;color:#aaa;line-height:1.6'>
+    <div>Hit Rate: <span style=""color:#4ec9b0"">94.7%</span></div>
+    <div>Memory: <span style=""color:#e0a040"">2.1 GB / 4 GB</span></div>
+    <div>Keys: <span style=""color:#569cd6"">142,391</span></div>
+    <div>Evictions/hr: <span style=""color:#4ec9b0"">12</span></div>
+  </div>
+</div>");`, 'html'), columns: 3 };
+
+  return [
+    md(`# Infrastructure Dashboard
+
+An infographic-style dashboard using **column layouts**, **stat cards**, **progress bars**, **charts**, and **marquees**. Run all cells to render the dashboard.
+
+> **New features used:** \`Display.StatCard()\`, \`Display.ProgressBar()\`, \`Display.Marquee()\`, and the \`columns\` cell property for side-by-side layout.`),
+
+    md('## Key Metrics'),
+    stat1, stat2, stat3, stat4,
+
+    cs(`Display.Marquee("  ●  SYSTEM STATUS: ALL SERVICES OPERATIONAL  ●  LAST DEPLOY: 2 hours ago  ●  NEXT MAINTENANCE WINDOW: Sunday 03:00 UTC  ●  ALERTS: 0 critical, 2 warning  ●  ", speed: 30, color: "#4ec9b0", background: "#0a0a12");`),
+
+    md('## Resource Utilization'),
+    prog1, prog2, prog3, prog4,
+
+    md('## Traffic Overview'),
+    chart1, chart2,
+
+    md('## Service Health'),
+    card1, card2, card3,
+
+    cs(`// Render an activity timeline
+Display.Html(@"<div style='border-left:2px solid #333;margin-left:12px;padding-left:16px'>
+  <div style='position:relative;padding:8px 0'>
+    <div style='position:absolute;left:-23px;top:10px;width:10px;height:10px;border-radius:50%;background:#4ec9b0'></div>
+    <div style='color:#4ec9b0;font-size:11px;font-family:monospace'>14:32 UTC</div>
+    <div style='color:#ddd;font-size:13px'>Auto-scaler added 2 instances to API cluster</div>
+  </div>
+  <div style='position:relative;padding:8px 0'>
+    <div style='position:absolute;left:-23px;top:10px;width:10px;height:10px;border-radius:50%;background:#569cd6'></div>
+    <div style='color:#569cd6;font-size:11px;font-family:monospace'>14:15 UTC</div>
+    <div style='color:#ddd;font-size:13px'>Deployment v2.14.3 completed successfully</div>
+  </div>
+  <div style='position:relative;padding:8px 0'>
+    <div style='position:absolute;left:-23px;top:10px;width:10px;height:10px;border-radius:50%;background:#e0a040'></div>
+    <div style='color:#e0a040;font-size:11px;font-family:monospace'>13:58 UTC</div>
+    <div style='color:#ddd;font-size:13px'>Cache hit rate dropped below 95% threshold — investigating</div>
+  </div>
+  <div style='position:relative;padding:8px 0'>
+    <div style='position:absolute;left:-23px;top:10px;width:10px;height:10px;border-radius:50%;background:#b48ead'></div>
+    <div style='color:#b48ead;font-size:11px;font-family:monospace'>13:30 UTC</div>
+    <div style='color:#ddd;font-size:13px'>SSL certificate renewed for api.example.com (expires in 90 days)</div>
+  </div>
+</div>");`, 'html'),
+
+    cs(`Display.Marquee("  📊  THROUGHPUT: 2,341 req/s  ●  P50: 12ms  ●  P95: 34ms  ●  P99: 45ms  ●  ERROR RATE: 0.02%  ●  CACHE HIT: 94.7%  ●  DB CONNECTIONS: 48/100  ●  ", speed: 35, color: "#569cd6", background: "#0a0a12");`),
+
+    md(`## Column Layout Reference
+
+Set the \`columns\` property on any cell to group consecutive cells with the same value into a CSS grid:
+
+| Property | Effect |
+|----------|--------|
+| \`columns: 2\` | Two cells side-by-side |
+| \`columns: 3\` | Three-column grid |
+| \`columns: 4\` | Four-column grid |
+
+### Display Helpers
+
+| Method | Description |
+|--------|-------------|
+| \`Display.StatCard(label, value, color?, icon?)\` | Large-value card with label |
+| \`Display.ProgressBar(percent, label?, color?)\` | Horizontal progress bar |
+| \`Display.Marquee(text, speed?, color?, background?)\` | Scrolling text ticker |
+| \`Display.Html(html)\` | Arbitrary HTML for custom layouts |
+
+Combine these with column layouts to create rich dashboards and infographics.`),
+  ];
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Template 10 — Service Mesh (Docker + Mock APIs)
+
+function makeServiceMeshCells() {
+  // Docker cells in 3-column layout
+  const gateway = { ...docker('nginx:alpine', {
+    containerName: 'mesh-gateway', name: 'API Gateway', color: 'blue',
+    ports: '8080:80', runOnStartup: true, presenting: true,
+  }), columns: 3 };
+
+  const redis = { ...docker('redis:7-alpine', {
+    containerName: 'mesh-cache', name: 'Cache (Redis)', color: 'red',
+    ports: '6379:6379', runOnStartup: true, presenting: true,
+  }), columns: 3 };
+
+  const postgres = { ...docker('postgres:16-alpine', {
+    containerName: 'mesh-db', name: 'Database (Postgres)', color: 'purple',
+    ports: '5432:5432', env: 'POSTGRES_USER=mesh, POSTGRES_PASSWORD=mesh123, POSTGRES_DB=meshdb',
+    runOnStartup: true, presenting: true,
+  }), columns: 3 };
+
+  // Mock service cells in 3 columns
+  const userSvc = { ...cs(`// User Service — CRUD mock on random port
+var userPort = await Mock.StartAsync(new {
+    id = "user-svc",
+    title = "User Service",
+    controllers = new[] { new {
+        basePath = "/api/users",
+        endpoints = new object[] {
+            new { method = "GET", path = "",       summary = "List users",
+                  mockResponse = new { status = 200, body = @"[{""id"":1,""name"":""Alice"",""email"":""alice@mesh.dev"",""role"":""admin""},{""id"":2,""name"":""Bob"",""email"":""bob@mesh.dev"",""role"":""user""},{""id"":3,""name"":""Carol"",""email"":""carol@mesh.dev"",""role"":""user""}]" } },
+            new { method = "GET", path = "/{id}",  summary = "Get user",
+                  mockResponse = new { status = 200, body = @"{""id"":{{id}},""name"":""Alice"",""email"":""alice@mesh.dev""}" } },
+            new { method = "POST", path = "",      summary = "Create user",
+                  mockResponse = new { status = 201, body = @"{""id"":4,""name"":""New User"",""created"":true}" } },
+        }
+    } }
+});
+Display.StatCard("User Service", $":{userPort}", color: "#4ec9b0", icon: "👤");`), columns: 3 };
+
+  const orderSvc = { ...cs(`// Order Service — mock on random port
+var orderPort = await Mock.StartAsync(new {
+    id = "order-svc",
+    title = "Order Service",
+    controllers = new[] { new {
+        basePath = "/api/orders",
+        endpoints = new object[] {
+            new { method = "GET", path = "",       summary = "List orders",
+                  mockResponse = new { status = 200, body = @"[{""id"":1001,""userId"":2,""total"":148.99,""status"":""confirmed""},{""id"":1002,""userId"":1,""total"":79.99,""status"":""shipped""}]" } },
+            new { method = "GET", path = "/{id}",  summary = "Get order",
+                  mockResponse = new { status = 200, body = @"{""id"":{{id}},""userId"":2,""items"":[{""productId"":42,""qty"":1,""price"":79.99},{""productId"":17,""qty"":2,""price"":34.50}],""total"":148.99}" } },
+            new { method = "POST", path = "",      summary = "Create order",
+                  mockResponse = new { status = 201, body = @"{""id"":1003,""created"":true}" } },
+        }
+    } }
+});
+Display.StatCard("Order Service", $":{orderPort}", color: "#e0a040", icon: "📦");`), columns: 3 };
+
+  const productSvc = { ...cs(`// Product Service — mock on random port
+var productPort = await Mock.StartAsync(new {
+    id = "product-svc",
+    title = "Product Service",
+    controllers = new[] { new {
+        basePath = "/api/products",
+        endpoints = new object[] {
+            new { method = "GET", path = "",       summary = "List products",
+                  mockResponse = new { status = 200, body = @"[{""id"":42,""name"":""Wireless Keyboard"",""price"":79.99,""stock"":150},{""id"":17,""name"":""USB-C Hub"",""price"":34.50,""stock"":89}]" } },
+            new { method = "GET", path = "/{id}",  summary = "Get product",
+                  mockResponse = new { status = 200, body = @"{""id"":{{id}},""name"":""Wireless Keyboard"",""price"":79.99,""stock"":150}" } },
+        }
+    } }
+});
+Display.StatCard("Product Service", $":{productPort}", color: "#c084d0", icon: "🛒");`), columns: 3 };
+
+  // Health + sidebar in 2 columns
+  const healthCheck = { ...cs(`// Verify all services are reachable
+var endpoints = new[] {
+    ("Gateway",  "http://localhost:8080"),
+    ("User API", $"http://localhost:{userPort}/api/users"),
+    ("Orders",   $"http://localhost:{orderPort}/api/orders"),
+    ("Products", $"http://localhost:{productPort}/api/products"),
+};
+
+var sb = new System.Text.StringBuilder();
+sb.AppendLine("<table style='width:100%;border-collapse:collapse'>");
+sb.AppendLine("<tr style='border-bottom:1px solid #333'><th style='text-align:left;padding:6px 8px'>Service</th><th style='padding:6px 8px'>Status</th><th style='padding:6px 8px'>Latency</th></tr>");
+
+foreach (var (name, url) in endpoints) {
+    var sw = System.Diagnostics.Stopwatch.StartNew();
+    bool ok = false;
+    try {
+        using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
+        var resp = await client.GetAsync(url);
+        ok = resp.IsSuccessStatusCode;
+    } catch { }
+    sw.Stop();
+    var color = ok ? "#4ec9b0" : "#e06070";
+    var icon = ok ? "●" : "○";
+    sb.AppendLine($"<tr><td style='padding:4px 8px'>{name}</td><td style='padding:4px 8px;color:{color};font-weight:600'>{icon} {(ok ? "Healthy" : "Down")}</td><td style='padding:4px 8px;color:#888;font-family:monospace'>{sw.ElapsedMilliseconds}ms</td></tr>");
+}
+sb.AppendLine("</table>");
+Display.Html(sb.ToString());`, 'html'), columns: 2 };
+
+  const healthNotes = { ...cs(`Display.Html(@"<div style='background:#111118;border:1px solid #333;border-radius:6px;padding:14px;font-size:12px;color:#aaa;line-height:1.7'>
+<div style='color:#569cd6;font-weight:600;margin-bottom:8px'>📋 Health Check Notes</div>
+<div>• The Gateway responds even without upstream config — nginx returns its default page</div>
+<div>• Mock services start on random ports above 9000 and are assigned automatically</div>
+<div>• Latency shown is round-trip from the kernel process, not end-user latency</div>
+<div>• If a service shows as Down, run its cell above to start it</div>
+<div style='margin-top:8px;color:#4ec9b0'>💡 <strong>Tip:</strong> Use <code>Mock.ListAsync()</code> to see all running mocks with their ports</div>
+</div>");`, 'html'), columns: 2 };
+
+  // Cross-service call + sidebar
+  const crossCall = { ...cs(`// Simulate Order Service assembling an order from multiple services
+using var http = new HttpClient();
+var user = await http.GetStringAsync($"http://localhost:{userPort}/api/users/2");
+var product1 = await http.GetStringAsync($"http://localhost:{productPort}/api/products/42");
+var product2 = await http.GetStringAsync($"http://localhost:{productPort}/api/products/17");
+
+var order = new {
+    orderId = 1001,
+    buyer = System.Text.Json.JsonSerializer.Deserialize<object>(user),
+    items = new[] {
+        System.Text.Json.JsonSerializer.Deserialize<object>(product1),
+        System.Text.Json.JsonSerializer.Deserialize<object>(product2),
+    },
+    total = 148.99,
+    status = "confirmed",
+};
+order.Display();`), columns: 2 };
+
+  const crossNotes = { ...cs(`Display.Html(@"<div style='background:#111118;border:1px solid #333;border-radius:6px;padding:14px;font-size:12px;color:#aaa;line-height:1.7'>
+<div style='color:#e0a040;font-weight:600;margin-bottom:8px'>🔗 Service Communication</div>
+<div>This cell demonstrates the <strong>API composition</strong> pattern:</div>
+<div style='margin:6px 0 6px 12px;font-family:monospace;font-size:11px;color:#888'>
+Order Service → User Service (resolve buyer)<br/>
+Order Service → Product Service × 2 (item details)<br/>
+Order Service → assemble response
+</div>
+<div>In a real mesh, an Envoy/Istio sidecar proxies these calls, adding:</div>
+<div>• Circuit breaking &amp; retries</div>
+<div>• mTLS encryption</div>
+<div>• Distributed tracing headers</div>
+<div>• Load balancing across replicas</div>
+</div>");`, 'html'), columns: 2 };
+
+  return [
+    md(`# Service Mesh Simulation
+
+A fully automated **microservice mesh** using Docker containers for infrastructure, \`Mock\` API for services, and the new column layout. **Run All** to spin up everything.`),
+
+    cs(`Display.Marquee("  🚀  SERVICE MESH DEMO  ●  Docker + Mock APIs + Column Layouts  ●  Run All to start  ●  ", speed: 25, color: "#569cd6", background: "#0a0a12");`),
+
+    md('## Infrastructure — Docker Containers'),
+    gateway, redis, postgres,
+
+    md('## Mock API Services'),
+    userSvc, orderSvc, productSvc,
+
+    md('## Health Check'),
+    healthCheck, healthNotes,
+
+    md('## Cross-Service Communication'),
+    crossCall, crossNotes,
+
+    md('## Service Dashboard'),
+    cs(`// Render live dashboard from running mocks
+var mocks = await Mock.ListAsync();
+var html = new System.Text.StringBuilder();
+html.AppendLine("<div style='display:grid;grid-template-columns:repeat(3,1fr);gap:10px'>");
+foreach (var svc in mocks) {
+    html.AppendLine($@"<div style='background:#1a1a22;border:1px solid #333;border-left:3px solid #4ec9b0;border-radius:6px;padding:12px'>
+  <div style='font-weight:600;color:#4ec9b0;margin-bottom:4px'>{svc.Title}</div>
+  <div style='font-size:11px;color:#888'>Mock API · <span style=""color:#4ec9b0"">:{svc.Port}</span></div>
+</div>");
+}
+
+// Add Docker containers
+foreach (var c in new[] { ("API Gateway", "8080", "#569cd6"), ("Redis Cache", "6379", "#e06070"), ("Postgres DB", "5432", "#b48ead") }) {
+    var running = Docker.IsRunning($"mesh-{(c.Item1 == "API Gateway" ? "gateway" : c.Item1 == "Redis Cache" ? "cache" : "db")}");
+    var status = running ? "Running" : "Stopped";
+    var statusColor = running ? "#4ec9b0" : "#e06070";
+    html.AppendLine($@"<div style='background:#1a1a22;border:1px solid #333;border-left:3px solid {c.Item3};border-radius:6px;padding:12px'>
+  <div style='font-weight:600;color:{c.Item3};margin-bottom:4px'>{c.Item1}</div>
+  <div style='font-size:11px;color:#888'>Docker · :{c.Item2} · <span style=""color:{statusColor}"">{status}</span></div>
+</div>");
+}
+html.AppendLine("</div>");
+Display.Html(html.ToString());`, 'html'),
+
+    md('## Cleanup'),
+    cs(`// Stop all mock servers and Docker containers in one call
+await Mock.StopAllAsync();
+Docker.StopAndRemove("mesh-gateway");
+Docker.StopAndRemove("mesh-cache");
+Docker.StopAndRemove("mesh-db");
+Display.Html("<div style='color:#4ec9b0;font-weight:600'>✓ All services stopped and cleaned up.</div>");`),
+
+    md(`---
+
+### API Reference
+
+| API | Description |
+|-----|-------------|
+| \`Mock.StartAsync(apiDef, port?)\` | Start a mock server, returns assigned port |
+| \`Mock.StopAsync(id)\` | Stop a mock server by ID |
+| \`Mock.StopAllAsync()\` | Stop all running mock servers |
+| \`Mock.ListAsync()\` | List all running mocks (id, port, title) |
+| \`Docker.Run(image, ...)\` | Start a container, returns ID |
+| \`Docker.Stop(id)\` / \`Docker.Remove(id)\` | Stop / remove a container |
+| \`Docker.StopAndRemove(id)\` | Stop + remove (ignores errors) |
+| \`Docker.StopAllTracked()\` | Stop all session containers |
+| \`Docker.IsRunning(id)\` | Check container status |
+| \`Docker.List()\` | List all containers |
+
+> **Tip:** Use **File → Export as Docker Compose…** to export infrastructure as a standalone \`docker-compose.yml\`.`),
+  ];
+}
+
 export function createNotebook(templateKey = null) {
   return {
     id: uuidv4(),
@@ -1843,10 +2594,13 @@ export function createNotebook(templateKey = null) {
     regexPanelOpen: false,
     historyPanelOpen: false,
     depsPanelOpen: false,
+    embedPanelOpen: false,
     outputHistory: {},
     staleCellIds: [],
     autoRun: false,
     pipelines: [],
+    embeddedFiles: [],
+    retainedResults: {},
     breakpoints: {},
     debugState: null,
   };

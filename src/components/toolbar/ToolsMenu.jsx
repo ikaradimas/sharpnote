@@ -4,7 +4,7 @@ import { Wrench } from 'lucide-react';
 import {
   IconReset, IconConfig, IconPackages, IconLogs, IconDB,
   IconVars, IconToC, IconLibrary, IconFiles, IconApi,
-  IconGraph, IconTodo, IconRegex, IconKafka, IconData, IconDeps, IconHistory, IconApiEditor, IconGit,
+  IconGraph, IconTodo, IconRegex, IconKafka, IconData, IconDeps, IconHistory, IconApiEditor, IconGit, IconEmbed,
 } from './Icons.jsx';
 
 export function ToolsMenu({
@@ -26,6 +26,7 @@ export function ToolsMenu({
   kafkaPanelOpen, onToggleKafka,
   depsPanelOpen, onToggleDeps,
   historyPanelOpen, onToggleHistory,
+  embedPanelOpen, onToggleEmbed,
   onCloseAllPanels,
   onImportData,
 }) {
@@ -84,8 +85,9 @@ export function ToolsMenu({
     { icon: <IconTodo />,      label: 'To Do',             action: onToggleTodo,     active: todoPanelOpen },
     { icon: <IconRegex />,     label: 'Regex',             action: onToggleRegex,    active: regexPanelOpen },
     { icon: <IconKafka />,     label: 'Kafka',             action: onToggleKafka,    active: kafkaPanelOpen },
-    { icon: <IconDeps />,      label: 'Dependencies',      action: onToggleDeps,     active: depsPanelOpen },
+    { icon: <IconDeps />,      label: 'Orchestration',     action: onToggleDeps,     active: depsPanelOpen },
     { icon: <IconHistory />,   label: 'History',            action: onToggleHistory,  active: historyPanelOpen },
+    { icon: <IconEmbed />,    label: 'Embedded Files',     action: onToggleEmbed,    active: embedPanelOpen },
   ];
 
   const anyPanelActive = panelItems.some((p) => p.active);

@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { useCellDependencies } from '../../hooks/useCellDependencies.js';
 import { CELL_COLORS } from '../../notebook-factory.js';
 import { CellNodeContextMenu } from './dep/CellNodeContextMenu.jsx';
@@ -10,61 +10,148 @@ const TYPE_COLORS = {
   check:    '#4ec9b0',
   http:     '#e0a040',
   shell:    '#4ec9b0',
+  docker:   '#0db7ed',
   decision: '#c586c0',
+};
+
+const TYPE_ICONS = {
+  code:     'C#',
+  sql:      'SQL',
+  http:     '⇄',
+  shell:    '>_',
+  docker:   '🐳',
+  check:    '✓',
+  decision: '◇',
 };
 
 const NODE_W = 140;
 const NODE_H = 36;
 const DIAMOND_SIZE = 38;
 const H_GAP = 50;
-const V_GAP = 24;
+const V_GAP = 40;
 const PAD = 24;
+const HEADER_H = 30;
 
-function layerNodes(nodes, edges) {
-  const inDegree = {};
-  const adj = {};
-  for (const n of nodes) { inDegree[n.id] = 0; adj[n.id] = []; }
-  for (const e of edges) { inDegree[e.to] = (inDegree[e.to] || 0) + 1; adj[e.from]?.push(e.to); }
+function layerNodes(nodes, edges, availableH = 600) {
+  const outAdj = {}, inAdj = {};
+  for (const n of nodes) { outAdj[n.id] = []; inAdj[n.id] = []; }
+  for (const e of edges) { outAdj[e.from]?.push(e.to); inAdj[e.to]?.push(e.from); }
 
-  const layers = {};
-  const queue = nodes.filter((n) => inDegree[n.id] === 0).map((n) => n.id);
-  for (const id of queue) layers[id] = 0;
-
+  // Longest-path layering (topological)
+  const inDeg = {};
+  for (const n of nodes) inDeg[n.id] = inAdj[n.id].length;
+  const layer = {};
+  const queue = nodes.filter((n) => inDeg[n.id] === 0).map((n) => n.id);
+  for (const id of queue) layer[id] = 0;
   let head = 0;
   while (head < queue.length) {
     const id = queue[head++];
-    for (const to of adj[id] || []) {
-      layers[to] = Math.max(layers[to] || 0, (layers[id] || 0) + 1);
-      inDegree[to]--;
-      if (inDegree[to] === 0) queue.push(to);
+    for (const to of outAdj[id]) {
+      layer[to] = Math.max(layer[to] || 0, layer[id] + 1);
+      if (--inDeg[to] === 0) queue.push(to);
     }
   }
-  for (const n of nodes) { if (!(n.id in layers)) layers[n.id] = 0; }
+  for (const n of nodes) { if (!(n.id in layer)) layer[n.id] = 0; }
 
+  // Promote nodes left to reduce width: move each node to the earliest
+  // layer that is still >= all predecessors + 1 (or 0 if no predecessors).
+  // This packs the graph tighter horizontally.
+  for (const n of nodes) {
+    const preds = inAdj[n.id];
+    if (preds.length === 0) { layer[n.id] = 0; continue; }
+    layer[n.id] = Math.max(...preds.map((p) => layer[p] + 1));
+  }
+
+  // Group by layer
   const byLayer = {};
   for (const n of nodes) {
-    const l = layers[n.id];
+    const l = layer[n.id];
     if (!byLayer[l]) byLayer[l] = [];
     byLayer[l].push(n);
   }
 
+  // Compact — remove empty layers
+  const keys = Object.keys(byLayer).map(Number).sort((a, b) => a - b);
+  const compacted = {};
+  keys.forEach((k, i) => { compacted[i] = byLayer[k]; });
+
+  // Compute positions with wrapping
   const positions = {};
-  const maxLayer = Math.max(0, ...Object.keys(byLayer).map(Number));
+  const maxLayer = Math.max(0, ...Object.keys(compacted).map(Number));
+  const topY = PAD + HEADER_H;
+
+  // Determine how many nodes fit vertically before wrapping needs a new row
+  const usableH = Math.max(availableH - topY - PAD, NODE_H + V_GAP);
+  const maxNodesPerCol = Math.max(1, Math.floor((usableH + V_GAP) / (NODE_H + V_GAP)));
+
+  let col = 0;        // current visual column
+  let rowOffset = 0;  // vertical offset for wrapped rows
+
   for (let l = 0; l <= maxLayer; l++) {
-    const items = byLayer[l] || [];
+    const items = compacted[l] || [];
+
+    // If this layer has more items than fit, they stack normally (overflow is ok within a layer)
     for (let i = 0; i < items.length; i++) {
       positions[items[i].id] = {
-        x: PAD + l * (NODE_W + H_GAP),
-        y: PAD + i * (NODE_H + V_GAP),
+        x: PAD + col * (NODE_W + H_GAP),
+        y: topY + rowOffset + i * (NODE_H + V_GAP),
       };
+    }
+    col++;
+
+    // Check if next layer should wrap: if current column reached the edge
+    // and there's room to start a new row below
+    const nextItems = compacted[l + 1] || [];
+    if (nextItems.length > 0) {
+      const nextLayerH = nextItems.length * (NODE_H + V_GAP);
+      const currentMaxY = items.length * (NODE_H + V_GAP);
+      const rowH = Math.max(currentMaxY, nextLayerH);
+      // Wrap if we've used enough horizontal space (more than 4 columns)
+      // and the next layer would fit starting a new row
+      if (col >= 4 && rowH <= usableH) {
+        rowOffset += Math.max(...Array.from({ length: col }, (_, c) => {
+          const layerIdx = l - col + 1 + c;
+          return (compacted[layerIdx]?.length || 0) * (NODE_H + V_GAP);
+        })) + V_GAP;
+        col = 0;
+      }
     }
   }
 
-  const totalW = PAD * 2 + (maxLayer + 1) * (NODE_W + H_GAP) - H_GAP;
-  const maxPerLayer = Math.max(1, ...Object.values(byLayer).map((a) => a.length));
-  const totalH = PAD * 2 + maxPerLayer * (NODE_H + V_GAP) - V_GAP;
+  // Compute total bounds from actual positions
+  let maxX = 0, maxY = 0;
+  for (const p of Object.values(positions)) {
+    maxX = Math.max(maxX, p.x + NODE_W);
+    maxY = Math.max(maxY, p.y + NODE_H);
+  }
+  const totalW = maxX + PAD;
+  const totalH = maxY + PAD;
 
-  return { positions, totalW, totalH };
+  return { positions, totalW, totalH, maxLayer };
+}
+
+const DIAMOND_R = DIAMOND_SIZE * Math.SQRT2 / 2;
+const ARROW_PAD = 6; // space for arrowhead to be visible outside node
+
+function getNodeRight(pos, node) {
+  const cx = pos.x + NODE_W / 2, cy = pos.y + NODE_H / 2;
+  if (node.type === 'decision') return { x: cx + DIAMOND_R, y: cy };
+  return { x: pos.x + NODE_W, y: cy };
+}
+function getNodeLeft(pos, node) {
+  const cx = pos.x + NODE_W / 2, cy = pos.y + NODE_H / 2;
+  if (node.type === 'decision') return { x: cx - DIAMOND_R - ARROW_PAD, y: cy };
+  return { x: pos.x - ARROW_PAD, y: cy };
+}
+function getNodeBottom(pos, node) {
+  const cx = pos.x + NODE_W / 2, cy = pos.y + NODE_H / 2;
+  if (node.type === 'decision') return { x: cx, y: cy + DIAMOND_R };
+  return { x: cx, y: pos.y + NODE_H };
+}
+function getNodeTop(pos, node) {
+  const cx = pos.x + NODE_W / 2, cy = pos.y + NODE_H / 2;
+  if (node.type === 'decision') return { x: cx, y: cy - DIAMOND_R - ARROW_PAD };
+  return { x: cx, y: pos.y - ARROW_PAD };
 }
 
 function getNodeColor(node) {
@@ -114,9 +201,21 @@ export function DependencyPanel({
 }) {
   const { nodes, edges } = useCellDependencies(notebook);
 
-  const { positions, totalW, totalH } = useMemo(
-    () => layerNodes(nodes, edges),
-    [nodes, edges]
+  const scrollRef = useRef(null);
+  const [scrollH, setScrollH] = useState(600);
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => setScrollH(entry.contentRect.height));
+    ro.observe(el);
+    setScrollH(el.clientHeight);
+    return () => ro.disconnect();
+  }, []);
+
+  const explicitEdges = useMemo(() => edges.filter((e) => !e.implicit), [edges]);
+  const { positions, totalW, totalH, maxLayer } = useMemo(
+    () => layerNodes(nodes, explicitEdges, scrollH),
+    [nodes, explicitEdges, scrollH]
   );
 
   // Zoom/pan state
@@ -168,14 +267,14 @@ export function DependencyPanel({
       });
       return;
     }
-    // Single click runs the cell
-    const cell = notebook?.cells.find((c) => c.id === node.id);
-    if (cell && notebookId) dispatchRun?.(notebookId, cell);
-  }, [selectionMode, notebook, notebookId, dispatchRun]);
+    // Single click navigates to the cell
+    onNavigateToCell?.(node.id);
+  }, [selectionMode, onNavigateToCell]);
 
   const handleNodeDblClick = useCallback((e, node) => {
-    onNavigateToCell?.(node.id);
-  }, [onNavigateToCell]);
+    const cell = notebook?.cells.find((c) => c.id === node.id);
+    if (cell && notebookId) dispatchRun?.(notebookId, cell);
+  }, [notebook, notebookId, dispatchRun]);
 
   const handleContextMenu = useCallback((e, node) => {
     e.preventDefault();
@@ -188,6 +287,7 @@ export function DependencyPanel({
   }, []);
 
   const fitAll = useCallback(() => { setZoom(1); setPan({ x: 0, y: 0 }); }, []);
+  const nodeMap = useMemo(() => Object.fromEntries(nodes.map((n) => [n.id, n])), [nodes]);
 
   if (nodes.length === 0) {
     return (
@@ -204,7 +304,7 @@ export function DependencyPanel({
     <div className="dependency-panel">
       <div className="dependency-panel-header">
         <span className="dependency-panel-title">Orchestration</span>
-        <span className="dependency-panel-info">{nodes.length} cells · {edges.length} edges</span>
+        <span className="dependency-panel-info">{nodes.length} cells · {edges.filter((e) => !e.implicit).length} edges</span>
         <div className="dep-zoom-controls">
           <button className="dep-zoom-btn" onClick={() => setZoom((z) => Math.min(3, z + 0.2))} title="Zoom in">+</button>
           <span className="dep-zoom-label">{Math.round(zoom * 100)}%</span>
@@ -216,6 +316,7 @@ export function DependencyPanel({
         </div>
       </div>
       <div
+        ref={scrollRef}
         className="dependency-panel-scroll"
         onWheel={handleWheel}
         onMouseDown={handleMouseDown}
@@ -243,22 +344,63 @@ export function DependencyPanel({
                       markerWidth="6" markerHeight="6" orient="auto-start-reverse">
                 <path d="M 0 0 L 10 5 L 0 10 z" fill="#e05050" />
               </marker>
+              <marker id="dep-arrow-implicit" viewBox="0 0 10 10" refX="9" refY="5"
+                      markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#2a3545" />
+              </marker>
             </defs>
+
+            {/* Layer backgrounds and labels */}
+            {Array.from({ length: maxLayer + 1 }, (_, l) => {
+              const lx = PAD + l * (NODE_W + H_GAP) - 8;
+              const lw = NODE_W + 16;
+              return (
+                <g key={`layer-${l}`}>
+                  <rect x={lx} y={PAD} width={lw} height={totalH - PAD * 2}
+                    rx="6" fill={l % 2 === 0 ? 'rgba(255,255,255,0.015)' : 'rgba(255,255,255,0.03)'}
+                    stroke="rgba(255,255,255,0.04)" strokeWidth="1" />
+                  <text x={lx + lw / 2} y={PAD + 12} textAnchor="middle" className="dep-layer-label">
+                    {l === 0 ? 'Entry' : `Layer ${l}`}
+                  </text>
+                </g>
+              );
+            })}
 
             {/* Edges */}
             {edges.map((e, i) => {
               const from = positions[e.from];
               const to = positions[e.to];
               if (!from || !to) return null;
-              const x1 = from.x + NODE_W;
-              const y1 = from.y + NODE_H / 2;
-              const x2 = to.x;
-              const y2 = to.y + NODE_H / 2;
-              const mx = (x1 + x2) / 2;
 
               const isFlowing = executionProgress && completedSet.has(e.from) &&
                 (executionProgress.activeCellId === e.to || executionProgress.queue?.includes(e.to));
               const isComplete = completedSet.has(e.from) && completedSet.has(e.to);
+
+              const fromNode = nodeMap[e.from];
+              const toNode = nodeMap[e.to];
+
+              // Implicit sequential edges: draw a straight vertical dotted arrow
+              if (e.implicit) {
+                const p1 = getNodeBottom(from, fromNode);
+                const p2 = getNodeTop(to, toNode);
+                return (
+                  <g key={`e-${i}`}>
+                    <line
+                      x1={p1.x} y1={p1.y + 2} x2={p2.x} y2={p2.y - 2}
+                      stroke={isComplete ? '#4ec9b040' : '#2a3545'}
+                      strokeWidth={1}
+                      strokeDasharray="3 3"
+                      markerEnd="url(#dep-arrow-implicit)"
+                    />
+                  </g>
+                );
+              }
+
+              const p1 = getNodeRight(from, fromNode);
+              const p2 = getNodeLeft(to, toNode);
+              const x1 = p1.x, y1 = p1.y, x2 = p2.x, y2 = p2.y;
+              const mx = (x1 + x2) / 2;
+
               const isBranch = !!e.branch;
               const branchColor = e.branch === 'true' ? '#4ec9b0'
                 : e.branch === 'false' ? '#e05050'
@@ -336,11 +478,12 @@ export function DependencyPanel({
                       strokeDasharray={isSelected ? '4 2' : 'none'}
                     />
                   )}
-                  <text x={pos.x + 8} y={pos.y + NODE_H / 2 + 4} className="dep-node-label">
-                    {n.label.length > 16 ? n.label.slice(0, 16) + '…' : n.label}
+                  <text x={pos.x + 22} y={pos.y + NODE_H / 2 + 4} className="dep-node-label">
+                    {n.label.length > 14 ? n.label.slice(0, 14) + '…' : n.label}
                   </text>
-                  <text x={pos.x + NODE_W - 6} y={pos.y + 12} textAnchor="end" className="dep-node-type">
-                    {n.type}
+                  <rect x={pos.x + 3} y={pos.y + NODE_H / 2 - 7} width={16} height={14} rx="3" fill={color} fillOpacity="0.2" />
+                  <text x={pos.x + 11} y={pos.y + NODE_H / 2 + 3} textAnchor="middle" className="dep-node-type-icon" fill={color}>
+                    {TYPE_ICONS[n.type] || n.type[0].toUpperCase()}
                   </text>
                   {statusFill && (
                     <circle

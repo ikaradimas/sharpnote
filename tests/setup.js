@@ -1,4 +1,4 @@
-import { vi, beforeEach } from 'vitest';
+import { vi, beforeEach, afterEach } from 'vitest';
 import '@testing-library/jest-dom';
 
 // ── Mock heavy external modules ───────────────────────────────────────────────
@@ -182,5 +182,13 @@ if (typeof window !== 'undefined') {
       writable: true,
       configurable: true,
     });
+  });
+
+  // Flush pending React state updates between tests so async useEffect microtasks
+  // (e.g. from component-mount API calls) don't leak across test boundaries.
+  afterEach(async () => {
+    const { act, cleanup } = await import('@testing-library/react');
+    await act(async () => {});
+    cleanup();
   });
 }

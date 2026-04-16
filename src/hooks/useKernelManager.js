@@ -45,7 +45,7 @@ function prepareCellRun(setNb, pendingResolversRef, notebookId, cellId, resolve)
  * @param {function} opts.onPanelCloseAll     - () — close all open panels
  * @param {function} opts.setDbConnections    - DB connections state setter
  */
-export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVarInspectDialog, onPanelVisible, onPanelDock, onPanelFloat, onPanelCloseAll, setDbConnections }) {
+export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVarInspectDialog, onPanelVisible, onPanelDock, onPanelFloat, onPanelCloseAll, onApiEditorLoad, setDbConnections }) {
   const pendingResolversRef = useRef({});
   const prevVarsSnapRef       = useRef({});
   const runAllRef             = useRef(null);
@@ -79,6 +79,14 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
           const nb = notebooksRef.current.find((n) => n.id === notebookId);
           if (!nb) break;
 
+          // Send embedded files to kernel
+          if (nb.embeddedFiles?.length > 0) {
+            window.electronAPI.sendToKernel(notebookId, {
+              type: 'set_embedded_files',
+              files: nb.embeddedFiles,
+            });
+          }
+
           // Auto-run on open
           if (nb.autoRun) {
             setTimeout(() => runAllRef.current?.(notebookId), 200);
@@ -93,6 +101,18 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
                   await runCell(notebookId, cell);
                 }
               }, 200);
+            }
+
+            // Auto-execute docker cells with runOnStartup
+            const startupDockerCells = nb.cells.filter((c) => c.type === 'docker' && c.runOnStartup && c.image);
+            if (startupDockerCells.length > 0) {
+              setTimeout(async () => {
+                for (const cell of startupDockerCells) {
+                  const nbNow = notebooksRef.current.find((n) => n.id === notebookId);
+                  if (!nbNow || nbNow.kernelStatus !== 'ready') break;
+                  await runDockerCell(notebookId, cell);
+                }
+              }, 300);
             }
           }
 
@@ -241,12 +261,19 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
           }));
           break;
 
-        case 'memory_mb':
-          setNb(notebookId, (n) => ({
-            memoryHistory: [...n.memoryHistory.slice(-59), msg.mb],
-            memoryWarning: msg.mb > 1024 ? `Kernel memory: ${Math.round(msg.mb)}MB` : null,
-          }));
+        case 'memory_mb': {
+          const gc = msg.gc ?? 0;
+          setNb(notebookId, (n) => {
+            const prevGc = n._lastGcCount ?? 0;
+            const gcHappened = gc > prevGc;
+            return {
+              memoryHistory: [...n.memoryHistory.slice(-59), { mb: msg.mb, gc: gcHappened }],
+              memoryWarning: msg.mb > 1024 ? `Kernel memory: ${Math.round(msg.mb)}MB` : null,
+              _lastGcCount: gc,
+            };
+          });
           break;
+        }
 
         case 'var_point':
           setNb(notebookId, (n) => {
@@ -273,6 +300,63 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
 
         case 'vars_update':
           setNb(notebookId, { vars: msg.vars });
+          break;
+
+        case 'docker_started':
+          setNb(notebookId, (n) => ({
+            cells: n.cells.map((c) =>
+              c.id === msg.id ? { ...c, containerId: msg.containerId, containerState: 'running' } : c
+            ),
+          }));
+          break;
+
+        case 'docker_stopped':
+          setNb(notebookId, (n) => ({
+            cells: n.cells.map((c) =>
+              c.id === msg.id ? { ...c, containerId: null, containerState: 'stopped' } : c
+            ),
+          }));
+          break;
+
+        case 'docker_status': {
+          const newState = msg.running ? 'running' : 'stopped';
+          const newPorts = msg.ports || '';
+          setNb(notebookId, (n) => ({
+            cells: n.cells.map((c) => {
+              if (c.id !== msg.id) return c;
+              if (c.containerState === newState && c.containerPorts === newPorts) return c;
+              return { ...c, containerState: newState, containerPorts: newPorts };
+            }),
+          }));
+          break;
+        }
+
+        case 'docker_logs':
+          setNb(notebookId, (n) => ({
+            cells: n.cells.map((c) =>
+              c.id === msg.id ? { ...c, containerLogs: msg.logs || '' } : c
+            ),
+          }));
+          break;
+
+        case 'file_embed':
+          setNb(notebookId, (n) => {
+            const idx = (n.embeddedFiles || []).findIndex(f => f.name === msg.name);
+            const file = { name: msg.name, filename: msg.filename, mimeType: msg.mimeType,
+                           content: msg.content, encoding: msg.encoding || 'base64', variables: msg.variables || {} };
+            const files = idx >= 0
+              ? n.embeddedFiles.map((f, i) => i === idx ? file : f)
+              : [...(n.embeddedFiles || []), file];
+            return { embeddedFiles: files };
+          });
+          break;
+
+        case 'file_var_set':
+          setNb(notebookId, (n) => ({
+            embeddedFiles: (n.embeddedFiles || []).map(f =>
+              f.name === msg.name ? { ...f, variables: { ...f.variables, [msg.key]: msg.value } } : f
+            ),
+          }));
           break;
 
         case 'graph_clear':
@@ -303,6 +387,10 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
 
         case 'panel_close_all':
           onPanelCloseAll?.();
+          break;
+
+        case 'api_editor_load':
+          onApiEditorLoad?.(msg.apiIdOrTitle);
           break;
 
         // ── DB management ───────────────────────────────────────────────────────
@@ -605,6 +693,52 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
     });
   }, [setNb]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const runDockerCell = useCallback((notebookId, cell) => {
+    if (!window.electronAPI || cell.type !== 'docker') return Promise.resolve();
+
+    return new Promise((resolve) => {
+      prepareCellRun(setNb, pendingResolversRef, notebookId, cell.id, resolve);
+      window.electronAPI.sendToKernel(notebookId, {
+        type: 'execute_docker',
+        id: cell.id,
+        image: cell.image || '',
+        containerName: cell.containerName || '',
+        ports: cell.ports || '',
+        env: cell.env || '',
+        volume: cell.volume || '',
+        command: cell.command || '',
+      });
+    });
+  }, [setNb]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const stopDockerCell = useCallback((notebookId, cellId, containerId) => {
+    if (!window.electronAPI) return;
+    window.electronAPI.sendToKernel(notebookId, {
+      type: 'stop_docker',
+      id: cellId,
+      containerId,
+    });
+  }, []);
+
+  const pollDockerStatus = useCallback((notebookId, cellId, containerId) => {
+    if (!window.electronAPI) return;
+    window.electronAPI.sendToKernel(notebookId, {
+      type: 'docker_status',
+      id: cellId,
+      containerId,
+    });
+  }, []);
+
+  const fetchDockerLogs = useCallback((notebookId, cellId, containerId) => {
+    if (!window.electronAPI) return;
+    window.electronAPI.sendToKernel(notebookId, {
+      type: 'docker_logs',
+      id: cellId,
+      containerId,
+      tail: 200,
+    });
+  }, []);
+
   const runCheckCell = useCallback(async (notebookId, cell) => {
     if (!window.electronAPI || cell.type !== 'check') return;
     const nb = notebooksRef.current.find((n) => n.id === notebookId);
@@ -710,6 +844,10 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
     runSqlCell,
     runHttpCell,
     runShellCell,
+    runDockerCell,
+    stopDockerCell,
+    pollDockerStatus,
+    fetchDockerLogs,
     runCheckCell,
     runDecisionCell,
     runAll,

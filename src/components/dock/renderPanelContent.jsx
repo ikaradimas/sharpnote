@@ -15,6 +15,7 @@ import { HistoryPanel } from '../panels/HistoryPanel.jsx';
 import { DependencyPanel } from '../panels/DependencyPanel.jsx';
 import { ApiEditorPanel } from '../panels/ApiEditorPanel.jsx';
 import { GitPanel } from '../panels/GitPanel.jsx';
+import { EmbedPanel } from '../panels/EmbedPanel.jsx';
 
 export function renderPanelContent(panelId, p) {
   if (!p) return null;
@@ -35,6 +36,7 @@ export function renderPanelContent(panelId, p) {
     case 'regex':   return <RegexPanel {...p} />;
     case 'history': return <HistoryPanel {...p} />;
     case 'deps':    return <DependencyPanel {...p} />;
+    case 'embed':   return <EmbedPanel {...p} />;
     default:        return null;
   }
 }

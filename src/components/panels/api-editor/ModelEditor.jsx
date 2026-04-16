@@ -53,10 +53,12 @@ export function ModelEditor({ model, modelNames, onUpdate, onDelete }) {
             {model.fields.map((f, i) => (
               <div key={i} className="api-ed-field-row">
                 <input className="api-ed-field-col-name" value={f.name} onChange={(e) => updateField(i, 'name', e.target.value)} placeholder="field" spellCheck={false} />
-                <select className="api-ed-field-col-type" value={TYPE_OPTIONS.includes(f.type?.toLowerCase()) ? f.type.toLowerCase() : ''} onChange={(e) => updateField(i, 'type', e.target.value)}>
+                <select className="api-ed-field-col-type" value={TYPE_OPTIONS.includes(f.type?.toLowerCase()) ? f.type.toLowerCase() : (f.type || '')} onChange={(e) => updateField(i, 'type', e.target.value)}>
                   <option value="">custom…</option>
                   {TYPE_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
                   {modelNames.filter(n => n !== model.name).map(n => <option key={n} value={n}>{n}</option>)}
+                  {modelNames.filter(n => n !== model.name).length > 0 && <option disabled>──────</option>}
+                  {modelNames.filter(n => n !== model.name).map(n => <option key={`list-${n}`} value={`List<${n}>`}>List&lt;{n}&gt;</option>)}
                 </select>
                 <input type="checkbox" className="api-ed-field-col-req" checked={f.required} onChange={(e) => updateField(i, 'required', e.target.checked)} />
                 <input className="api-ed-field-col-desc" value={f.description || ''} onChange={(e) => updateField(i, 'description', e.target.value)} placeholder="description" />

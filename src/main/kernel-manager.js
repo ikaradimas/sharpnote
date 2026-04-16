@@ -78,9 +78,10 @@ function startKernelForId(notebookId) {
   const rl = readline.createInterface({ input: kernelProcess.stdout });
 
   const lineHandler = (line) => {
-    if (!line.trim()) return;
+    const trimmed = line.trim();
+    if (!trimmed || trimmed[0] !== '{') return; // skip non-JSON lines (e.g. MSBuild output from dotnet run)
     try {
-      const msg = JSON.parse(line);
+      const msg = JSON.parse(trimmed);
 
       if (msg.type === 'ready') {
         entry.ready = true;
@@ -134,6 +135,12 @@ function startKernelForId(notebookId) {
       }
       if (msg.type === 'db_error') {
         _writeLog('DB', `Connection failed: ${msg.message}`);
+      }
+
+      // Intercept mock_request messages: kernel → main process → mock-server.js
+      if (msg.type === 'mock_request' && msg.requestId) {
+        handleMockRequest(msg, entry.process).catch(() => {});
+        return; // don't forward to renderer
       }
 
       _notifyWindow(notebookId, msg);
@@ -299,6 +306,44 @@ function register(ipcMain, { mainWindow, app, writeLog } = {}) {
       entry.process.stdin.write(JSON.stringify({ type: 'interrupt' }) + '\n');
     }
   });
+}
+
+// ── Mock server bridge (kernel → main process) ──────────────────────────────
+
+const mockServer = require('./mock-server.js');
+
+async function handleMockRequest(msg, kernelProcess) {
+  const { requestId, action, payload } = msg;
+  let data = {};
+  try {
+    switch (action) {
+      case 'start': {
+        const result = await mockServer.startMockServer(payload.apiDef, payload.port || 0);
+        data = { success: true, port: result.port, id: result.id };
+        break;
+      }
+      case 'stop':
+        mockServer.stopMockServer(payload.id);
+        data = { success: true };
+        break;
+      case 'stop_all':
+        mockServer.stopAll();
+        data = { success: true };
+        break;
+      case 'list':
+        data = { servers: mockServer.listServers() };
+        break;
+      default:
+        data = { error: `Unknown mock action: ${action}` };
+    }
+  } catch (err) {
+    data = { error: err.message };
+  }
+
+  if (kernelProcess?.stdin?.writable) {
+    const resp = JSON.stringify({ type: 'mock_response', requestId, data });
+    kernelProcess.stdin.write(resp + '\n');
+  }
 }
 
 // Auto-register IPC handlers when running under Vitest so tests can

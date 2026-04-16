@@ -71,6 +71,8 @@ export function Toolbar({
   onDeleteLayout,
   onCloseAllPanels,
   onImportData,
+  embedPanelOpen,
+  onToggleEmbed,
   notebookId,
   notebookScheduleMs,
   onNotebookScheduleStart,
@@ -166,6 +168,7 @@ export function Toolbar({
     kafkaPanelOpen, onToggleKafka,
     historyPanelOpen, onToggleHistory,
     depsPanelOpen, onToggleDeps,
+    embedPanelOpen, onToggleEmbed,
     onCloseAllPanels,
     onImportData,
   };

@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Completion;
@@ -42,6 +43,8 @@ public record SignatureHelpData(IReadOnlyList<SignatureData> Signatures, int Act
 
 public sealed class WorkspaceManager : IDisposable
 {
+    private readonly SemaphoreSlim _gate = new(1, 1);
+
     // Preamble is derived from ScriptGlobals via reflection so the workspace
     // always mirrors the actual script execution environment.
     private static readonly string GlobalsPreamble = BuildGlobalsPreamble();
@@ -262,6 +265,23 @@ public sealed class WorkspaceManager : IDisposable
         // Strip the preamble — return only the user code, trimming leading blank lines
         // that the formatter may insert at the preamble/code boundary.
         return text[TotalPreambleLength..].TrimStart('\r', '\n');
+    }
+
+    /// <summary>
+    /// Atomically updates the document and formats it, preventing concurrent LSP
+    /// didChange calls from corrupting the workspace between update and format.
+    /// </summary>
+    public async Task<(string formatted, IReadOnlyList<DiagnosticData> diagnostics)> FormatCodeAsync(string code)
+    {
+        await _gate.WaitAsync();
+        try
+        {
+            UpdateDocument(code);
+            var formatted   = await FormatDocumentAsync();
+            var diagnostics = await GetDiagnosticsAsync();
+            return (formatted, diagnostics);
+        }
+        finally { _gate.Release(); }
     }
 
     /// <summary>

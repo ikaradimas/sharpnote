@@ -1,10 +1,13 @@
-import { DOCS_TAB_ID, LIB_EDITOR_ID_PREFIX } from './constants.js';
+import { DOCS_TAB_ID, LIB_EDITOR_ID_PREFIX, PANEL_TAB_PREFIX } from './constants.js';
 import katex from 'katex';
 
 // ── Tab ID helpers ─────────────────────────────────────────────────────────────
 export const makeLibEditorId = (fullPath) => `${LIB_EDITOR_ID_PREFIX}${fullPath}`;
 export const isLibEditorId  = (id) => id?.startsWith(LIB_EDITOR_ID_PREFIX) ?? false;
-export const isNotebookId   = (id) => !!(id && id !== DOCS_TAB_ID && !isLibEditorId(id));
+export const isPanelTabId    = (id) => id?.startsWith(PANEL_TAB_PREFIX) ?? false;
+export const panelIdFromTabId = (id) => id?.slice(PANEL_TAB_PREFIX.length);
+export const makePanelTabId  = (panelId) => `${PANEL_TAB_PREFIX}${panelId}`;
+export const isNotebookId   = (id) => !!(id && id !== DOCS_TAB_ID && !isLibEditorId(id) && !isPanelTabId(id));
 
 // ── Notebook display name ──────────────────────────────────────────────────────
 // Returns the human-readable name for a notebook given its saved path and/or title.
@@ -172,4 +175,65 @@ export function scrollAndFlash(el, block = 'nearest') {
   el.scrollIntoView({ behavior: 'smooth', block });
   el.classList.add('cell-flash');
   el.addEventListener('animationend', () => el.classList.remove('cell-flash'), { once: true });
+}
+
+// ── Docker Compose generation ─────────────────────────────────────────────────
+
+function yamlQuote(s) {
+  if (!s) return '""';
+  if (/[:#{}[\],&*?|>!%@`'"\n]/.test(s) || s.trim() !== s) return `"${s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+  return s;
+}
+
+/** Generate a docker-compose.yml string from an array of docker cells. */
+export function generateDockerCompose(dockerCells) {
+  const lines = ['version: "3.8"', '', 'services:'];
+
+  for (const cell of dockerCells) {
+    const name = cell.containerName || cell.name || cell.image.replace(/[/:]/g, '-').replace(/^-|-$/g, '') || 'service';
+    lines.push(`  ${name}:`);
+    lines.push(`    image: ${yamlQuote(cell.image)}`);
+
+    if (cell.containerName) {
+      lines.push(`    container_name: ${yamlQuote(cell.containerName)}`);
+    }
+
+    // Ports: "8080:80, 3000:3000"
+    if (cell.ports) {
+      const mappings = cell.ports.split(',').map((s) => s.trim()).filter(Boolean);
+      if (mappings.length > 0) {
+        lines.push('    ports:');
+        for (const m of mappings) lines.push(`      - ${yamlQuote(m)}`);
+      }
+    }
+
+    // Environment: "KEY=val, FOO=bar"
+    if (cell.env) {
+      const entries = cell.env.split(',').map((s) => s.trim()).filter(Boolean);
+      if (entries.length > 0) {
+        lines.push('    environment:');
+        for (const e of entries) lines.push(`      - ${yamlQuote(e)}`);
+      }
+    }
+
+    // Volumes: single mapping
+    if (cell.volume) {
+      lines.push('    volumes:');
+      lines.push(`      - ${yamlQuote(cell.volume)}`);
+    }
+
+    // Command override
+    if (cell.command) {
+      lines.push(`    command: ${yamlQuote(cell.command)}`);
+    }
+
+    // Restart policy for startup containers
+    if (cell.runOnStartup) {
+      lines.push('    restart: unless-stopped');
+    }
+
+    lines.push('');
+  }
+
+  return lines.join('\n');
 }

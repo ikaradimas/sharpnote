@@ -5,9 +5,9 @@ import React, {
   useCallback,
   useMemo,
 } from 'react';
-import { DOCS_TAB_ID, KAFKA_TAB_ID } from '../constants.js';
+import { DOCS_TAB_ID, CHANGELOG_TAB_ID, KAFKA_TAB_ID, PANEL_TAB_PREFIX } from '../constants.js';
 import {
-  makeLibEditorId, isLibEditorId, isNotebookId, getNotebookDisplayName,
+  makeLibEditorId, isLibEditorId, isNotebookId, getNotebookDisplayName, generateDockerCompose, makePanelTabId,
 } from '../utils.js';
 import { DEFAULT_DOCK_LAYOUT, DEFAULT_FLOAT_W, DEFAULT_FLOAT_H } from '../config/dock-layout.jsx';
 import { TablePageSizeContext } from '../config/table-page-size-context.js';
@@ -22,6 +22,9 @@ import { TabBar } from '../components/toolbar/TabBar.jsx';
 import { NotebookView } from '../components/NotebookView.jsx';
 import { LibraryEditorPane } from '../components/panels/library/LibraryEditorPane.jsx';
 import { DocsPanel } from '../components/panels/docs/DocsPanel.jsx';
+import { ChangelogPanel } from '../components/panels/ChangelogPanel.jsx';
+import { Ghost } from '../components/Ghost.jsx';
+import { IdleSkyline } from '../components/IdleSkyline.jsx';
 import { KafkaPanel } from '../components/panels/kafka/KafkaPanel.jsx';
 import { DockZone } from '../components/dock/DockZone.jsx';
 import { FloatPanel } from '../components/dock/FloatPanel.jsx';
@@ -59,6 +62,20 @@ export function App() {
   const formatOnSaveRef = useRef(false);
   useEffect(() => { formatOnSaveRef.current = formatOnSave; }, [formatOnSave]);
 
+  const [showFish, setShowFish] = useState(true);
+  const showFishRef = useRef(true);
+  useEffect(() => { showFishRef.current = showFish; }, [showFish]);
+  const [showCircuit, setShowCircuit] = useState(true);
+  const showCircuitRef = useRef(true);
+  useEffect(() => { showCircuitRef.current = showCircuit; }, [showCircuit]);
+  const [showGhost, setShowGhost] = useState(true);
+  const showGhostRef = useRef(true);
+  useEffect(() => { showGhostRef.current = showGhost; }, [showGhost]);
+  const [showSkyline, setShowSkyline] = useState(true);
+  const showSkylineRef = useRef(true);
+  useEffect(() => { showSkylineRef.current = showSkyline; }, [showSkyline]);
+  const skylineTriggerRef = useRef(null);
+
   const [tablePageSize, setTablePageSize] = useState(10);
   const tablePageSizeRef = useRef(10);
   useEffect(() => { tablePageSizeRef.current = tablePageSize; }, [tablePageSize]);
@@ -92,6 +109,7 @@ export function App() {
   const [filesPanelOpen, setFilesPanelOpen]     = useState(false);
   const [apiPanelOpen, setApiPanelOpen]         = useState(false);
   const [apiEditorPanelOpen, setApiEditorPanelOpen] = useState(false);
+  const [apiEditorRequestedId, setApiEditorRequestedId] = useState(null);
   const [gitPanelOpen, setGitPanelOpen]         = useState(false);
   const [gitRefreshKey, setGitRefreshKey]       = useState(0);
   const [filesCurrentDir, setFilesCurrentDir]   = useState(null);
@@ -120,9 +138,11 @@ export function App() {
     handleNew, handleLoad, handleImportPolyglot, handleOpenRecent, handleCloseTab, handleReorder,
     handleRenameTab, handleSetTabColor, handleSave, handleSaveAs, handleExportHtml, handleExportGoogleDoc,
     handleOpenDocs, handleCloseDocs,
+    changelogOpen, handleOpenChangelog, handleCloseChangelog,
     kafkaTabOpen, handleOpenKafkaTab, handleCloseKafkaTab,
     handleTogglePin, handleNavigateToCell,
     handleInsertLibraryFile, handleImportData, openPinnedNotebooks,
+    handleRetainOutput, handleUnretainOutput,
   } = useNotebookManager({ cancelPendingCellsRef, saveSettingsRef, formatOnSaveRef });
 
   const {
@@ -133,6 +153,8 @@ export function App() {
     handleZoneResizeEnd, handleFloatMove, handleStartDrag,
     handleSaveLayout, handleLoadLayout, handleDeleteLayout,
   } = useDockLayout({ saveSettingsRef });
+
+  const [panelTabs, setPanelTabs] = useState(new Set());
 
   // ── Panel visibility and layout (shared by close button, menu, and kernel messages) ──
 
@@ -148,7 +170,7 @@ export function App() {
     const nbFlagMap = {
       log: 'logPanelOpen', nuget: 'nugetPanelOpen', config: 'configPanelOpen',
       db: 'dbPanelOpen', vars: 'varsPanelOpen', toc: 'tocPanelOpen',
-      graph: 'graphPanelOpen', todo: 'todoPanelOpen', regex: 'regexPanelOpen', history: 'historyPanelOpen', deps: 'depsPanelOpen',
+      graph: 'graphPanelOpen', todo: 'todoPanelOpen', regex: 'regexPanelOpen', history: 'historyPanelOpen', deps: 'depsPanelOpen', embed: 'embedPanelOpen',
     };
     if (globalSetters[panelId]) {
       globalSetters[panelId](open === null ? (v) => !v : open);
@@ -196,11 +218,37 @@ export function App() {
       setNb(nbId, () => ({
         logPanelOpen: false, nugetPanelOpen: false, configPanelOpen: false,
         dbPanelOpen: false, varsPanelOpen: false, tocPanelOpen: false,
-        graphPanelOpen: false, todoPanelOpen: false, regexPanelOpen: false, historyPanelOpen: false, depsPanelOpen: false,
+        graphPanelOpen: false, todoPanelOpen: false, regexPanelOpen: false, historyPanelOpen: false, depsPanelOpen: false, embedPanelOpen: false,
       }));
   }, [setNb, setLibraryPanelOpen, setFilesPanelOpen, setApiPanelOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const { runCell, runCellWithFormData, runSqlCell, runHttpCell, runShellCell, runCheckCell, runDecisionCell, runAll, runFrom, runTo, handleInterrupt, handleReset,
+  // ── Panel-as-tab ──────────────────────────────────────────────────────────
+  const detachPanelToTab = useCallback((panelId) => {
+    setPanelVisible(panelId, false);
+    setPanelTabs((prev) => new Set([...prev, panelId]));
+    setActiveId(makePanelTabId(panelId));
+  }, [setPanelVisible, setActiveId]);
+
+  const returnPanelFromTab = useCallback((panelId) => {
+    setPanelTabs((prev) => { const next = new Set(prev); next.delete(panelId); return next; });
+    // Switch to a notebook first so setPanelVisible targets the right notebook
+    if (activeIdRef.current === makePanelTabId(panelId)) {
+      const first = notebooksRef.current[0];
+      if (first) setActiveId(first.id);
+    }
+    // Open the panel after a tick so activeIdRef has updated
+    setTimeout(() => setPanelVisible(panelId, true), 0);
+  }, [setPanelVisible, setActiveId]);
+
+  const closePanelTab = useCallback((panelId) => {
+    setPanelTabs((prev) => { const next = new Set(prev); next.delete(panelId); return next; });
+    if (activeIdRef.current === makePanelTabId(panelId)) {
+      const first = notebooksRef.current[0];
+      if (first) setActiveId(first.id);
+    }
+  }, [setActiveId]);
+
+  const { runCell, runCellWithFormData, runSqlCell, runHttpCell, runShellCell, runDockerCell, stopDockerCell, pollDockerStatus, fetchDockerLogs, runCheckCell, runDecisionCell, runAll, runFrom, runTo, handleInterrupt, handleReset,
           cancelPendingCells, debugResume, debugStep, toggleBreakpoint } =
     useKernelManager({
       setNb, notebooksRef, dbConnectionsRef, setVarInspectDialog,
@@ -208,6 +256,10 @@ export function App() {
       onPanelDock:    setPanelDock,
       onPanelFloat:   setPanelFloat,
       onPanelCloseAll: setPanelCloseAll,
+      onApiEditorLoad: (apiIdOrTitle) => {
+        setApiEditorRequestedId(apiIdOrTitle);
+        setApiEditorPanelOpen(true);
+      },
       setDbConnections,
     });
   cancelPendingCellsRef.current = cancelPendingCells;
@@ -247,6 +299,10 @@ export function App() {
       lintEnabled: lintEnabledRef.current,
       strongCuesEnabled: strongCuesRef.current,
       formatOnSave: formatOnSaveRef.current,
+      showFish: showFishRef.current,
+      showCircuit: showCircuitRef.current,
+      showGhost: showGhostRef.current,
+      showSkyline: showSkylineRef.current,
       tablePageSize: tablePageSizeRef.current,
       customShortcuts: customShortcutsRef.current,
       pinnedTabs: [...pinnedPathsRef.current],
@@ -276,6 +332,11 @@ export function App() {
       if (typeof s?.lintEnabled === 'boolean') setLintEnabled(s.lintEnabled);
       if (typeof s?.strongCuesEnabled === 'boolean') setStrongCuesEnabled(s.strongCuesEnabled);
       if (typeof s?.formatOnSave === 'boolean') setFormatOnSave(s.formatOnSave);
+      if (typeof s?.showFish === 'boolean') setShowFish(s.showFish);
+      if (typeof s?.showCircuit === 'boolean') setShowCircuit(s.showCircuit);
+      else if (typeof s?.showMinigame === 'boolean') setShowCircuit(s.showMinigame);
+      if (typeof s?.showGhost === 'boolean') setShowGhost(s.showGhost);
+      if (typeof s?.showSkyline === 'boolean') setShowSkyline(s.showSkyline);
       if (typeof s?.tablePageSize === 'number') setTablePageSize(s.tablePageSize);
       if (s?.customShortcuts && typeof s.customShortcuts === 'object') {
         setCustomShortcuts(s.customShortcuts);
@@ -756,6 +817,7 @@ export function App() {
     reset:             () => { if (isNotebook()) handleResetWithSchedules(activeIdRef.current); },
     'clear-output':    () => { if (isNotebook()) setNb(activeIdRef.current, { outputs: {} }); },
     docs:              handleOpenDocs,
+    changelog:         handleOpenChangelog,
     'toggle-packages': () => setPanelVisible('nuget',   null),
     'toggle-config':   () => setPanelVisible('config',  null),
     'toggle-logs':     () => setPanelVisible('log',     null),
@@ -773,6 +835,7 @@ export function App() {
     'toggle-regex':    () => setPanelVisible('regex',   null),
     'toggle-history':  () => setPanelVisible('history', null),
     'toggle-deps':     () => setPanelVisible('deps', null),
+    'toggle-embed':    () => setPanelVisible('embed', null),
     about:             () => setAboutOpen(true),
     settings:          () => setSettingsOpen(true),
     'export-html':     handleExportHtml,
@@ -792,6 +855,18 @@ export function App() {
         title: getNotebookDisplayName(nb.path, nb.title, 'notebook'),
       });
     },
+    'export-docker-compose': () => {
+      const nb = notebooksRef.current.find((n) => n.id === activeIdRef.current);
+      if (!nb) return;
+      const dockerCells = nb.cells.filter((c) => c.type === 'docker' && c.image);
+      if (dockerCells.length === 0) return;
+      const yaml = generateDockerCompose(dockerCells);
+      window.electronAPI?.saveFile({
+        content: yaml,
+        defaultName: 'docker-compose.yml',
+        filters: [{ name: 'YAML', extensions: ['yml', 'yaml'] }],
+      });
+    },
     'command-palette': () => setCommandPaletteOpen(true),
     dashboard:         () => setDashboardMode((v) => !v),
   };
@@ -809,8 +884,9 @@ export function App() {
       ...libEditors.map((e) => ({
         id: e.id, label: e.filename, isDirty: e.isDirty, isActive: e.id === activeId,
       })),
-      ...(docsOpen     ? [{ id: DOCS_TAB_ID,  label: 'Documentation', isDirty: false, isActive: activeId === DOCS_TAB_ID  }] : []),
-      ...(kafkaTabOpen ? [{ id: KAFKA_TAB_ID, label: 'Kafka',         isDirty: false, isActive: activeId === KAFKA_TAB_ID }] : []),
+      ...(docsOpen      ? [{ id: DOCS_TAB_ID,      label: 'Documentation', isDirty: false, isActive: activeId === DOCS_TAB_ID      }] : []),
+      ...(changelogOpen ? [{ id: CHANGELOG_TAB_ID, label: 'Changelog',     isDirty: false, isActive: activeId === CHANGELOG_TAB_ID }] : []),
+      ...(kafkaTabOpen  ? [{ id: KAFKA_TAB_ID,     label: 'Kafka',         isDirty: false, isActive: activeId === KAFKA_TAB_ID     }] : []),
     ]);
   }, [notebooks, libEditors, docsOpen, kafkaTabOpen, activeId]);
 
@@ -886,7 +962,7 @@ export function App() {
       if (dirty.length === 0) {
         window.electronAPI.confirmQuit();
       } else {
-        setQuitDirtyNbs(dirty.map((n) => ({ id: n.id, title: n.title, path: n.path })));
+        setQuitDirtyNbs(dirty.map((n) => ({ id: n.id, title: getNotebookDisplayName(n.path, n.title), path: n.path })));
       }
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -899,7 +975,7 @@ export function App() {
   const depGraph = useCellDependencies(activeNb);
   const orchestrator = useCellOrchestrator({
     notebooksRef, nodes: depGraph.nodes, edges: depGraph.edges,
-    runCell, runSqlCell, runHttpCell, runShellCell, runCheckCell, runDecisionCell,
+    runCell, runSqlCell, runHttpCell, runShellCell, runDockerCell, runCheckCell, runDecisionCell,
   });
 
   const openFlags = useMemo(() => ({
@@ -919,7 +995,16 @@ export function App() {
     regex:   isNotebookId(activeId) ? (activeNb?.regexPanelOpen  ?? false) : false,
     history: isNotebookId(activeId) ? (activeNb?.historyPanelOpen ?? false) : false,
     deps:    isNotebookId(activeId) ? (activeNb?.depsPanelOpen    ?? false) : false,
+    embed:   isNotebookId(activeId) ? (activeNb?.embedPanelOpen   ?? false) : false,
   }), [activeId, activeNb, libraryPanelOpen, filesPanelOpen, apiPanelOpen, apiEditorPanelOpen, gitPanelOpen]);
+
+  // Suppress dock rendering for panels open as tabs
+  const effectiveOpenFlags = useMemo(() => {
+    if (panelTabs.size === 0) return openFlags;
+    const flags = { ...openFlags };
+    for (const pid of panelTabs) flags[pid] = false;
+    return flags;
+  }, [openFlags, panelTabs]);
 
   const panelPropsMap = useMemo(() => {
     const nbId = activeNb?.id ?? null;
@@ -927,7 +1012,9 @@ export function App() {
       log: {
         onToggle: nbId ? () => setNb(nbId, (n) => ({ logPanelOpen: !n.logPanelOpen })) : () => {},
         currentMemoryMb: activeNb?.memoryHistory?.length
-          ? activeNb.memoryHistory[activeNb.memoryHistory.length - 1] : null,
+          ? (typeof activeNb.memoryHistory[activeNb.memoryHistory.length - 1] === 'number'
+            ? activeNb.memoryHistory[activeNb.memoryHistory.length - 1]
+            : activeNb.memoryHistory[activeNb.memoryHistory.length - 1]?.mb) : null,
         cells: activeNb?.cells ?? [],
         onNavigateToCell: nbId ? (cellId) => handleNavigateToCell(nbId, cellId) : () => {},
       },
@@ -1022,6 +1109,8 @@ export function App() {
       },
       'api-editor': {
         onToggle: () => setApiEditorPanelOpen((v) => !v),
+        requestedApiId: apiEditorRequestedId,
+        onRequestedApiHandled: () => setApiEditorRequestedId(null),
       },
       git: {
         onToggle: () => setGitPanelOpen((v) => !v),
@@ -1068,6 +1157,47 @@ export function App() {
         onSetPipelineCells: pipelineManager.setPipelineCells,
         scheduledCells,
       },
+      embed: {
+        onToggle: nbId ? () => setNb(nbId, (n) => ({ embedPanelOpen: !n.embedPanelOpen })) : () => {},
+        files: activeNb?.embeddedFiles || [],
+        onAdd: async () => {
+          if (!nbId) return;
+          const result = await window.electronAPI?.pickEmbedFile?.();
+          if (!result) return;
+          const name = result.filename.replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9_]/g, '_');
+          setNbDirty(nbId, (n) => ({
+            embeddedFiles: [...(n.embeddedFiles || []), { name, ...result, variables: {} }],
+          }));
+          if (activeNb?.kernelStatus === 'ready') {
+            window.electronAPI?.sendToKernel(nbId, {
+              type: 'set_embedded_files',
+              files: [...(activeNb.embeddedFiles || []), { name, ...result, variables: {} }],
+            });
+          }
+        },
+        onDelete: (name) => {
+          if (!nbId) return;
+          setNbDirty(nbId, (n) => ({
+            embeddedFiles: (n.embeddedFiles || []).filter(f => f.name !== name),
+          }));
+        },
+        onUpdateVars: (name, key, value) => {
+          if (!nbId) return;
+          setNbDirty(nbId, (n) => ({
+            embeddedFiles: (n.embeddedFiles || []).map(f =>
+              f.name === name ? { ...f, variables: { ...f.variables, [key]: value } } : f
+            ),
+          }));
+        },
+        onUpdate: (oldName, updated) => {
+          if (!nbId) return;
+          const newFiles = (activeNb?.embeddedFiles || []).map(f => f.name === oldName ? updated : f);
+          setNbDirty(nbId, () => ({ embeddedFiles: newFiles }));
+          if (activeNb?.kernelStatus === 'ready') {
+            window.electronAPI?.sendToKernel(nbId, { type: 'set_embedded_files', files: newFiles });
+          }
+        },
+      },
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeNb, dbConnections, filesPanelOpen, filesCurrentDir, apiPanelOpen, favoriteFolders]);
@@ -1076,10 +1206,11 @@ export function App() {
 
   const dockZoneProps = {
     dockLayout,
-    openFlags,
+    openFlags: effectiveOpenFlags,
     panelProps: panelPropsMap,
     onTabChange:  handleZoneTabChange,
     onPanelClose: handlePanelClose,
+    onDetachToTab: detachPanelToTab,
     onStartDrag:  handleStartDrag,
     onResizeEnd:  handleZoneResizeEnd,
     flashingPanel,
@@ -1101,6 +1232,9 @@ export function App() {
         docsOpen={docsOpen}
         onActivateDocs={handleOpenDocs}
         onCloseDocs={handleCloseDocs}
+        changelogOpen={changelogOpen}
+        onActivateChangelog={handleOpenChangelog}
+        onCloseChangelog={handleCloseChangelog}
         kafkaTabOpen={kafkaTabOpen}
         onActivateKafka={handleOpenKafkaTab}
         onCloseKafka={handleCloseKafkaTab}
@@ -1108,6 +1242,10 @@ export function App() {
         onCloseLibEditor={handleCloseLibEditor}
         pinnedPaths={pinnedPaths}
         onTogglePin={handleTogglePin}
+        panelTabs={panelTabs}
+        onActivatePanelTab={(pid) => setActiveId(makePanelTabId(pid))}
+        onClosePanelTab={closePanelTab}
+        onReturnPanelToPanel={returnPanelFromTab}
       />
       <div id="toolbar-portal-root" />
       <div className="dock-workspace" key={layoutKey}>
@@ -1131,6 +1269,10 @@ export function App() {
                     onRunSqlCell={runSqlCell}
                     onRunHttpCell={runHttpCell}
                     onRunShellCell={runShellCell}
+                    onRunDockerCell={runDockerCell}
+                    onStopDockerCell={stopDockerCell}
+                    onPollDockerStatus={pollDockerStatus}
+                    onFetchDockerLogs={fetchDockerLogs}
                     onRunCheckCell={runCheckCell}
                     onRunDecisionCell={runDecisionCell}
                     onRunCellByName={handleRunCellByName}
@@ -1195,6 +1337,9 @@ export function App() {
                     onDebugResume={debugResume}
                     onDebugStep={debugStep}
                     onToggleBreakpoint={toggleBreakpoint}
+                    onRetainOutput={handleRetainOutput}
+                    onUnretainOutput={handleUnretainOutput}
+                    showCircuit={showCircuit}
                   />
                 </div>
               ))}
@@ -1219,6 +1364,14 @@ export function App() {
                   <DocsPanel />
                 </div>
               )}
+              {changelogOpen && (
+                <div
+                  className="notebook-pane"
+                  style={activeId === CHANGELOG_TAB_ID ? undefined : { display: 'none' }}
+                >
+                  <ChangelogPanel />
+                </div>
+              )}
               {kafkaTabOpen && (
                 <div
                   className="notebook-pane"
@@ -1230,15 +1383,27 @@ export function App() {
                   />
                 </div>
               )}
+              {[...panelTabs].map((panelId) => {
+                const tabId = makePanelTabId(panelId);
+                const p = panelPropsMap[panelId];
+                return (
+                  <div key={tabId} className="notebook-pane" style={activeId === tabId ? undefined : { display: 'none' }}>
+                    {p && renderPanelContent(panelId, { ...p, isOpen: true })}
+                  </div>
+                );
+              })}
             </div>
             <DockZone zone="right" {...dockZoneProps} />
           </div>
           <DockZone zone="bottom" {...dockZoneProps} />
         </div>
       </div>
-      <StatusBar notebooks={notebooks} activeId={activeId} />
+      <StatusBar notebooks={notebooks} activeId={activeId} showFish={showFish}
+        showSkyline={showSkyline} onTriggerSkyline={() => skylineTriggerRef.current?.()} />
+      {showGhost && <Ghost />}
+      {showSkyline && <IdleSkyline triggerRef={skylineTriggerRef} />}
       {Object.entries(dockLayout.assignments)
-        .filter(([panelId, z]) => z === 'float' && !!openFlags[panelId])
+        .filter(([panelId, z]) => z === 'float' && !!effectiveOpenFlags[panelId])
         .map(([panelId]) => {
           const p = panelPropsMap[panelId];
           if (!p) return null;
@@ -1277,6 +1442,14 @@ export function App() {
           onStrongCuesChange={setStrongCuesEnabled}
           formatOnSave={formatOnSave}
           onFormatOnSaveChange={setFormatOnSave}
+          showFish={showFish}
+          onShowFishChange={setShowFish}
+          showCircuit={showCircuit}
+          onShowCircuitChange={setShowCircuit}
+          showGhost={showGhost}
+          onShowGhostChange={setShowGhost}
+          showSkyline={showSkyline}
+          onShowSkylineChange={setShowSkyline}
           tablePageSize={tablePageSize}
           onTablePageSizeChange={setTablePageSize}
           customShortcuts={customShortcuts}

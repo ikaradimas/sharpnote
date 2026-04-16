@@ -1,8 +1,10 @@
 // ── Tab ID constants ──────────────────────────────────────────────────────────
 
-export const DOCS_TAB_ID  = '__docs__';
-export const KAFKA_TAB_ID = '__kafka__';
+export const DOCS_TAB_ID      = '__docs__';
+export const CHANGELOG_TAB_ID = '__changelog__';
+export const KAFKA_TAB_ID     = '__kafka__';
 export const LIB_EDITOR_ID_PREFIX = '__libed__';
+export const PANEL_TAB_PREFIX    = '__panel__';
 
 // ── Kernel request timeouts ───────────────────────────────────────────────────
 

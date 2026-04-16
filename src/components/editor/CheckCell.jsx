@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { CellControls } from './CellControls.jsx';
 import { CellNameColor } from './CellNameColor.jsx';
+import { CellRunGroup } from './CellRunGroup.jsx';
 
 export function CheckCell({
   cell,
@@ -13,9 +14,11 @@ export function CheckCell({
   onUpdate,
   onLabelChange,
   onRun,
-  onDelete,
+  onRunFrom, onRunTo,
+  onDelete, onCopy,
   onMoveUp,
   onMoveDown,
+  columns = 0, onColumnsChange,
   onNameChange,
   onColorChange,
 }) {
@@ -62,15 +65,8 @@ export function CheckCell({
           )}
         </div>
         <div className="check-cell-actions">
-          <button
-            className="run-btn check-run-btn"
-            onClick={onRun}
-            disabled={anyRunning || !kernelReady || !cell.content.trim()}
-            title="Run check (Enter)"
-          >
-            ▶
-          </button>
-          <CellControls onMoveUp={onMoveUp} onMoveDown={onMoveDown} onDelete={onDelete} />
+          <CellRunGroup onRun={onRun} onRunFrom={onRunFrom} onRunTo={onRunTo} isRunning={isRunning} disabled={anyRunning || !kernelReady || !cell.content.trim()} />
+          <CellControls onCopy={onCopy} onMoveUp={onMoveUp} onMoveDown={onMoveDown} onDelete={onDelete} columns={columns} onColumnsChange={onColumnsChange} />
         </div>
       </div>
     </div>

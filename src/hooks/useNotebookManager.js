@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { marked } from 'marked';
-import { DOCS_TAB_ID, KAFKA_TAB_ID } from '../constants.js';
+import { DOCS_TAB_ID, CHANGELOG_TAB_ID, KAFKA_TAB_ID } from '../constants.js';
 import { makeLibEditorId, isNotebookId, getNotebookDisplayName, scrollAndFlash, escHtml } from '../utils.js';
 import { createNotebook, makeCell, DEFAULT_NUGET_SOURCES } from '../notebook-factory.js';
 import { generateImportCode } from '../data-import-templates.js';
@@ -20,6 +20,7 @@ export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef, for
   const [notebooks, setNotebooks] = useState([initialNb.current]);
   const [activeId, setActiveId]   = useState(initialNb.current.id);
   const [docsOpen,      setDocsOpen]      = useState(false);
+  const [changelogOpen, setChangelogOpen] = useState(false);
   const [kafkaTabOpen,  setKafkaTabOpen]  = useState(false);
   const [pinnedPaths, setPinnedPaths] = useState(() => new Set());
 
@@ -50,7 +51,7 @@ export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef, for
     const nb = notebooksRef.current.find((n) => n.id === notebookId);
     if (!nb) return null;
     return {
-      version: '1.0',
+      version: '2.0',
       title: getNotebookDisplayName(nb.path, nb.title, 'notebook'),
       color: nb.color || null,
       packages: nb.nugetPackages.map(({ id, version }) => ({ id, version: version || null })),
@@ -58,16 +59,22 @@ export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef, for
       config: nb.config.filter((e) => e.key.trim()),
       attachedDbIds: nb.attachedDbs.filter((d) => d.status === 'ready').map((d) => d.connectionId),
       autoRun: nb.autoRun || false,
-      cells: nb.cells.map(({ id, type, content, name, color, outputMode, locked, codeFolded, presenting, presentInterval, db, label, mode, truePath, falsePath, switchPaths }) => ({
+      cells: nb.cells.map(({ id, type, content, name, color, columns, nextCells, prevCells, outputMode, locked, codeFolded, presenting, presentInterval, db, label, mode, truePath, falsePath, switchPaths, image, containerName, ports, env, volume, command, runOnStartup, runOnShutdown }) => ({
         id, type, content,
         ...(name ? { name } : {}),
         ...(color ? { color } : {}),
+        ...(columns ? { columns } : {}),
+        ...(nextCells != null ? { nextCells } : {}),
+        ...(prevCells != null ? { prevCells } : {}),
         ...(type === 'code' ? { outputMode: outputMode || 'auto', locked: locked || false, ...(codeFolded ? { codeFolded: true } : {}), ...(presenting ? { presenting: true } : {}), ...(presentInterval ? { presentInterval } : {}) } : {}),
         ...(type === 'sql'  ? { db: db || '' } : {}),
         ...(type === 'check' || type === 'decision' ? { label: label || '' } : {}),
         ...(type === 'decision' ? { mode: mode || 'bool', truePath: truePath || [], falsePath: falsePath || [], switchPaths: switchPaths || {} } : {}),
+        ...(type === 'docker' ? { image: image || '', containerName: containerName || '', ports: ports || '', env: env || '', volume: volume || '', command: command || '', runOnStartup: runOnStartup || false, runOnShutdown: runOnShutdown || false, ...(presenting ? { presenting: true } : {}) } : {}),
       })),
       pipelines: (nb.pipelines || []).map(({ id, name, cellIds, color }) => ({ id, name, cellIds, color: color || null })),
+      embeddedFiles: nb.embeddedFiles || [],
+      retainedResults: nb.retainedResults || {},
     };
   }, []);
 
@@ -110,17 +117,6 @@ export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef, for
           }));
         }
 
-        // Report errors as a brief flash in the cell output
-        const errors = (result.diagnostics || []).filter((d) => d.severity === 'error');
-        if (errors.length > 0) {
-          const msg = errors.map((d) => d.message).join('\n');
-          setNb(notebookId, (n) => ({
-            outputs: {
-              ...n.outputs,
-              [cell.id]: [{ type: 'error', id: cell.id, message: `Format check: ${errors.length} error(s)\n${msg}` }],
-            },
-          }));
-        }
       } catch {
         // Timeout or other error — skip this cell silently
       }
@@ -173,6 +169,8 @@ export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef, for
       autoRun: result.data.autoRun || false,
       cells: result.data.cells || [],
       pipelines: result.data.pipelines || [],
+      embeddedFiles: result.data.embeddedFiles || [],
+      retainedResults: result.data.retainedResults || {},
       nugetPackages: (result.data.packages || []).map((p) => ({ ...p, status: 'pending' })),
       nugetSources: result.data.sources || [...DEFAULT_NUGET_SOURCES],
       config: result.data.config || [],
@@ -200,6 +198,8 @@ export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef, for
       autoRun: result.data.autoRun || false,
       cells: result.data.cells || [],
       pipelines: result.data.pipelines || [],
+      embeddedFiles: result.data.embeddedFiles || [],
+      retainedResults: result.data.retainedResults || {},
       nugetPackages: (result.data.packages || []).map((p) => ({ ...p, status: 'pending' })),
       nugetSources: result.data.sources || [...DEFAULT_NUGET_SOURCES],
       config: result.data.config || [],
@@ -322,6 +322,18 @@ export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef, for
 
   const handleCloseDocs = useCallback(() => {
     setDocsOpen(false);
+    const target = prevNbIdRef.current ?? notebooksRef.current[0]?.id;
+    if (target) setActiveId(target);
+  }, []);
+
+  const handleOpenChangelog = useCallback(() => {
+    if (activeIdRef.current !== CHANGELOG_TAB_ID) prevNbIdRef.current = activeIdRef.current;
+    setChangelogOpen(true);
+    setActiveId(CHANGELOG_TAB_ID);
+  }, []);
+
+  const handleCloseChangelog = useCallback(() => {
+    setChangelogOpen(false);
     const target = prevNbIdRef.current ?? notebooksRef.current[0]?.id;
     if (target) setActiveId(target);
   }, []);
@@ -568,6 +580,9 @@ ${cellsHtml}
           attachedDbs: (r.value.data.attachedDbIds || []).map((id) => ({
             connectionId: id, status: 'connecting', varName: '', schema: null, error: undefined,
           })),
+          retainedResults: r.value.data.retainedResults || {},
+          embeddedFiles: r.value.data.embeddedFiles || [],
+          autoRun: r.value.data.autoRun || false,
           isDirty: false,
         },
       });
@@ -586,6 +601,31 @@ ${cellsHtml}
     // Focus the first loaded pinned notebook
     setActiveId(toAdd[0].nb.id);
   }, []);
+
+  const RETAINABLE_TYPES = new Set(['stdout', 'display']);
+
+  const handleRetainOutput = useCallback((notebookId, cellId) => {
+    setNbDirty(notebookId, (n) => {
+      const outputs = n.outputs?.[cellId];
+      if (!outputs?.length) return {};
+      const retainable = outputs.filter(o => RETAINABLE_TYPES.has(o.type));
+      if (!retainable.length) return {};
+      return {
+        retainedResults: {
+          ...(n.retainedResults || {}),
+          [cellId]: { outputs: retainable, retainedAt: new Date().toISOString() },
+        },
+      };
+    });
+  }, [setNbDirty]);
+
+  const handleUnretainOutput = useCallback((notebookId, cellId) => {
+    setNbDirty(notebookId, (n) => {
+      const r = { ...(n.retainedResults || {}) };
+      delete r[cellId];
+      return { retainedResults: r };
+    });
+  }, [setNbDirty]);
 
   return {
     // State
@@ -622,6 +662,10 @@ ${cellsHtml}
     handleExportGoogleDoc,
     handleOpenDocs,
     handleCloseDocs,
+    changelogOpen,
+    setChangelogOpen,
+    handleOpenChangelog,
+    handleCloseChangelog,
     handleOpenKafkaTab,
     handleCloseKafkaTab,
     handleTogglePin,
@@ -629,5 +673,7 @@ ${cellsHtml}
     handleInsertLibraryFile,
     handleImportData,
     openPinnedNotebooks,
+    handleRetainOutput,
+    handleUnretainOutput,
   };
 }
