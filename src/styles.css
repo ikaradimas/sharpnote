@@ -7213,7 +7213,14 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
   border-radius: 4px; color: var(--text-muted); cursor: pointer;
 }
 .api-ed-toolbar-btn:hover { color: var(--text-primary); border-color: var(--border-default); }
+.api-ed-save-btn { color: var(--text-secondary); position: relative; }
 .api-ed-save-btn:hover { color: #98c379; border-color: #98c379; }
+.api-ed-save-dirty { color: #e0a040 !important; border-color: #e0a040 !important; }
+.api-ed-save-dirty:hover { color: #e0c060 !important; border-color: #e0c060 !important; }
+.api-ed-dirty-dot {
+  position: absolute; top: 2px; right: 2px; width: 5px; height: 5px;
+  border-radius: 50%; background: #e0a040;
+}
 .api-ed-del-btn:hover { color: #e05050; border-color: #e05050; }
 .api-ed-saved-select {
   flex: 1; font-family: var(--font-ui); font-size: 10px;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { FilePlus, Save, Trash2, Database, FolderTree, Download, Play, Square, Plus, Server, X } from 'lucide-react';
 import { ModelEditor } from './api-editor/ModelEditor.jsx';
 import { ControllerSection } from './api-editor/ControllerSection.jsx';
@@ -24,6 +24,8 @@ export function ApiEditorPanel({ onToggle }) {
   const [selectedId, setSelectedId] = useState(null);
   const [runningServers, setRunningServers] = useState([]); // [{ id, port, title }]
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const cleanSnapshotRef = useRef(JSON.stringify(apiDef));
+  const isDirty = JSON.stringify(apiDef) !== cleanSnapshotRef.current;
 
   // Load saved APIs and running servers on mount
   useEffect(() => {
@@ -51,14 +53,15 @@ export function ApiEditorPanel({ onToggle }) {
       : [...savedApis, entry];
     setSavedApis(updated);
     setSelectedId(entry.id);
+    cleanSnapshotRef.current = JSON.stringify(entry);
     window.electronAPI?.saveApiSaved?.(updated);
   }, [apiDef, selectedId, savedApis]);
 
   const loadApi = useCallback((id) => {
     setSelectedId(id);
-    if (!id) { setApiDef(emptyApiDef()); return; }
+    if (!id) { const fresh = emptyApiDef(); setApiDef(fresh); cleanSnapshotRef.current = JSON.stringify(fresh); return; }
     const saved = savedApis.find(a => a.id === id);
-    if (saved) setApiDef(saved);
+    if (saved) { setApiDef(saved); cleanSnapshotRef.current = JSON.stringify(saved); }
   }, [savedApis]);
 
   const deleteApi = useCallback(() => {
@@ -72,7 +75,9 @@ export function ApiEditorPanel({ onToggle }) {
 
   const newApi = useCallback(() => {
     setSelectedId(null);
-    setApiDef(emptyApiDef());
+    const fresh = emptyApiDef();
+    setApiDef(fresh);
+    cleanSnapshotRef.current = JSON.stringify(fresh);
   }, []);
 
   // ── Models ────────────────────────────────────────────────────────────
@@ -128,7 +133,7 @@ export function ApiEditorPanel({ onToggle }) {
           <option value="">— select saved —</option>
           {editorApis.map(a => <option key={a.id} value={a.id}>{a.title || 'Untitled'}</option>)}
         </select>
-        <button className="api-ed-toolbar-btn api-ed-save-btn" onClick={saveApi} title="Save"><Save size={14} /></button>
+        <button className={`api-ed-toolbar-btn api-ed-save-btn${isDirty ? ' api-ed-save-dirty' : ''}`} onClick={saveApi} title={isDirty ? 'Save (unsaved changes)' : 'Save'}><Save size={14} />{isDirty && <span className="api-ed-dirty-dot" />}</button>
         <button className="api-ed-toolbar-btn api-ed-del-btn" onClick={deleteApi} disabled={!selectedId} title="Delete"><Trash2 size={14} /></button>
       </div>
 
