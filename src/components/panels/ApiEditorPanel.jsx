@@ -18,7 +18,7 @@ function emptyApiDef() {
   };
 }
 
-export function ApiEditorPanel({ onToggle }) {
+export function ApiEditorPanel({ onToggle, requestedApiId, onRequestedApiHandled }) {
   const [apiDef, setApiDef] = useState(emptyApiDef);
   const [savedApis, setSavedApis] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
@@ -32,6 +32,18 @@ export function ApiEditorPanel({ onToggle }) {
     window.electronAPI?.loadApiSaved?.().then(list => setSavedApis(list ?? [])).catch(() => {});
     refreshServerList();
   }, []);
+
+  // Load a specific API when requested externally (e.g. Panels.LoadApiEditor)
+  useEffect(() => {
+    if (!requestedApiId || savedApis.length === 0) return;
+    const match = savedApis.find(a => a.id === requestedApiId || a.title === requestedApiId);
+    if (match) {
+      setSelectedId(match.id);
+      setApiDef(match);
+      cleanSnapshotRef.current = JSON.stringify(match);
+    }
+    onRequestedApiHandled?.();
+  }, [requestedApiId, savedApis]);
 
   const refreshServerList = useCallback(() => {
     window.electronAPI?.listMockServers?.().then(list => setRunningServers(list ?? [])).catch(() => {});

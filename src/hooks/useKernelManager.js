@@ -45,7 +45,7 @@ function prepareCellRun(setNb, pendingResolversRef, notebookId, cellId, resolve)
  * @param {function} opts.onPanelCloseAll     - () — close all open panels
  * @param {function} opts.setDbConnections    - DB connections state setter
  */
-export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVarInspectDialog, onPanelVisible, onPanelDock, onPanelFloat, onPanelCloseAll, setDbConnections }) {
+export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVarInspectDialog, onPanelVisible, onPanelDock, onPanelFloat, onPanelCloseAll, onApiEditorLoad, setDbConnections }) {
   const pendingResolversRef = useRef({});
   const prevVarsSnapRef       = useRef({});
   const runAllRef             = useRef(null);
@@ -387,6 +387,10 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
 
         case 'panel_close_all':
           onPanelCloseAll?.();
+          break;
+
+        case 'api_editor_load':
+          onApiEditorLoad?.(msg.apiIdOrTitle);
           break;
 
         // ── DB management ───────────────────────────────────────────────────────

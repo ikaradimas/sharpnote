@@ -86,6 +86,15 @@ public class PanelsHelper
     public void Float(string panelId, int? x = null, int? y = null, int? width = null, int? height = null) =>
         _out.WriteLine(JsonSerializer.Serialize(new { type = "panel_float", panel = panelId, x, y, w = width, h = height }));
 
+    /// <summary>
+    /// Opens the API Editor panel and loads a saved API by its ID or title.
+    /// </summary>
+    public void LoadApiEditor(string apiIdOrTitle)
+    {
+        Open(PanelId.ApiEditor);
+        _out.WriteLine(JsonSerializer.Serialize(new { type = "api_editor_load", apiIdOrTitle }));
+    }
+
     private void Send(string type, string panel) =>
         _out.WriteLine(JsonSerializer.Serialize(new { type, panel }));
 }

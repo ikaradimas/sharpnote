@@ -109,6 +109,7 @@ export function App() {
   const [filesPanelOpen, setFilesPanelOpen]     = useState(false);
   const [apiPanelOpen, setApiPanelOpen]         = useState(false);
   const [apiEditorPanelOpen, setApiEditorPanelOpen] = useState(false);
+  const [apiEditorRequestedId, setApiEditorRequestedId] = useState(null);
   const [gitPanelOpen, setGitPanelOpen]         = useState(false);
   const [gitRefreshKey, setGitRefreshKey]       = useState(0);
   const [filesCurrentDir, setFilesCurrentDir]   = useState(null);
@@ -255,6 +256,10 @@ export function App() {
       onPanelDock:    setPanelDock,
       onPanelFloat:   setPanelFloat,
       onPanelCloseAll: setPanelCloseAll,
+      onApiEditorLoad: (apiIdOrTitle) => {
+        setApiEditorRequestedId(apiIdOrTitle);
+        setApiEditorPanelOpen(true);
+      },
       setDbConnections,
     });
   cancelPendingCellsRef.current = cancelPendingCells;
@@ -1104,6 +1109,8 @@ export function App() {
       },
       'api-editor': {
         onToggle: () => setApiEditorPanelOpen((v) => !v),
+        requestedApiId: apiEditorRequestedId,
+        onRequestedApiHandled: () => setApiEditorRequestedId(null),
       },
       git: {
         onToggle: () => setGitPanelOpen((v) => !v),
