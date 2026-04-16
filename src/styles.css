@@ -1730,7 +1730,6 @@ body {
   align-items: center;
   gap: 4px;
   margin-left: auto;
-  overflow: hidden;
   flex-shrink: 1;
   min-width: 0;
 }
