@@ -230,11 +230,13 @@ export function App() {
 
   const returnPanelFromTab = useCallback((panelId) => {
     setPanelTabs((prev) => { const next = new Set(prev); next.delete(panelId); return next; });
-    setPanelVisible(panelId, true);
+    // Switch to a notebook first so setPanelVisible targets the right notebook
     if (activeIdRef.current === makePanelTabId(panelId)) {
       const first = notebooksRef.current[0];
       if (first) setActiveId(first.id);
     }
+    // Open the panel after a tick so activeIdRef has updated
+    setTimeout(() => setPanelVisible(panelId, true), 0);
   }, [setPanelVisible, setActiveId]);
 
   const closePanelTab = useCallback((panelId) => {
@@ -1376,9 +1378,10 @@ export function App() {
               )}
               {[...panelTabs].map((panelId) => {
                 const tabId = makePanelTabId(panelId);
+                const p = panelPropsMap[panelId];
                 return (
                   <div key={tabId} className="notebook-pane" style={activeId === tabId ? undefined : { display: 'none' }}>
-                    {renderPanelContent(panelId, panelPropsMap[panelId])}
+                    {p && renderPanelContent(panelId, { ...p, isOpen: true })}
                   </div>
                 );
               })}
