@@ -757,6 +757,34 @@ pie title Revenue by Category
     "Software" : 29
     "Services" : 18
     "Support"  : 11
+\`\`\`
+
+\`\`\`mermaid
+mindmap
+  root((SharpNote))
+    Cells
+      Code C#
+      SQL
+      HTTP
+      Shell
+      Docker
+      Decision
+    Output
+      Tables
+      Charts
+      Mermaid
+      KaTeX
+      Images
+    Tools
+      Orchestration
+      Git
+      API Editor
+      Kafka
+    Features
+      Embedded Files
+      Retained Results
+      Column Layout
+      Presentation Mode
 \`\`\``),
 
     md(`## Math Formulas (KaTeX)
