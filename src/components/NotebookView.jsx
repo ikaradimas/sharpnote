@@ -446,15 +446,21 @@ export function NotebookView({
         {notebookBg !== 'none' && (() => {
           const bg = NOTEBOOK_BACKGROUNDS.find(b => b.id === notebookBg);
           if (!bg) return null;
-          const color = getComputedStyle(document.documentElement).getPropertyValue('--text-secondary').trim() || '#b8ccd8';
-          const svgEncoded = encodeURIComponent(bg.svg.replace(/currentColor/g, color));
+          // Extract viewBox dimensions from the SVG string
+          const vbMatch = bg.svg.match(/viewBox="(\d+)\s+(\d+)\s+(\d+)\s+(\d+)"/);
+          const vbW = vbMatch ? +vbMatch[3] : 300;
+          const vbH = vbMatch ? +vbMatch[4] : 400;
+          // Strip the outer <svg> tag to get just the inner content
+          const innerSvg = bg.svg.replace(/^<svg[^>]*>/, '').replace(/<\/svg>\s*$/, '');
+          const tileSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">` +
+            `<defs><pattern id="nb-bg-pat" patternUnits="userSpaceOnUse" width="${vbW}" height="${vbH}">` +
+            `<g>${innerSvg}</g></pattern></defs>` +
+            `<rect width="100%" height="100%" fill="url(#nb-bg-pat)"/></svg>`;
           return (
             <div
               className="notebook-bg-overlay"
-              style={{
-                opacity: notebookBgOpacity,
-                backgroundImage: `url("data:image/svg+xml,${svgEncoded}")`,
-              }}
+              style={{ opacity: notebookBgOpacity }}
+              dangerouslySetInnerHTML={{ __html: tileSvg }}
             />
           );
         })()}
