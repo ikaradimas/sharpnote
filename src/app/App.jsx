@@ -1225,6 +1225,10 @@ export function App() {
         onDeletePipeline: pipelineManager.deletePipeline,
         onSetPipelineCells: pipelineManager.setPipelineCells,
         scheduledCells,
+        onAddCell: nbId ? (type) => {
+          const cell = makeCell(type);
+          setNbDirty(nbId, (n) => ({ cells: [...n.cells, cell] }));
+        } : null,
       },
       embed: {
         onToggle: nbId ? () => setNb(nbId, (n) => ({ embedPanelOpen: !n.embedPanelOpen })) : () => {},
