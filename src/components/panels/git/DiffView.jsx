@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { parseDiff } from '../../../utils/diff-parser.js';
 
-export function DiffView({ diffText, fileName, diffMode, onToggleDiffMode }) {
+export function DiffView({ diffText, fileName, diffMode, onToggleDiffMode, blameToggle }) {
   const [viewMode, setViewMode] = useState('unified'); // 'unified' | 'split'
   const hunks = parseDiff(diffText);
 
@@ -28,6 +28,7 @@ export function DiffView({ diffText, fileName, diffMode, onToggleDiffMode }) {
             vs HEAD
           </button>
         )}
+        {blameToggle}
         <div className="git-diff-mode-toggle">
           <button
             className={`git-diff-mode-btn${viewMode === 'unified' ? ' active' : ''}`}

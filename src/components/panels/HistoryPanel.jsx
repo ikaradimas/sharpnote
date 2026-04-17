@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { computeLineDiff } from '../../utils/text-diff.js';
 
 function formatTimestamp(iso) {
   try {
@@ -24,6 +25,8 @@ function timeAgo(iso) {
 export function HistoryPanel({ notebookPath, onRestore }) {
   const [snapshots, setSnapshots] = useState([]);
   const [selected, setSelected] = useState(null);
+  const [compareSet, setCompareSet] = useState(new Set());
+  const [diffResult, setDiffResult] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const refresh = useCallback(async () => {
@@ -50,15 +53,64 @@ export function HistoryPanel({ notebookPath, onRestore }) {
     await window.electronAPI?.deleteNotebookHistory(notebookPath);
     setSnapshots([]);
     setSelected(null);
+    setCompareSet(new Set());
+    setDiffResult(null);
+  };
+
+  const toggleCompare = (index) => {
+    setCompareSet((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) {
+        next.delete(index);
+      } else if (next.size < 2) {
+        next.add(index);
+      } else {
+        // Replace oldest selection
+        const arr = [...next];
+        next.delete(arr[0]);
+        next.add(index);
+      }
+      return next;
+    });
+    setDiffResult(null);
+  };
+
+  const handleCompare = async () => {
+    const indices = [...compareSet].sort((a, b) => a - b);
+    if (indices.length !== 2) return;
+    const [dataA, dataB] = await Promise.all(
+      indices.map((idx) => window.electronAPI.restoreNotebookSnapshot(notebookPath, idx))
+    );
+    if (!dataA || !dataB) return;
+
+    const cellsA = dataA.cells || [];
+    const cellsB = dataB.cells || [];
+    const maxLen = Math.max(cellsA.length, cellsB.length);
+    const diffs = [];
+    for (let i = 0; i < maxLen; i++) {
+      const a = cellsA[i];
+      const b = cellsB[i];
+      const contentA = a?.content || '';
+      const contentB = b?.content || '';
+      if (contentA === contentB && a?.type === b?.type) continue;
+      const label = b ? `Cell ${i + 1} (${b.type || 'unknown'})` : a ? `Cell ${i + 1} (removed)` : `Cell ${i + 1}`;
+      const lines = computeLineDiff(contentA, contentB);
+      diffs.push({ label, lines });
+    }
+    setDiffResult(diffs);
   };
 
   const selectedSnapshot = selected !== null ? snapshots.find((s) => s.index === selected) : null;
+  const compareIndices = [...compareSet];
 
   return (
     <div className="history-panel">
       <div className="history-panel-header">
         <span className="history-panel-title">History</span>
         <span className="history-panel-count">{snapshots.length}</span>
+        {compareSet.size === 2 && (
+          <button className="history-compare-btn" onClick={handleCompare}>Compare</button>
+        )}
         {snapshots.length > 0 && (
           <button
             className="history-clear-btn"
@@ -81,10 +133,17 @@ export function HistoryPanel({ notebookPath, onRestore }) {
             {[...snapshots].reverse().map((snap) => (
               <button
                 key={snap.index}
-                className={`history-item${selected === snap.index ? ' history-item-selected' : ''}`}
+                className={`history-item${selected === snap.index ? ' history-item-selected' : ''}${compareSet.has(snap.index) ? ' history-item-selected' : ''}`}
                 onClick={() => setSelected(selected === snap.index ? null : snap.index)}
                 title={formatTimestamp(snap.timestamp)}
               >
+                <input
+                  type="checkbox"
+                  checked={compareSet.has(snap.index)}
+                  onChange={(e) => { e.stopPropagation(); toggleCompare(snap.index); }}
+                  onClick={(e) => e.stopPropagation()}
+                  style={{ marginRight: 4, accentColor: 'var(--accent-primary)' }}
+                />
                 <span className="history-item-time">{timeAgo(snap.timestamp)}</span>
                 <span className="history-item-detail">
                   {snap.cellCount} cell{snap.cellCount !== 1 ? 's' : ''}
@@ -121,6 +180,26 @@ export function HistoryPanel({ notebookPath, onRestore }) {
                   ))}
                 </div>
               )}
+            </div>
+          )}
+          {/* Diff comparison result */}
+          {diffResult && (
+            <div className="history-diff-section">
+              {diffResult.length === 0 ? (
+                <div className="history-panel-empty">No differences found between selected snapshots.</div>
+              ) : diffResult.map((cell, ci) => (
+                <div key={ci}>
+                  <div className="history-diff-cell-header">{cell.label}</div>
+                  {cell.lines.map((ln, li) => (
+                    <div
+                      key={li}
+                      className={`history-diff-line${ln.type === 'add' ? ' history-diff-add' : ln.type === 'remove' ? ' history-diff-remove' : ''}`}
+                    >
+                      {ln.type === 'add' ? '+ ' : ln.type === 'remove' ? '- ' : '  '}{ln.line}
+                    </div>
+                  ))}
+                </div>
+              ))}
             </div>
           )}
         </div>

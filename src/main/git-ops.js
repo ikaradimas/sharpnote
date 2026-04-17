@@ -127,6 +127,53 @@ async function gitInit(cwd) {
   return gitExec(cwd, ['init']);
 }
 
+async function gitBlame(cwd, filePath) {
+  const result = await gitExec(cwd, ['blame', '--porcelain', filePath]);
+  if (!result.success) return result;
+  if (!result.data) return { success: true, data: [] };
+
+  const lines = result.data.split('\n');
+  const entries = [];
+  let current = null;
+
+  for (const line of lines) {
+    const headerMatch = line.match(/^([0-9a-f]{40})\s+(\d+)\s+(\d+)/);
+    if (headerMatch) {
+      current = { hash: headerMatch[1], line: parseInt(headerMatch[3]), author: '', content: '' };
+      continue;
+    }
+    if (current && line.startsWith('author ')) {
+      current.author = line.slice(7);
+    }
+    if (current && line.startsWith('\t')) {
+      current.content = line.slice(1);
+      entries.push({ ...current });
+      current = null;
+    }
+  }
+  return { success: true, data: entries };
+}
+
+async function gitStash(cwd) {
+  return gitExec(cwd, ['stash', 'push']);
+}
+
+async function gitStashPop(cwd) {
+  return gitExec(cwd, ['stash', 'pop']);
+}
+
+async function gitStashList(cwd) {
+  const result = await gitExec(cwd, ['stash', 'list']);
+  if (!result.success) return result;
+  if (!result.data) return { success: true, data: [] };
+
+  const entries = result.data.split('\n').filter(Boolean).map((line) => {
+    const match = line.match(/^stash@\{(\d+)\}:\s*(.*)/);
+    return match ? { index: parseInt(match[1]), message: match[2] } : { index: 0, message: line };
+  });
+  return { success: true, data: entries };
+}
+
 function register(ipcMain) {
   ipcMain.handle('git-is-repo',    (_ev, cwd) => gitIsRepo(cwd));
   ipcMain.handle('git-status',     (_ev, cwd) => gitStatus(cwd));
@@ -142,6 +189,10 @@ function register(ipcMain) {
   ipcMain.handle('git-checkout',      (_ev, cwd, branch) => gitCheckout(cwd, branch));
   ipcMain.handle('git-create-branch', (_ev, cwd, branch) => gitCreateBranch(cwd, branch));
   ipcMain.handle('git-init',          (_ev, cwd) => gitInit(cwd));
+  ipcMain.handle('git-blame',         (_ev, { cwd, file }) => gitBlame(cwd, file));
+  ipcMain.handle('git-stash',         (_ev, cwd) => gitStash(cwd));
+  ipcMain.handle('git-stash-pop',     (_ev, cwd) => gitStashPop(cwd));
+  ipcMain.handle('git-stash-list',    (_ev, cwd) => gitStashList(cwd));
 }
 
-module.exports = { gitExec, gitIsRepo, gitStatus, gitDiff, gitDiffHead, gitDiffCommit, gitLog, gitStage, gitUnstage, gitDiscard, gitCommit, gitBranches, gitCheckout, gitCreateBranch, gitInit, register };
+module.exports = { gitExec, gitIsRepo, gitStatus, gitDiff, gitDiffHead, gitDiffCommit, gitLog, gitStage, gitUnstage, gitDiscard, gitCommit, gitBranches, gitCheckout, gitCreateBranch, gitInit, gitBlame, gitStash, gitStashPop, gitStashList, register };

@@ -14,6 +14,10 @@ export function GitPanel({ onToggle, notebookDir, refreshKey }) {
   const [commitMsg, setCommitMsg] = useState('');
   const [branchDropdown, setBranchDropdown] = useState(false);
   const [error, setError] = useState(null);
+  const [blameActive, setBlameActive] = useState(false);
+  const [blameData, setBlameData] = useState(null);
+  const [stashList, setStashList] = useState([]);
+  const [stashOpen, setStashOpen] = useState(false);
 
   const cwd = notebookDir || null;
 
@@ -25,16 +29,18 @@ export function GitPanel({ onToggle, notebookDir, refreshKey }) {
     setIsRepo(repoCheck?.data ?? false);
     if (!repoCheck?.data) return;
 
-    const [statusRes, branchRes, logRes] = await Promise.all([
+    const [statusRes, branchRes, logRes, stashRes] = await Promise.all([
       window.electronAPI.gitStatus(cwd),
       window.electronAPI.gitBranches(cwd),
       window.electronAPI.gitLog(cwd, 15),
+      window.electronAPI.gitStashList(cwd),
     ]);
 
     if (statusRes?.success) setStatus(statusRes.data);
     else setError(statusRes?.error);
     if (branchRes?.success) setBranches(branchRes.data);
     if (logRes?.success) setLog(logRes.data);
+    if (stashRes?.success) setStashList(stashRes.data);
   }, [cwd]);
 
   useEffect(() => { refresh(); }, [refresh]);
@@ -104,6 +110,32 @@ export function GitPanel({ onToggle, notebookDir, refreshKey }) {
       setError(result?.error);
     }
   }, [cwd, newBranchName, refresh]);
+
+  const handleBlameToggle = useCallback(async () => {
+    if (blameActive) {
+      setBlameActive(false);
+      setBlameData(null);
+      return;
+    }
+    if (!selectedFile || selectedFile.startsWith('commit:') || !cwd) return;
+    const result = await window.electronAPI?.gitBlame(cwd, selectedFile);
+    if (result?.success) {
+      setBlameData(result.data);
+      setBlameActive(true);
+    }
+  }, [blameActive, selectedFile, cwd]);
+
+  const handleStash = useCallback(async () => {
+    const result = await window.electronAPI?.gitStash(cwd);
+    if (result?.success) refresh();
+    else setError(result?.error);
+  }, [cwd, refresh]);
+
+  const handleStashPop = useCallback(async () => {
+    const result = await window.electronAPI?.gitStashPop(cwd);
+    if (result?.success) refresh();
+    else setError(result?.error);
+  }, [cwd, refresh]);
 
   const handleInit = useCallback(async () => {
     await window.electronAPI?.gitInit(cwd);
@@ -187,6 +219,8 @@ export function GitPanel({ onToggle, notebookDir, refreshKey }) {
           )}
         </div>
         <button className="git-refresh-btn" onClick={refresh} title="Refresh">↻</button>
+        <button className="git-stash-btn" onClick={handleStash} title="Stash changes">Stash</button>
+        <button className="git-stash-btn" onClick={handleStashPop} title="Pop stash" disabled={stashList.length === 0}>Pop</button>
       </div>
 
       {error && <div className="git-error">{error}</div>}
@@ -247,6 +281,25 @@ export function GitPanel({ onToggle, notebookDir, refreshKey }) {
           </button>
         </div>
 
+        {/* Stash list */}
+        {stashList.length > 0 && (
+          <div className="git-history-section">
+            <div className="git-history-header" style={{ cursor: 'pointer' }} onClick={() => setStashOpen(v => !v)}>
+              {stashOpen ? '▾' : '▸'} Stashes ({stashList.length})
+            </div>
+            {stashOpen && (
+              <div className="git-stash-list">
+                {stashList.map((s) => (
+                  <div key={s.index} className="git-stash-item">
+                    <span className="git-stash-idx">stash@{'{' + s.index + '}'}</span>
+                    {s.message}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* History */}
         {log.length > 0 && (
           <div className="git-history-section">
@@ -271,7 +324,30 @@ export function GitPanel({ onToggle, notebookDir, refreshKey }) {
             const next = diffMode === 'head' ? 'auto' : 'head';
             loadDiff(selectedFile, selectedStaged, next);
           }}
+          blameToggle={
+            selectedFile && !selectedFile.startsWith('commit:') ? (
+              <button
+                className={`git-blame-toggle${blameActive ? ' active' : ''}`}
+                onClick={handleBlameToggle}
+              >Blame</button>
+            ) : null
+          }
         />
+
+        {/* Blame view */}
+        {blameActive && blameData && (
+          <div className="git-blame-section">
+            {blameData.map((entry, i) => (
+              <div key={i} className="git-blame-line">
+                <span className="git-blame-info">
+                  <span className="git-blame-hash">{entry.hash.slice(0, 7)}</span>
+                  <span className="git-blame-author">{entry.author}</span>
+                </span>
+                <span className="git-blame-content">{entry.content}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

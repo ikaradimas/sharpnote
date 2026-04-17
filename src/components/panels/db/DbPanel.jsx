@@ -2,9 +2,16 @@ import React, { useState, useRef, useCallback } from 'react';
 import { useResize } from '../../../hooks/useResize.js';
 import { useClipboard } from '../../../hooks/useClipboard.js';
 import { DB_PROVIDERS } from '../../../config/db-providers.js';
+import { QueryBuilder } from './QueryBuilder.jsx';
 
 function DbStatusDot({ status }) {
-  return <span className={`db-status-dot db-status-${status || 'none'}`} />;
+  return (
+    <span className={`db-status-dot db-status-${status || 'none'}`}>
+      {status === 'ready' && <span className="db-health-dot" />}
+      {status === 'error' && <span className="db-health-dot db-health-dot-error" />}
+      {status === 'connecting' && <span className="db-health-dot db-health-dot-connecting" />}
+    </span>
+  );
 }
 
 const NS_COLORS = ['#4fc3f7', '#ce93d8', '#81c784', '#ffb74d', '#ef9a9a', '#90caf9', '#a5d6a7'];
@@ -125,6 +132,7 @@ export function DbPanel({
   const [height, onResizeMouseDown] = useResize(280, 'top');
   const [leftWidth, onColResizeMouseDown] = useResize(260, 'right');
   const [collapsedDbs, setCollapsedDbs] = useState(new Set());
+  const [qbOpen, setQbOpen] = useState(false);
   const schemaRefsMap = useRef({});
 
   const toggleDbCollapse = useCallback((connId) => {
@@ -244,6 +252,19 @@ export function DbPanel({
               </div>
             );
           })}
+
+          {/* Query Builder */}
+          <div className="db-schema-section">
+            <div className="db-schema-header" onClick={() => setQbOpen((v) => !v)} style={{ cursor: 'pointer' }}>
+              <span className="db-table-arrow">{qbOpen ? '▾' : '▸'}</span>
+              <span className="db-conn-name">Query Builder</span>
+            </div>
+            {qbOpen && (
+              <QueryBuilder
+                schema={attachedDbs.length > 0 && attachedDbs[0].schema ? attachedDbs[0].schema : null}
+              />
+            )}
+          </div>
         </div>
       </div>
     </div>
