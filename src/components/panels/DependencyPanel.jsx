@@ -296,6 +296,7 @@ export function DependencyPanel({
   scheduledCells,
   dispatchRun,
   onAddCell,
+  onWireCell,
 }) {
   const { nodes, edges, startId, endIds } = useCellDependencies(notebook);
 
@@ -484,11 +485,28 @@ export function DependencyPanel({
 
   const handleInputPortMouseUp = useCallback((e, nodeId) => {
     if (!draggingEdge) return;
-    if (draggingEdge.fromId === nodeId) return; // no self-loops
+    const fromId = draggingEdge.fromId;
+    if (fromId === nodeId) return; // no self-loops
     e.stopPropagation();
-    // Edge creation would be wired to a callback — for now just clear
     setDraggingEdge(null);
-  }, [draggingEdge]);
+    if (!onWireCell) return;
+    // Add nodeId to fromCell.nextCells
+    const fromCell = notebook?.cells?.find(c => c.id === fromId);
+    if (fromCell) {
+      const current = fromCell.nextCells || [];
+      if (!current.includes(nodeId)) {
+        onWireCell(fromId, 'nextCells', [...current, nodeId]);
+      }
+    }
+    // Add fromId to toCell.prevCells
+    const toCell = notebook?.cells?.find(c => c.id === nodeId);
+    if (toCell) {
+      const current = toCell.prevCells || [];
+      if (!current.includes(fromId)) {
+        onWireCell(nodeId, 'prevCells', [...current, fromId]);
+      }
+    }
+  }, [draggingEdge, onWireCell, notebook?.cells]);
 
   /* ── Toolbar actions ───────────────────────────────────────────────────── */
   const fitAll = useCallback(() => {
@@ -922,6 +940,20 @@ export function DependencyPanel({
               onRunWithDeps: () => onRunWithDeps?.(notebookId, ctxMenu.node.id),
               onRunDownstream: () => onRunDownstream?.(notebookId, ctxMenu.node.id),
               onNavigate: () => onNavigateToCell?.(ctxMenu.node.id),
+              onClearConnections: onWireCell ? () => {
+                const cellId = ctxMenu.node.id;
+                onWireCell(cellId, 'nextCells', undefined);
+                onWireCell(cellId, 'prevCells', undefined);
+                // Also remove this cell from other cells' nextCells/prevCells
+                for (const c of notebook?.cells || []) {
+                  if (c.nextCells?.includes(cellId)) {
+                    onWireCell(c.id, 'nextCells', c.nextCells.filter(id => id !== cellId));
+                  }
+                  if (c.prevCells?.includes(cellId)) {
+                    onWireCell(c.id, 'prevCells', c.prevCells.filter(id => id !== cellId));
+                  }
+                }
+              } : null,
               onAddToPipeline: (pipelineId) => {
                 const p = (pipelines || []).find((pp) => pp.id === pipelineId);
                 if (p && !p.cellIds.includes(ctxMenu.node.id)) {

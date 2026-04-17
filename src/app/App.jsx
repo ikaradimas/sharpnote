@@ -1229,6 +1229,11 @@ export function App() {
           const cell = makeCell(type);
           setNbDirty(nbId, (n) => ({ cells: [...n.cells, cell] }));
         } : null,
+        onWireCell: nbId ? (cellId, prop, value) => {
+          setNbDirty(nbId, (n) => ({
+            cells: n.cells.map(c => c.id === cellId ? { ...c, [prop]: value } : c),
+          }));
+        } : null,
       },
       embed: {
         onToggle: nbId ? () => setNb(nbId, (n) => ({ embedPanelOpen: !n.embedPanelOpen })) : () => {},

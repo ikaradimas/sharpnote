@@ -26,6 +26,11 @@ export function CellNodeContextMenu({ x, y, node, pipelines, onClose, actions })
       <button className="dep-context-item" onClick={() => { actions.onNavigate(); onClose(); }}>
         ↗ Navigate to cell
       </button>
+      {actions.onClearConnections && (
+        <button className="dep-context-item" onClick={() => { actions.onClearConnections(); onClose(); }}>
+          ✕ Clear connections
+        </button>
+      )}
       <div className="dep-context-sep" />
       {(pipelines || []).length > 0 && (
         <>
