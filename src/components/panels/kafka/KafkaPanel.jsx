@@ -88,7 +88,7 @@ const COPY_ICON = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" s
 
 // ── Imperative message DOM builder (no React render) ─────────────────────────
 
-function buildMessageEl(msg) {
+function buildMessageEl(msg, onPin, onCompare) {
   const rawVal = msg.value ?? '';
   let isJson = false, pretty = '', preview = '';
   try {
@@ -128,21 +128,25 @@ function buildMessageEl(msg) {
   const pinBtn = document.createElement('button');
   pinBtn.className = 'kafka-msg-pin';
   pinBtn.title = 'Pin message';
-  pinBtn.textContent = '\u{1F4CC}';
+  pinBtn.textContent = '⊕';
   pinBtn.addEventListener('click', (e) => {
     e.preventDefault();
     e.stopPropagation();
-    details.dispatchEvent(new CustomEvent('kafka-pin', { bubbles: true, detail: msg }));
+    onPin?.(msg);
+    pinBtn.textContent = '✓';
+    setTimeout(() => { pinBtn.textContent = '⊕'; }, 1000);
   });
 
   const compareBtn = document.createElement('button');
   compareBtn.className = 'kafka-msg-compare-btn';
   compareBtn.title = 'Select for comparison';
-  compareBtn.textContent = '\u21D4';
+  compareBtn.textContent = '⇔';
   compareBtn.addEventListener('click', (e) => {
     e.preventDefault();
     e.stopPropagation();
-    details.dispatchEvent(new CustomEvent('kafka-compare', { bubbles: true, detail: msg }));
+    onCompare?.(msg);
+    compareBtn.textContent = '✓';
+    setTimeout(() => { compareBtn.textContent = '⇔'; }, 1000);
   });
 
   const summary = document.createElement('summary');
@@ -361,7 +365,7 @@ export function KafkaPanel({ onToggle, asTab = false }) {
     const frag = document.createDocumentFragment();
     source
       .slice((pageNum - 1) * PAGE_SIZE, pageNum * PAGE_SIZE)
-      .forEach((m) => frag.appendChild(buildMessageEl(m)));
+      .forEach((m) => frag.appendChild(buildMessageEl(m, pinMessageRef.current, compareMessageRef.current)));
     container.replaceChildren(frag);
     renderedPageRef.current = pageNum;
     const toRestore = expandedRef.current[pageNum];
@@ -431,31 +435,22 @@ export function KafkaPanel({ onToggle, asTab = false }) {
   }, []);
 
   // Listen for pin/compare custom events from imperative DOM
-  useEffect(() => {
-    const container = feedRef.current;
-    if (!container) return;
-    const pinHandler = (e) => {
-      const msg = e.detail;
-      setPinnedMessages((prev) => {
-        if (prev.some(p => p.topic === msg.topic && p.partition === msg.partition && p.offset === msg.offset)) return prev;
-        return [...prev, msg];
-      });
-    };
-    const compareHandler = (e) => {
-      const msg = e.detail;
-      setCompareMessages((prev) => {
-        if (prev.length >= 2) return [msg];
-        if (prev.some(p => p.topic === msg.topic && p.partition === msg.partition && p.offset === msg.offset)) return prev;
-        return [...prev, msg];
-      });
-    };
-    container.addEventListener('kafka-pin', pinHandler);
-    container.addEventListener('kafka-compare', compareHandler);
-    return () => {
-      container.removeEventListener('kafka-pin', pinHandler);
-      container.removeEventListener('kafka-compare', compareHandler);
-    };
-  }, []);
+  // Use refs for pin/compare so buildMessageEl can call them directly
+  const pinMessageRef = useRef(null);
+  const compareMessageRef = useRef(null);
+  pinMessageRef.current = (msg) => {
+    setPinnedMessages((prev) => {
+      if (prev.some(p => p.topic === msg.topic && p.partition === msg.partition && p.offset === msg.offset)) return prev;
+      return [...prev, msg];
+    });
+  };
+  compareMessageRef.current = (msg) => {
+    setCompareMessages((prev) => {
+      if (prev.length >= 2) return [msg];
+      if (prev.some(p => p.topic === msg.topic && p.partition === msg.partition && p.offset === msg.offset)) return prev;
+      return [...prev, msg];
+    });
+  };
 
   // Ctrl+F focuses the search input when the panel is focused
   const searchInputRef = useRef(null);
