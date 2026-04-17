@@ -595,7 +595,6 @@ body {
 /* ── Markdown Cell ───────────────────────────────────────────────────────── */
 
 .markdown-cell {
-  background: var(--bg-base);
   padding: 3px 12px;
   min-height: 24px;
 }
@@ -5986,11 +5985,9 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
   mask-image: linear-gradient(to right, black 0%, transparent 100%);
   -webkit-mask-image: linear-gradient(to right, black 0%, transparent 100%);
   overflow: hidden;
-}
-.notebook-bg-overlay > svg {
-  width: auto;
-  height: 100%;
-  display: block;
+  background-repeat: repeat-y;
+  background-size: auto 400px;
+  background-position: left top;
 }
 
 /* Path rows */

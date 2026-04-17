@@ -194,7 +194,7 @@ function AppearanceSection({ theme, fontSize, onThemeChange, onFontSizeChange, p
             >
               <div
                 className="settings-bg-preview"
-                dangerouslySetInnerHTML={{ __html: bg.svg.replace('currentColor', 'var(--text-secondary)') }}
+                dangerouslySetInnerHTML={{ __html: bg.svg.replace(/currentColor/g, 'var(--text-secondary)') }}
               />
               <span className="settings-bg-name">{bg.name}</span>
             </button>

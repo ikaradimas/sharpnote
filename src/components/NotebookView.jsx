@@ -446,11 +446,15 @@ export function NotebookView({
         {notebookBg !== 'none' && (() => {
           const bg = NOTEBOOK_BACKGROUNDS.find(b => b.id === notebookBg);
           if (!bg) return null;
+          const color = getComputedStyle(document.documentElement).getPropertyValue('--text-secondary').trim() || '#b8ccd8';
+          const svgEncoded = encodeURIComponent(bg.svg.replace(/currentColor/g, color));
           return (
             <div
               className="notebook-bg-overlay"
-              style={{ opacity: notebookBgOpacity }}
-              dangerouslySetInnerHTML={{ __html: bg.svg }}
+              style={{
+                opacity: notebookBgOpacity,
+                backgroundImage: `url("data:image/svg+xml,${svgEncoded}")`,
+              }}
             />
           );
         })()}
