@@ -5976,21 +5976,23 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 
 /* Notebook background overlay */
 .notebook-bg-overlay {
-  position: absolute;
-  top: 0; left: 0; bottom: 0;
+  position: sticky;
+  top: 0;
   width: 50%;
+  height: 100vh;
+  margin-bottom: -100vh;
   pointer-events: none;
   z-index: 0;
   color: var(--text-secondary);
   mask-image: linear-gradient(to right, black 0%, transparent 100%);
   -webkit-mask-image: linear-gradient(to right, black 0%, transparent 100%);
   overflow: hidden;
+  flex-shrink: 0;
 }
 .notebook-bg-overlay > svg {
   width: 100%;
   height: 100%;
   display: block;
-  color: var(--text-secondary);
 }
 
 /* Path rows */
