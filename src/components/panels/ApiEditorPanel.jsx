@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { FilePlus, Save, Trash2, Database, FolderTree, Download, Play, Square, Plus, Server, X } from 'lucide-react';
 import { ModelEditor } from './api-editor/ModelEditor.jsx';
 import { ControllerSection } from './api-editor/ControllerSection.jsx';
+import { ModelDiagram } from './api-editor/ModelDiagram.jsx';
 
 function shortId() { return Math.random().toString(36).slice(2, 10); }
 
@@ -25,6 +26,7 @@ export function ApiEditorPanel({ onToggle, requestedApiId, onRequestedApiHandled
   const restoredForRef = useRef(null);
   const [runningServers, setRunningServers] = useState([]); // [{ id, port, title }]
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [showDiagram, setShowDiagram] = useState(false);
   const cleanSnapshotRef = useRef(JSON.stringify(apiDef));
   const isDirty = JSON.stringify(apiDef) !== cleanSnapshotRef.current;
 
@@ -180,7 +182,9 @@ export function ApiEditorPanel({ onToggle, requestedApiId, onRequestedApiHandled
             <Database size={14} className="api-ed-section-icon" />
             <span>Models</span>
             <button className="api-ed-add-btn-inline" onClick={addModel}><Plus size={12} /> Model</button>
+            <button className={`model-diagram-btn${showDiagram ? ' active' : ''}`} onClick={() => setShowDiagram(v => !v)}>Diagram</button>
           </div>
+          {showDiagram && <ModelDiagram models={apiDef.models} />}
           {apiDef.models.map((model, i) => (
             <ModelEditor
               key={model.id}
@@ -205,6 +209,7 @@ export function ApiEditorPanel({ onToggle, requestedApiId, onRequestedApiHandled
               key={ctrl.id}
               controller={ctrl}
               modelNames={modelNames}
+              baseUrl={apiDef.baseUrl}
               onUpdate={(c) => updateController(i, c)}
               onDelete={() => removeController(i)}
             />

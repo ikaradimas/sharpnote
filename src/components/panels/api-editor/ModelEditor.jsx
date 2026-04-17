@@ -11,6 +11,14 @@ export function ModelEditor({ model, modelNames, onUpdate, onDelete }) {
     onUpdate({ ...model, fields });
   };
 
+  const updateConstraint = (idx, key, value) => {
+    const fields = model.fields.map((f, i) => {
+      if (i !== idx) return f;
+      return { ...f, constraints: { ...(f.constraints || {}), [key]: value } };
+    });
+    onUpdate({ ...model, fields });
+  };
+
   const addField = () => {
     onUpdate({ ...model, fields: [...model.fields, { name: '', type: 'string', required: false, description: '' }] });
   };
@@ -50,21 +58,45 @@ export function ModelEditor({ model, modelNames, onUpdate, onDelete }) {
               <span className="api-ed-field-col-desc">Description</span>
               <span className="api-ed-field-col-act" />
             </div>
-            {model.fields.map((f, i) => (
-              <div key={i} className="api-ed-field-row">
-                <input className="api-ed-field-col-name" value={f.name} onChange={(e) => updateField(i, 'name', e.target.value)} placeholder="field" spellCheck={false} />
-                <select className="api-ed-field-col-type" value={TYPE_OPTIONS.includes(f.type?.toLowerCase()) ? f.type.toLowerCase() : (f.type || '')} onChange={(e) => updateField(i, 'type', e.target.value)}>
-                  <option value="">custom…</option>
-                  {TYPE_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
-                  {modelNames.filter(n => n !== model.name).map(n => <option key={n} value={n}>{n}</option>)}
-                  {modelNames.filter(n => n !== model.name).length > 0 && <option disabled>──────</option>}
-                  {modelNames.filter(n => n !== model.name).map(n => <option key={`list-${n}`} value={`List<${n}>`}>List&lt;{n}&gt;</option>)}
-                </select>
-                <input type="checkbox" className="api-ed-field-col-req" checked={f.required} onChange={(e) => updateField(i, 'required', e.target.checked)} />
-                <input className="api-ed-field-col-desc" value={f.description || ''} onChange={(e) => updateField(i, 'description', e.target.value)} placeholder="description" />
-                <button className="api-ed-remove-btn api-ed-field-col-act" onClick={() => removeField(i)}><X size={12} /></button>
-              </div>
-            ))}
+            {model.fields.map((f, i) => {
+              const c = f.constraints || {};
+              const isNumeric = ['int', 'long', 'float', 'double'].includes(f.type?.toLowerCase());
+              const isString = !isNumeric && !['bool', 'date', 'datetime', 'uuid'].includes(f.type?.toLowerCase());
+              return (
+                <div key={i}>
+                  <div className="api-ed-field-row">
+                    <input className="api-ed-field-col-name" value={f.name} onChange={(e) => updateField(i, 'name', e.target.value)} placeholder="field" spellCheck={false} />
+                    <select className="api-ed-field-col-type" value={TYPE_OPTIONS.includes(f.type?.toLowerCase()) ? f.type.toLowerCase() : (f.type || '')} onChange={(e) => updateField(i, 'type', e.target.value)}>
+                      <option value="">custom…</option>
+                      {TYPE_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+                      {modelNames.filter(n => n !== model.name).map(n => <option key={n} value={n}>{n}</option>)}
+                      {modelNames.filter(n => n !== model.name).length > 0 && <option disabled>──────</option>}
+                      {modelNames.filter(n => n !== model.name).map(n => <option key={`list-${n}`} value={`List<${n}>`}>List&lt;{n}&gt;</option>)}
+                    </select>
+                    <input type="checkbox" className="api-ed-field-col-req" checked={f.required} onChange={(e) => updateField(i, 'required', e.target.checked)} />
+                    <input className="api-ed-field-col-desc" value={f.description || ''} onChange={(e) => updateField(i, 'description', e.target.value)} placeholder="description" />
+                    <button className="api-ed-remove-btn api-ed-field-col-act" onClick={() => removeField(i)}><X size={12} /></button>
+                  </div>
+                  <div className="field-constraints">
+                    <label className="field-constraint-label"><input type="checkbox" className="field-required-check" checked={!!c.required} onChange={(e) => updateConstraint(i, 'required', e.target.checked)} /> required</label>
+                    {isNumeric && (
+                      <>
+                        <span className="field-constraint-label">min</span>
+                        <input className="field-constraint-input" type="number" value={c.min ?? ''} onChange={(e) => updateConstraint(i, 'min', e.target.value === '' ? undefined : Number(e.target.value))} placeholder="min" />
+                        <span className="field-constraint-label">max</span>
+                        <input className="field-constraint-input" type="number" value={c.max ?? ''} onChange={(e) => updateConstraint(i, 'max', e.target.value === '' ? undefined : Number(e.target.value))} placeholder="max" />
+                      </>
+                    )}
+                    {isString && (
+                      <>
+                        <span className="field-constraint-label">pattern</span>
+                        <input className="field-constraint-input" style={{ width: 100 }} value={c.pattern || ''} onChange={(e) => updateConstraint(i, 'pattern', e.target.value)} placeholder="regex" spellCheck={false} />
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
           <button className="api-ed-add-btn" onClick={addField}><Plus size={12} /> Field</button>
         </div>

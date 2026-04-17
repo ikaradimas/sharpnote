@@ -512,7 +512,7 @@ function AuthConfig({ auth, onChange }) {
   );
 }
 
-function TryItForm({ spec, method, pathTemplate, op, auth, baseUrl }) {
+function TryItForm({ spec, method, pathTemplate, op, auth, baseUrl, onRequestExecuted }) {
   const pathParamDefs  = (op.parameters ?? []).filter(p => p.in === 'path');
   const queryParamDefs = (op.parameters ?? []).filter(p => p.in === 'query');
   const hasBody = !!op.requestBody || (spec.swagger && op.parameters?.some(p => p.in === 'body'));
@@ -543,8 +543,20 @@ function TryItForm({ spec, method, pathTemplate, op, auth, baseUrl }) {
       const url = buildRequestUrl(baseUrl, pathTemplate, pathParams, qp);
       const opts = { method, url, headers };
       if (hasBody && body.trim()) opts.body = body;
+      const t0 = Date.now();
       const result = await window.electronAPI.apiRequest(opts);
       setResponse(result);
+      onRequestExecuted?.({
+        method: method.toUpperCase(),
+        url,
+        status: result.status,
+        duration: result.duration ?? (Date.now() - t0),
+        body: body || undefined,
+        pathParams: { ...pathParams },
+        queryParams: { ...queryParams },
+        pathTemplate,
+        timestamp: Date.now(),
+      });
     } catch (e) {
       setResponse({ error: e.message || String(e) });
     } finally {
@@ -751,7 +763,7 @@ function CopyClassButton({ spec, schema, name }) {
   );
 }
 
-function Operation({ spec, method, path, op, expanded, onToggle, tryItOpen, onToggleTryIt, auth, baseUrl }) {
+function Operation({ spec, method, path, op, expanded, onToggle, tryItOpen, onToggleTryIt, auth, baseUrl, onRequestExecuted }) {
   const sw2Body      = !op.requestBody && spec.swagger ? getSwagger2BodyInfo(spec, op) : null;
   const displayParams = sw2Body
     ? (op.parameters ?? []).filter(p => p.in !== 'body')
@@ -844,6 +856,7 @@ function Operation({ spec, method, path, op, expanded, onToggle, tryItOpen, onTo
               op={op}
               auth={auth}
               baseUrl={baseUrl}
+              onRequestExecuted={onRequestExecuted}
             />
           )}
         </div>
@@ -852,7 +865,7 @@ function Operation({ spec, method, path, op, expanded, onToggle, tryItOpen, onTo
   );
 }
 
-function TagGroup({ spec, tag, operations, expanded, onToggleTag, expandedOps, onToggleOp, expandedTryIt, onToggleTryIt, auth, baseUrl }) {
+function TagGroup({ spec, tag, operations, expanded, onToggleTag, expandedOps, onToggleOp, expandedTryIt, onToggleTryIt, auth, baseUrl, onRequestExecuted }) {
   return (
     <div className="api-tag">
       <button className="api-tag-header" onClick={() => onToggleTag(tag)}>
@@ -875,6 +888,7 @@ function TagGroup({ spec, tag, operations, expanded, onToggleTag, expandedOps, o
             onToggleTryIt={() => onToggleTryIt(opKey)}
             auth={auth}
             baseUrl={baseUrl}
+            onRequestExecuted={onRequestExecuted}
           />
         );
       })}
@@ -895,6 +909,8 @@ export function ApiPanel({ onToggle }) {
   const [auth,         setAuth]         = useState(DEFAULT_AUTH);
   const [savedApis,    setSavedApis]    = useState([]);
   const [selectedSavedId, setSelectedSavedId] = useState(null);
+  const [requestHistory, setRequestHistory] = useState([]);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   useEffect(() => {
     window.electronAPI.loadApiSaved?.().then(list => setSavedApis(list ?? [])).catch(() => {});
@@ -978,6 +994,10 @@ export function ApiPanel({ onToggle }) {
     });
   }
 
+  function handleRequestExecuted(entry) {
+    setRequestHistory(prev => [entry, ...prev].slice(0, 50));
+  }
+
   const groups  = spec ? groupOperations(spec) : {};
   const specBaseUrl = spec ? getBaseUrl(spec) : '';
   let baseUrl = specBaseUrl;
@@ -1051,10 +1071,40 @@ export function ApiPanel({ onToggle }) {
                 onToggleTryIt={toggleTryIt}
                 auth={auth}
                 baseUrl={baseUrl}
+                onRequestExecuted={handleRequestExecuted}
               />
             ))}
           </div>
         </>
+      )}
+
+      {requestHistory.length > 0 && (
+        <div className="api-history-section">
+          <div className="api-history-header" onClick={() => setHistoryOpen(v => !v)}>
+            {historyOpen ? '▾' : '▸'} History ({requestHistory.length})
+          </div>
+          {historyOpen && requestHistory.map((h, i) => {
+            const statusCls = h.status ? `api-history-status api-history-status-${String(h.status)[0]}xx` : 'api-history-status';
+            return (
+              <div key={i} className="api-history-item" title={h.url}>
+                <span className="api-history-method">{h.method}</span>
+                <span className="api-history-url">{h.url}</span>
+                {h.status && <span className={statusCls}>{h.status}</span>}
+                {h.duration != null && <span className="api-history-time">{h.duration}ms</span>}
+                <button
+                  className="api-history-replay"
+                  onClick={() => {
+                    // Expand the matching operation and its try-it form
+                    const opKey = `${h.method.toLowerCase()}:${h.pathTemplate}`;
+                    setExpandedOps(prev => { const n = new Set(prev); n.add(opKey); return n; });
+                    setExpandedTryIt(prev => { const n = new Set(prev); n.add(opKey); return n; });
+                  }}
+                  title="Replay - expand operation"
+                >Replay</button>
+              </div>
+            );
+          })}
+        </div>
       )}
     </div>
   );

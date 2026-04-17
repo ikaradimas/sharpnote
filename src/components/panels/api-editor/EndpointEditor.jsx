@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, X } from 'lucide-react';
+import { useClipboard } from '../../../hooks/useClipboard.js';
 
 const METHOD_COLORS = {
   get: '#61afef', post: '#98c379', put: '#e5c07b',
@@ -20,8 +21,9 @@ const HANDLER_PLACEHOLDER = [
   '};',
 ].join('\n');
 
-export function EndpointEditor({ endpoint, modelNames, onUpdate, onDelete }) {
+export function EndpointEditor({ endpoint, modelNames, basePath, baseUrl, onUpdate, onDelete }) {
   const [expanded, setExpanded] = useState(false);
+  const [copied, copyText] = useClipboard();
 
   const set = (key, value) => onUpdate({ ...endpoint, [key]: value });
 
@@ -69,6 +71,20 @@ export function EndpointEditor({ endpoint, modelNames, onUpdate, onDelete }) {
           onClick={(e) => e.stopPropagation()}
           placeholder="Summary"
         />
+        <button
+          className={`endpoint-try-btn${copied ? ' active' : ''}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            const m = (endpoint.method || 'GET').toUpperCase();
+            const fullPath = (baseUrl || 'http://localhost:3000') + (basePath || '') + (endpoint.path || '/');
+            let httpStr = `${m} ${fullPath}`;
+            if (endpoint.requestBody?.schema) {
+              httpStr += `\nContent-Type: application/json\n\n{\n  // ${endpoint.requestBody.schema} body\n}`;
+            }
+            copyText(httpStr);
+          }}
+          title="Copy HTTP request to clipboard"
+        >{copied ? 'Copied!' : 'Try'}</button>
         <button className="api-ed-remove-btn" onClick={(e) => { e.stopPropagation(); onDelete(); }} title="Delete endpoint"><X size={12} /></button>
       </div>
       {expanded && (

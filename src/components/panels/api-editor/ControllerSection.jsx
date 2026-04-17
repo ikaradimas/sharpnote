@@ -4,7 +4,7 @@ import { EndpointEditor } from './EndpointEditor.jsx';
 
 function shortId() { return Math.random().toString(36).slice(2, 10); }
 
-export function ControllerSection({ controller, modelNames, onUpdate, onDelete }) {
+export function ControllerSection({ controller, modelNames, baseUrl, onUpdate, onDelete }) {
   const [expanded, setExpanded] = useState(true);
 
   const set = (key, value) => onUpdate({ ...controller, [key]: value });
@@ -63,6 +63,8 @@ export function ControllerSection({ controller, modelNames, onUpdate, onDelete }
               key={ep.id}
               endpoint={ep}
               modelNames={modelNames}
+              basePath={controller.basePath}
+              baseUrl={baseUrl}
               onUpdate={(updated) => updateEndpoint(i, updated)}
               onDelete={() => removeEndpoint(i)}
             />

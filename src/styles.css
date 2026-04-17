@@ -9074,3 +9074,89 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
   pointer-events: none;
 }
 .files-preview-image { max-width: 100%; max-height: 200px; border-radius: 3px; }
+
+/* ── Feature 36: Try-it button on endpoints ─────────────────────────── */
+.endpoint-try-btn {
+  background: none; border: 1px solid var(--border-secondary);
+  color: var(--text-dim); font-size: 9px; padding: 1px 6px;
+  border-radius: 3px; cursor: pointer;
+}
+.endpoint-try-btn:hover { color: var(--accent-primary); border-color: var(--accent-primary); }
+
+/* ── Feature 37: Model relationship diagram ──────────────────────────── */
+.model-diagram { padding: 8px; overflow: auto; max-height: 300px; }
+.model-diagram svg { max-width: 100%; }
+.model-diagram-btn {
+  background: none; border: 1px solid var(--border-secondary);
+  color: var(--text-dim); font-size: 9px; padding: 1px 6px;
+  border-radius: 3px; cursor: pointer; margin-left: auto;
+}
+.model-diagram-btn.active { border-color: var(--accent-primary); color: var(--accent-primary); }
+
+/* ── Feature 38: Validation rules on model fields ────────────────────── */
+.field-constraints { display: flex; gap: 6px; align-items: center; margin-top: 2px; }
+.field-constraint-label { font-size: 9px; color: var(--text-dim); }
+.field-constraint-input {
+  background: var(--bg-input); border: 1px solid var(--border-secondary);
+  color: var(--text-secondary); font-size: 10px; padding: 1px 4px;
+  border-radius: 3px; width: 60px; font-family: var(--font-code);
+}
+.field-required-check { accent-color: var(--accent-primary); }
+
+/* ── Feature 39: Request history in API Browser ──────────────────────── */
+.api-history-section { border-top: 1px solid var(--border-secondary); padding: 4px 0; }
+.api-history-header {
+  font-size: 10px; text-transform: uppercase; color: var(--text-dim);
+  padding: 4px 10px; cursor: pointer;
+}
+.api-history-item {
+  display: flex; align-items: center; gap: 6px;
+  padding: 3px 10px; font-size: 10px; cursor: pointer;
+}
+.api-history-item:hover { background: var(--bg-hover); }
+.api-history-method { font-weight: 600; width: 40px; }
+.api-history-url { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-secondary); font-family: var(--font-code); }
+.api-history-status { font-family: var(--font-code); }
+.api-history-status-2xx { color: #6a9955; }
+.api-history-status-4xx { color: #e0a040; }
+.api-history-status-5xx { color: #d16969; }
+.api-history-time { color: var(--text-dim); }
+.api-history-replay {
+  background: none; border: none; color: var(--text-dim);
+  cursor: pointer; font-size: 9px; padding: 0 4px;
+}
+.api-history-replay:hover { color: var(--accent-primary); }
+
+/* ── Feature 45: Graph annotations ───────────────────────────────────── */
+.graph-annotation {
+  position: absolute; background: var(--bg-secondary);
+  border: 1px solid var(--accent-primary); border-radius: 3px;
+  padding: 2px 6px; font-size: 9px; color: var(--text-primary);
+  pointer-events: auto; cursor: default; white-space: nowrap;
+  transform: translate(-50%, -100%); margin-top: -4px;
+}
+.graph-annotation-remove {
+  background: none; border: none; color: var(--text-dim);
+  cursor: pointer; font-size: 8px; margin-left: 4px;
+}
+
+/* ── Feature 46: Graph export ────────────────────────────────────────── */
+.graph-export-wrap { position: relative; }
+.graph-export-btn {
+  background: none; border: 1px solid var(--border-secondary);
+  color: var(--text-dim); font-size: 10px; padding: 1px 6px;
+  border-radius: 3px; cursor: pointer;
+}
+.graph-export-btn:hover { color: var(--text-primary); }
+.graph-export-menu {
+  position: absolute; top: 100%; right: 0; z-index: 100;
+  background: var(--bg-secondary); border: 1px solid var(--border-primary);
+  border-radius: 4px; overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+.graph-export-menu button {
+  display: block; width: 100%; text-align: left;
+  background: none; border: none; border-bottom: 1px solid var(--border-secondary);
+  color: var(--text-secondary); padding: 6px 12px; cursor: pointer; font-size: 11px;
+}
+.graph-export-menu button:hover { background: var(--bg-hover); }

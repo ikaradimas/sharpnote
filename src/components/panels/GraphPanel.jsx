@@ -38,6 +38,9 @@ export function GraphPanel({ varHistory, onClearGraph }) {
   const [showLegend, setShowLegend]         = useState(true);
   const canvasRef = useRef(null);
   const chartRef  = useRef(null);
+  const [annotations, setAnnotations]     = useState([]);
+  const [exportOpen, setExportOpen]       = useState(false);
+  const wrapRef = useRef(null);
 
   // Keep selected set in sync when vars appear / disappear
   const namesKey = varNames.join(',');
@@ -253,11 +256,62 @@ export function GraphPanel({ varHistory, onClearGraph }) {
         },
         scales,
         animation: { duration: 0 },
+        onClick: (evt, elements) => {
+          if (!elements.length) return;
+          const el = elements[0];
+          const text = prompt('Annotation:');
+          if (!text) return;
+          setAnnotations(prev => [...prev, { datasetIndex: el.datasetIndex, index: el.index, text }]);
+        },
       },
     });
     return () => { chartRef.current?.destroy(); chartRef.current = null; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [datasets, showLegend, scales]);
+
+  // Compute pixel positions for annotations
+  const annotationPositions = useMemo(() => {
+    const chart = chartRef.current;
+    if (!chart) return [];
+    return annotations.map(a => {
+      const ds = chart.data.datasets[a.datasetIndex];
+      if (!ds) return null;
+      const pt = ds.data[a.index];
+      if (!pt) return null;
+      const meta = chart.getDatasetMeta(a.datasetIndex);
+      const elem = meta?.data?.[a.index];
+      if (!elem) return null;
+      return { x: elem.x, y: elem.y, text: a.text, key: `${a.datasetIndex}-${a.index}` };
+    }).filter(Boolean);
+  }, [annotations, datasets]);
+
+  function exportPNG() {
+    setExportOpen(false);
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const link = document.createElement('a');
+    link.download = 'chart.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  }
+
+  function exportCSV() {
+    setExportOpen(false);
+    const chart = chartRef.current;
+    if (!chart) return;
+    const rows = ['dataset,x,y'];
+    for (const ds of chart.data.datasets) {
+      for (const pt of ds.data) {
+        rows.push(`${ds.label},${pt.x},${pt.y}`);
+      }
+    }
+    const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+    const link = document.createElement('a');
+    link.download = 'chart.csv';
+    link.href = URL.createObjectURL(blob);
+    link.click();
+    URL.revokeObjectURL(link.href);
+  }
 
   return (
     <div className="graph-panel">
@@ -281,6 +335,15 @@ export function GraphPanel({ varHistory, onClearGraph }) {
           >
             Legend
           </button>
+          <div className="graph-export-wrap">
+            <button className="graph-export-btn" onClick={() => setExportOpen(v => !v)}>Export ▾</button>
+            {exportOpen && (
+              <div className="graph-export-menu">
+                <button onClick={exportPNG}>PNG</button>
+                <button onClick={exportCSV}>CSV</button>
+              </div>
+            )}
+          </div>
           {onClearGraph && (
             <button
               className="graph-clear-btn"
@@ -351,11 +414,26 @@ export function GraphPanel({ varHistory, onClearGraph }) {
               );
             })}
           </div>
-          <div className="graph-canvas-wrap">
+          <div className="graph-canvas-wrap" ref={wrapRef} style={{ position: 'relative' }}>
             {selected.size === 0 ? (
               <div className="graph-panel-empty">Select a variable above to plot</div>
             ) : (
-              <canvas ref={canvasRef} />
+              <>
+                <canvas ref={canvasRef} />
+                {annotationPositions.map((a, i) => (
+                  <div
+                    key={a.key}
+                    className="graph-annotation"
+                    style={{ left: a.x, top: a.y }}
+                  >
+                    {a.text}
+                    <button
+                      className="graph-annotation-remove"
+                      onClick={() => setAnnotations(prev => prev.filter((_, j) => j !== i))}
+                    >x</button>
+                  </div>
+                ))}
+              </>
             )}
           </div>
         </div>
