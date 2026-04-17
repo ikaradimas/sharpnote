@@ -515,7 +515,7 @@ function inlineDiagsTooltip() {
 export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
                       notebookId, cellId = null, readOnly = false, cellIndex = null, sqlSchema = null,
                       breakpoints = null, onToggleBreakpoint = null, pausedLine = null,
-                      inlineDiagnostics = null }) {
+                      inlineDiagnostics = null, peekVars = null }) {
   const containerRef = useRef(null);
   const viewRef = useRef(null);
   const onChangeRef = useRef(onChange);
@@ -525,6 +525,9 @@ export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
   const cellIndexRef = useRef(cellIndex);
   const onToggleBreakpointRef = useRef(onToggleBreakpoint);
   useEffect(() => { onToggleBreakpointRef.current = onToggleBreakpoint; }, [onToggleBreakpoint]);
+  const peekVarsRef = useRef(peekVars);
+  const peekVarsCompartmentRef = useRef(null);
+  useEffect(() => { peekVarsRef.current = peekVars; }, [peekVars]);
 
   useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
   useEffect(() => { onCtrlEnterRef.current = onCtrlEnter; }, [onCtrlEnter]);
@@ -540,6 +543,35 @@ export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
       defaultKeymap: true,
     })) });
   }, [sqlSchema, language]);
+
+  // Reconfigure variable peek tooltip when vars change
+  useEffect(() => {
+    const view = viewRef.current;
+    const compartment = peekVarsCompartmentRef.current;
+    if (!view || !compartment) return;
+    const ext = peekVarsRef.current?.length
+      ? [hoverTooltip((view, pos) => {
+          const word = view.state.wordAt(pos);
+          if (!word) return null;
+          const name = view.state.sliceDoc(word.from, word.to);
+          const v = peekVarsRef.current?.find(v => v.name === name);
+          if (!v) return null;
+          return {
+            pos: word.from,
+            end: word.to,
+            above: true,
+            create() {
+              const dom = document.createElement('div');
+              dom.className = 'cm-var-peek-tooltip';
+              dom.innerHTML = `<span class="cm-var-peek-type">${v.typeName}</span> <span class="cm-var-peek-name">${v.name}</span>` +
+                `<div class="cm-var-peek-value">${(v.isNull ? 'null' : (v.value || '').slice(0, 200))}</div>`;
+              return { dom };
+            },
+          };
+        })]
+      : [];
+    view.dispatch({ effects: compartment.reconfigure(ext) });
+  }, [peekVars]);
 
   // Toggle read-only without recreating the editor
   useEffect(() => {
@@ -607,6 +639,11 @@ export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
       inlineDiagsField,
       inlineDiagsTooltip(),
     ];
+
+    // Variable peek tooltip (reconfigurable via compartment)
+    const peekVarsCompartment = new Compartment();
+    peekVarsCompartmentRef.current = peekVarsCompartment;
+    extensions.push(peekVarsCompartment.of([]));
 
     if (language === 'csharp' && notebookId) {
       extensions.push(

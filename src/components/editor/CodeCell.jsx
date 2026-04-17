@@ -6,6 +6,7 @@ import { CellControls } from './CellControls.jsx';
 import { CellNameColor } from './CellNameColor.jsx';
 import { CellLinkPicker } from './CellLinkPicker.jsx';
 import { CellRunGroup } from './CellRunGroup.jsx';
+import { computeLineDiff } from '../../utils/text-diff.js';
 
 function formatElapsed(ms) {
   if (ms < 60_000) {
@@ -88,6 +89,7 @@ export function CodeCell({
   onNextCellsChange,
   onPrevCellsChange,
   cellElapsed,
+  vars,
 }) {
   const outputMode = cell.outputMode || 'auto';
   const locked = cell.locked || false;
@@ -105,11 +107,18 @@ export function CodeCell({
   const elapsedRef = useRef(0);
   // Output history browsing: -1 = current, 0 = oldest historical, histLen-1 = newest historical
   const [histIdx, setHistIdx] = useState(-1);
+  // Feature: cell diff view when stale
+  const [showDiff, setShowDiff] = useState(false);
+  // Feature: output pinning with comparison
+  const [pinnedHistIdx, setPinnedHistIdx] = useState(null);
 
   // Reset to current when a new run starts or outputs change
   useEffect(() => {
     setHistIdx(-1);
   }, [isRunning, outputs]);
+
+  // Reset diff view when cell starts running
+  useEffect(() => { if (isRunning) setShowDiff(false); }, [isRunning]);
 
   // Presentation auto-refresh interval
   useEffect(() => {
@@ -179,6 +188,23 @@ export function CodeCell({
           ↺ upstream variables changed
         </div>
       )}
+      {isStale && cell._lastRunCode != null && (
+        <div className="cell-diff-section">
+          <button className="cell-diff-toggle" onClick={() => setShowDiff(v => !v)}>
+            {showDiff ? '▾ Hide changes' : '▸ Show changes since last run'}
+          </button>
+          {showDiff && (
+            <div className="cell-diff-view">
+              {computeLineDiff(cell._lastRunCode, cell.content).filter(d => d.type !== 'same').map((d, i) => (
+                <div key={i} className={`cell-diff-line cell-diff-${d.type}`}>
+                  <span className="cell-diff-marker">{d.type === 'add' ? '+' : '−'}</span>
+                  {d.line || ' '}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
       {debugState?.cellId === cell.id && debugState.paused && (
         <div className="cell-debug-controls">
           <button className="debug-resume-btn" onClick={onDebugResume} title="Resume execution"><Play size={12} /> Resume</button>
@@ -242,6 +268,7 @@ export function CodeCell({
           onToggleBreakpoint={onToggleBreakpoint}
           pausedLine={debugState?.cellId === cell.id ? debugState.line : null}
           inlineDiagnostics={inlineDiagnostics}
+          peekVars={vars}
         />
       )}
       {(normalMessages.length > 0 || errorCount > 0) && (
@@ -298,6 +325,22 @@ export function CodeCell({
       )}
       {showErrors && <CellOutput messages={errorMessages} notebookId={notebookId} allCells={allCells} onRunCellByName={onRunCellByName} />}
       {!showErrors && !outputCollapsed && <CellOutput messages={normalMessages} notebookId={notebookId} allCells={allCells} onRunCellByName={onRunCellByName} />}
+      {pinnedHistIdx !== null && histLen > pinnedHistIdx && !showErrors && !outputCollapsed && (
+        <div className="output-compare">
+          <div className="output-compare-header">
+            <span className="output-compare-label">Pinned (run −{histLen - pinnedHistIdx})</span>
+            <span className="output-compare-label">Current</span>
+          </div>
+          <div className="output-compare-panes">
+            <div className="output-compare-pane">
+              <CellOutput messages={outputHistory[pinnedHistIdx]} notebookId={notebookId} />
+            </div>
+            <div className="output-compare-pane">
+              <CellOutput messages={normalMessages} notebookId={notebookId} />
+            </div>
+          </div>
+        </div>
+      )}
       {!showErrors && !outputCollapsed && !normalMessages.length && retainedResult && (
         <div className="retained-result">
           <div className="retained-header">
@@ -356,6 +399,16 @@ export function CodeCell({
               disabled={histIdx === -1}
               title="Next run output"
             >›</button>
+            {histIdx >= 0 && (
+              <button className="hist-pin-btn" onClick={() => setPinnedHistIdx(histIdx)} title="Pin this output for comparison">
+                📌
+              </button>
+            )}
+            {pinnedHistIdx !== null && (
+              <button className="hist-unpin-btn" onClick={() => setPinnedHistIdx(null)} title="Unpin comparison">
+                ✕ pinned
+              </button>
+            )}
           </span>
         )}
         <div className="cell-schedule-group" ref={scheduleDropdownRef}>

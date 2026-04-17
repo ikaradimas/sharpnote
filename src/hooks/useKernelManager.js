@@ -20,7 +20,10 @@ function prepareCellRun(setNb, pendingResolversRef, notebookId, cellId, resolve)
     if (prevOutputs?.length > 0) {
       newOutputHistory[cellId] = [...(newOutputHistory[cellId] || []).slice(-4), prevOutputs];
     }
+    const cell = n.cells.find(c => c.id === cellId);
+    const updatedCells = cell ? n.cells.map(c => c.id === cellId ? { ...c, _lastRunCode: c.content } : c) : n.cells;
     return {
+      cells: updatedCells,
       outputs: { ...n.outputs, [cellId]: [] },
       outputHistory: newOutputHistory,
       cellResults: { ...(n.cellResults || {}), [cellId]: null },

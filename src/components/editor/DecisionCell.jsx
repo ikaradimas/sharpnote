@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { CellControls } from './CellControls.jsx';
 import { CellNameColor } from './CellNameColor.jsx';
 import { CellRunGroup } from './CellRunGroup.jsx';
@@ -27,11 +27,20 @@ export function DecisionCell({
   onMoveDown,
   columns = 0, onColumnsChange,
   onToggleBookmark,
+  onHighlightCells,
 }) {
   const result = decisionResult?.result;
   const message = decisionResult?.message;
   const hasResult = decisionResult != null;
   const mode = cell.mode || 'bool';
+
+  // Feature 18: Decision history timeline
+  const [history, setHistory] = useState([]);
+  useEffect(() => {
+    if (decisionResult != null) {
+      setHistory(prev => [...prev.slice(-9), decisionResult.result]);
+    }
+  }, [decisionResult]);
 
   const statusClass = !hasResult ? '' :
     mode === 'switch' ? ' decision-cell-matched' :
@@ -70,6 +79,14 @@ export function DecisionCell({
         </div>
         <div className="decision-cell-content">
           <div className="decision-cell-header-row">
+            {history.length > 0 && (
+              <div className="decision-history">
+                {history.map((r, i) => (
+                  <span key={i} className={`decision-history-dot decision-history-${r === true ? 'true' : r === false ? 'false' : 'other'}`}
+                        title={String(r)} />
+                ))}
+              </div>
+            )}
             <CellNameColor name={cell.name} color={cell.color} onNameChange={onNameChange} onColorChange={onColorChange} />
             <input
               className="check-label-input"
@@ -111,6 +128,7 @@ export function DecisionCell({
                 selected={truePath}
                 options={cellOptions}
                 onToggle={(id) => togglePath(id, truePath, (v) => onTruePathChange(v))}
+                onHighlightCells={onHighlightCells}
               />
               <PathSelector
                 label="False →"
@@ -118,6 +136,7 @@ export function DecisionCell({
                 selected={falsePath}
                 options={cellOptions}
                 onToggle={(id) => togglePath(id, falsePath, (v) => onFalsePathChange(v))}
+                onHighlightCells={onHighlightCells}
               />
             </div>
           ) : (
@@ -126,6 +145,7 @@ export function DecisionCell({
               cellOptions={cellOptions}
               onChange={onSwitchPathsChange}
               matchedKey={hasResult ? String(result) : null}
+              onHighlightCells={onHighlightCells}
             />
           )}
         </div>
@@ -138,10 +158,14 @@ export function DecisionCell({
   );
 }
 
-function PathSelector({ label, className, selected, options, onToggle }) {
+function PathSelector({ label, className, selected, options, onToggle, onHighlightCells }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className={`decision-path-selector ${className}`}>
+    <div
+      className={`decision-path-selector ${className}`}
+      onMouseEnter={() => onHighlightCells?.(selected.length > 0 ? new Set(selected) : null)}
+      onMouseLeave={() => onHighlightCells?.(null)}
+    >
       <span className="decision-path-label">{label}</span>
       <button className="decision-path-toggle" onClick={() => setOpen((v) => !v)}>
         {selected.length === 0 ? 'none' : `${selected.length} cell${selected.length !== 1 ? 's' : ''}`} ▾
@@ -165,7 +189,7 @@ function PathSelector({ label, className, selected, options, onToggle }) {
   );
 }
 
-function SwitchPathEditor({ switchPaths, cellOptions, onChange, matchedKey }) {
+function SwitchPathEditor({ switchPaths, cellOptions, onChange, matchedKey, onHighlightCells }) {
   const [newCase, setNewCase] = useState('');
   const [openCase, setOpenCase] = useState(null);
 
@@ -199,7 +223,12 @@ function SwitchPathEditor({ switchPaths, cellOptions, onChange, matchedKey }) {
         const isMatched = matchedKey === caseKey;
         const isOpen = openCase === caseKey;
         return (
-          <div key={caseKey} className={`decision-switch-case${isMatched ? ' matched' : ''}`}>
+          <div
+            key={caseKey}
+            className={`decision-switch-case${isMatched ? ' matched' : ''}`}
+            onMouseEnter={() => onHighlightCells?.(cells.length > 0 ? new Set(cells) : null)}
+            onMouseLeave={() => onHighlightCells?.(null)}
+          >
             <div className="decision-switch-case-header">
               <span className={`decision-switch-key${isMatched ? ' matched' : ''}`}>
                 {caseKey === 'default' ? 'default' : `"${caseKey}"`} →

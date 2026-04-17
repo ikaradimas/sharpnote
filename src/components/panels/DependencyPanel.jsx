@@ -203,12 +203,17 @@ export function DependencyPanel({
 
   const scrollRef = useRef(null);
   const [scrollH, setScrollH] = useState(600);
+  const [scrollW, setScrollW] = useState(300);
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    const ro = new ResizeObserver(([entry]) => setScrollH(entry.contentRect.height));
+    const ro = new ResizeObserver(([entry]) => {
+      setScrollH(entry.contentRect.height);
+      setScrollW(entry.contentRect.width);
+    });
     ro.observe(el);
     setScrollH(el.clientHeight);
+    setScrollW(el.clientWidth);
     return () => ro.disconnect();
   }, []);
 
@@ -236,6 +241,85 @@ export function DependencyPanel({
   const [selectedPipelineId, setSelectedPipelineId] = useState(null);
 
   const selectedPipeline = (pipelines || []).find((p) => p.id === selectedPipelineId);
+
+  // Feature 20: Critical path highlighting
+  const [showCriticalPath, setShowCriticalPath] = useState(false);
+
+  const criticalPath = useMemo(() => {
+    if (!showCriticalPath) return null;
+    const elapsed = notebook?.cellElapsed || {};
+    if (nodes.length === 0) return null;
+
+    // Build adjacency from explicit edges
+    const outAdj = {}, inAdj = {};
+    for (const n of nodes) { outAdj[n.id] = []; inAdj[n.id] = []; }
+    for (const e of explicitEdges) { outAdj[e.from]?.push(e.to); inAdj[e.to]?.push(e.from); }
+
+    // Topological sort
+    const inDeg = {};
+    for (const n of nodes) inDeg[n.id] = inAdj[n.id].length;
+    const topo = [];
+    const queue = nodes.filter((n) => inDeg[n.id] === 0).map((n) => n.id);
+    let head = 0;
+    while (head < queue.length) {
+      const id = queue[head++];
+      topo.push(id);
+      for (const to of outAdj[id]) { if (--inDeg[to] === 0) queue.push(to); }
+    }
+
+    // Longest path distances
+    const dist = {};
+    const prev = {};
+    for (const id of topo) {
+      const w = elapsed[id] || 1;
+      if (inAdj[id].length === 0) { dist[id] = w; prev[id] = null; }
+      else {
+        let best = -1, bestPrev = null;
+        for (const p of inAdj[id]) {
+          if ((dist[p] || 0) > best) { best = dist[p] || 0; bestPrev = p; }
+        }
+        dist[id] = best + w;
+        prev[id] = bestPrev;
+      }
+    }
+
+    // Find exit node (max dist)
+    let maxDist = -1, exitId = null;
+    for (const id of topo) { if (dist[id] > maxDist) { maxDist = dist[id]; exitId = id; } }
+    if (!exitId) return null;
+
+    // Backtrack
+    const pathSet = new Set();
+    let cur = exitId;
+    while (cur) { pathSet.add(cur); cur = prev[cur]; }
+    return pathSet;
+  }, [showCriticalPath, notebook?.cellElapsed, nodes, explicitEdges]);
+
+  // Critical path edges
+  const criticalEdgeSet = useMemo(() => {
+    if (!criticalPath) return null;
+    const set = new Set();
+    for (const e of explicitEdges) {
+      if (criticalPath.has(e.from) && criticalPath.has(e.to)) set.add(`${e.from}->${e.to}`);
+    }
+    return set;
+  }, [criticalPath, explicitEdges]);
+
+  const handleMinimapClick = useCallback((e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    const mmW = 150, mmH = 100;
+    const scaleX = mmW / (totalW || 1);
+    const scaleY = mmH / (totalH || 1);
+    const scale = Math.min(scaleX, scaleY, 1);
+    // Convert minimap coords to graph coords, then compute pan to center viewport there
+    const graphX = mx / scale;
+    const graphY = my / scale;
+    const vpW = scrollW / zoom;
+    const vpH = scrollH / zoom;
+    setPan({ x: -(graphX - vpW / 2) * zoom, y: -(graphY - vpH / 2) * zoom });
+  }, [totalW, totalH, scrollW, scrollH, zoom]);
 
   const handleWheel = useCallback((e) => {
     e.preventDefault();
@@ -310,6 +394,11 @@ export function DependencyPanel({
           <span className="dep-zoom-label">{Math.round(zoom * 100)}%</span>
           <button className="dep-zoom-btn" onClick={() => setZoom((z) => Math.max(0.3, z - 0.2))} title="Zoom out">−</button>
           <button className="dep-zoom-btn" onClick={fitAll} title="Fit to view">⊞</button>
+          <button
+            className={`dep-critical-path-btn${showCriticalPath ? ' active' : ''}`}
+            onClick={() => setShowCriticalPath((v) => !v)}
+            title="Highlight critical path"
+          >Critical path</button>
           {executionProgress && (
             <button className="dep-cancel-btn" onClick={onCancelOrchestration} title="Cancel orchestration">⏹</button>
           )}
@@ -420,7 +509,7 @@ export function DependencyPanel({
                     stroke={isComplete ? '#4ec9b0' : branchColor}
                     strokeWidth={isFlowing ? 2.5 : 1.5}
                     strokeDasharray={isDashed ? '4 3' : isFlowing ? '6 4' : 'none'}
-                    className={isFlowing ? 'dep-edge-flowing' : ''}
+                    className={`${isFlowing ? 'dep-edge-flowing' : ''}${criticalEdgeSet?.has(`${e.from}->${e.to}`) ? ' dep-edge-critical' : ''}`}
                     markerEnd={marker}
                   />
                   {isBranch && (
@@ -448,10 +537,12 @@ export function DependencyPanel({
               const isSelected = selectionMode && selectedCellIds.has(n.id);
               const isDecision = n.type === 'decision';
 
+              const isCritical = criticalPath?.has(n.id);
+
               return (
                 <g
                   key={n.id}
-                  className="dep-node-group"
+                  className={`dep-node-group${isCritical ? ' dep-node-critical' : ''}`}
                   onClick={(e) => handleNodeClick(e, n)}
                   onDoubleClick={(e) => handleNodeDblClick(e, n)}
                   onContextMenu={(e) => handleContextMenu(e, n)}
@@ -539,6 +630,55 @@ export function DependencyPanel({
             )}
           </div>
         )}
+
+        {/* Minimap */}
+        {totalW > 0 && totalH > 0 && (() => {
+          const mmW = 150, mmH = 100;
+          const scaleX = mmW / totalW;
+          const scaleY = mmH / totalH;
+          const scale = Math.min(scaleX, scaleY, 1);
+          const vpW = (scrollW / zoom) * scale;
+          const vpH = (scrollH / zoom) * scale;
+          const vpX = (-pan.x / zoom) * scale;
+          const vpY = (-pan.y / zoom) * scale;
+          return (
+            <svg
+              className="dep-minimap"
+              width={mmW} height={mmH}
+              onClick={handleMinimapClick}
+            >
+              <g transform={`scale(${scale})`}>
+                {explicitEdges.map((e, i) => {
+                  const from = positions[e.from];
+                  const to = positions[e.to];
+                  if (!from || !to) return null;
+                  const isCritEdge = criticalEdgeSet?.has(`${e.from}->${e.to}`);
+                  return (
+                    <line key={`me-${i}`}
+                      x1={from.x + NODE_W / 2} y1={from.y + NODE_H / 2}
+                      x2={to.x + NODE_W / 2} y2={to.y + NODE_H / 2}
+                      stroke={isCritEdge ? '#e0a040' : '#3a5068'} strokeWidth={isCritEdge ? 2 : 1} />
+                  );
+                })}
+                {nodes.map((n) => {
+                  const pos = positions[n.id];
+                  if (!pos) return null;
+                  const isCrit = criticalPath?.has(n.id);
+                  return (
+                    <rect key={`mn-${n.id}`}
+                      x={pos.x} y={pos.y} width={NODE_W} height={NODE_H}
+                      rx="2" fill={isCrit ? '#e0a04040' : '#1a1a24'}
+                      stroke={isCrit ? '#e0a040' : getNodeColor(n)}
+                      strokeWidth={isCrit ? 1.5 : 0.5} />
+                  );
+                })}
+              </g>
+              <rect className="dep-minimap-viewport"
+                x={Math.max(0, vpX)} y={Math.max(0, vpY)}
+                width={Math.min(vpW, mmW)} height={Math.min(vpH, mmH)} />
+            </svg>
+          );
+        })()}
       </div>
 
       {/* Pipeline management */}

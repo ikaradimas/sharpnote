@@ -780,6 +780,46 @@ export const DOCS_SECTIONS = [
         'History is in-memory only — it is not persisted when the notebook is saved or the kernel resets',
         'Only the last 5 outputs are retained per cell; older entries are discarded automatically',
         'Navigating history does not affect the current cell state or re-run anything',
+      'Pin a historical output for side-by-side comparison with the current output using the 📌 button',
+      ]},
+    ],
+  },
+  {
+    id: 'cell-diff-view', title: 'Cell Diff View',
+    content: [
+      { type: 'p', text: 'When a code cell is marked stale (upstream variables changed), a "Show changes since last run" button appears below the stale banner. Click it to reveal an inline diff showing lines added and removed since the cell was last executed.' },
+      { type: 'h3', text: 'How It Works' },
+      { type: 'ul', items: [
+        'The cell content at the time of each execution is snapshotted automatically',
+        'The diff uses an LCS-based algorithm to compare the last-run code with the current content',
+        'Added lines are shown in green with a + marker; removed lines in red with a − marker',
+        'The diff view resets when the cell starts running',
+      ]},
+    ],
+  },
+  {
+    id: 'output-pinning', title: 'Output Pinning & Comparison',
+    content: [
+      { type: 'p', text: 'Pin a historical output to compare it side-by-side with the current output. This is useful for tracking how results change across executions.' },
+      { type: 'h3', text: 'Using Pinned Outputs' },
+      { type: 'ul', items: [
+        'Navigate to a historical output using the ‹ › history controls in the cell footer',
+        'Click the 📌 button to pin that output for comparison',
+        'A side-by-side comparison view appears showing the pinned output on the left and the current output on the right',
+        'Click "✕ pinned" to remove the pin and return to the normal view',
+      ]},
+    ],
+  },
+  {
+    id: 'variable-peek', title: 'Inline Variable Peek',
+    content: [
+      { type: 'p', text: 'Hover over any variable name in the code editor to see its current type and value in a tooltip. This provides quick inspection without switching to the Variables panel.' },
+      { type: 'h3', text: 'Details' },
+      { type: 'ul', items: [
+        'The tooltip shows the variable\'s type name, name, and current value (up to 200 characters)',
+        'Only variables from the kernel\'s global state are shown — local variables inside methods are not available',
+        'Null values are displayed explicitly as "null"',
+        'The peek updates after each cell execution as the variables list refreshes',
       ]},
     ],
   },

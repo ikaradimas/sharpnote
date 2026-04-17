@@ -104,6 +104,7 @@ export function App() {
   const [dbConnDialog, setDbConnDialog] = useState(null); // null | connection object (edit) | opened with null (new)
 
   const [dashboardMode, setDashboardMode] = useState(false);
+  const [highlightedCellIds, setHighlightedCellIds] = useState(null);
 
   // ── Panel / pane states ────────────────────────────────────────────────────
   const [apiEditorRequestedId, setApiEditorRequestedId] = useState(null);
@@ -1382,6 +1383,8 @@ export function App() {
                     onRetainOutput={handleRetainOutput}
                     onUnretainOutput={handleUnretainOutput}
                     showCircuit={showCircuit}
+                    highlightedCellIds={highlightedCellIds}
+                    onHighlightCells={setHighlightedCellIds}
                   />
                 </div>
               ))}
