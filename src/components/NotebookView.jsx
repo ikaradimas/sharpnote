@@ -446,14 +446,11 @@ export function NotebookView({
         {notebookBg !== 'none' && (() => {
           const bg = NOTEBOOK_BACKGROUNDS.find(b => b.id === notebookBg);
           if (!bg) return null;
-          const dataUri = `data:image/svg+xml,${encodeURIComponent(bg.svg)}`;
           return (
             <div
               className="notebook-bg-overlay"
-              style={{
-                backgroundImage: `url("${dataUri}")`,
-                opacity: notebookBgOpacity,
-              }}
+              style={{ opacity: notebookBgOpacity }}
+              dangerouslySetInnerHTML={{ __html: bg.svg }}
             />
           );
         })()}
