@@ -5,13 +5,23 @@ import { makeLibEditorId, isNotebookId, getNotebookDisplayName, scrollAndFlash, 
 import { createNotebook, makeCell, DEFAULT_NUGET_SOURCES } from '../notebook-factory.js';
 import { generateImportCode } from '../data-import-templates.js';
 
+const PANEL_FLAG_MAP = {
+  log: 'logPanelOpen', nuget: 'nugetPanelOpen', config: 'configPanelOpen',
+  db: 'dbPanelOpen', library: 'libraryPanelOpen', vars: 'varsPanelOpen',
+  toc: 'tocPanelOpen', files: 'filesPanelOpen', api: 'apiPanelOpen',
+  'api-editor': 'apiEditorPanelOpen', git: 'gitPanelOpen', graph: 'graphPanelOpen',
+  todo: 'todoPanelOpen', regex: 'regexPanelOpen', history: 'historyPanelOpen',
+  deps: 'depsPanelOpen', embed: 'embedPanelOpen',
+};
+
 function applyPanelLayout(data) {
   const pl = data?.panelLayout;
   if (!pl) return {};
   const flags = {};
   if (pl.openPanels) {
     for (const [k, v] of Object.entries(pl.openPanels)) {
-      if (v) flags[k + 'PanelOpen'] = true;
+      const flag = PANEL_FLAG_MAP[k];
+      if (v && flag) flags[flag] = true;
     }
   }
   return { ...flags, ...(pl.dockLayout ? { dockLayout: pl.dockLayout } : {}) };
@@ -89,9 +99,9 @@ export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef, for
       retainedResults: nb.retainedResults || {},
       panelLayout: {
         openPanels: Object.fromEntries(
-          ['log','nuget','config','db','library','vars','toc','files','api','api-editor','git','graph','todo','regex','history','deps','embed']
-            .filter((k) => nb[k + 'PanelOpen'])
-            .map((k) => [k, true])
+          Object.entries(PANEL_FLAG_MAP)
+            .filter(([, flag]) => nb[flag])
+            .map(([k]) => [k, true])
         ),
         dockLayout: nb.dockLayout || null,
       },
