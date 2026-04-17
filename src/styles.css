@@ -5556,7 +5556,7 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 .files-crumb-sep { font-size: 10px; color: var(--text-dim); padding: 0 1px; }
 
 .files-list {
-  flex: 1; overflow-y: auto; overflow-x: hidden;
+  flex: 1; overflow-y: auto; overflow-x: hidden; position: relative;
 }
 
 .files-entry {
@@ -5597,6 +5597,19 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 }
 .files-action-btn:hover { background: var(--bg-mid); color: var(--text-primary); }
 .files-action-delete:hover { color: #e06060; }
+
+.files-ctx-menu {
+  position: absolute; z-index: 200;
+  background: var(--bg-elevated); border: 1px solid var(--border-default);
+  border-radius: 6px; padding: 4px 0; min-width: 160px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+}
+.files-ctx-item {
+  display: block; width: 100%; padding: 5px 12px; background: none; border: none;
+  cursor: pointer; font-family: var(--font-ui); font-size: 11px;
+  color: var(--text-secondary); text-align: left; transition: background 0.1s;
+}
+.files-ctx-item:hover { background: var(--bg-mid); color: var(--text-primary); }
 
 .files-rename-input {
   flex: 1; min-width: 0; background: var(--bg-deep);

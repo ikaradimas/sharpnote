@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { formatFileSize } from '../../utils.js';
 import { IconFolderSvg, IconFileSvg } from '../toolbar/Icons.jsx';
+import { useOutsideClick } from '../../hooks/useOutsideClick.js';
 
 function formatFileMtime(ms) {
   if (!ms) return '';
@@ -31,6 +32,9 @@ export function FilesPanel({ currentDir, onNavigate, onOpenNotebook, notebookDir
   const [favsCollapsed, setFavsCollapsed] = useState(false);
   const renameRef    = useRef(null);
   const createRef    = useRef(null);
+  const [ctxMenu, setCtxMenu] = useState(null); // { name, x, y }
+  const ctxRef = useRef(null);
+  useOutsideClick(ctxRef, () => setCtxMenu(null), !!ctxMenu);
 
   const loadDir = useCallback(async (dir) => {
     setLoading(true);
@@ -114,6 +118,30 @@ export function FilesPanel({ currentDir, onNavigate, onOpenNotebook, notebookDir
     }
     setCreating(false);
     setCreateDraft('');
+  };
+
+  const handleContextMenu = (e, entry) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const rect = e.currentTarget.closest('.files-list')?.getBoundingClientRect();
+    setCtxMenu({
+      name: entry.name,
+      x: e.clientX - (rect?.left || 0),
+      y: e.clientY - (rect?.top || 0),
+    });
+  };
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard?.writeText(text);
+    setCtxMenu(null);
+  };
+
+  const getAbsPath = (name) => currentDir ? currentDir.replace(/\/?$/, '/') + name : name;
+  const getRelPath = (name) => {
+    if (!notebookDir || !currentDir) return name;
+    const abs = getAbsPath(name);
+    if (abs.startsWith(notebookDir)) return abs.slice(notebookDir.replace(/\/?$/, '/').length);
+    return abs;
   };
 
   const isFavorite = currentDir && favoriteFolders.includes(currentDir);
@@ -249,6 +277,7 @@ export function FilesPanel({ currentDir, onNavigate, onOpenNotebook, notebookDir
             className={`files-entry${selected === entry.name ? ' files-selected' : ''}${entry.unreadable ? ' files-unreadable' : ''}`}
             onClick={() => setSelected(entry.name)}
             onDoubleClick={() => handleOpen(entry)}
+            onContextMenu={(e) => handleContextMenu(e, entry)}
           >
             <span className="files-icon">
               {entry.isDirectory ? <IconFolderSvg /> : <IconFileSvg isNotebook={entry.name.endsWith('.cnb')} />}
@@ -294,6 +323,20 @@ export function FilesPanel({ currentDir, onNavigate, onOpenNotebook, notebookDir
 
         {!loading && !error && entries.length === 0 && !creating && (
           <div className="files-empty">Empty folder</div>
+        )}
+
+        {ctxMenu && (
+          <div ref={ctxRef} className="files-ctx-menu" style={{ left: ctxMenu.x, top: ctxMenu.y }}>
+            <button className="files-ctx-item" onClick={() => copyToClipboard(getAbsPath(ctxMenu.name))}>
+              Copy absolute path
+            </button>
+            <button className="files-ctx-item" onClick={() => copyToClipboard(getRelPath(ctxMenu.name))}>
+              Copy relative path
+            </button>
+            <button className="files-ctx-item" onClick={() => copyToClipboard(ctxMenu.name)}>
+              Copy filename
+            </button>
+          </div>
         )}
       </div>
     </div>
