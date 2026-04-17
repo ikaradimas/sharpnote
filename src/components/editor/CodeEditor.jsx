@@ -512,6 +512,67 @@ function inlineDiagsTooltip() {
   }, { hideOnChange: true });
 }
 
+const COLLECTION_RE = /^(List|IList|IEnumerable|ICollection|IReadOnlyList|HashSet|Queue|Stack|LinkedList|ObservableCollection|SortedSet)/i;
+const DICT_RE = /^(Dictionary|IDictionary|IReadOnlyDictionary|SortedDictionary|ConcurrentDictionary)/i;
+const ARRAY_SUFFIX_RE = /\[\]$/;
+
+function formatPeekValue(escapedVal, escapedType) {
+  // Try to detect collection-like values and show first items
+  const raw = escapedVal;
+  const type = escapedType;
+  const isCollection = COLLECTION_RE.test(type) || ARRAY_SUFFIX_RE.test(type);
+  const isDict = DICT_RE.test(type);
+
+  // Try parse as JSON-like structure (the value string from the kernel)
+  // Values often look like: "System.Collections.Generic.List`1[System.Int32]"
+  // or for ToString() results: "[ 1, 2, 3, 4, 5 ]" or "{ key = val, ... }"
+  if (isCollection || isDict) {
+    // Try bracket-delimited list: [ item1, item2, ... ]
+    const bracketMatch = raw.match(/^\[(.+)\]$/s) || raw.match(/^\{(.+)\}$/s);
+    if (bracketMatch) {
+      const inner = bracketMatch[1];
+      const items = splitTopLevel(inner);
+      const maxShow = 5;
+      const shown = items.slice(0, maxShow);
+      const more = items.length > maxShow ? items.length - maxShow : 0;
+      let html = `<div class="cm-var-peek-collection-header">${items.length} item${items.length !== 1 ? 's' : ''}</div>`;
+      html += '<div class="cm-var-peek-items">';
+      for (const item of shown) {
+        html += `<div class="cm-var-peek-item">${item.trim()}</div>`;
+      }
+      if (more > 0) html += `<div class="cm-var-peek-more">… ${more} more</div>`;
+      html += '</div>';
+      return html;
+    }
+    // Count hint: "Count = 5" pattern
+    const countMatch = raw.match(/Count\s*=\s*(\d+)/);
+    if (countMatch) {
+      return `<div class="cm-var-peek-collection-header">${countMatch[1]} items</div><div class="cm-var-peek-scalar">${raw}</div>`;
+    }
+  }
+
+  // For simple scalars or unrecognised formats, show truncated value
+  const truncated = raw.length > 300 ? raw.slice(0, 300) + '…' : raw;
+  return `<div class="cm-var-peek-scalar">${truncated}</div>`;
+}
+
+function splitTopLevel(s) {
+  // Split by commas, but respect nested brackets/braces
+  const items = [];
+  let depth = 0, start = 0;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (c === '[' || c === '{' || c === '(') depth++;
+    else if (c === ']' || c === '}' || c === ')') depth--;
+    else if (c === ',' && depth === 0) {
+      items.push(s.slice(start, i));
+      start = i + 1;
+    }
+  }
+  if (start < s.length) items.push(s.slice(start));
+  return items;
+}
+
 export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
                       notebookId, cellId = null, readOnly = false, cellIndex = null, sqlSchema = null,
                       breakpoints = null, onToggleBreakpoint = null, pausedLine = null,
@@ -563,8 +624,19 @@ export function CodeEditor({ value, onChange, language = 'csharp', onCtrlEnter,
             create() {
               const dom = document.createElement('div');
               dom.className = 'cm-var-peek-tooltip';
-              dom.innerHTML = `<span class="cm-var-peek-type">${v.typeName}</span> <span class="cm-var-peek-name">${v.name}</span>` +
-                `<div class="cm-var-peek-value">${(v.isNull ? 'null' : (v.value || '').slice(0, 200))}</div>`;
+              const esc = (s) => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+              let bodyHtml;
+              if (v.isNull) {
+                bodyHtml = '<div class="cm-var-peek-null">null</div>';
+              } else {
+                bodyHtml = formatPeekValue(esc(v.value || ''), esc(v.typeName));
+              }
+              dom.innerHTML =
+                `<div class="cm-var-peek-header">` +
+                  `<span class="cm-var-peek-type">${esc(v.typeName)}</span>` +
+                `</div>` +
+                `<div class="cm-var-peek-name">${esc(v.name)}</div>` +
+                `<div class="cm-var-peek-body">${bodyHtml}</div>`;
               return { dom };
             },
           };

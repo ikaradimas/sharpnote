@@ -8786,22 +8786,71 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 .cm-var-peek-tooltip {
   background: var(--bg-secondary);
   border: 1px solid var(--border-primary);
-  border-radius: 4px;
-  padding: 4px 8px;
+  border-radius: 6px;
+  padding: 0;
   font-family: var(--font-code);
   font-size: 11px;
-  max-width: 400px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-}
-.cm-var-peek-type { color: var(--accent-secondary); }
-.cm-var-peek-name { color: var(--text-primary); font-weight: 500; }
-.cm-var-peek-value {
-  color: var(--text-secondary);
-  margin-top: 2px;
-  max-height: 100px;
+  max-width: 420px;
+  min-width: 180px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
   overflow: hidden;
+}
+.cm-var-peek-header {
+  background: rgba(0,0,0,0.2);
+  padding: 4px 10px;
+  border-bottom: 1px solid var(--border-secondary);
+}
+.cm-var-peek-type {
+  color: var(--accent-secondary);
+  font-size: 10px;
+  opacity: 0.8;
+}
+.cm-var-peek-name {
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 12px;
+  padding: 2px 10px 0;
+}
+.cm-var-peek-body {
+  padding: 4px 10px 6px;
+  max-height: 180px;
+  overflow: auto;
+}
+.cm-var-peek-null {
+  color: #808080;
+  font-style: italic;
+}
+.cm-var-peek-scalar {
+  color: var(--text-secondary);
   white-space: pre-wrap;
   word-break: break-all;
+}
+.cm-var-peek-collection-header {
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-bottom: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.cm-var-peek-items {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.cm-var-peek-item {
+  color: var(--text-secondary);
+  padding: 1px 6px;
+  background: rgba(0,0,0,0.1);
+  border-radius: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cm-var-peek-more {
+  color: var(--text-dim);
+  font-size: 10px;
+  font-style: italic;
+  padding: 2px 6px 0;
 }
 
 /* ── Feature 17: Branch preview highlight ─────────────────────────────── */
