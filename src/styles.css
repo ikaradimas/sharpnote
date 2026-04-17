@@ -8583,11 +8583,18 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
   font-size: 10px; display: flex; gap: 8px;
 }
 .kafka-compare-body {
-  flex: 1; overflow: auto; padding: 8px;
+  flex: 1; overflow: auto; padding: 0;
   font-family: var(--font-code); font-size: 11px;
-  color: var(--text-secondary); white-space: pre-wrap;
+  color: var(--text-secondary); white-space: pre;
   margin: 0;
 }
+.kafka-compare-diff-pane { border-left: 1px solid var(--border-default); border-right: 1px solid var(--border-default); }
+.kafka-compare-pane-label { color: var(--text-dim); font-style: italic; }
+.kafka-diff-line { padding: 0 8px; min-height: 1.4em; }
+.kafka-diff-same { color: var(--text-secondary); }
+.kafka-diff-add { background: rgba(106, 153, 85, 0.18); color: #6a9955; }
+.kafka-diff-remove { background: rgba(209, 105, 105, 0.18); color: #d16969; }
+.kafka-diff-marker { display: inline-block; width: 14px; opacity: 0.6; user-select: none; }
 
 .rx-ref-desc { color: var(--text-dim); }
 

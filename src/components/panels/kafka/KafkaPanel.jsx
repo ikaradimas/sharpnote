@@ -2,6 +2,16 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useResize } from '../../../hooks/useResize.js';
 import { useOutsideClick } from '../../../hooks/useOutsideClick.js';
+import { computeLineDiff } from '../../../utils/text-diff.js';
+
+function prettyValue(raw) {
+  try {
+    const cleaned = (raw || '').replace(/^[\uFEFF\x00]+/, '').replace(/\s*#\d+\s*$/, '');
+    const parsed = JSON.parse(cleaned);
+    if (parsed && typeof parsed === 'object') return JSON.stringify(parsed, null, 2);
+  } catch {}
+  return raw || '(null)';
+}
 
 // ── C# consumer code generator ────────────────────────────────────────────────
 
@@ -909,25 +919,54 @@ export function KafkaPanel({ onToggle, asTab = false }) {
                       <span>Compare Messages</span>
                       <button className="kafka-btn" onClick={() => setCompareMessages([])}>{'\u2715'} Close</button>
                     </div>
-                    <div className="kafka-compare-panes">
-                      {compareMessages.map((msg, i) => (
-                        <div key={i} className="kafka-compare-pane">
-                          <div className="kafka-compare-pane-header">
-                            <span className="kafka-msg-stream">{msg.topic}</span>
-                            <span className="kafka-msg-meta">p{msg.partition}&middot;{msg.offset}</span>
+                    {(() => {
+                      const textA = prettyValue(compareMessages[0].value);
+                      const textB = prettyValue(compareMessages[1].value);
+                      const diff = computeLineDiff(textA, textB);
+                      return (
+                        <div className="kafka-compare-panes">
+                          <div className="kafka-compare-pane">
+                            <div className="kafka-compare-pane-header">
+                              <span className="kafka-msg-stream">{compareMessages[0].topic}</span>
+                              <span className="kafka-msg-meta">p{compareMessages[0].partition}&middot;{compareMessages[0].offset}</span>
+                            </div>
+                            <pre className="kafka-compare-body">
+                              {diff.map((d, i) => (
+                                d.type === 'add' ? null : (
+                                  <div key={i} className={`kafka-diff-line kafka-diff-${d.type}`}>{d.line || ' '}</div>
+                                )
+                              ))}
+                            </pre>
                           </div>
-                          <pre className="kafka-compare-body">
-                            {(() => {
-                              try {
-                                const parsed = JSON.parse(msg.value.replace(/^[\uFEFF\x00]+/, '').replace(/\s*#\d+\s*$/, ''));
-                                if (parsed && typeof parsed === 'object') return JSON.stringify(parsed, null, 2);
-                              } catch {}
-                              return msg.value || '(null)';
-                            })()}
-                          </pre>
+                          <div className="kafka-compare-pane kafka-compare-diff-pane">
+                            <div className="kafka-compare-pane-header">
+                              <span className="kafka-compare-pane-label">Diff</span>
+                            </div>
+                            <pre className="kafka-compare-body">
+                              {diff.map((d, i) => (
+                                <div key={i} className={`kafka-diff-line kafka-diff-${d.type}`}>
+                                  <span className="kafka-diff-marker">{d.type === 'add' ? '+' : d.type === 'remove' ? '−' : ' '}</span>
+                                  {d.line || ' '}
+                                </div>
+                              ))}
+                            </pre>
+                          </div>
+                          <div className="kafka-compare-pane">
+                            <div className="kafka-compare-pane-header">
+                              <span className="kafka-msg-stream">{compareMessages[1].topic}</span>
+                              <span className="kafka-msg-meta">p{compareMessages[1].partition}&middot;{compareMessages[1].offset}</span>
+                            </div>
+                            <pre className="kafka-compare-body">
+                              {diff.map((d, i) => (
+                                d.type === 'remove' ? null : (
+                                  <div key={i} className={`kafka-diff-line kafka-diff-${d.type}`}>{d.line || ' '}</div>
+                                )
+                              ))}
+                            </pre>
+                          </div>
                         </div>
-                      ))}
-                    </div>
+                      );
+                    })()}
                   </div>
                 )}
                 {pager.total > 0 && (
