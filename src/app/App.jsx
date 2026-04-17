@@ -77,6 +77,13 @@ export function App() {
   useEffect(() => { showSkylineRef.current = showSkyline; }, [showSkyline]);
   const skylineTriggerRef = useRef(null);
 
+  const [notebookBg, setNotebookBg] = useState('none');
+  const notebookBgRef = useRef('none');
+  useEffect(() => { notebookBgRef.current = notebookBg; }, [notebookBg]);
+  const [notebookBgOpacity, setNotebookBgOpacity] = useState(0.15);
+  const notebookBgOpacityRef = useRef(0.15);
+  useEffect(() => { notebookBgOpacityRef.current = notebookBgOpacity; }, [notebookBgOpacity]);
+
   const [tablePageSize, setTablePageSize] = useState(10);
   const tablePageSizeRef = useRef(10);
   useEffect(() => { tablePageSizeRef.current = tablePageSize; }, [tablePageSize]);
@@ -298,6 +305,8 @@ export function App() {
       showCircuit: showCircuitRef.current,
       showGhost: showGhostRef.current,
       showSkyline: showSkylineRef.current,
+      notebookBg: notebookBgRef.current,
+      notebookBgOpacity: notebookBgOpacityRef.current,
       tablePageSize: tablePageSizeRef.current,
       customShortcuts: customShortcutsRef.current,
       pinnedTabs: [...pinnedPathsRef.current],
@@ -332,6 +341,8 @@ export function App() {
       else if (typeof s?.showMinigame === 'boolean') setShowCircuit(s.showMinigame);
       if (typeof s?.showGhost === 'boolean') setShowGhost(s.showGhost);
       if (typeof s?.showSkyline === 'boolean') setShowSkyline(s.showSkyline);
+      if (s?.notebookBg) setNotebookBg(s.notebookBg);
+      if (typeof s?.notebookBgOpacity === 'number') setNotebookBgOpacity(s.notebookBgOpacity);
       if (typeof s?.tablePageSize === 'number') setTablePageSize(s.tablePageSize);
       if (s?.customShortcuts && typeof s.customShortcuts === 'object') {
         setCustomShortcuts(s.customShortcuts);
@@ -433,6 +444,11 @@ export function App() {
     if (!settingsLoadedRef.current) return;
     saveSettingsRef.current();
   }, [formatOnSave]);
+
+  useEffect(() => {
+    if (!settingsLoadedRef.current) return;
+    saveSettingsRef.current();
+  }, [notebookBg, notebookBgOpacity]);
 
   const handleShortcutsChange = useCallback((id, combo) => {
     setCustomShortcuts((prev) => {
@@ -1393,6 +1409,8 @@ export function App() {
                     onRetainOutput={handleRetainOutput}
                     onUnretainOutput={handleUnretainOutput}
                     showCircuit={showCircuit}
+                    notebookBg={notebookBg}
+                    notebookBgOpacity={notebookBgOpacity}
                     highlightedCellIds={highlightedCellIds}
                     onHighlightCells={setHighlightedCellIds}
                   />
@@ -1505,6 +1523,10 @@ export function App() {
           onShowGhostChange={setShowGhost}
           showSkyline={showSkyline}
           onShowSkylineChange={setShowSkyline}
+          notebookBg={notebookBg}
+          onNotebookBgChange={setNotebookBg}
+          notebookBgOpacity={notebookBgOpacity}
+          onNotebookBgOpacityChange={setNotebookBgOpacity}
           tablePageSize={tablePageSize}
           onTablePageSizeChange={setTablePageSize}
           customShortcuts={customShortcuts}

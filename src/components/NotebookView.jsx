@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { makeCell } from '../notebook-factory.js';
 import { getSectionHeadingLevel, getCollapsedSections } from '../utils.js';
+import { NOTEBOOK_BACKGROUNDS } from '../config/notebook-backgrounds.js';
 import { Toolbar } from './toolbar/Toolbar.jsx';
 import { CodeCell } from './editor/CodeCell.jsx';
 import { MarkdownCell } from './editor/MarkdownCell.jsx';
@@ -77,6 +78,8 @@ export function NotebookView({
   onRetainOutput,
   onUnretainOutput,
   showCircuit = true,
+  notebookBg = 'none',
+  notebookBgOpacity = 0.15,
   highlightedCellIds,
   onHighlightCells,
 }) {
@@ -440,6 +443,20 @@ export function NotebookView({
         />
       )}
       <div className={`notebook${dashboardMode ? ' dashboard-mode' : ''}`}>
+        {notebookBg !== 'none' && (() => {
+          const bg = NOTEBOOK_BACKGROUNDS.find(b => b.id === notebookBg);
+          if (!bg) return null;
+          const dataUri = `data:image/svg+xml,${encodeURIComponent(bg.svg)}`;
+          return (
+            <div
+              className="notebook-bg-overlay"
+              style={{
+                backgroundImage: `url("${dataUri}")`,
+                opacity: notebookBgOpacity,
+              }}
+            />
+          );
+        })()}
         {cells.length === 0 && (
           <div className="empty-notebook">
             <h2>Empty Notebook</h2>

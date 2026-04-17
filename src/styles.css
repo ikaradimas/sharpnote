@@ -5938,6 +5938,57 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 }
 .settings-theme-tile.active .settings-theme-name { color: var(--accent-primary); }
 
+/* Notebook background picker */
+.settings-bg-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 8px;
+}
+.settings-bg-tile {
+  background: var(--bg-deep);
+  border: 1px solid var(--border-default);
+  border-radius: 4px; cursor: pointer;
+  padding: 4px 4px 5px;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+.settings-bg-tile:hover { border-color: var(--border-strong); }
+.settings-bg-tile.active {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 1px var(--accent-primary-dim);
+}
+.settings-bg-preview {
+  width: 100%; height: 60px; overflow: hidden;
+  border-radius: 3px; background: var(--bg-base);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-secondary);
+}
+.settings-bg-preview svg {
+  width: auto; height: 100%; opacity: 0.4;
+}
+.settings-bg-none {
+  font-size: 18px; color: var(--text-dim); opacity: 0.4;
+}
+.settings-bg-name {
+  font-family: var(--font-ui); font-size: 10px;
+  color: var(--text-secondary); white-space: nowrap;
+}
+.settings-bg-tile.active .settings-bg-name { color: var(--accent-primary); }
+
+/* Notebook background overlay */
+.notebook-bg-overlay {
+  position: absolute;
+  top: 0; left: 0; bottom: 0;
+  width: 50%;
+  pointer-events: none;
+  z-index: 0;
+  background-repeat: no-repeat;
+  background-size: auto 100%;
+  background-position: left top;
+  mask-image: linear-gradient(to right, black 0%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, black 0%, transparent 100%);
+}
+
 /* Path rows */
 .settings-path-row {
   display: flex; flex-direction: column; gap: 3px;

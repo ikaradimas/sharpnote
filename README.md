@@ -171,6 +171,7 @@
 - **Recent files** — last 12 opened notebooks persisted to `userData/recent-files.json`; exposed in the File menu
 - **CLI / headless execution** — run notebooks from the command line (`electron . run notebook.cnb`) without opening the GUI; supports `--config Key=Value` overrides, `--output path` to write results to a file, and `--format json` for machine-readable output; exits with code 0 when all checks pass, 1 on any failure; ideal for CI/CD, cron jobs, and automated reporting
 - **Dark theme** — purpose-built urban dark CSS; no UI framework dependency
+- **Notebook backgrounds** — decorative shadow patterns (Tribal, Cyber, FPS, Relaxing) that render on the left edge and fade toward center; configurable in Settings with an opacity slider
 
 ---
 

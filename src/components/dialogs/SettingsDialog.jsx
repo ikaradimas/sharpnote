@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { THEMES } from '../../config/themes.js';
+import { NOTEBOOK_BACKGROUNDS } from '../../config/notebook-backgrounds.js';
 
 const FONT_SIZE_MIN = 10;
 const FONT_SIZE_MAX = 28;
@@ -11,7 +12,7 @@ const PANEL_FONT_SIZE_DEFAULT = 11.5;
 
 // ── Appearance section ────────────────────────────────────────────────────────
 
-function AppearanceSection({ theme, fontSize, onThemeChange, onFontSizeChange, panelFontSize, onPanelFontSizeChange, lineAltEnabled, onLineAltChange, lintEnabled, onLintEnabledChange, strongCuesEnabled, onStrongCuesChange, formatOnSave, onFormatOnSaveChange, showFish, onShowFishChange, showCircuit, onShowCircuitChange, showGhost, onShowGhostChange, showSkyline, onShowSkylineChange, tablePageSize = 10, onTablePageSizeChange }) {
+function AppearanceSection({ theme, fontSize, onThemeChange, onFontSizeChange, panelFontSize, onPanelFontSizeChange, lineAltEnabled, onLineAltChange, lintEnabled, onLintEnabledChange, strongCuesEnabled, onStrongCuesChange, formatOnSave, onFormatOnSaveChange, showFish, onShowFishChange, showCircuit, onShowCircuitChange, showGhost, onShowGhostChange, showSkyline, onShowSkylineChange, notebookBg = 'none', onNotebookBgChange, notebookBgOpacity = 0.15, onNotebookBgOpacityChange, tablePageSize = 10, onTablePageSizeChange }) {
   return (
     <div className="settings-section">
       <div className="settings-group">
@@ -171,6 +172,49 @@ function AppearanceSection({ theme, fontSize, onThemeChange, onFontSizeChange, p
             </button>
           ))}
         </div>
+      </div>
+
+      <div className="settings-group">
+        <div className="settings-group-label">Notebook Background</div>
+        <div className="settings-bg-grid">
+          <button
+            className={`settings-bg-tile${notebookBg === 'none' ? ' active' : ''}`}
+            onClick={() => onNotebookBgChange('none')}
+            title="None"
+          >
+            <div className="settings-bg-preview settings-bg-none">—</div>
+            <span className="settings-bg-name">None</span>
+          </button>
+          {NOTEBOOK_BACKGROUNDS.map((bg) => (
+            <button
+              key={bg.id}
+              className={`settings-bg-tile${notebookBg === bg.id ? ' active' : ''}`}
+              onClick={() => onNotebookBgChange(bg.id)}
+              title={bg.name}
+            >
+              <div
+                className="settings-bg-preview"
+                dangerouslySetInnerHTML={{ __html: bg.svg.replace('currentColor', 'var(--text-secondary)') }}
+              />
+              <span className="settings-bg-name">{bg.name}</span>
+            </button>
+          ))}
+        </div>
+        {notebookBg !== 'none' && (
+          <div className="settings-font-row" style={{ marginTop: 8 }}>
+            <span className="settings-path-label">Opacity</span>
+            <input
+              type="range"
+              min="0.02"
+              max="0.5"
+              step="0.01"
+              value={notebookBgOpacity}
+              onChange={(e) => onNotebookBgOpacityChange(parseFloat(e.target.value))}
+              className="settings-font-slider"
+            />
+            <span className="settings-font-value">{Math.round(notebookBgOpacity * 100)}%</span>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -455,6 +499,10 @@ export function SettingsDialog({
   onShowGhostChange,
   showSkyline,
   onShowSkylineChange,
+  notebookBg,
+  onNotebookBgChange,
+  notebookBgOpacity,
+  onNotebookBgOpacityChange,
   tablePageSize = 10,
   onTablePageSizeChange,
   customShortcuts,
@@ -576,6 +624,10 @@ export function SettingsDialog({
                 onShowGhostChange={onShowGhostChange}
                 showSkyline={showSkyline}
                 onShowSkylineChange={onShowSkylineChange}
+                notebookBg={notebookBg}
+                onNotebookBgChange={onNotebookBgChange}
+                notebookBgOpacity={notebookBgOpacity}
+                onNotebookBgOpacityChange={onNotebookBgOpacityChange}
                 tablePageSize={tablePageSize}
                 onTablePageSizeChange={onTablePageSizeChange}
               />

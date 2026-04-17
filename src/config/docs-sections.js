@@ -1451,4 +1451,23 @@ export const DOCS_SECTIONS = [
       ]},
     ],
   },
+  {
+    id: 'notebook-backgrounds', title: 'Notebook Backgrounds',
+    content: [
+      { type: 'p', text: 'Add a decorative background pattern to notebooks. Patterns render as a shadow design on the left edge that fades toward the center.' },
+      { type: 'h3', text: 'Selecting a Background' },
+      { type: 'p', text: 'Open Settings (gear icon) > Appearance > Notebook Background. Choose from four designs or "None" to disable.' },
+      { type: 'h3', text: 'Available Designs' },
+      { type: 'ul', items: [
+        'Tribal — flowing organic curves, dots, spirals, and hook motifs',
+        'Cyber — angular grid lines, circuit traces, hex clusters, and data blocks',
+        'FPS — military/tactical HUD with crosshairs, range finders, compass rose, and ammo counters',
+        'Relaxing — soft waves, fern tendrils, zen circles, and dot mandalas',
+      ]},
+      { type: 'h3', text: 'Opacity Control' },
+      { type: 'p', text: 'When a background is selected, an opacity slider appears (2%–50%). Lower values create a subtle shadow effect; higher values make the pattern more prominent. The default is 15%.' },
+      { type: 'h3', text: 'Theme Compatibility' },
+      { type: 'p', text: 'All patterns use the current theme\'s text color, so they automatically adapt to any theme including light themes.' },
+    ],
+  },
 ];
