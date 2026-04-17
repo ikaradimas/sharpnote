@@ -8698,3 +8698,49 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 }
 .vars-watch-item:hover .vars-watch-remove { opacity: 1; }
 .vars-watch-remove:hover { color: var(--danger); }
+
+/* ── SQL Schema Sidebar ──────────────────────────────────────────────────── */
+.sql-schema-sidebar {
+  border-top: 1px solid var(--border-secondary);
+  max-height: 200px;
+  overflow: auto;
+  font-size: 11px;
+  font-family: var(--font-code);
+}
+.sql-schema-table { padding: 2px 8px; cursor: pointer; }
+.sql-schema-table:hover { background: var(--bg-hover); }
+.sql-schema-table-name { font-weight: 500; color: var(--accent-secondary); }
+.sql-schema-col { padding: 1px 8px 1px 20px; cursor: pointer; color: var(--text-secondary); }
+.sql-schema-col:hover { background: var(--bg-hover); color: var(--text-primary); }
+.sql-schema-col-type { color: var(--text-dim); font-size: 10px; margin-left: 6px; }
+.sql-schema-toggle {
+  background: none; border: none; color: var(--text-dim);
+  cursor: pointer; font-size: 11px; padding: 2px 6px;
+}
+.sql-schema-toggle:hover { color: var(--accent-primary); }
+
+/* ── SQL Query History ───────────────────────────────────────────────────── */
+.sql-history-btn { background: none; border: none; color: var(--text-dim); cursor: pointer; padding: 2px 4px; }
+.sql-history-btn:hover { color: var(--accent-primary); }
+.sql-history-dropdown {
+  position: absolute; top: 100%; right: 0; z-index: 100;
+  background: var(--bg-secondary); border: 1px solid var(--border-primary);
+  border-radius: 4px; min-width: 300px; max-height: 250px; overflow: auto;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+.sql-history-item {
+  display: block; width: 100%; text-align: left;
+  background: none; border: none; border-bottom: 1px solid var(--border-secondary);
+  color: var(--text-secondary); padding: 6px 10px; cursor: pointer;
+  font-family: var(--font-code); font-size: 10px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sql-history-item:hover { background: var(--bg-hover); color: var(--text-primary); }
+.sql-history-empty { padding: 12px; color: var(--text-dim); font-size: 11px; text-align: center; }
+
+/* ── HTTP Environment Select ─────────────────────────────────────────────── */
+.http-env-select {
+  background: var(--bg-input); border: 1px solid var(--border-secondary);
+  color: var(--text-secondary); font-size: 10px; padding: 1px 4px;
+  border-radius: 3px; margin-right: 4px;
+}

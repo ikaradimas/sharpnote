@@ -154,16 +154,35 @@ partial class Program
     __http_sb__.Append(""</div>"");
     Display.Html(__http_sb__.ToString());
 ");
+            // Capture elapsed time for the complete message
+            sb.AppendLine("    __http_timing_ms__ = __http_sw__.ElapsedMilliseconds;");
+            sb.AppendLine("    __http_status_code__ = (int)__http_resp__.StatusCode;");
             sb.AppendLine("}");
 
             var code = sb.ToString();
+
+            // Declare timing variables before the block so they survive scope
+            var preamble = "long __http_timing_ms__ = 0; int __http_status_code__ = 0;\n";
+            var fullCode = preamble + code;
             var opts = options;
             if (script == null)
-                script = await CSharpScript.RunAsync<object?>(code, opts, globals, typeof(ScriptGlobals));
+                script = await CSharpScript.RunAsync<object?>(fullCode, opts, globals, typeof(ScriptGlobals));
             else
-                script = await script.ContinueWithAsync<object?>(code, opts);
+                script = await script.ContinueWithAsync<object?>(fullCode, opts);
 
-            realStdout.WriteLine(JsonSerializer.Serialize(new { type = "complete", id = cellId, success = true }));
+            // Extract timing from script state
+            long durationMs = 0;
+            int statusCode = 0;
+            try
+            {
+                var timingVar = script.GetVariable("__http_timing_ms__");
+                if (timingVar?.Value is long tl) durationMs = tl;
+                var statusVar = script.GetVariable("__http_status_code__");
+                if (statusVar?.Value is int si) statusCode = si;
+            }
+            catch { /* variable not found — leave defaults */ }
+
+            realStdout.WriteLine(JsonSerializer.Serialize(new { type = "complete", id = cellId, success = true, durationMs, statusCode }));
         }
         catch (Exception ex)
         {

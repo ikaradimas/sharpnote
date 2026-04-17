@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { CodeEditor } from './CodeEditor.jsx';
 import { CellOutput } from '../output/OutputBlock.jsx';
 import { CellControls } from './CellControls.jsx';
@@ -30,6 +30,32 @@ export function SqlCell({
   const selectedDb = cell.db || (readyDbs[0]?.connectionId ?? '');
   const selectedSchema = readyDbs.find((d) => d.connectionId === selectedDb)?.schema ?? null;
 
+  // Schema sidebar state
+  const [schemaOpen, setSchemaOpen] = useState(false);
+  const [expandedTables, setExpandedTables] = useState({});
+
+  const toggleTable = useCallback((key) => {
+    setExpandedTables((prev) => ({ ...prev, [key]: !prev[key] }));
+  }, []);
+
+  const copyColumnName = useCallback((name) => {
+    navigator.clipboard.writeText(name).catch(() => {});
+  }, []);
+
+  // Query history state
+  const [queryHistory, setQueryHistory] = useState([]);
+  const [historyOpen, setHistoryOpen] = useState(false);
+
+  const handleRun = useCallback(() => {
+    if (cell.content?.trim()) {
+      setQueryHistory((prev) => {
+        const filtered = prev.filter((q) => q !== cell.content);
+        return [cell.content, ...filtered].slice(0, 20);
+      });
+    }
+    onRun?.();
+  }, [cell.content, onRun]);
+
   return (
     <div className={`cell sql-cell${isRunning ? ' running' : ''}`}>
       {cellIndex != null && <span className="cell-index-badge">{cellIndex + 1}</span>}
@@ -49,17 +75,73 @@ export function SqlCell({
             <option key={d.connectionId} value={d.connectionId}>{d.varName}</option>
           ))}
         </select>
-        <CellRunGroup onRun={onRun} onRunFrom={onRunFrom} onRunTo={onRunTo} isRunning={isRunning} disabled={anyRunning || !kernelReady || readyDbs.length === 0 || !selectedDb} />
+        {selectedSchema && (
+          <button
+            className="sql-schema-toggle"
+            onClick={() => setSchemaOpen((v) => !v)}
+            title={schemaOpen ? 'Hide schema' : 'Show schema'}
+          >{schemaOpen ? '▾ Schema' : '▸ Schema'}</button>
+        )}
+        <div style={{ position: 'relative', display: 'inline-block' }}>
+          <button
+            className="sql-history-btn"
+            onClick={() => setHistoryOpen((v) => !v)}
+            title="Query history"
+          >&#x1f552;</button>
+          {historyOpen && (
+            <div className="sql-history-dropdown">
+              {queryHistory.length === 0
+                ? <div className="sql-history-empty">No query history yet</div>
+                : queryHistory.map((q, i) => (
+                    <button
+                      key={i}
+                      className="sql-history-item"
+                      onClick={() => { onUpdate(q); setHistoryOpen(false); }}
+                      title={q}
+                    >{q}</button>
+                  ))
+              }
+            </div>
+          )}
+        </div>
+        <CellRunGroup onRun={handleRun} onRunFrom={onRunFrom} onRunTo={onRunTo} isRunning={isRunning} disabled={anyRunning || !kernelReady || readyDbs.length === 0 || !selectedDb} />
         <div className="header-right">
           <CellControls onCopy={onCopy} onMoveUp={onMoveUp} onMoveDown={onMoveDown} onDelete={onDelete} columns={columns} onColumnsChange={onColumnsChange} bookmarked={cell.bookmarked} onToggleBookmark={onToggleBookmark} />
         </div>
       </div>
+      {schemaOpen && selectedSchema && (
+        <div className="sql-schema-sidebar">
+          {(selectedSchema.tables || []).map((table) => {
+            const tableKey = table.schema ? `${table.schema}.${table.name}` : table.name;
+            const isOpen = expandedTables[tableKey];
+            return (
+              <div key={tableKey}>
+                <div className="sql-schema-table" onClick={() => toggleTable(tableKey)}>
+                  <span>{isOpen ? '▾' : '▸'}</span>{' '}
+                  <span className="sql-schema-table-name">{tableKey}</span>
+                </div>
+                {isOpen && table.columns.map((col) => (
+                  <div
+                    key={col.name}
+                    className="sql-schema-col"
+                    onClick={() => copyColumnName(col.name)}
+                    title={`Click to copy "${col.name}"`}
+                  >
+                    {col.name}
+                    {col.type && <span className="sql-schema-col-type">{col.type}</span>}
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+        </div>
+      )}
       <CodeEditor
         value={cell.content}
         onChange={(val) => onUpdate(val)}
         language="sql"
         sqlSchema={selectedSchema}
-        onCtrlEnter={kernelReady && !anyRunning ? onRun : undefined}
+        onCtrlEnter={kernelReady && !anyRunning ? handleRun : undefined}
         lintEnabled={false}
         cellIndex={cellIndex}
       />

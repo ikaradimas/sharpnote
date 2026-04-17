@@ -77,6 +77,8 @@ export function NotebookView({
   onRetainOutput,
   onUnretainOutput,
   showCircuit = true,
+  highlightedCellIds,
+  onHighlightCells,
 }) {
   const { cells, outputs, outputHistory, cellResults, running, kernelStatus,
           config, logPanelOpen, nugetPanelOpen, configPanelOpen, inlineDiagnostics,
@@ -305,6 +307,7 @@ export function NotebookView({
     );
     if (cell.type === 'http') return (
       <HttpCell cell={cell} cellIndex={index} outputs={outputs[cell.id]} notebookId={nb.id}
+        config={config}
         isRunning={running.has(cell.id)} anyRunning={running.size > 0}
         kernelReady={kernelStatus === 'ready'} onUpdate={(val) => updateCell(cell.id, val)}
         onRun={() => onRunHttpCell(nb.id, cell)}
@@ -315,6 +318,7 @@ export function NotebookView({
         columns={cell.columns || 0} onColumnsChange={(v) => updateCellProp(cell.id, 'columns', v || undefined)}
         onNameChange={(name) => updateCellProp(cell.id, 'name', name)}
         onColorChange={(color) => updateCellProp(cell.id, 'color', color)}
+        onEnvChange={(env) => updateCellProp(cell.id, 'env', env || undefined)}
         onToggleBookmark={() => toggleBookmark(cell.id)} />
     );
     if (cell.type === 'shell') return (
@@ -382,7 +386,8 @@ export function NotebookView({
         onCopy={() => copyCell(cell.id)}
         onMoveUp={() => moveCell(cell.id, -1)} onMoveDown={() => moveCell(cell.id, 1)}
         columns={cell.columns || 0} onColumnsChange={(v) => updateCellProp(cell.id, 'columns', v || undefined)}
-        onToggleBookmark={() => toggleBookmark(cell.id)} />
+        onToggleBookmark={() => toggleBookmark(cell.id)}
+        onHighlightCells={onHighlightCells} />
     );
     return (
       <CodeCell cell={cell} cellIndex={index} outputs={outputs[cell.id]}
@@ -418,7 +423,8 @@ export function NotebookView({
         onNextCellsChange={(ids) => updateCellProp(cell.id, 'nextCells', ids === null ? undefined : ids)}
         onPrevCellsChange={(ids) => updateCellProp(cell.id, 'prevCells', ids === null ? undefined : ids)}
         cellElapsed={nb.cellElapsed?.[cell.id] ?? null}
-        onToggleBookmark={() => toggleBookmark(cell.id)} />
+        onToggleBookmark={() => toggleBookmark(cell.id)}
+        vars={nb.vars || []} />
     );
   };
 
@@ -482,7 +488,7 @@ export function NotebookView({
                 {group.map(({ cell: gc, index: gi }) => (
                   <div
                     key={gc.id}
-                    className={`cell-wrapper${collapsedCellIds.has(gc.id) ? ' cell-section-hidden' : ''}${findHighlighted.has(gc.id) ? ' cell-find-match' : ''}`}
+                    className={`cell-wrapper${collapsedCellIds.has(gc.id) ? ' cell-section-hidden' : ''}${findHighlighted.has(gc.id) ? ' cell-find-match' : ''}${highlightedCellIds?.has(gc.id) ? ' cell-highlighted' : ''}`}
                     data-cell-id={gc.id}
                   >
                     {renderCell(gc, gi)}
@@ -495,7 +501,7 @@ export function NotebookView({
           return (
           <div
             key={cell.id}
-            className={`cell-wrapper${isHidden ? ' cell-section-hidden' : ''}${isHighlighted ? ' cell-find-match' : ''}`}
+            className={`cell-wrapper${isHidden ? ' cell-section-hidden' : ''}${isHighlighted ? ' cell-find-match' : ''}${highlightedCellIds?.has(cell.id) ? ' cell-highlighted' : ''}`}
             data-cell-id={cell.id}
           >
             {renderCell(cell, index)}

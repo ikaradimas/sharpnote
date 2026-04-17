@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { CodeEditor } from './CodeEditor.jsx';
 import { CellOutput } from '../output/OutputBlock.jsx';
 import { CellControls } from './CellControls.jsx';
@@ -10,6 +10,7 @@ export function HttpCell({
   cellIndex,
   outputs,
   notebookId,
+  config = [],
   isRunning,
   anyRunning,
   kernelReady = true,
@@ -23,7 +24,21 @@ export function HttpCell({
   onToggleBookmark,
   onNameChange,
   onColorChange,
+  onEnvChange,
 }) {
+  // Extract available environments from config entries prefixed with env.{name}.
+  const environments = useMemo(() => {
+    const envNames = new Set();
+    for (const entry of config) {
+      const key = entry.key || entry.name || '';
+      const match = key.match(/^env\.([^.]+)\./);
+      if (match) envNames.add(match[1]);
+    }
+    return Array.from(envNames).sort();
+  }, [config]);
+
+  const selectedEnv = cell.env || '';
+
   return (
     <div className={`cell http-cell${isRunning ? ' running' : ''}`}>
       {cellIndex != null && <span className="cell-index-badge">{cellIndex + 1}</span>}
@@ -31,6 +46,19 @@ export function HttpCell({
         <CellNameColor name={cell.name} color={cell.color} onNameChange={onNameChange} onColorChange={onColorChange} />
         <span className="cell-lang-label http-label">HTTP</span>
         <span className="cell-id-label" title={`Cell ID: ${cell.id}`}>{cell.id}</span>
+        {environments.length > 0 && (
+          <select
+            className="http-env-select"
+            value={selectedEnv}
+            onChange={(e) => onEnvChange?.(e.target.value)}
+            title="Environment"
+          >
+            <option value="">No env</option>
+            {environments.map((env) => (
+              <option key={env} value={env}>{env}</option>
+            ))}
+          </select>
+        )}
         <CellRunGroup onRun={onRun} onRunFrom={onRunFrom} onRunTo={onRunTo} isRunning={isRunning} disabled={anyRunning || !kernelReady} />
         <div className="header-right">
           <CellControls onCopy={onCopy} onMoveUp={onMoveUp} onMoveDown={onMoveDown} onDelete={onDelete} columns={columns} onColumnsChange={onColumnsChange} bookmarked={cell.bookmarked} onToggleBookmark={onToggleBookmark} />
