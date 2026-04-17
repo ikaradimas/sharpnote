@@ -4,6 +4,27 @@
 // gears: 1 = minor fix/tweak, 2 = notable feature, 3 = major feature/architecture
 
 export const CHANGELOG = [
+  { version: '2.2.0', date: '2026-04-17', title: '45 UI Improvements Across All Tools', gears: 3, items: [
+    'Code Cells: diff view when stale, output pinning with comparison, inline variable peek on hover (collection preview), execution cost badge on folded cells, cell bookmarks',
+    'SQL Cell: schema sidebar with table/column browser, query history with recall',
+    'HTTP Cell: environment switcher for named request profiles, response timeline visualization',
+    'Shell Cell: working directory indicator in header, streaming dot animation during output',
+    'Docker Cell: resource meter (CPU/memory gauges), health check badge, quick shell via docker exec',
+    'Decision/Check Cells: branch preview on hover showing downstream paths, decision history timeline',
+    'Orchestration Panel: minimap overview, critical path highlighting, parallel execution groups, run animation',
+    'Config Panel: prefix-based entry groups, import/export (.env and JSON formats)',
+    'Variables Panel: watch expressions pinned to top, variable diff highlights (new/modified/removed), copy as C# literal',
+    'Files Panel: drag-and-drop file embed into code cells, file preview tooltip on hover, git status badges per file',
+    'Git Panel: blame view per file, stash support (save/pop/list), merge conflict resolver with accept-theirs/ours/both',
+    'History Panel: snapshot diff between two selected versions, auto-snapshot before destructive operations',
+    'Database Panel: visual query builder for SELECT queries, connection health pulse indicator',
+    'API Editor: try-it endpoint button for live requests, model relationship diagram (ERD), field validation rules editor',
+    'API Browser: request history with one-click replay',
+    'Graph Panel: click-to-annotate data points, export chart as PNG or data as CSV',
+    'Regex Panel: replace mode with live preview, named group labels in match list',
+    'Kernel: HTTP cookie jar persistence, shell cwd tracking, docker stats/exec/health APIs, watch expression evaluation',
+    'Bug Fixes: menu flicker prevention on rapid rebuild, hooks order fix in orchestration panel',
+  ]},
   { version: '1.89', date: '2026-04-11', title: 'Notebook v2: embedded files & retained results', gears: 3, items: [
     'File format bumped to v2 (backward compatible with v1)',
     'Embedded files: store files inline in .cnb with variables; Files API in kernel',

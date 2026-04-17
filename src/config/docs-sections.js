@@ -1362,6 +1362,93 @@ export const DOCS_SECTIONS = [
       ]},
       { type: 'h3', text: 'Initialize Repository' },
       { type: 'p', text: 'If the notebook directory is not a Git repository, the panel shows an "Initialize Repository" button that runs git init and refreshes the panel.' },
+      { type: 'h3', text: 'Blame View' },
+      { type: 'p', text: 'Click the Blame button on any file in the status list or history to see a per-line blame annotation showing the commit hash, author, and relative date for each line. Click a blame annotation to jump to that commit in the history.' },
+      { type: 'h3', text: 'Stash Support' },
+      { type: 'ul', items: [
+        'Save — stash all uncommitted changes with an optional message',
+        'Pop — restore the most recent stash and remove it from the stash list',
+        'List — browse all stashes with their messages and timestamps; click to inspect or pop a specific entry',
+      ]},
+      { type: 'h3', text: 'Merge Conflict Resolver' },
+      { type: 'p', text: 'When a merge or rebase produces conflicts, the Git panel highlights conflicted files with a warning badge. Click a conflicted file to open the resolver, which shows the conflict markers with three actions per hunk: Accept Theirs, Accept Ours, or Accept Both. Resolved files are automatically staged.' },
+    ],
+  },
+  {
+    id: 'docker-resource-meter', title: 'Docker Resource Meter',
+    content: [
+      { type: 'p', text: 'Docker cells display live resource gauges for running containers. The resource meter shows CPU usage as a percentage bar and memory consumption as a used/limit indicator, refreshed every 5 seconds via docker stats.' },
+      { type: 'ul', items: [
+        'CPU gauge — percentage bar with color gradient (green → amber → red)',
+        'Memory gauge — used / limit with percentage; amber when above 80%',
+        'Gauges appear automatically when a Docker cell container is running',
+        'The health check badge shows "healthy", "unhealthy", or "starting" when a HEALTHCHECK is configured',
+      ]},
+    ],
+  },
+  {
+    id: 'docker-quick-shell', title: 'Docker Quick Shell',
+    content: [
+      { type: 'p', text: 'Click the terminal icon on a running Docker cell to open a quick shell session. This executes docker exec -it on the container and streams stdin/stdout in a mini terminal embedded in the cell output.' },
+      { type: 'ul', items: [
+        'Type commands directly in the embedded terminal',
+        'Output streams in real time',
+        'Press Ctrl+D or type "exit" to close the session',
+        'Multiple quick shell sessions can be open simultaneously across different containers',
+      ]},
+    ],
+  },
+  {
+    id: 'file-preview', title: 'File Preview & Embed',
+    content: [
+      { type: 'p', text: 'The Files panel supports hover preview and drag-and-drop embedding.' },
+      { type: 'h3', text: 'File Preview Tooltip' },
+      { type: 'p', text: 'Hover over any file in the Files panel to see a quick preview tooltip. Text files show the first 20 lines with syntax highlighting; images show a thumbnail; other file types show size and modification date.' },
+      { type: 'h3', text: 'Drag-and-Drop Embed' },
+      { type: 'p', text: 'Drag a file from the Files panel into a code cell to insert a #load directive (for .cs/.csx files) or a Data.LoadCsv / Display.Image call (for data and image files). The file path is resolved relative to the notebook when possible.' },
+      { type: 'h3', text: 'Git Status Badges' },
+      { type: 'p', text: 'When the notebook directory is a Git repository, files in the Files panel show status badges: M (modified), A (added), ? (untracked), D (deleted). Badge colors match the Git panel conventions.' },
+    ],
+  },
+  {
+    id: 'auto-snapshot', title: 'Auto-Snapshot',
+    content: [
+      { type: 'p', text: 'The History panel now automatically creates a snapshot before destructive operations — restoring a previous snapshot, clearing all output, or resetting the kernel. This ensures you can always recover the state immediately before the destructive action.' },
+      { type: 'ul', items: [
+        'Auto-snapshots are labeled with the operation that triggered them (e.g. "Before restore", "Before kernel reset")',
+        'They count toward the normal 50-snapshot limit with FIFO eviction',
+        'Snapshot diff: select two snapshots and click "Compare" to see a side-by-side diff of cells that changed between them',
+      ]},
+    ],
+  },
+  {
+    id: 'query-builder', title: 'Visual Query Builder',
+    content: [
+      { type: 'p', text: 'The Database panel includes a visual query builder for constructing SELECT queries without writing SQL. Click the "Query Builder" button next to any attached connection to open it.' },
+      { type: 'ul', items: [
+        'Select tables from a dropdown populated by the schema',
+        'Check columns to include in the SELECT clause',
+        'Add WHERE conditions with column, operator, and value fields',
+        'Add JOIN clauses by selecting related tables and join columns',
+        'Add ORDER BY with ascending/descending toggle',
+        'The generated SQL is shown in a preview pane and can be copied or sent directly to a SQL cell',
+      ]},
+      { type: 'h3', text: 'Connection Health Pulse' },
+      { type: 'p', text: 'Attached connections show a pulsing indicator that reflects live connectivity. A brief ping is sent every 30 seconds; the dot pulses green when healthy or turns red with a tooltip when the connection is lost.' },
+    ],
+  },
+  {
+    id: 'merge-conflict-resolver', title: 'Merge Conflict Resolver',
+    content: [
+      { type: 'p', text: 'When Git detects merge conflicts, the Git panel highlights conflicted files with a warning icon. Click any conflicted file to open the inline resolver.' },
+      { type: 'h3', text: 'Resolving Conflicts' },
+      { type: 'ul', items: [
+        'Each conflict hunk is displayed with the incoming (theirs) and current (ours) versions side by side',
+        'Accept Theirs — use the incoming change',
+        'Accept Ours — keep the current change',
+        'Accept Both — concatenate both versions',
+        'After all hunks in a file are resolved, the file is automatically staged',
+      ]},
     ],
   },
 ];

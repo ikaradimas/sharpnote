@@ -101,6 +101,13 @@
 - **Decision cells** — boolean expression cells that branch execution into true/false paths to different downstream cells; appear as diamond-shaped nodes in the dependency graph; add via the + bar or toolbar dropdown
 - **Cell Orchestration panel** — the Dependencies panel (`Ctrl+Shift+Y`) is an interactive dependency graph with click-to-run nodes, right-click context menu (Run, Run with Dependencies, Run Downstream), zoom/pan navigation, and fit-to-view; supports named pipelines — groups of cells that execute in dependency order with a single click
 - **Dashboard mode** — View → Dashboard Mode (⌘⇧B) or the command palette hides all code editors, cell headers, and controls, showing only outputs and rendered markdown; ideal for presentations or wall-mounted monitors; an "Exit Dashboard" button appears in the top-right corner
+- **Execution cost badge** — folded cells display an execution cost badge showing elapsed time and memory delta from the last run
+- **SQL schema sidebar** — SQL cells include a collapsible schema sidebar for browsing tables and columns inline; query history lets you recall and re-run previous queries
+- **HTTP environment switcher** — HTTP cells support named environment profiles (dev, staging, prod) that swap variable sets; response timeline shows request phases (DNS, connect, TLS, TTFB, download)
+- **Shell working directory indicator** — shell cells display the current working directory in the header; a streaming dot animates while output is being received
+- **Docker resource meter** — Docker cells show live CPU and memory gauges; a health check badge reflects container health status; quick shell opens an interactive `docker exec` session
+- **Decision branch preview** — hover over a decision cell to preview its downstream branch paths; a decision history timeline shows past evaluation results
+- **Orchestration minimap** — the Orchestration panel includes a minimap for large graphs, critical path highlighting, parallel execution group indicators, and animated run progress
 
 ### Output & Display
 
@@ -135,7 +142,14 @@
 - **Config panel** — per-notebook key/value store; readable via `Config["key"]` and writable from code via `Config.Set(key, value)` / `Config.Remove(key)` — changes reflect in the panel in real time; entries are grouped by prefix when multiple groups exist; import from `.env` files and export as `.env` or JSON
 - **Panel scripting API** — `Panels.Open/Close/Toggle/CloseAll` controls panel visibility; `Panels.Dock(PanelId.*, DockZone.*, size?)` and `Panels.Float(PanelId.*, x?, y?, width?, height?)` move panels between dock zones or float them with precise position and size; `Db.Add/Remove/Attach/Detach/ListAsync` manages database connections from code
 - **Dock layout** — panels can be docked to left / right / bottom zones, floated freely, or dragged between zones; opening a panel via the toolbar auto-switches to its tab and briefly highlights it; tab bars show scroll-shadow indicators when tabs overflow; layouts can be saved and restored by name
-- **Notebook versioning** — built-in snapshot history stored in a sidecar `.cnb.history` file; up to 50 snapshots with FIFO eviction; browse, preview, and restore from the History panel (`Ctrl+Shift+H`)
+- **Notebook versioning** — built-in snapshot history stored in a sidecar `.cnb.history` file; up to 50 snapshots with FIFO eviction; browse, preview, and restore from the History panel (`Ctrl+Shift+H`); snapshot diff compares two selected versions side-by-side; auto-snapshot fires before destructive operations
+- **Files panel extras** — drag-and-drop files from the Files panel into code cells to embed them; hover any file for a quick preview tooltip; files under Git show status badges (modified, added, untracked)
+- **Git blame & stash** — the Git panel supports per-file blame view, stash save/pop/list, and an interactive merge conflict resolver with accept-theirs/ours/both actions
+- **Visual query builder** — the Database panel includes a visual query builder for constructing SELECT queries with table joins and filters; connection health pulse shows live connectivity status
+- **API Editor extras** — try-it button sends live requests from the editor; model relationship diagram (ERD) visualises entity connections; field validation rules editor for request/response schemas
+- **API Browser request history** — all requests sent from the API Browser are logged with one-click replay
+- **Graph annotations & export** — click any data point in the Graph panel to add a text annotation; export the chart as PNG or the underlying data as CSV
+- **Regex replace mode** — the Regex panel supports a replace mode with live preview of substitutions; named capture groups display labels in the match list
 
 ### Data & Integration
 
