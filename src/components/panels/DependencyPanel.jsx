@@ -485,7 +485,7 @@ export function DependencyPanel({
     const pos = positions[nodeId];
     if (!pos) return;
     const nh = getNodeHeight(nodeMap[nodeId], expandedBoxes);
-    const fromPos = { x: pos.x + NODE_W / 2, y: pos.y + nh };
+    const fromPos = { x: pos.x + NODE_W / 2, y: pos.y + nh + PORT_R };
     setDraggingEdge({ fromId: nodeId, fromPos, toPos: fromPos });
   }, [mode, positions, nodeMap, expandedBoxes]);
 
@@ -715,9 +715,9 @@ export function DependencyPanel({
 
               const fromH = getNodeHeight(fromNode, expandedBoxes);
               const x1 = fromPos.x + NODE_W / 2;
-              const y1 = fromPos.y + fromH;
+              const y1 = fromPos.y + fromH + PORT_R;
               const x2 = toPos.x + NODE_W / 2;
-              const y2 = toPos.y;
+              const y2 = toPos.y - PORT_R;
 
               const color = getEdgeColor(e);
               const dash = getEdgeDash(e);
@@ -806,21 +806,7 @@ export function DependencyPanel({
 
               return (
                 <g key={n.id} className="orch-node">
-                  {/* Input port (top center) */}
-                  {!n.virtual || n.type === 'end' ? (
-                    <circle
-                      cx={pos.x + NODE_W / 2}
-                      cy={pos.y}
-                      r={PORT_R}
-                      className={`orch-port orch-port-input${draggingEdge ? ' orch-port-active' : ''}`}
-                      fill="#1e2530"
-                      stroke={color}
-                      strokeWidth={1}
-                      onMouseUp={(e) => handleInputPortMouseUp(e, n.id)}
-                    />
-                  ) : null}
-
-                  {/* Node body */}
+                  {/* Node body (rendered first so ports sit on top) */}
                   <foreignObject
                     x={pos.x}
                     y={pos.y}
@@ -910,18 +896,33 @@ export function DependencyPanel({
                     </div>
                   </foreignObject>
 
+                  {/* Input port (top center) — rendered after foreignObject so it's on top */}
+                  {!n.virtual || n.type === 'end' ? (
+                    <circle
+                      cx={pos.x + NODE_W / 2}
+                      cy={pos.y - PORT_R}
+                      r={PORT_R + 2}
+                      className={`orch-port orch-port-input${draggingEdge ? ' orch-port-active' : ''}`}
+                      fill="#1e2530"
+                      stroke={color}
+                      strokeWidth={1.5}
+                      onMouseUp={(e) => handleInputPortMouseUp(e, n.id)}
+                      style={{ cursor: draggingEdge ? 'pointer' : 'default', pointerEvents: 'all' }}
+                    />
+                  ) : null}
+
                   {/* Output port (bottom center) */}
                   {!n.virtual || n.type === 'start' ? (
                     <circle
                       cx={pos.x + NODE_W / 2}
-                      cy={pos.y + nh}
-                      r={PORT_R}
+                      cy={pos.y + nh + PORT_R}
+                      r={PORT_R + 2}
                       className="orch-port orch-port-output"
                       fill="#1e2530"
                       stroke={color}
-                      strokeWidth={1}
+                      strokeWidth={1.5}
                       onMouseDown={(e) => handleOutputPortMouseDown(e, n.id)}
-                      style={{ cursor: mode === 'design' ? 'crosshair' : 'default' }}
+                      style={{ cursor: mode === 'design' ? 'crosshair' : 'default', pointerEvents: 'all' }}
                     />
                   ) : null}
                 </g>
