@@ -22,11 +22,17 @@ export function ApiEditorPanel({ onToggle, requestedApiId, onRequestedApiHandled
   const [apiDef, setApiDef] = useState(emptyApiDef);
   const [savedApis, setSavedApis] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
-  const initializedRef = useRef(false);
+  const restoredForRef = useRef(null);
   const [runningServers, setRunningServers] = useState([]); // [{ id, port, title }]
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const cleanSnapshotRef = useRef(JSON.stringify(apiDef));
   const isDirty = JSON.stringify(apiDef) !== cleanSnapshotRef.current;
+
+  const applyMatch = useCallback((match) => {
+    setSelectedId(match.id);
+    setApiDef(match);
+    cleanSnapshotRef.current = JSON.stringify(match);
+  }, []);
 
   // Load saved APIs and running servers on mount
   useEffect(() => {
@@ -38,30 +44,21 @@ export function ApiEditorPanel({ onToggle, requestedApiId, onRequestedApiHandled
   useEffect(() => {
     if (!requestedApiId || savedApis.length === 0) return;
     const match = savedApis.find(a => a.id === requestedApiId || a.title === requestedApiId);
-    if (match) {
-      setSelectedId(match.id);
-      setApiDef(match);
-      cleanSnapshotRef.current = JSON.stringify(match);
-    }
+    if (match) applyMatch(match);
     onRequestedApiHandled?.();
   }, [requestedApiId, savedApis]);
 
-  // Restore last selected API from notebook on initial load
+  // Restore last selected API when notebook changes or savedApis arrive
   useEffect(() => {
-    if (initializedRef.current || !lastApiId || savedApis.length === 0) return;
+    if (!lastApiId || savedApis.length === 0 || restoredForRef.current === lastApiId) return;
+    restoredForRef.current = lastApiId;
     const match = savedApis.find(a => a.id === lastApiId);
-    if (match) {
-      setSelectedId(match.id);
-      setApiDef(match);
-      cleanSnapshotRef.current = JSON.stringify(match);
-    }
-    initializedRef.current = true;
-  }, [lastApiId, savedApis]);
+    if (match) applyMatch(match);
+  }, [lastApiId, savedApis, applyMatch]);
 
-  // Notify parent when selection changes so it can persist per-notebook
   useEffect(() => {
     onApiSelectionChange?.(selectedId);
-  }, [selectedId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedId, onApiSelectionChange]);
 
   const refreshServerList = useCallback(() => {
     window.electronAPI?.listMockServers?.().then(list => setRunningServers(list ?? [])).catch(() => {});
@@ -88,11 +85,10 @@ export function ApiEditorPanel({ onToggle, requestedApiId, onRequestedApiHandled
   }, [apiDef, selectedId, savedApis]);
 
   const loadApi = useCallback((id) => {
-    setSelectedId(id);
-    if (!id) { const fresh = emptyApiDef(); setApiDef(fresh); cleanSnapshotRef.current = JSON.stringify(fresh); return; }
+    if (!id) { setSelectedId(null); const fresh = emptyApiDef(); setApiDef(fresh); cleanSnapshotRef.current = JSON.stringify(fresh); return; }
     const saved = savedApis.find(a => a.id === id);
-    if (saved) { setApiDef(saved); cleanSnapshotRef.current = JSON.stringify(saved); }
-  }, [savedApis]);
+    if (saved) applyMatch(saved);
+  }, [savedApis, applyMatch]);
 
   const deleteApi = useCallback(() => {
     if (!selectedId) return;
