@@ -418,11 +418,17 @@ export function DependencyPanel({
     setPan({ x: panStartRef.current.px + dx, y: panStartRef.current.py + dy });
   }, [draggingNode, draggingEdge, zoom, pan]);
 
+  const draggingEdgeRef = useRef(null);
+  useEffect(() => { draggingEdgeRef.current = draggingEdge; }, [draggingEdge]);
+
   const handleMouseUp = useCallback(() => {
     isPanningRef.current = false;
     if (draggingNode) setDraggingNode(null);
-    if (draggingEdge) setDraggingEdge(null);
-  }, [draggingNode, draggingEdge]);
+    // Delay clearing draggingEdge so port onMouseUp fires first
+    if (draggingEdgeRef.current) {
+      requestAnimationFrame(() => setDraggingEdge(null));
+    }
+  }, [draggingNode]);
 
   /* ── Node interaction ──────────────────────────────────────────────────── */
   const handleNodeMouseDown = useCallback((e, nodeId) => {
