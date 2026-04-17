@@ -356,6 +356,24 @@ partial class Program
                     break;
                 }
 
+                case "docker_stats":
+                {
+                    await HandleDockerStats(msg, realStdout);
+                    break;
+                }
+
+                case "docker_exec":
+                {
+                    await HandleDockerExec(msg, realStdout);
+                    break;
+                }
+
+                case "docker_exec_input":
+                {
+                    HandleDockerExecInput(msg, realStdout);
+                    break;
+                }
+
                 case "set_embedded_files":
                 {
                     if (msg.TryGetProperty("files", out var filesArr))
@@ -400,7 +418,7 @@ partial class Program
 
                 case "var_inspect":
                 {
-                    HandleVarInspect(msg, realStdout);
+                    await HandleVarInspect(msg, options, globals, realStdout);
                     break;
                 }
 

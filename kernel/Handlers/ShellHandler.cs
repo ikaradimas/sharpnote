@@ -16,6 +16,7 @@ partial class Program
     {
         var cellId  = msg.TryGetProperty("id",      out var cid) ? cid.GetString() : null;
         var content = msg.TryGetProperty("content",  out var cp)  ? cp.GetString()  : "";
+        var cwd     = msg.TryGetProperty("cwd",      out var cwdP) ? cwdP.GetString()?.Trim() : null;
 
         try
         {
@@ -53,6 +54,8 @@ partial class Program
                 UseShellExecute        = false,
                 CreateNoWindow         = true,
             };
+            if (!string.IsNullOrEmpty(cwd) && Directory.Exists(cwd))
+                psi.WorkingDirectory = cwd;
 
             using var proc = Process.Start(psi)!;
 
