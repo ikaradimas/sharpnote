@@ -867,6 +867,16 @@ export function App() {
   };
 
   // ── Window tabs sync ───────────────────────────────────────────────────────
+  const tabFingerprint = useMemo(() => {
+    const parts = notebooks.map((nb) => `${nb.id}:${getNotebookDisplayName(nb.path, nb.title)}:${nb.isDirty}`);
+    parts.push(...libEditors.map((e) => `${e.id}:${e.filename}:${e.isDirty}`));
+    if (docsOpen) parts.push(DOCS_TAB_ID);
+    if (changelogOpen) parts.push(CHANGELOG_TAB_ID);
+    if (kafkaTabOpen) parts.push(KAFKA_TAB_ID);
+    parts.push(`active:${activeId}`);
+    return parts.join('|');
+  }, [notebooks, libEditors, docsOpen, changelogOpen, kafkaTabOpen, activeId]);
+
   useEffect(() => {
     if (!window.electronAPI?.updateWindowTabs) return;
     window.electronAPI.updateWindowTabs([
@@ -883,7 +893,7 @@ export function App() {
       ...(changelogOpen ? [{ id: CHANGELOG_TAB_ID, label: 'Changelog',     isDirty: false, isActive: activeId === CHANGELOG_TAB_ID }] : []),
       ...(kafkaTabOpen  ? [{ id: KAFKA_TAB_ID,     label: 'Kafka',         isDirty: false, isActive: activeId === KAFKA_TAB_ID     }] : []),
     ]);
-  }, [notebooks, libEditors, docsOpen, kafkaTabOpen, activeId]);
+  }, [tabFingerprint]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Menu action handler ────────────────────────────────────────────────────
   useEffect(() => {
