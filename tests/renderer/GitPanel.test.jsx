@@ -20,6 +20,10 @@ function makeAPI(overrides = {}) {
     gitCommit:     vi.fn().mockResolvedValue({ success: true }),
     gitCheckout:   vi.fn().mockResolvedValue({ success: true }),
     gitInit:       vi.fn().mockResolvedValue({ success: true }),
+    gitStashList:  vi.fn().mockResolvedValue({ success: true, data: [] }),
+    gitStash:      vi.fn().mockResolvedValue({ success: true }),
+    gitStashPop:   vi.fn().mockResolvedValue({ success: true }),
+    gitBlame:      vi.fn().mockResolvedValue({ success: true, data: [] }),
     ...overrides,
   };
 }
