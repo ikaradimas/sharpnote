@@ -383,205 +383,187 @@ Display.Layout(3,
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function makeDatabasesCells() {
+  const sql = (content) => makeCell('sql', content);
   return [
     md(`# Databases
 
-Connect to SQLite, SQL Server, PostgreSQL, or Redis. The kernel introspects the schema and injects a typed \`DbContext\`.
+Connect to SQLite, SQL Server, PostgreSQL, or Redis. The kernel introspects the schema and injects a typed \`DbContext\`.`),
 
-## NuGet Packages
+    // ── Setup (collapsible section) ──────────────────────────────────────────
+    md(`## Setup
 
-Use \`#r "nuget: PackageName, Version"\` to load any NuGet package inline.
-The first run downloads and caches it; subsequent runs are instant.`),
+Start a PostgreSQL container, connect it to the notebook, and seed it with sample data. **Run the docker cell, then the setup cells in order.**`),
 
-    cs(`#r "nuget: Newtonsoft.Json, 13.0.3"
-using Newtonsoft.Json;
+    { ...docker('postgres:16-alpine', {
+      containerName: 'sharpnote-pg',
+      ports: '5433:5432',
+      env: 'POSTGRES_USER=demo,POSTGRES_PASSWORD=demo123,POSTGRES_DB=shop',
+      color: '#c586c0',
+      name: 'postgres',
+      presenting: false,
+    }), columns: 2 },
 
-var payload = new {
-  name         = "Ada Lovelace",
-  born         = 1815,
-  contributions = new[] { "First algorithm", "Analytical Engine notes" },
-};
+    { ...md(`### Postgres Container
 
-var json = JsonConvert.SerializeObject(payload, Formatting.Indented);
-Display.Html($"<pre style='color:#9cdcfe;margin:0'>{json}</pre>");`),
+Runs **PostgreSQL 16** on port **5433** (mapped from 5432 inside the container).
 
-    md(`## Database Connections
+| Setting | Value |
+|---------|-------|
+| User | \`demo\` |
+| Password | \`demo123\` |
+| Database | \`shop\` |
+| Connection String | \`Host=localhost;Port=5433;Database=shop;Username=demo;Password=demo123\` |
 
-There are two ways to connect a database to a notebook:
+▶ Run the Docker cell, wait for it to start, then run the cells below.`), columns: 2 },
 
-**Via the DB panel** — click **+ Add** to register a connection, then **Attach** to connect it. The kernel introspects the schema and injects a typed \`DbContext\` variable. The variable name is derived from the connection name (e.g. *"My CRM"* → \`myCrm\`).
+    cs(`// ── Connect to the Postgres container ────────────────────────────────────────
+// Wait for Postgres to be ready, then register and attach.
 
-**From code** — use the \`Db\` global to register and attach connections programmatically:
-
-\`\`\`
-Db.Add(name, DbProvider.Sqlite, connectionString)  // register
-Db.Attach(name)                                     // attach → injects DbContext
-Db.Detach(name) / Db.Remove(name)                   // clean up
-var conns = await Db.ListAsync()                    // DbEntry[] with IsAttached flag
-\`\`\`
-
-| Task | Expression |
-|------|------------|
-| Fetch all rows | \`mydb.Users.ToList()\` |
-| Filter | \`mydb.Orders.Where(o => o.Total > 100).ToList()\` |
-| Project | \`mydb.Products.Select(p => new { p.Name, p.Price }).ToList()\` |
-| Raw SQL | \`mydb.Database.SqlQueryRaw<T>("SELECT …").ToList()\` |
-| Add connection | \`await Db.AddAsync(name, provider, connStr)\` |
-| Async | \`await mydb.Orders.ToListAsync()\` |`),
-
-    md(`### In-memory SQLite from code
-
-\`Db.Add\` + \`Db.Attach\` register and connect a database without touching the DB panel.
-\`Db.Attach\` triggers schema introspection via a round-trip to the renderer, so the injected
-variable (\`scratch\`) is available to the **next** cell, not the one that called \`Attach\`.
-
-**Run the setup cell first, then run the query cell.**`),
-
-    md(`### Step 1 — Register and Attach
-
-Registers an in-memory SQLite database and attaches it. The \`scratch\` DbContext
-is available in the **next** cell.`),
-
-    cs(`// ── Step 1: register and attach ──────────────────────────────────────────────
-// Safe to re-run: removes any previous "scratch" connection first.
+await Task.Delay(2000); // give the container a moment to initialize
 
 var existing = await Db.ListAsync();
-if (existing.Any(c => c.Name == "scratch")) {
-    Db.Detach("scratch");
-    Db.Remove("scratch");
+if (existing.Any(c => c.Name == "shop")) {
+    Db.Detach("shop");
+    Db.Remove("shop");
     await Task.Delay(300);
 }
-await Db.AddAsync("scratch", DbProvider.SqliteMemory, "");
-Db.Attach("scratch");
 
-Display.Html("<p style='color:#4ec9b0'>Attached — run the next cell to create tables.</p>");`),
+await Db.AddAsync("shop", DbProvider.Postgresql,
+    "Host=localhost;Port=5433;Database=shop;Username=demo;Password=demo123");
+Db.Attach("shop");
 
-    md(`### Step 2 — Create Tables and Re-attach
+Display.Html("<p style='color:#4ec9b0'>✓ Connected to PostgreSQL — run the next cell to create tables.</p>");`),
 
-Creates \`Orders\` and \`Products\` tables, then detaches and re-attaches so the
-schema introspection picks up the new tables as typed \`DbSet\` properties.`),
-
-    cs(`// ── Step 2: create tables and refresh schema ────────────────────────────────
-// The 'scratch' context exists but has no DbSets yet (empty schema).
-// Create the tables, then re-attach to get typed DbSets.
-
-scratch.Database.ExecuteSqlRaw(@"
-    CREATE TABLE IF NOT EXISTS Orders (
-        Id      INTEGER PRIMARY KEY,
-        Product TEXT    NOT NULL,
-        Qty     INTEGER NOT NULL,
-        Price   REAL    NOT NULL
+    cs(`// ── Create tables ────────────────────────────────────────────────────────────
+shop.Database.ExecuteSqlRaw(@"
+    CREATE TABLE IF NOT EXISTS products (
+        id    SERIAL PRIMARY KEY,
+        name  TEXT    NOT NULL,
+        price NUMERIC(10,2) NOT NULL,
+        stock INTEGER NOT NULL DEFAULT 0
     )");
-scratch.Database.ExecuteSqlRaw(@"
-    CREATE TABLE IF NOT EXISTS Products (
-        Id    INTEGER PRIMARY KEY AUTOINCREMENT,
-        Name  TEXT    NOT NULL,
-        Price REAL    NOT NULL,
-        Stock INTEGER NOT NULL DEFAULT 0
+shop.Database.ExecuteSqlRaw(@"
+    CREATE TABLE IF NOT EXISTS orders (
+        id         SERIAL PRIMARY KEY,
+        product    TEXT    NOT NULL,
+        qty        INTEGER NOT NULL,
+        unit_price NUMERIC(10,2) NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW()
     )");
 
-// Re-attach to refresh the typed context with the new tables
-Db.Detach("scratch");
-Db.Attach("scratch");
+// Re-attach to refresh typed DbSets
+Db.Detach("shop");
+Db.Attach("shop");
+Display.Html("<p style='color:#4ec9b0'>✓ Tables created — run seed cell next.</p>");`),
 
-Display.Html("<p style='color:#4ec9b0'>Tables created — run the cells below.</p>");`),
+    sql(`-- ── Seed data via SQL ─────────────────────────────────────────────────────────
+INSERT INTO products (name, price, stock) VALUES
+    ('Keyboard',  79.99, 25),
+    ('Mouse',     29.99, 50),
+    ('Monitor',  349.99, 10),
+    ('Webcam',    59.99,  0),
+    ('Headset',   99.99, 15),
+    ('USB Hub',   24.99, 40),
+    ('Desk Lamp', 44.99, 30)
+ON CONFLICT DO NOTHING;
 
-    md('### Step 3 — Query with LINQ'),
+INSERT INTO orders (product, qty, unit_price) VALUES
+    ('Keyboard', 3, 79.99),
+    ('Mouse',    5, 29.99),
+    ('Monitor',  1, 349.99),
+    ('Headset',  2, 99.99),
+    ('USB Hub',  4, 24.99),
+    ('Keyboard', 1, 79.99),
+    ('Mouse',    2, 29.99),
+    ('Desk Lamp', 3, 44.99);
 
-    cs(`// ── Step 3: seed data and query ──────────────────────────────────────────────
-// Now scratch.Orders and scratch.Products are typed DbSets.
+SELECT 'Seeded ' || (SELECT count(*) FROM products) || ' products, ' ||
+       (SELECT count(*) FROM orders) || ' orders' AS result;`),
 
-// Seed orders
-scratch.Orders.Add(new() { Id = 1, Product = "Widget A", Qty = 3, Price = 9.99 });
-scratch.Orders.Add(new() { Id = 2, Product = "Widget B", Qty = 1, Price = 24.99 });
-scratch.Orders.Add(new() { Id = 3, Product = "Widget A", Qty = 7, Price = 9.99 });
-scratch.Orders.Add(new() { Id = 4, Product = "Gadget",   Qty = 2, Price = 49.99 });
-scratch.SaveChanges();
+    // ── Querying ─────────────────────────────────────────────────────────────
+    md(`## Querying with SQL & LINQ
 
-// Query using the typed DbSet
-scratch.Orders.OrderBy(o => o.Id).ToList().DisplayTable();
+The \`shop\` DbContext is now available with typed \`Products\` and \`Orders\` DbSets. Use SQL cells for quick queries, or C# cells for LINQ.`),
 
-// LINQ aggregation
-scratch.Orders.ToList()
-    .GroupBy(o => o.Product)
-    .Select(g => new {
-        Product = g.Key,
-        Units   = g.Sum(o => o.Qty),
-        Revenue = Math.Round(g.Sum(o => (double)(o.Qty * o.Price)), 2),
-    })
-    .OrderByDescending(s => s.Revenue)
-    .DisplayTable();`),
+    sql(`-- ── Products overview ─────────────────────────────────────────────────────────
+SELECT * FROM products ORDER BY id;`),
 
-    md(`### LINQ to SQL — Full CRUD
+    sql(`-- ── Revenue by product ───────────────────────────────────────────────────────
+SELECT
+    product,
+    SUM(qty) AS total_units,
+    ROUND(SUM(qty * unit_price)::numeric, 2) AS revenue
+FROM orders
+GROUP BY product
+ORDER BY revenue DESC;`),
 
-Complete Create → Read → Update → Delete workflow using the typed DbContext.
-All operations use the \`DbSet\` properties and EF Core change tracking — **no raw SQL**.
+    cs(`// ── LINQ queries on the typed DbContext ──────────────────────────────────────
 
-**Run the setup cell above first.**`),
+// All products as a table
+Display.Html("<h4 style='color:#61afef;margin:4px 0'>All Products (LINQ)</h4>");
+shop.Products.OrderBy(p => p.Id).ToList().DisplayTable();
 
-    { ...cs(`// ── LINQ to SQL CRUD — no raw SQL ───────────────────────────────────────────
-// Uses the 'scratch' DbContext with its typed Products DbSet.
-
-// ── CREATE ───────────────────────────────────────────────────────────────────
-// Add entities via the DbSet and SaveChanges
-scratch.Products.Add(new() { Name = "Keyboard", Price = 79.99, Stock = 25 });
-scratch.Products.Add(new() { Name = "Mouse",    Price = 29.99, Stock = 50 });
-scratch.Products.Add(new() { Name = "Monitor",  Price = 349.99, Stock = 10 });
-scratch.Products.Add(new() { Name = "Webcam",   Price = 59.99, Stock = 0 });
-scratch.Products.Add(new() { Name = "Headset",  Price = 99.99, Stock = 15 });
-scratch.SaveChanges();
-
-Display.Html("<h4 style='color:#4ec9b0;margin:4px 0'>CREATE — 5 products added via DbSet</h4>");
-
-// ── READ ─────────────────────────────────────────────────────────────────────
-// All products via LINQ
-var all = scratch.Products.OrderBy(p => p.Id).ToList();
-Display.Html("<h4 style='color:#61afef;margin:8px 0 4px'>READ — All products</h4>");
-all.DisplayTable();
-
-// Filtered: in-stock items over $50
-var expensive = scratch.Products
+// In-stock items over $50
+Display.Html("<h4 style='color:#61afef;margin:8px 0 4px'>In Stock & Over $50</h4>");
+shop.Products
     .Where(p => p.Price > 50 && p.Stock > 0)
     .OrderByDescending(p => p.Price)
-    .ToList();
-Display.Html("<h4 style='color:#61afef;margin:8px 0 4px'>READ — In stock & over $50</h4>");
-expensive.DisplayTable();
-
-// Aggregation
-var summary = new {
-    TotalProducts = scratch.Products.Count(),
-    InStock       = scratch.Products.Count(p => p.Stock > 0),
-    OutOfStock    = scratch.Products.Count(p => p.Stock == 0),
-    AvgPrice      = Math.Round(scratch.Products.Average(p => (double)p.Price), 2),
-    TotalValue    = Math.Round(scratch.Products.Sum(p => (double)(p.Price * p.Stock)), 2),
-};
-Display.Html("<h4 style='color:#61afef;margin:8px 0 4px'>READ — Inventory summary</h4>");
-summary.Display();
-
-// ── UPDATE ───────────────────────────────────────────────────────────────────
-// Find and modify entities, then SaveChanges
-var webcam = scratch.Products.First(p => p.Name == "Webcam");
-webcam.Stock = 20;
-
-var keyboard = scratch.Products.First(p => p.Name == "Keyboard");
-keyboard.Price = 89.99;
-
-scratch.SaveChanges();
-
-Display.Html("<h4 style='color:#e5c07b;margin:8px 0 4px'>UPDATE — Webcam restocked, Keyboard repriced</h4>");
-scratch.Products
-    .Where(p => p.Name == "Webcam" || p.Name == "Keyboard")
     .ToList()
     .DisplayTable();
 
-// ── DELETE ───────────────────────────────────────────────────────────────────
-// Remove entities matching a condition
-var outOfStock = scratch.Products.Where(p => p.Stock == 0).ToList();
-scratch.Products.RemoveRange(outOfStock);
-scratch.SaveChanges();
+// Inventory summary
+var summary = new {
+    TotalProducts = shop.Products.Count(),
+    InStock       = shop.Products.Count(p => p.Stock > 0),
+    OutOfStock    = shop.Products.Count(p => p.Stock == 0),
+    AvgPrice      = Math.Round(shop.Products.Average(p => (double)p.Price), 2),
+    TotalValue    = Math.Round(shop.Products.Sum(p => (double)(p.Price * p.Stock)), 2),
+};
+Display.Html("<h4 style='color:#61afef;margin:8px 0 4px'>Inventory Summary</h4>");
+summary.Display();`),
 
-Display.Html("<h4 style='color:#e06c75;margin:8px 0 4px'>DELETE — Removed out-of-stock items</h4>");
-scratch.Products.OrderBy(p => p.Id).ToList().DisplayTable();`), columns: 2 },
+    // ── CRUD ─────────────────────────────────────────────────────────────────
+    md(`## LINQ to SQL — Full CRUD
+
+Complete Create → Read → Update → Delete workflow using the typed DbContext.
+All operations use \`DbSet\` properties and EF Core change tracking — **no raw SQL**.`),
+
+    { ...cs(`// ── LINQ CRUD ────────────────────────────────────────────────────────────────
+
+// ── CREATE ──
+shop.Products.Add(new() { Name = "Mousepad", Price = 14.99, Stock = 100 });
+shop.SaveChanges();
+Display.Html("<h4 style='color:#4ec9b0;margin:4px 0'>CREATE — Mousepad added</h4>");
+shop.Products.Where(p => p.Name == "Mousepad").ToList().DisplayTable();
+
+// ── READ ──
+Display.Html("<h4 style='color:#61afef;margin:8px 0 4px'>READ — Products over $50</h4>");
+shop.Products
+    .Where(p => p.Price > 50)
+    .OrderByDescending(p => p.Price)
+    .ToList()
+    .DisplayTable();
+
+// ── UPDATE ──
+var webcam = shop.Products.First(p => p.Name == "Webcam");
+webcam.Stock = 20;
+webcam.Price = 49.99;
+shop.SaveChanges();
+Display.Html("<h4 style='color:#e5c07b;margin:8px 0 4px'>UPDATE — Webcam restocked & repriced</h4>");
+shop.Products.Where(p => p.Name == "Webcam").ToList().DisplayTable();
+
+// ── DELETE ──
+var outOfStock = shop.Products.Where(p => p.Stock == 0).ToList();
+if (outOfStock.Any()) {
+    shop.Products.RemoveRange(outOfStock);
+    shop.SaveChanges();
+    Display.Html($"<h4 style='color:#e06c75;margin:8px 0 4px'>DELETE — Removed {outOfStock.Count} out-of-stock items</h4>");
+} else {
+    Display.Html("<h4 style='color:#e06c75;margin:8px 0 4px'>DELETE — No out-of-stock items to remove</h4>");
+}
+
+Display.Html("<h4 style='color:#61afef;margin:8px 0 4px'>Final State</h4>");
+shop.Products.OrderBy(p => p.Id).ToList().DisplayTable();`), columns: 2 },
 
     { ...cs(`Display.Html(@"<div style='background:#111118;border:1px solid #333;border-radius:6px;padding:14px;font-size:12px;color:#aaa;line-height:1.7'>
 <div style='color:#569cd6;font-weight:600;margin-bottom:8px'>📋 EF Core CRUD Reference</div>
@@ -591,65 +573,69 @@ scratch.Products.OrderBy(p => p.Id).ToList().DisplayTable();`), columns: 2 },
 <div><strong style='color:#e06c75'>DELETE</strong> — <code>dbSet.Remove(entity)</code> or <code>RemoveRange()</code></div>
 <div style='margin-top:8px;border-top:1px solid #333;padding-top:8px'>
 <div>• All POCO types are auto-generated from the schema</div>
-<div>• Types are available unqualified: <code>new Orders { ... }</code></div>
+<div>• Types are available unqualified: <code>new Products { ... }</code></div>
 <div>• Use <code>await dbSet.ToListAsync()</code> for async queries</div>
 <div>• <code>SaveChanges()</code> persists all tracked changes in one transaction</div>
 </div>
 </div>");`, 'html'), columns: 2 },
 
-    md('### Querying an External Database'),
+    // ── Parameterized SQL ────────────────────────────────────────────────────
+    md(`## Parameterized SQL from Config
 
-    cs(`// ── Querying an externally-registered database ───────────────────────────────
-// Replace "mydb" with the variable name shown in the DB panel (derived from
-// the connection name you entered when registering it).
+SQL cells support \`@ParamName\` placeholders bound from the **Config** panel.
+Open Config, add \`MinPrice = 50\`, then run the cell below.`),
 
-// 1. List all rows as a table
-// mydb.Users.ToList().DisplayTable();
+    sql(`-- ── Parameterized query ───────────────────────────────────────────────────────
+SELECT name, price, stock
+FROM products
+WHERE price >= @MinPrice
+ORDER BY price DESC;`),
 
-// 2. Filter and project
-// mydb.Orders
-//     .Where(o => o.Total > 100)
-//     .Select(o => new { o.Id, o.CustomerName, o.Total, o.CreatedAt })
-//     .OrderByDescending(o => o.Total)
-//     .Take(20)
-//     .ToList()
-//     .DisplayTable();
+    // ── In-memory SQLite ─────────────────────────────────────────────────────
+    md(`## In-Memory SQLite (No Docker)
 
-// 3. Aggregate stats
-// var stats = new {
-//     Total   = mydb.Orders.Count(),
-//     Revenue = mydb.Orders.Sum(o => (decimal?)o.Total) ?? 0,
-//     Avg     = mydb.Orders.Average(o => (decimal?)o.Total) ?? 0,
-// };
-// stats.Display();
+For quick experiments without Docker, use an in-memory SQLite database.
+\`Db.Add\` + \`Db.Attach\` register and connect without the DB panel.`),
 
-// ── Connection string reference ───────────────────────────────────────────────
-// SQLite:      Data Source=/path/to/database.db
-// SQL Server:  Server=localhost;Database=MyDb;User Id=sa;Password=…;TrustServerCertificate=True
-// PostgreSQL:  Host=localhost;Database=mydb;Username=postgres;Password=…
-// Redis:       localhost:6379
+    cs(`// ── In-memory SQLite setup ────────────────────────────────────────────────────
+var existing = await Db.ListAsync();
+if (existing.Any(c => c.Name == "scratch")) {
+    Db.Detach("scratch");
+    Db.Remove("scratch");
+    await Task.Delay(300);
+}
+await Db.AddAsync("scratch", DbProvider.SqliteMemory, "");
+Db.Attach("scratch");
+Display.Html("<p style='color:#4ec9b0'>✓ In-memory SQLite attached — run the next cell.</p>");`),
 
-Display.Html(@"
-<p style='color:#5a7080;font-style:italic;font-size:12px'>
-  Attach a database in the <strong style='color:#c4964a'>DB panel</strong> (or run the in-memory
-  example above) to query it here.
-</p>");`),
+    cs(`// ── Create tables and seed ────────────────────────────────────────────────────
+scratch.Database.ExecuteSqlRaw(@"
+    CREATE TABLE IF NOT EXISTS Orders (
+        Id      INTEGER PRIMARY KEY,
+        Product TEXT    NOT NULL,
+        Qty     INTEGER NOT NULL,
+        Price   REAL    NOT NULL
+    )");
+Db.Detach("scratch");
+Db.Attach("scratch");
 
-    md(`### Parameterized SQL from Config
+scratch.Orders.Add(new() { Id = 1, Product = "Widget A", Qty = 3, Price = 9.99 });
+scratch.Orders.Add(new() { Id = 2, Product = "Widget B", Qty = 1, Price = 24.99 });
+scratch.Orders.Add(new() { Id = 3, Product = "Widget A", Qty = 7, Price = 9.99 });
+scratch.SaveChanges();
 
-SQL cells can use \`@ParamName\` placeholders that are automatically bound from the **Config** panel.
-Any \`@ParamName\` matching a Config key is injected as a safe, parameterized query argument.
+scratch.Orders.OrderBy(o => o.Id).ToList().DisplayTable();`),
 
-Open the **Config** panel, add entries like \`Region = North\` and \`MinTotal = 100\`, then
-use them in a SQL cell:
+    // ── Reference ────────────────────────────────────────────────────────────
+    md(`## Connection String Reference
 
-\`\`\`sql
-SELECT * FROM Orders
-WHERE Region = @Region AND Total > @MinTotal
-ORDER BY Total DESC
-\`\`\`
-
-Config values can also be overridden by environment variables — useful for switching between dev/prod.`),
+| Provider | Connection String |
+|----------|-------------------|
+| SQLite (file) | \`Data Source=/path/to/database.db\` |
+| SQLite (memory) | *(empty string with DbProvider.SqliteMemory)* |
+| PostgreSQL | \`Host=localhost;Port=5432;Database=mydb;Username=postgres;Password=…\` |
+| SQL Server | \`Server=localhost;Database=MyDb;User Id=sa;Password=…;TrustServerCertificate=True\` |
+| Redis | \`localhost:6379\` |`),
   ];
 }
 
