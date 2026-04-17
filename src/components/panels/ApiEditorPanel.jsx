@@ -176,6 +176,26 @@ export function ApiEditorPanel({ onToggle, requestedApiId, onRequestedApiHandled
           <input className="api-ed-desc-input" value={apiDef.description} onChange={(e) => set('description', e.target.value)} placeholder="API description" />
         </div>
 
+        {/* Controllers section */}
+        <div className="api-ed-section">
+          <div className="api-ed-section-header api-ed-section-controllers">
+            <FolderTree size={14} className="api-ed-section-icon" />
+            <span>Controllers</span>
+            <button className="api-ed-add-btn-inline" onClick={addController}><Plus size={12} /> Controller</button>
+          </div>
+          {apiDef.controllers.map((ctrl, i) => (
+            <ControllerSection
+              key={ctrl.id}
+              controller={ctrl}
+              modelNames={modelNames}
+              baseUrl={apiDef.baseUrl}
+              onUpdate={(c) => updateController(i, c)}
+              onDelete={() => removeController(i)}
+            />
+          ))}
+          {apiDef.controllers.length === 0 && <div className="api-ed-empty">No controllers — click + Controller to add one</div>}
+        </div>
+
         {/* Models section */}
         <div className="api-ed-section">
           <div className="api-ed-section-header api-ed-section-models">
@@ -195,26 +215,6 @@ export function ApiEditorPanel({ onToggle, requestedApiId, onRequestedApiHandled
             />
           ))}
           {apiDef.models.length === 0 && <div className="api-ed-empty">No models defined</div>}
-        </div>
-
-        {/* Controllers section */}
-        <div className="api-ed-section">
-          <div className="api-ed-section-header api-ed-section-controllers">
-            <FolderTree size={14} className="api-ed-section-icon" />
-            <span>Controllers</span>
-            <button className="api-ed-add-btn-inline" onClick={addController}><Plus size={12} /> Controller</button>
-          </div>
-          {apiDef.controllers.map((ctrl, i) => (
-            <ControllerSection
-              key={ctrl.id}
-              controller={ctrl}
-              modelNames={modelNames}
-              baseUrl={apiDef.baseUrl}
-              onUpdate={(c) => updateController(i, c)}
-              onDelete={() => removeController(i)}
-            />
-          ))}
-          {apiDef.controllers.length === 0 && <div className="api-ed-empty">No controllers — click + Controller to add one</div>}
         </div>
       </div>
 
