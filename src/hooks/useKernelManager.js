@@ -298,9 +298,25 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
           });
           break;
 
-        case 'vars_update':
-          setNb(notebookId, { vars: msg.vars });
+        case 'vars_update': {
+          setNb(notebookId, (n) => {
+            const prevVars = n.vars || [];
+            const prevMap = new Map(prevVars.map(v => [v.name, v.value]));
+            const newMap = new Map(msg.vars.map(v => [v.name, v.value]));
+            const diff = {};
+            for (const v of msg.vars) {
+              if (!prevMap.has(v.name)) diff[v.name] = 'new';
+              else if (prevMap.get(v.name) !== v.value) diff[v.name] = 'modified';
+            }
+            for (const v of prevVars) {
+              if (!newMap.has(v.name)) diff[v.name] = 'removed';
+            }
+            return { vars: msg.vars, varDiff: Object.keys(diff).length > 0 ? diff : null };
+          });
+          // Clear diff highlight after 5 seconds
+          setTimeout(() => setNb(notebookId, { varDiff: null }), 5000);
           break;
+        }
 
         case 'docker_started':
           setNb(notebookId, (n) => ({

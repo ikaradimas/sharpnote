@@ -120,15 +120,16 @@
 
 ### Panels
 
-- **Variables panel** — live snapshot of the kernel's global state after each execution
+- **Variables panel** — live snapshot of the kernel's global state after each execution; diff highlights (green/blue/red) flash briefly after each run to show new, modified, and removed variables
 - **Variable Sparklines** — the Variables panel tracks the history of numeric variables and renders a mini trend sparkline for each one, updated after every execution
 - **Variable Inspection** — click ⊕ in the Variables panel to open a full-value inspection dialog; Load Full Value fetches the complete JSON-serialised representation from the kernel with a copy-to-clipboard button
+- **Watch expressions** — pin important variables to a Watch section at the top of the Variables panel; watched variables show their current value or "not in scope" and are saved with the notebook
 - **Copy as C# literal** — click ⧉ on any variable row to copy its value as a type-aware C# literal (strings are quoted/escaped, numbers get correct suffixes, booleans produce true/false)
 - **Log panel** — structured, time-stamped kernel log stream with `NOTEBOOK` lifecycle entries and `USER` entries written by `.Log()` calls in scripts
 - **Log panel cell links** — cell IDs that appear in log entries are rendered as clickable links that navigate directly to the corresponding cell; code cells show their ID in muted text in the header
 - **Table of Contents** — live heading outline from markdown cells; click any entry to scroll to it
 - **To Do panel** — auto-scans code cells for `// TODO`, `// FIXME`, and `// BUG` comments; click any item to scroll to and highlight the originating cell (`Ctrl+Shift+O`)
-- **Config panel** — per-notebook key/value store; readable via `Config["key"]` and writable from code via `Config.Set(key, value)` / `Config.Remove(key)` — changes reflect in the panel in real time
+- **Config panel** — per-notebook key/value store; readable via `Config["key"]` and writable from code via `Config.Set(key, value)` / `Config.Remove(key)` — changes reflect in the panel in real time; entries are grouped by prefix when multiple groups exist; import from `.env` files and export as `.env` or JSON
 - **Panel scripting API** — `Panels.Open/Close/Toggle/CloseAll` controls panel visibility; `Panels.Dock(PanelId.*, DockZone.*, size?)` and `Panels.Float(PanelId.*, x?, y?, width?, height?)` move panels between dock zones or float them with precise position and size; `Db.Add/Remove/Attach/Detach/ListAsync` manages database connections from code
 - **Dock layout** — panels can be docked to left / right / bottom zones, floated freely, or dragged between zones; opening a panel via the toolbar auto-switches to its tab and briefly highlights it; tab bars show scroll-shadow indicators when tabs overflow; layouts can be saved and restored by name
 - **Notebook versioning** — built-in snapshot history stored in a sidecar `.cnb.history` file; up to 50 snapshots with FIFO eviction; browse, preview, and restore from the History panel (`Ctrl+Shift+H`)

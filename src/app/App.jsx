@@ -1092,10 +1092,20 @@ export function App() {
         onToggle: nbId ? () => setNb(nbId, (n) => ({ varsPanelOpen: !n.varsPanelOpen })) : () => {},
         vars: activeNb?.vars ?? [],
         varHistory: activeNb?.varHistory ?? {},
+        varDiff: activeNb?.varDiff ?? null,
         onInspect: nbId ? (name) => {
           const v = (activeNb?.vars ?? []).find((vv) => vv.name === name);
           setVarInspectDialog({ name, typeName: v?.typeName ?? '', value: v?.value ?? '', notebookId: nbId, fullValue: null });
         } : null,
+        watchExpressions: activeNb?.watchExpressions ?? [],
+        onAddWatch: nbId ? (name) => setNbDirty(nbId, (n) => {
+          const existing = n.watchExpressions || [];
+          if (existing.some(w => w.name === name)) return {};
+          return { watchExpressions: [...existing, { name }] };
+        }) : null,
+        onRemoveWatch: nbId ? (name) => setNbDirty(nbId, (n) => ({
+          watchExpressions: (n.watchExpressions || []).filter(w => w.name !== name),
+        })) : null,
       },
       toc: {
         onToggle: nbId ? () => setNb(nbId, (n) => ({ tocPanelOpen: !n.tocPanelOpen })) : () => {},

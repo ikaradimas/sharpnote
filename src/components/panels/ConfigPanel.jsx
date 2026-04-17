@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { useResize } from '../../hooks/useResize.js';
 
 const CONFIG_TYPES = ['string', 'number', 'boolean', 'secret'];
@@ -10,7 +10,25 @@ export function ConfigPanel({ isOpen, onToggle, config, onAdd, onRemove, onUpdat
   const [newType, setNewType]     = useState('string');
   const [newEnvVar, setNewEnvVar] = useState('');
   const [showSecrets, setShowSecrets] = useState(false);
+  const [collapsed, setCollapsed] = useState(new Set());
   const keyRef = useRef(null);
+
+  // Feature 23: group config entries by prefix (text before first . or _)
+  const groups = useMemo(() => {
+    const map = new Map();
+    config.forEach((entry, i) => {
+      const dot = entry.key.indexOf('.');
+      const under = entry.key.indexOf('_');
+      const sep = dot >= 0 && under >= 0 ? Math.min(dot, under) : dot >= 0 ? dot : under;
+      const prefix = sep > 0 ? entry.key.slice(0, sep) : '';
+      const group = prefix || 'other';
+      if (!map.has(group)) map.set(group, []);
+      map.get(group).push({ entry, index: i });
+    });
+    return map;
+  }, [config]);
+
+  const hasMultipleGroups = groups.size >= 2;
 
   if (!isOpen) return null;
 
@@ -22,12 +40,67 @@ export function ConfigPanel({ isOpen, onToggle, config, onAdd, onRemove, onUpdat
     keyRef.current?.focus();
   };
 
+  const toggleGroup = (group) => {
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      next.has(group) ? next.delete(group) : next.add(group);
+      return next;
+    });
+  };
+
+  const handleImport = async () => {
+    const result = await window.electronAPI.importEnvFile();
+    if (result?.success && result.entries?.length) {
+      for (const e of result.entries) onAdd(e.key, e.value, e.type);
+    }
+  };
+
+  const handleExport = async (format) => {
+    await window.electronAPI.exportConfig(config, format);
+  };
+
+  const renderEntry = (entry, i) => {
+    const isSecret = entry.type === 'secret';
+    const inputType = isSecret && !showSecrets ? 'password' : 'text';
+    return (
+      <div key={i} className="config-item">
+        <span className="config-key">{entry.key}</span>
+        <input
+          className="nuget-input config-env-input"
+          value={entry.envVar || ''}
+          onChange={(e) => onUpdate(i, { envVar: e.target.value || undefined })}
+          placeholder="ENV_VAR"
+          spellCheck={false}
+        />
+        <select
+          className="config-type-select"
+          value={entry.type || 'string'}
+          onChange={(e) => onUpdate(i, { type: e.target.value })}
+        >
+          {CONFIG_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+        </select>
+        <span className="config-eq">=</span>
+        <input
+          className="nuget-input config-value-input"
+          type={inputType}
+          value={entry.value}
+          onChange={(e) => onUpdate(i, { value: e.target.value })}
+          spellCheck={false}
+        />
+        <button className="nuget-remove-btn" title="Remove" onClick={() => onRemove(i)}>×</button>
+      </div>
+    );
+  };
+
   return (
     <div className="config-panel" style={{ height }}>
       <div className="resize-handle resize-v" onMouseDown={onResizeMouseDown} />
       <div className="config-panel-header">
         <span className="config-panel-title">Config</span>
         <span className="config-panel-hint">Access in scripts via <code>Config["key"]</code></span>
+        <button className="config-io-btn" onClick={handleImport} title="Import from .env file">Import</button>
+        <button className="config-io-btn" onClick={() => handleExport('env')} title="Export as .env file">Export</button>
+        <button className="config-io-btn" onClick={() => handleExport('json')} title="Export as JSON">JSON</button>
         <button
           className={`config-show-btn${showSecrets ? ' active' : ''}`}
           onClick={() => setShowSecrets((v) => !v)}
@@ -46,38 +119,19 @@ export function ConfigPanel({ isOpen, onToggle, config, onAdd, onRemove, onUpdat
               <span className="panel-empty-hint">Add key/value pairs to configure this notebook</span>
             </div>
           )}
-          {config.map((entry, i) => {
-            const isSecret = entry.type === 'secret';
-            const inputType = isSecret && !showSecrets ? 'password' : 'text';
-            return (
-              <div key={i} className="config-item">
-                <span className="config-key">{entry.key}</span>
-                <input
-                  className="nuget-input config-env-input"
-                  value={entry.envVar || ''}
-                  onChange={(e) => onUpdate(i, { envVar: e.target.value || undefined })}
-                  placeholder="ENV_VAR"
-                  spellCheck={false}
-                />
-                <select
-                  className="config-type-select"
-                  value={entry.type || 'string'}
-                  onChange={(e) => onUpdate(i, { type: e.target.value })}
-                >
-                  {CONFIG_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-                </select>
-                <span className="config-eq">=</span>
-                <input
-                  className="nuget-input config-value-input"
-                  type={inputType}
-                  value={entry.value}
-                  onChange={(e) => onUpdate(i, { value: e.target.value })}
-                  spellCheck={false}
-                />
-                <button className="nuget-remove-btn" title="Remove" onClick={() => onRemove(i)}>×</button>
-              </div>
-            );
-          })}
+          {hasMultipleGroups
+            ? Array.from(groups.entries()).map(([group, items]) => (
+                <div key={group} className="config-group">
+                  <div className="config-group-header" onClick={() => toggleGroup(group)}>
+                    <span className={`config-group-chevron${collapsed.has(group) ? '' : ' open'}`}>&#9654;</span>
+                    <span>{group}</span>
+                    <span style={{ opacity: 0.5 }}>({items.length})</span>
+                  </div>
+                  {!collapsed.has(group) && items.map(({ entry, index }) => renderEntry(entry, index))}
+                </div>
+              ))
+            : config.map((entry, i) => renderEntry(entry, i))
+          }
         </div>
         <div className="config-add-row">
           <input ref={keyRef} className="nuget-input config-key-input" placeholder="Key"

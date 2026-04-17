@@ -183,6 +183,54 @@ function registerAllHandlers() {
     }
   });
 
+  // Config import / export (Feature 24)
+  ipcMain.handle('import-env-file', async () => {
+    const { filePaths, canceled } = await dialog.showOpenDialog({
+      title: 'Import .env File',
+      filters: [{ name: 'Environment Files', extensions: ['env', 'txt', ''] }, { name: 'All Files', extensions: ['*'] }],
+      properties: ['openFile'],
+    });
+    if (canceled || !filePaths?.length) return { success: false };
+    try {
+      const content = fs.readFileSync(filePaths[0], 'utf-8');
+      const entries = [];
+      for (const line of content.split('\n')) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith('#')) continue;
+        const eq = trimmed.indexOf('=');
+        if (eq < 1) continue;
+        const key = trimmed.slice(0, eq).trim();
+        const val = trimmed.slice(eq + 1).trim().replace(/^["']|["']$/g, '');
+        entries.push({ key, value: val, type: 'string' });
+      }
+      return { success: true, entries };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('export-config', async (_event, { config, format }) => {
+    const ext = format === 'json' ? 'json' : 'env';
+    const { filePath, canceled } = await dialog.showSaveDialog({
+      title: 'Export Config',
+      defaultPath: `config.${ext}`,
+      filters: [{ name: ext === 'json' ? 'JSON' : 'Env File', extensions: [ext] }],
+    });
+    if (canceled || !filePath) return { success: false };
+    try {
+      let content;
+      if (format === 'json') {
+        content = JSON.stringify(config.map(e => ({ key: e.key, value: e.value, type: e.type })), null, 2);
+      } else {
+        content = config.map(e => `${e.key}=${e.value}`).join('\n') + '\n';
+      }
+      fs.writeFileSync(filePath, content, 'utf-8');
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
   ipcMain.handle('db-connections-export', async (_event, connections) => {
     const { filePath, canceled } = await dialog.showSaveDialog({
       title: 'Export Database Connections',

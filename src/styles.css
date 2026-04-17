@@ -8600,3 +8600,101 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
   border-radius: 3px;
   padding: 0 3px;
 }
+
+/* Feature 23: Config groups */
+.config-group-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+  cursor: pointer;
+  user-select: none;
+}
+.config-group-header:hover { color: var(--text-secondary); }
+.config-group-chevron { font-size: 8px; transition: transform 0.15s; }
+.config-group-chevron.open { transform: rotate(90deg); }
+
+/* Feature 24: Config import/export buttons */
+.config-io-btn {
+  background: none;
+  border: 1px solid var(--border-secondary);
+  color: var(--text-dim);
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+  margin-left: 4px;
+}
+.config-io-btn:hover { color: var(--text-primary); border-color: var(--border-primary); }
+
+/* Feature 28: Variable diff highlights */
+.var-row-new { background: rgba(106, 153, 85, 0.15); }
+.var-row-modified { background: rgba(86, 156, 214, 0.15); }
+.var-row-removed { background: rgba(209, 105, 105, 0.15); text-decoration: line-through; opacity: 0.6; }
+
+/* Feature 27: Watch expressions */
+.vars-watch-section {
+  border-bottom: 1px solid var(--border-secondary);
+  padding: 6px 8px;
+}
+.vars-watch-header {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+.vars-watch-input-row {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+.vars-watch-input {
+  flex: 1;
+  background: var(--bg-input);
+  border: 1px solid var(--border-secondary);
+  color: var(--text-primary);
+  font-family: var(--font-code);
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  outline: none;
+}
+.vars-watch-input:focus { border-color: var(--accent-primary); }
+.vars-watch-add-btn {
+  background: none;
+  border: 1px solid var(--border-secondary);
+  color: var(--text-dim);
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+.vars-watch-add-btn:hover { color: var(--text-primary); border-color: var(--accent-primary); }
+.vars-watch-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+  font-size: 11px;
+  font-family: var(--font-code);
+}
+.vars-watch-name { color: var(--accent-secondary); }
+.vars-watch-eq { color: var(--text-dim); }
+.vars-watch-value { color: var(--text-secondary); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vars-watch-remove {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 10px;
+  padding: 0 2px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.vars-watch-item:hover .vars-watch-remove { opacity: 1; }
+.vars-watch-remove:hover { color: var(--danger); }
