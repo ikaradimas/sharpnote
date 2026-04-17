@@ -23,7 +23,27 @@ export function ShellCell({
   onToggleBookmark,
   onNameChange,
   onColorChange,
+  onWorkingDirChange,
 }) {
+  const [cwdEditing, setCwdEditing] = useState(false);
+  const [cwdDraft, setCwdDraft] = useState('');
+
+  const handleCwdClick = () => {
+    setCwdDraft(cell.workingDir || '');
+    setCwdEditing(true);
+  };
+
+  const handleCwdCommit = () => {
+    const trimmed = cwdDraft.trim();
+    onWorkingDirChange?.(trimmed || undefined);
+    setCwdEditing(false);
+  };
+
+  const handleCwdKeyDown = (e) => {
+    if (e.key === 'Enter') handleCwdCommit();
+    else if (e.key === 'Escape') setCwdEditing(false);
+  };
+
   return (
     <div className={`cell shell-cell${isRunning ? ' running' : ''}`}>
       {cellIndex != null && <span className="cell-index-badge">{cellIndex + 1}</span>}
@@ -35,6 +55,29 @@ export function ShellCell({
         <div className="header-right">
           <CellControls onCopy={onCopy} onMoveUp={onMoveUp} onMoveDown={onMoveDown} onDelete={onDelete} columns={columns} onColumnsChange={onColumnsChange} bookmarked={cell.bookmarked} onToggleBookmark={onToggleBookmark} />
         </div>
+      </div>
+      <div className="shell-cwd-row">
+        <span className="shell-cwd-label">cwd:</span>
+        {cwdEditing ? (
+          <input
+            className="shell-cwd-input"
+            value={cwdDraft}
+            onChange={(e) => setCwdDraft(e.target.value)}
+            onBlur={handleCwdCommit}
+            onKeyDown={handleCwdKeyDown}
+            autoFocus
+            placeholder="/path/to/directory"
+            spellCheck={false}
+          />
+        ) : (
+          <span
+            className="shell-cwd-value"
+            onClick={handleCwdClick}
+            title="Click to set working directory"
+          >
+            {cell.workingDir || '(default)'}
+          </span>
+        )}
       </div>
       <CodeEditor
         value={cell.content}

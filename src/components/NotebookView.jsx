@@ -333,6 +333,7 @@ export function NotebookView({
         columns={cell.columns || 0} onColumnsChange={(v) => updateCellProp(cell.id, 'columns', v || undefined)}
         onNameChange={(name) => updateCellProp(cell.id, 'name', name)}
         onColorChange={(color) => updateCellProp(cell.id, 'color', color)}
+        onWorkingDirChange={(dir) => updateCellProp(cell.id, 'workingDir', dir)}
         onToggleBookmark={() => toggleBookmark(cell.id)} />
     );
     if (cell.type === 'docker') return (

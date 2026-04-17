@@ -343,8 +343,9 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
           setNb(notebookId, (n) => ({
             cells: n.cells.map((c) => {
               if (c.id !== msg.id) return c;
-              if (c.containerState === newState && c.containerPorts === newPorts) return c;
-              return { ...c, containerState: newState, containerPorts: newPorts };
+              const newHealth = msg.healthStatus || null;
+              if (c.containerState === newState && c.containerPorts === newPorts && c.healthStatus === newHealth) return c;
+              return { ...c, containerState: newState, containerPorts: newPorts, healthStatus: newHealth };
             }),
           }));
           break;
@@ -708,6 +709,7 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
         type: 'execute_shell',
         id: cell.id,
         content: cell.content,
+        ...(cell.workingDir ? { cwd: cell.workingDir } : {}),
       });
     });
   }, [setNb]); // eslint-disable-line react-hooks/exhaustive-deps

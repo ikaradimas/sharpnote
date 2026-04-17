@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { Play, Square, Monitor, Container, Clock, Wifi, X, ScrollText } from 'lucide-react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { Play, Square, Monitor, Container, Clock, Wifi, X, ScrollText, Terminal } from 'lucide-react';
 import { CellNameColor } from './CellNameColor.jsx';
 import { CellControls } from './CellControls.jsx';
 import { CellOutput } from '../output/OutputBlock.jsx';
@@ -27,6 +27,34 @@ function StatusBadge({ state }) {
               : state === 'error'   ? 'Error'
               : 'Stopped';
   return <span className={`docker-status-badge ${cls}`}>{label}</span>;
+}
+
+function HealthBadge({ status }) {
+  if (!status || status === 'none') return null;
+  const cls = status === 'healthy'   ? 'docker-health-healthy'
+            : status === 'unhealthy' ? 'docker-health-unhealthy'
+            : 'docker-health-starting';
+  return <span className={`docker-health-badge ${cls}`}>{status}</span>;
+}
+
+function StatsRow({ stats }) {
+  if (!stats) return null;
+  const formatMem = (bytes) => {
+    if (!bytes && bytes !== 0) return '—';
+    if (bytes >= 1073741824) return `${(bytes / 1073741824).toFixed(1)} GB`;
+    if (bytes >= 1048576) return `${(bytes / 1048576).toFixed(1)} MB`;
+    return `${(bytes / 1024).toFixed(0)} KB`;
+  };
+  return (
+    <div className="docker-stats-row">
+      <span className="docker-stat-label">CPU:</span>
+      <span className="docker-stat-value">{stats.cpuPercent != null ? `${stats.cpuPercent.toFixed(1)}%` : '—'}</span>
+      <span className="docker-stat-label">Mem:</span>
+      <span className="docker-stat-value">
+        {formatMem(stats.memUsage)}{stats.memLimit ? ` / ${formatMem(stats.memLimit)}` : ''}
+      </span>
+    </div>
+  );
 }
 
 function LogsPopup({ logs, onClose, onRefresh }) {
@@ -58,6 +86,100 @@ function LogsPopup({ logs, onClose, onRefresh }) {
   );
 }
 
+function ExecSection({ notebookId, cellId, containerId }) {
+  const [execOpen, setExecOpen] = useState(false);
+  const [execOutput, setExecOutput] = useState([]);
+  const [execInput, setExecInput] = useState('');
+  const [execActive, setExecActive] = useState(false);
+  const outputRef = useRef(null);
+
+  // Listen for exec output messages
+  useEffect(() => {
+    if (!execActive || !window.electronAPI) return;
+    const handler = (_ev, nbId, msg) => {
+      if (nbId !== notebookId) return;
+      if (msg.type === 'docker_exec_output' && msg.id === cellId) {
+        setExecOutput((prev) => [...prev.slice(-500), msg.data || '']);
+      }
+      if (msg.type === 'docker_exec_ended' && msg.id === cellId) {
+        setExecActive(false);
+      }
+    };
+    window.electronAPI.onKernelMessage(handler);
+    return () => window.electronAPI.offKernelMessage(handler);
+  }, [execActive, notebookId, cellId]);
+
+  useEffect(() => {
+    if (outputRef.current) outputRef.current.scrollTop = outputRef.current.scrollHeight;
+  }, [execOutput]);
+
+  const handleAttach = () => {
+    setExecOutput([]);
+    setExecActive(true);
+    setExecOpen(true);
+    window.electronAPI?.sendToKernel(notebookId, {
+      type: 'docker_exec',
+      id: cellId,
+      containerId,
+    });
+  };
+
+  const handleSend = () => {
+    if (!execInput.trim()) return;
+    window.electronAPI?.sendToKernel(notebookId, {
+      type: 'docker_exec_input',
+      id: cellId,
+      containerId,
+      input: execInput + '\n',
+    });
+    setExecOutput((prev) => [...prev, `$ ${execInput}\n`]);
+    setExecInput('');
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); handleSend(); }
+  };
+
+  if (!execOpen) {
+    return (
+      <div className="docker-exec-section">
+        <button className="docker-logs-btn" onClick={handleAttach} title="Attach shell">
+          <Terminal size={12} />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="docker-exec-section">
+      <div className="docker-exec-header">
+        <Terminal size={12} />
+        <span>Exec{execActive ? '' : ' (disconnected)'}</span>
+        <button className="docker-logs-close" onClick={() => { setExecOpen(false); setExecActive(false); }} title="Close">
+          <X size={12} />
+        </button>
+      </div>
+      {execOutput.length > 0 && (
+        <pre ref={outputRef} className="docker-logs-content" style={{ maxHeight: 150, margin: '0 8px', borderRadius: 3 }}>
+          {execOutput.join('')}
+        </pre>
+      )}
+      <div className="docker-exec-input-row">
+        <input
+          className="docker-exec-input"
+          value={execInput}
+          onChange={(e) => setExecInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder={execActive ? 'Type command...' : 'Disconnected'}
+          disabled={!execActive}
+          spellCheck={false}
+        />
+        <button className="docker-exec-send" onClick={handleSend} disabled={!execActive}>Send</button>
+      </div>
+    </div>
+  );
+}
+
 export function DockerCell({
   cell, cellIndex, outputs, notebookId,
   isRunning, anyRunning, kernelReady = true,
@@ -70,6 +192,7 @@ export function DockerCell({
   const containerId = cell.containerId || null;
   const containerState = cell.containerState || 'stopped';
   const [logsOpen, setLogsOpen] = useState(false);
+  const [stats, setStats] = useState(null);
 
   // Auto-poll status every 5s in presentation mode when running
   useEffect(() => {
@@ -79,6 +202,32 @@ export function DockerCell({
     }, 5000);
     return () => clearInterval(id);
   }, [presenting, containerId, containerState, notebookId, cell.id, onPollDockerStatus]);
+
+  // Poll docker stats every 5s when container is running
+  useEffect(() => {
+    if (!containerId || containerState !== 'running' || !window.electronAPI) return;
+
+    const handler = (_ev, nbId, msg) => {
+      if (nbId !== notebookId || msg.type !== 'docker_stats' || msg.id !== cell.id) return;
+      setStats({ cpuPercent: msg.cpuPercent, memUsage: msg.memUsage, memLimit: msg.memLimit });
+    };
+    window.electronAPI.onKernelMessage(handler);
+
+    // Initial fetch + interval
+    const poll = () => {
+      window.electronAPI.sendToKernel(notebookId, {
+        type: 'docker_stats', id: cell.id, containerId,
+      });
+    };
+    poll();
+    const id = setInterval(poll, 5000);
+
+    return () => {
+      clearInterval(id);
+      window.electronAPI.offKernelMessage(handler);
+      setStats(null);
+    };
+  }, [containerId, containerState, notebookId, cell.id]);
 
   const handleStop = () => {
     if (containerId) onStopDocker?.(notebookId, cell.id, containerId);
@@ -114,6 +263,7 @@ export function DockerCell({
             <span className="docker-present-image">{cell.image}</span>
           </div>
           <StatusBadge state={containerState} />
+          <HealthBadge status={cell.healthStatus} />
           {logsButton}
           <button
             className="docker-present-exit"
@@ -145,6 +295,8 @@ export function DockerCell({
           )}
         </div>
 
+        <StatsRow stats={stats} />
+
         <div className="docker-present-controls">
           {containerState === 'running' ? (
             <button className="docker-btn docker-btn-stop" onClick={handleStop}>
@@ -160,6 +312,10 @@ export function DockerCell({
             </button>
           )}
         </div>
+
+        {containerState === 'running' && containerId && (
+          <ExecSection notebookId={notebookId} cellId={cell.id} containerId={containerId} />
+        )}
 
         <CellOutput messages={outputs} notebookId={notebookId} />
         {logsOpen && (
@@ -186,6 +342,7 @@ export function DockerCell({
         />
         <span className="cell-lang-label docker-label">Docker</span>
         {containerId && <StatusBadge state={containerState} />}
+        {containerId && <HealthBadge status={cell.healthStatus} />}
         {logsButton}
         <span className="cell-id-label">{cell.id}</span>
         <div className="cell-run-group">
@@ -240,6 +397,12 @@ export function DockerCell({
           </label>
         </div>
       </div>
+
+      <StatsRow stats={stats} />
+
+      {containerState === 'running' && containerId && (
+        <ExecSection notebookId={notebookId} cellId={cell.id} containerId={containerId} />
+      )}
 
       <CellOutput messages={outputs} notebookId={notebookId} />
       {logsOpen && (

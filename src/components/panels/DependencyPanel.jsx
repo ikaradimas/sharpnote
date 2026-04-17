@@ -127,7 +127,7 @@ function layerNodes(nodes, edges, availableH = 600) {
   const totalW = maxX + PAD;
   const totalH = maxY + PAD;
 
-  return { positions, totalW, totalH, maxLayer };
+  return { positions, totalW, totalH, maxLayer, compacted };
 }
 
 const DIAMOND_R = DIAMOND_SIZE * Math.SQRT2 / 2;
@@ -218,7 +218,7 @@ export function DependencyPanel({
   }, []);
 
   const explicitEdges = useMemo(() => edges.filter((e) => !e.implicit), [edges]);
-  const { positions, totalW, totalH, maxLayer } = useMemo(
+  const { positions, totalW, totalH, maxLayer, compacted } = useMemo(
     () => layerNodes(nodes, explicitEdges, scrollH),
     [nodes, explicitEdges, scrollH]
   );
@@ -384,6 +384,42 @@ export function DependencyPanel({
 
   const completedSet = new Set(executionProgress?.completed || []);
 
+  // Feature 21: Parallel execution groups — layers with 2+ non-decision nodes
+  const parallelGroups = useMemo(() => {
+    if (!compacted) return [];
+    const edgeSet = new Set(explicitEdges.map((e) => `${e.from}->${e.to}`));
+    const groups = [];
+    for (const [l, items] of Object.entries(compacted)) {
+      const nonDecision = items.filter((n) => n.type !== 'decision');
+      if (nonDecision.length < 2) continue;
+      // Check that no intra-layer edges exist among the non-decision nodes
+      const ids = new Set(nonDecision.map((n) => n.id));
+      let hasIntraEdge = false;
+      for (const a of ids) {
+        for (const b of ids) {
+          if (a !== b && (edgeSet.has(`${a}->${b}`) || edgeSet.has(`${b}->${a}`))) {
+            hasIntraEdge = true; break;
+          }
+        }
+        if (hasIntraEdge) break;
+      }
+      if (hasIntraEdge) continue;
+      // Compute bounding box from positions
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (const n of nonDecision) {
+        const p = positions[n.id];
+        if (!p) continue;
+        minX = Math.min(minX, p.x);
+        minY = Math.min(minY, p.y);
+        maxX = Math.max(maxX, p.x + NODE_W);
+        maxY = Math.max(maxY, p.y + NODE_H);
+      }
+      if (minX === Infinity) continue;
+      groups.push({ layer: Number(l), count: nonDecision.length, minX: minX - 6, minY: minY - 6, maxX: maxX + 6, maxY: maxY + 6 });
+    }
+    return groups;
+  }, [compacted, explicitEdges, positions]);
+
   return (
     <div className="dependency-panel">
       <div className="dependency-panel-header">
@@ -454,6 +490,21 @@ export function DependencyPanel({
                 </g>
               );
             })}
+
+            {/* Parallel execution groups */}
+            {parallelGroups.map((g) => (
+              <g key={`par-${g.layer}`}>
+                <rect
+                  x={g.minX} y={g.minY}
+                  width={g.maxX - g.minX} height={g.maxY - g.minY}
+                  rx="6" className="dep-parallel-bg"
+                />
+                <text
+                  x={g.maxX - 4} y={g.minY + 10}
+                  textAnchor="end" className="dep-parallel-label"
+                >&#x2225; {g.count}</text>
+              </g>
+            ))}
 
             {/* Edges */}
             {edges.map((e, i) => {

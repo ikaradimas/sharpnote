@@ -36,18 +36,33 @@ export function FilesPanel({ currentDir, onNavigate, onOpenNotebook, notebookDir
   const ctxRef = useRef(null);
   useOutsideClick(ctxRef, () => setCtxMenu(null), !!ctxMenu);
 
+  // Feature 32: Git status badges
+  const [gitStatuses, setGitStatuses] = useState(null); // Map<filename, statusChar>
+
   const loadDir = useCallback(async (dir) => {
     setLoading(true);
     setError(null);
     setSelected(null);
     setRenaming(null);
     setCreating(false);
+    setGitStatuses(null);
     const result = await window.electronAPI.fsReaddir(dir);
     setLoading(false);
     if (result.success) {
       setEntries(result.entries);
       setParentDir(result.parentDir);
       onNavigate(result.dirPath);
+      // Feature 32: fetch git status for this directory
+      if (window.electronAPI.gitStatus) {
+        window.electronAPI.gitStatus(result.dirPath).then((gs) => {
+          if (!gs?.success) return;
+          const map = {};
+          for (const f of gs.staged || [])    map[f.file] = f.status;
+          for (const f of gs.unstaged || [])   { if (!map[f.file]) map[f.file] = f.status; }
+          for (const f of gs.untracked || [])  map[f.file] = '?';
+          setGitStatuses(map);
+        });
+      }
     } else {
       setError(result.error);
     }
@@ -271,10 +286,20 @@ export function FilesPanel({ currentDir, onNavigate, onOpenNotebook, notebookDir
           </div>
         )}
 
-        {!loading && !error && entries.map((entry) => (
+        {!loading && !error && entries.map((entry) => {
+          const gitChar = gitStatuses?.[entry.name];
+          const gitLabel = gitChar === '?' ? '?' : gitChar || null;
+          const gitClass = gitChar === '?' ? 'Q' : gitChar === 'A' ? 'A' : gitChar === 'D' ? 'D' : gitChar === 'U' ? 'U' : gitChar ? 'M' : null;
+          return (
           <div
             key={entry.name}
             className={`files-entry${selected === entry.name ? ' files-selected' : ''}${entry.unreadable ? ' files-unreadable' : ''}`}
+            draggable={!entry.isDirectory}
+            onDragStart={(e) => {
+              if (entry.isDirectory) return;
+              e.dataTransfer.setData('text/plain', `Files["${entry.name}"].ContentAsText`);
+              e.dataTransfer.effectAllowed = 'copy';
+            }}
             onClick={() => setSelected(entry.name)}
             onDoubleClick={() => handleOpen(entry)}
             onContextMenu={(e) => handleContextMenu(e, entry)}
@@ -305,6 +330,7 @@ export function FilesPanel({ currentDir, onNavigate, onOpenNotebook, notebookDir
 
             {renaming !== entry.name && (
               <span className="files-meta">
+                {gitLabel && <span className={`files-git-badge files-git-${gitClass}`}>{gitLabel}</span>}
                 {!entry.isDirectory && <span className="files-size">{formatFileSize(entry.size)}</span>}
                 <span className="files-mtime">{formatFileMtime(entry.mtime)}</span>
               </span>
@@ -319,7 +345,8 @@ export function FilesPanel({ currentDir, onNavigate, onOpenNotebook, notebookDir
               </span>
             )}
           </div>
-        ))}
+          );
+        })}
 
         {!loading && !error && entries.length === 0 && !creating && (
           <div className="files-empty">Empty folder</div>
