@@ -5,6 +5,18 @@ import { makeLibEditorId, isNotebookId, getNotebookDisplayName, scrollAndFlash, 
 import { createNotebook, makeCell, DEFAULT_NUGET_SOURCES } from '../notebook-factory.js';
 import { generateImportCode } from '../data-import-templates.js';
 
+function applyPanelLayout(data) {
+  const pl = data?.panelLayout;
+  if (!pl) return {};
+  const flags = {};
+  if (pl.openPanels) {
+    for (const [k, v] of Object.entries(pl.openPanels)) {
+      if (v) flags[k + 'PanelOpen'] = true;
+    }
+  }
+  return { ...flags, ...(pl.dockLayout ? { dockLayout: pl.dockLayout } : {}) };
+}
+
 /**
  * Manages notebook tabs: CRUD, save/load, pinned tabs, docs tab,
  * cell navigation, and library/API injection.
@@ -75,6 +87,14 @@ export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef, for
       pipelines: (nb.pipelines || []).map(({ id, name, cellIds, color }) => ({ id, name, cellIds, color: color || null })),
       embeddedFiles: nb.embeddedFiles || [],
       retainedResults: nb.retainedResults || {},
+      panelLayout: {
+        openPanels: Object.fromEntries(
+          ['log','nuget','config','db','library','vars','toc','files','api','api-editor','git','graph','todo','regex','history','deps','embed']
+            .filter((k) => nb[k + 'PanelOpen'])
+            .map((k) => [k, true])
+        ),
+        dockLayout: nb.dockLayout || null,
+      },
     };
   }, []);
 
@@ -171,6 +191,7 @@ export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef, for
       pipelines: result.data.pipelines || [],
       embeddedFiles: result.data.embeddedFiles || [],
       retainedResults: result.data.retainedResults || {},
+      ...applyPanelLayout(result.data),
       nugetPackages: (result.data.packages || []).map((p) => ({ ...p, status: 'pending' })),
       nugetSources: result.data.sources || [...DEFAULT_NUGET_SOURCES],
       config: result.data.config || [],
@@ -200,6 +221,7 @@ export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef, for
       pipelines: result.data.pipelines || [],
       embeddedFiles: result.data.embeddedFiles || [],
       retainedResults: result.data.retainedResults || {},
+      ...applyPanelLayout(result.data),
       nugetPackages: (result.data.packages || []).map((p) => ({ ...p, status: 'pending' })),
       nugetSources: result.data.sources || [...DEFAULT_NUGET_SOURCES],
       config: result.data.config || [],
@@ -583,6 +605,7 @@ ${cellsHtml}
           retainedResults: r.value.data.retainedResults || {},
           embeddedFiles: r.value.data.embeddedFiles || [],
           autoRun: r.value.data.autoRun || false,
+          ...applyPanelLayout(r.value.data),
           isDirty: false,
         },
       });

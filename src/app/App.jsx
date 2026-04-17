@@ -106,12 +106,7 @@ export function App() {
   const [dashboardMode, setDashboardMode] = useState(false);
 
   // ── Panel / pane states ────────────────────────────────────────────────────
-  const [libraryPanelOpen, setLibraryPanelOpen] = useState(false);
-  const [filesPanelOpen, setFilesPanelOpen]     = useState(false);
-  const [apiPanelOpen, setApiPanelOpen]         = useState(false);
-  const [apiEditorPanelOpen, setApiEditorPanelOpen] = useState(false);
   const [apiEditorRequestedId, setApiEditorRequestedId] = useState(null);
-  const [gitPanelOpen, setGitPanelOpen]         = useState(false);
   const [gitRefreshKey, setGitRefreshKey]       = useState(0);
   const [filesCurrentDir, setFilesCurrentDir]   = useState(null);
   const [favoriteFolders, setFavoriteFolders]   = useState([]);
@@ -167,21 +162,19 @@ export function App() {
       if (shouldOpen) handleOpenKafkaTab(); else handleCloseKafkaTab();
       return;
     }
-    const globalSetters = { library: setLibraryPanelOpen, files: setFilesPanelOpen, api: setApiPanelOpen, 'api-editor': setApiEditorPanelOpen, git: setGitPanelOpen };
     const nbFlagMap = {
       log: 'logPanelOpen', nuget: 'nugetPanelOpen', config: 'configPanelOpen',
       db: 'dbPanelOpen', vars: 'varsPanelOpen', toc: 'tocPanelOpen',
-      graph: 'graphPanelOpen', todo: 'todoPanelOpen', regex: 'regexPanelOpen', history: 'historyPanelOpen', deps: 'depsPanelOpen', embed: 'embedPanelOpen',
+      graph: 'graphPanelOpen', todo: 'todoPanelOpen', regex: 'regexPanelOpen',
+      history: 'historyPanelOpen', deps: 'depsPanelOpen', embed: 'embedPanelOpen',
+      library: 'libraryPanelOpen', files: 'filesPanelOpen', api: 'apiPanelOpen',
+      'api-editor': 'apiEditorPanelOpen', git: 'gitPanelOpen',
     };
-    if (globalSetters[panelId]) {
-      globalSetters[panelId](open === null ? (v) => !v : open);
-    } else {
-      const flag = nbFlagMap[panelId];
-      const nbId = activeIdRef.current;
-      if (flag && isNotebookId(nbId))
-        setNb(nbId, open === null ? (n) => ({ [flag]: !n[flag] }) : { [flag]: open });
-    }
-  }, [setNb, setLibraryPanelOpen, setFilesPanelOpen, setApiPanelOpen, handleOpenKafkaTab, handleCloseKafkaTab, kafkaTabOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+    const flag = nbFlagMap[panelId];
+    const nbId = activeIdRef.current;
+    if (flag && isNotebookId(nbId))
+      setNbDirty(nbId, open === null ? (n) => ({ [flag]: !n[flag] }) : { [flag]: open });
+  }, [setNbDirty, handleOpenKafkaTab, handleCloseKafkaTab, kafkaTabOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const setPanelDock = useCallback((panelId, zone, size) => {
     setDockLayout((prev) => {
@@ -211,17 +204,17 @@ export function App() {
   }, [setDockLayout, saveSettingsRef]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const setPanelCloseAll = useCallback(() => {
-    setLibraryPanelOpen(false);
-    setFilesPanelOpen(false);
-    setApiPanelOpen(false);
     const nbId = activeIdRef.current;
     if (isNotebookId(nbId))
-      setNb(nbId, () => ({
+      setNbDirty(nbId, () => ({
         logPanelOpen: false, nugetPanelOpen: false, configPanelOpen: false,
         dbPanelOpen: false, varsPanelOpen: false, tocPanelOpen: false,
-        graphPanelOpen: false, todoPanelOpen: false, regexPanelOpen: false, historyPanelOpen: false, depsPanelOpen: false, embedPanelOpen: false,
+        graphPanelOpen: false, todoPanelOpen: false, regexPanelOpen: false,
+        historyPanelOpen: false, depsPanelOpen: false, embedPanelOpen: false,
+        libraryPanelOpen: false, filesPanelOpen: false, apiPanelOpen: false,
+        apiEditorPanelOpen: false, gitPanelOpen: false,
       }));
-  }, [setNb, setLibraryPanelOpen, setFilesPanelOpen, setApiPanelOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [setNbDirty]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Panel-as-tab ──────────────────────────────────────────────────────────
   const detachPanelToTab = useCallback((panelId) => {
@@ -979,25 +972,52 @@ export function App() {
     runCell, runSqlCell, runHttpCell, runShellCell, runDockerCell, runCheckCell, runDecisionCell,
   });
 
+  // ── Per-notebook dock layout sync ──────────────────────────────────────────
+  // When switching notebooks, restore the saved layout; when layout changes, save to notebook
+  const prevActiveIdRef = useRef(activeId);
+  useEffect(() => {
+    if (!isNotebookId(activeId)) return;
+    if (prevActiveIdRef.current !== activeId) {
+      prevActiveIdRef.current = activeId;
+      const nb = notebooksRef.current.find((n) => n.id === activeId);
+      if (nb?.dockLayout) {
+        setDockLayout({ ...DEFAULT_DOCK_LAYOUT, ...nb.dockLayout });
+      }
+    }
+  }, [activeId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Save dock layout to active notebook whenever it changes
+  const dockLayoutJsonRef = useRef('');
+  useEffect(() => {
+    const json = JSON.stringify(dockLayout);
+    if (json === dockLayoutJsonRef.current) return;
+    dockLayoutJsonRef.current = json;
+    const nbId = activeIdRef.current;
+    if (isNotebookId(nbId)) {
+      setNbDirty(nbId, { dockLayout });
+    }
+  }, [dockLayout]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const nb_ = isNotebookId(activeId) ? activeNb : null;
   const openFlags = useMemo(() => ({
-    log:     isNotebookId(activeId) ? (activeNb?.logPanelOpen    ?? false) : false,
-    nuget:   isNotebookId(activeId) ? (activeNb?.nugetPanelOpen  ?? false) : false,
-    config:  isNotebookId(activeId) ? (activeNb?.configPanelOpen ?? false) : false,
-    db:      isNotebookId(activeId) ? (activeNb?.dbPanelOpen     ?? false) : false,
-    library: libraryPanelOpen,
-    vars:    isNotebookId(activeId) ? (activeNb?.varsPanelOpen   ?? false) : false,
-    toc:     isNotebookId(activeId) ? (activeNb?.tocPanelOpen    ?? false) : false,
-    files:   filesPanelOpen,
-    api:     apiPanelOpen,
-    'api-editor': apiEditorPanelOpen,
-    git:     gitPanelOpen,
-    graph:   isNotebookId(activeId) ? (activeNb?.graphPanelOpen  ?? false) : false,
-    todo:    isNotebookId(activeId) ? (activeNb?.todoPanelOpen   ?? false) : false,
-    regex:   isNotebookId(activeId) ? (activeNb?.regexPanelOpen  ?? false) : false,
-    history: isNotebookId(activeId) ? (activeNb?.historyPanelOpen ?? false) : false,
-    deps:    isNotebookId(activeId) ? (activeNb?.depsPanelOpen    ?? false) : false,
-    embed:   isNotebookId(activeId) ? (activeNb?.embedPanelOpen   ?? false) : false,
-  }), [activeId, activeNb, libraryPanelOpen, filesPanelOpen, apiPanelOpen, apiEditorPanelOpen, gitPanelOpen]);
+    log:          nb_?.logPanelOpen      ?? false,
+    nuget:        nb_?.nugetPanelOpen    ?? false,
+    config:       nb_?.configPanelOpen   ?? false,
+    db:           nb_?.dbPanelOpen       ?? false,
+    library:      nb_?.libraryPanelOpen  ?? false,
+    vars:         nb_?.varsPanelOpen     ?? false,
+    toc:          nb_?.tocPanelOpen      ?? false,
+    files:        nb_?.filesPanelOpen    ?? false,
+    api:          nb_?.apiPanelOpen      ?? false,
+    'api-editor': nb_?.apiEditorPanelOpen ?? false,
+    git:          nb_?.gitPanelOpen      ?? false,
+    graph:        nb_?.graphPanelOpen    ?? false,
+    todo:         nb_?.todoPanelOpen     ?? false,
+    regex:        nb_?.regexPanelOpen    ?? false,
+    history:      nb_?.historyPanelOpen  ?? false,
+    deps:         nb_?.depsPanelOpen     ?? false,
+    embed:        nb_?.embedPanelOpen    ?? false,
+  }), [activeId, activeNb]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Suppress dock rendering for panels open as tabs
   const effectiveOpenFlags = useMemo(() => {
@@ -1092,11 +1112,11 @@ export function App() {
       },
       files: {
         onToggle: () => {
-          if (!filesPanelOpen && !filesCurrentDir && activeNb?.path) {
+          if (!(activeNb?.filesPanelOpen) && !filesCurrentDir && activeNb?.path) {
             const p = activeNb.path.replace(/\\/g, '/');
             setFilesCurrentDir(p.slice(0, p.lastIndexOf('/')));
           }
-          setFilesPanelOpen((v) => !v);
+          setPanelVisible('files', null);
         },
         currentDir: filesCurrentDir,
         onNavigate: setFilesCurrentDir,
@@ -1210,7 +1230,7 @@ export function App() {
       },
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeNb, dbConnections, filesPanelOpen, filesCurrentDir, apiPanelOpen, favoriteFolders]);
+  }, [activeNb, dbConnections, filesCurrentDir, favoriteFolders]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -1294,30 +1314,30 @@ export function App() {
                     onLoad={handleLoad}
                     onReset={handleResetWithSchedules}
                     onRename={(newName) => handleRenameTab(notebook.id, newName)}
-                    libraryPanelOpen={libraryPanelOpen}
+                    libraryPanelOpen={notebook.libraryPanelOpen || false}
                     onToggleLibrary={() => {
-                      if (!libraryPanelOpen) handleFocusPanel('library');
-                      setLibraryPanelOpen((v) => !v);
+                      if (!notebook.libraryPanelOpen) handleFocusPanel('library');
+                      setPanelVisible('library', null);
                     }}
-                    filesPanelOpen={filesPanelOpen}
+                    filesPanelOpen={notebook.filesPanelOpen || false}
                     onToggleFiles={() => {
-                      if (!filesPanelOpen) handleFocusPanel('files');
+                      if (!notebook.filesPanelOpen) handleFocusPanel('files');
                       panelPropsMap.files.onToggle();
                     }}
-                    apiPanelOpen={apiPanelOpen}
+                    apiPanelOpen={notebook.apiPanelOpen || false}
                     onToggleApi={() => {
-                      if (!apiPanelOpen) handleFocusPanel('api');
-                      setApiPanelOpen((v) => !v);
+                      if (!notebook.apiPanelOpen) handleFocusPanel('api');
+                      setPanelVisible('api', null);
                     }}
-                    apiEditorPanelOpen={apiEditorPanelOpen}
+                    apiEditorPanelOpen={notebook.apiEditorPanelOpen || false}
                     onToggleApiEditor={() => {
-                      if (!apiEditorPanelOpen) handleFocusPanel('api-editor');
-                      setApiEditorPanelOpen((v) => !v);
+                      if (!notebook.apiEditorPanelOpen) handleFocusPanel('api-editor');
+                      setPanelVisible('api-editor', null);
                     }}
-                    gitPanelOpen={gitPanelOpen}
+                    gitPanelOpen={notebook.gitPanelOpen || false}
                     onToggleGit={() => {
-                      if (!gitPanelOpen) handleFocusPanel('git');
-                      setGitPanelOpen((v) => !v);
+                      if (!notebook.gitPanelOpen) handleFocusPanel('git');
+                      setPanelVisible('git', null);
                     }}
                     kafkaPanelOpen={kafkaTabOpen}
                     onToggleKafka={() => {
