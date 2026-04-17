@@ -39,6 +39,7 @@ import { NewNotebookDialog } from '../components/dialogs/NewNotebookDialog.jsx';
 import { KeyboardShortcutsOverlay } from '../components/dialogs/KeyboardShortcutsOverlay.jsx';
 import { StatusBar } from './StatusBar.jsx';
 import { renderPanelContent } from '../components/dock/renderPanelContent.jsx';
+import { makeCell } from '../notebook-factory.js';
 
 export function App() {
   // ── UI settings ────────────────────────────────────────────────────────────
@@ -1079,6 +1080,15 @@ export function App() {
       toc: {
         onToggle: nbId ? () => setNb(nbId, (n) => ({ tocPanelOpen: !n.tocPanelOpen })) : () => {},
         cells: activeNb?.cells ?? [],
+        onAddCell: nbId ? (type, afterCellId) => {
+          const newCell = makeCell(type, '');
+          setNbDirty(nbId, (n) => {
+            const next = [...n.cells];
+            const idx = afterCellId ? next.findIndex((c) => c.id === afterCellId) + 1 : next.length;
+            next.splice(idx < 0 ? next.length : idx, 0, newCell);
+            return { cells: next };
+          });
+        } : null,
       },
       files: {
         onToggle: () => {

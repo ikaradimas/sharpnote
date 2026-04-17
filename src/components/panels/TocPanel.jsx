@@ -1,9 +1,37 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
+import { Plus } from 'lucide-react';
 import { extractHeadings } from '../../utils.js';
+import { useOutsideClick } from '../../hooks/useOutsideClick.js';
 
-export function TocPanel({ cells }) {
+const CELL_TYPES = [
+  { type: 'markdown', label: 'Markdown' },
+  { type: 'code',     label: 'Code' },
+  { type: 'sql',      label: 'SQL' },
+  { type: 'http',     label: 'HTTP' },
+  { type: 'shell',    label: 'Shell' },
+  { type: 'docker',   label: 'Docker' },
+  { type: 'check',    label: 'Check' },
+  { type: 'decision', label: 'Decision' },
+];
+
+function AddCellMenu({ cellId, onAddCell, onClose }) {
+  const ref = useRef(null);
+  useOutsideClick(ref, onClose, true);
+  return (
+    <div className="toc-add-menu" ref={ref}>
+      {CELL_TYPES.map(({ type, label }) => (
+        <button key={type} className="toc-add-menu-item" onClick={() => { onAddCell(type, cellId); onClose(); }}>
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+export function TocPanel({ cells, onAddCell }) {
   const headings = useMemo(() => extractHeadings(cells), [cells]);
   const [query, setQuery] = useState('');
+  const [addMenuCellId, setAddMenuCellId] = useState(null);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -19,9 +47,6 @@ export function TocPanel({ cells }) {
       cell.scrollIntoView({ behavior: 'smooth', block: 'start' });
       return;
     }
-    // .notebook has position:relative, so cell.offsetTop is the stable absolute
-    // offset within the scroll container — independent of current scroll position
-    // or any ongoing animation/transition.
     container.scrollTo({ top: cell.offsetTop - 8, behavior: 'smooth' });
   };
 
@@ -49,10 +74,22 @@ export function TocPanel({ cells }) {
       ) : (
         <div className="toc-list">
           {filtered.map((h, i) => (
-            <button key={i} className={`toc-item toc-h${h.level}${h.cellType ? ' toc-cell' : ''}`} onClick={() => scroll(h.cellId)}>
-              {h.cellType && <span className="toc-cell-badge">{h.cellType}</span>}
-              {h.text}
-            </button>
+            <div key={i} className="toc-item-row">
+              <button className={`toc-item toc-h${h.level}${h.cellType ? ' toc-cell' : ''}`} onClick={() => scroll(h.cellId)}>
+                {h.cellType && <span className="toc-cell-badge">{h.cellType}</span>}
+                {h.text}
+              </button>
+              {onAddCell && (
+                <div className="toc-add-wrap">
+                  <button className="toc-add-btn" onClick={() => setAddMenuCellId(addMenuCellId === h.cellId ? null : h.cellId)} title="Add cell after this">
+                    <Plus size={10} />
+                  </button>
+                  {addMenuCellId === h.cellId && (
+                    <AddCellMenu cellId={h.cellId} onAddCell={onAddCell} onClose={() => setAddMenuCellId(null)} />
+                  )}
+                </div>
+              )}
+            </div>
           ))}
         </div>
       )}

@@ -5264,6 +5264,28 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
   padding: 0 4px; border-radius: 3px; letter-spacing: 0.04em;
   flex-shrink: 0;
 }
+.toc-item-row { display: flex; align-items: center; }
+.toc-item-row .toc-item { flex: 1; min-width: 0; }
+.toc-add-wrap { position: relative; flex-shrink: 0; }
+.toc-add-btn {
+  background: none; border: none; cursor: pointer; color: var(--text-dim);
+  padding: 2px 4px; opacity: 0; transition: opacity 0.15s;
+  display: flex; align-items: center;
+}
+.toc-item-row:hover .toc-add-btn { opacity: 0.6; }
+.toc-add-btn:hover { opacity: 1 !important; color: var(--accent-secondary); }
+.toc-add-menu {
+  position: absolute; right: 0; top: 100%; z-index: 100;
+  background: var(--bg-elevated); border: 1px solid var(--border-default);
+  border-radius: 6px; padding: 4px 0; min-width: 100px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+.toc-add-menu-item {
+  display: block; width: 100%; padding: 4px 10px; background: none; border: none;
+  cursor: pointer; font-family: var(--font-ui); font-size: 10px;
+  color: var(--text-secondary); text-align: left; transition: background 0.1s;
+}
+.toc-add-menu-item:hover { background: var(--bg-mid); color: var(--text-primary); }
 
 /* ── Section collapse ────────────────────────────────────────────────────── */
 .cell-section-hidden { display: none; }
