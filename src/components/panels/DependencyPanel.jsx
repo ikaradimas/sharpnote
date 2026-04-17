@@ -373,17 +373,6 @@ export function DependencyPanel({
   const fitAll = useCallback(() => { setZoom(1); setPan({ x: 0, y: 0 }); }, []);
   const nodeMap = useMemo(() => Object.fromEntries(nodes.map((n) => [n.id, n])), [nodes]);
 
-  if (nodes.length === 0) {
-    return (
-      <div className="panel-empty-state">
-        <span className="panel-empty-title">No dependency data</span>
-        <span className="panel-empty-hint">Run code cells to see variable flow between them</span>
-      </div>
-    );
-  }
-
-  const completedSet = new Set(executionProgress?.completed || []);
-
   // Feature 21: Parallel execution groups — layers with 2+ non-decision nodes
   const parallelGroups = useMemo(() => {
     if (!compacted) return [];
@@ -419,6 +408,17 @@ export function DependencyPanel({
     }
     return groups;
   }, [compacted, explicitEdges, positions]);
+
+  if (nodes.length === 0) {
+    return (
+      <div className="panel-empty-state">
+        <span className="panel-empty-title">No dependency data</span>
+        <span className="panel-empty-hint">Run code cells to see variable flow between them</span>
+      </div>
+    );
+  }
+
+  const completedSet = new Set(executionProgress?.completed || []);
 
   return (
     <div className="dependency-panel">
