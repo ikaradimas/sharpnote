@@ -125,6 +125,26 @@ function buildMessageEl(msg) {
     });
   });
 
+  const pinBtn = document.createElement('button');
+  pinBtn.className = 'kafka-msg-pin';
+  pinBtn.title = 'Pin message';
+  pinBtn.textContent = '\u{1F4CC}';
+  pinBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    details.dispatchEvent(new CustomEvent('kafka-pin', { bubbles: true, detail: msg }));
+  });
+
+  const compareBtn = document.createElement('button');
+  compareBtn.className = 'kafka-msg-compare-btn';
+  compareBtn.title = 'Select for comparison';
+  compareBtn.textContent = '\u21D4';
+  compareBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    details.dispatchEvent(new CustomEvent('kafka-compare', { bubbles: true, detail: msg }));
+  });
+
   const summary = document.createElement('summary');
   summary.className = 'kafka-msg-summary';
   summary.append(
@@ -132,6 +152,8 @@ function buildMessageEl(msg) {
     span('kafka-msg-meta', `p${msg.partition}·${msg.offset}`),
     ...(msg.key ? [span('kafka-msg-key', msg.key)] : []),
     span('kafka-msg-value kafka-msg-value--collapsed', preview || '(null)'),
+    pinBtn,
+    compareBtn,
     copyBtn,
   );
 
@@ -289,6 +311,8 @@ export function KafkaPanel({ onToggle, asTab = false }) {
   const PAGE_SIZE = 50;
 
   const [copiedTopic, setCopiedTopic] = useState(null);
+  const [pinnedMessages, setPinnedMessages] = useState([]);
+  const [compareMessages, setCompareMessages] = useState([]);
 
   // ── Resizable panes ──────────────────────────────────────────────────────────
   const [leftW, leftDragDown] = useResize(200, 'right');
@@ -404,6 +428,50 @@ export function KafkaPanel({ onToggle, asTab = false }) {
         window.electronAPI.kafkaConsumeStop(id).catch(() => {});
       });
     };
+  }, []);
+
+  // Listen for pin/compare custom events from imperative DOM
+  useEffect(() => {
+    const container = feedRef.current;
+    if (!container) return;
+    const pinHandler = (e) => {
+      const msg = e.detail;
+      setPinnedMessages((prev) => {
+        if (prev.some(p => p.topic === msg.topic && p.partition === msg.partition && p.offset === msg.offset)) return prev;
+        return [...prev, msg];
+      });
+    };
+    const compareHandler = (e) => {
+      const msg = e.detail;
+      setCompareMessages((prev) => {
+        if (prev.length >= 2) return [msg];
+        if (prev.some(p => p.topic === msg.topic && p.partition === msg.partition && p.offset === msg.offset)) return prev;
+        return [...prev, msg];
+      });
+    };
+    container.addEventListener('kafka-pin', pinHandler);
+    container.addEventListener('kafka-compare', compareHandler);
+    return () => {
+      container.removeEventListener('kafka-pin', pinHandler);
+      container.removeEventListener('kafka-compare', compareHandler);
+    };
+  }, []);
+
+  // Ctrl+F focuses the search input when the panel is focused
+  const searchInputRef = useRef(null);
+  useEffect(() => {
+    const handler = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+        if (searchInputRef.current) {
+          e.preventDefault();
+          searchInputRef.current.focus();
+        }
+      }
+    };
+    const panel = feedRef.current?.closest('.kafka-panel');
+    if (!panel) return;
+    panel.addEventListener('keydown', handler);
+    return () => panel.removeEventListener('keydown', handler);
   }, []);
 
   // ── Connection management ─────────────────────────────────────────────────────
@@ -767,9 +835,10 @@ export function KafkaPanel({ onToggle, asTab = false }) {
                 {allMsgsRef.current.length > 0 && (
                   <div className="kafka-search-bar">
                     <input
+                      ref={searchInputRef}
                       className="kafka-search-input"
                       type="text"
-                      placeholder="Search messages…"
+                      placeholder="Search messages… (Ctrl+F)"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       onKeyDown={(e) => { if (e.key === 'Enter') applySearch(); }}
@@ -790,7 +859,82 @@ export function KafkaPanel({ onToggle, asTab = false }) {
                         : 'Waiting for messages…'}
                   </div>
                 )}
+                {pinnedMessages.length > 0 && (
+                  <div className="kafka-pinned-section">
+                    <div className="kafka-pinned-header">
+                      <span>{'\u{1F4CC}'} Pinned ({pinnedMessages.length})</span>
+                      <button className="kafka-btn" onClick={() => setPinnedMessages([])} title="Clear all pins">Clear</button>
+                    </div>
+                    {pinnedMessages.map((msg, i) => (
+                      <details key={`${msg.topic}-${msg.partition}-${msg.offset}`} className="kafka-feed-message kafka-pinned-message">
+                        <summary className="kafka-msg-summary">
+                          <span className="kafka-msg-stream">{msg.topic}</span>
+                          <span className="kafka-msg-meta">p{msg.partition}&middot;{msg.offset}</span>
+                          {msg.key && <span className="kafka-msg-key">{msg.key}</span>}
+                          <span className="kafka-msg-value kafka-msg-value--collapsed">
+                            {(msg.value || '').slice(0, 120)}
+                          </span>
+                          <button className="kafka-msg-pin kafka-msg-unpin" title="Unpin" onClick={(e) => {
+                            e.preventDefault(); e.stopPropagation();
+                            setPinnedMessages(prev => prev.filter((_, j) => j !== i));
+                          }}>{'\u2715'}</button>
+                          <button className="kafka-msg-compare-btn" title="Select for comparison" style={{ opacity: 1 }} onClick={(e) => {
+                            e.preventDefault(); e.stopPropagation();
+                            setCompareMessages(prev => {
+                              if (prev.length >= 2) return [msg];
+                              if (prev.some(p => p.topic === msg.topic && p.partition === msg.partition && p.offset === msg.offset)) return prev;
+                              return [...prev, msg];
+                            });
+                          }}>{'\u21D4'}</button>
+                        </summary>
+                        <div className="kafka-msg-body">
+                          <span className="kafka-msg-value kafka-msg-value--expanded">
+                            {(() => {
+                              try {
+                                const parsed = JSON.parse(msg.value.replace(/^[\uFEFF\x00]+/, '').replace(/\s*#\d+\s*$/, ''));
+                                if (parsed && typeof parsed === 'object') {
+                                  return <JsonHighlight str={JSON.stringify(parsed, null, 2)} />;
+                                }
+                              } catch {}
+                              return msg.value || '(null)';
+                            })()}
+                          </span>
+                        </div>
+                      </details>
+                    ))}
+                  </div>
+                )}
+                {compareMessages.length === 1 && (
+                  <div className="kafka-compare-hint">Select another message to compare</div>
+                )}
                 <div className="kafka-feed-messages" ref={feedRef} />
+                {compareMessages.length === 2 && (
+                  <div className="kafka-compare-overlay">
+                    <div className="kafka-compare-header">
+                      <span>Compare Messages</span>
+                      <button className="kafka-btn" onClick={() => setCompareMessages([])}>{'\u2715'} Close</button>
+                    </div>
+                    <div className="kafka-compare-panes">
+                      {compareMessages.map((msg, i) => (
+                        <div key={i} className="kafka-compare-pane">
+                          <div className="kafka-compare-pane-header">
+                            <span className="kafka-msg-stream">{msg.topic}</span>
+                            <span className="kafka-msg-meta">p{msg.partition}&middot;{msg.offset}</span>
+                          </div>
+                          <pre className="kafka-compare-body">
+                            {(() => {
+                              try {
+                                const parsed = JSON.parse(msg.value.replace(/^[\uFEFF\x00]+/, '').replace(/\s*#\d+\s*$/, ''));
+                                if (parsed && typeof parsed === 'object') return JSON.stringify(parsed, null, 2);
+                              } catch {}
+                              return msg.value || '(null)';
+                            })()}
+                          </pre>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 {pager.total > 0 && (
                   <div className="kafka-feed-pager">
                     <button className="kafka-btn" onClick={() => handlePageChange(1)} disabled={pager.page === 1} title="First">«</button>
