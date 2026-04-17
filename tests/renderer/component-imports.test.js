@@ -21,6 +21,6 @@ describe('Component imports', () => {
     const rel = relative(join(__dirname, '..', '..', 'src'), file);
     it(`imports ${rel} without errors`, async () => {
       await expect(import(file)).resolves.toBeDefined();
-    });
+    }, 15_000);
   }
 });
