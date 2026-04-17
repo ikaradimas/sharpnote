@@ -252,7 +252,7 @@ export function App() {
       onPanelCloseAll: setPanelCloseAll,
       onApiEditorLoad: (apiIdOrTitle) => {
         setApiEditorRequestedId(apiIdOrTitle);
-        setApiEditorPanelOpen(true);
+        setPanelVisible('api-editor', true);
       },
       setDbConnections,
     });
@@ -1085,7 +1085,7 @@ export function App() {
       },
       library: {
         onInsert:   handleInsertLibraryFile,
-        onClose:    () => setLibraryPanelOpen(false),
+        onClose:    () => setPanelVisible('library', false),
         onOpenFile: handleOpenLibraryFile,
       },
       vars: {
@@ -1135,15 +1135,15 @@ export function App() {
         },
       },
       api: {
-        onToggle: () => setApiPanelOpen((v) => !v),
+        onToggle: () => setPanelVisible('api', null),
       },
       'api-editor': {
-        onToggle: () => setApiEditorPanelOpen((v) => !v),
+        onToggle: () => setPanelVisible('api-editor', null),
         requestedApiId: apiEditorRequestedId,
         onRequestedApiHandled: () => setApiEditorRequestedId(null),
       },
       git: {
-        onToggle: () => setGitPanelOpen((v) => !v),
+        onToggle: () => setPanelVisible('git', null),
         notebookDir: activeNb?.path ? activeNb.path.replace(/\\/g, '/').replace(/\/[^/]+$/, '') : null,
         refreshKey: gitRefreshKey,
       },
