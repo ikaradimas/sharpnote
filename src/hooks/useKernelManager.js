@@ -241,7 +241,7 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
               }
             }
 
-            return { running: next, cellResults: { ...(n.cellResults || {}), [msg.id]: result }, staleCellIds, debugState: null, ...extra };
+            return { running: next, cellResults: { ...(n.cellResults || {}), [msg.id]: result }, cellElapsed: { ...(n.cellElapsed || {}), [msg.id]: msg.durationMs ?? null }, staleCellIds, debugState: null, ...extra };
           });
           break;
         }

@@ -63,6 +63,7 @@ export function DockerCell({
   isRunning, anyRunning, kernelReady = true,
   onUpdate, onRun, onStopDocker, onPollDockerStatus, onFetchDockerLogs,
   onDelete, onCopy, onMoveUp, onMoveDown,
+  onToggleBookmark,
   onNameChange, onColorChange,
 }) {
   const presenting = cell.presenting || false;
@@ -215,6 +216,8 @@ export function DockerCell({
           onMoveUp={onMoveUp}
           onMoveDown={onMoveDown}
           onDelete={onDelete}
+          bookmarked={cell.bookmarked}
+          onToggleBookmark={onToggleBookmark}
         />
       </div>
 

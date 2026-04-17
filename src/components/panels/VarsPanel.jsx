@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { formatCSharpLiteral } from '../../utils.js';
 
 function Sparkline({ values }) {
   if (!values || values.length < 2) return null;
@@ -70,6 +71,13 @@ export function VarsPanel({ vars, varHistory, onInspect }) {
                       {hist && hist.length >= 2 && <Sparkline values={hist.map((p) => typeof p === 'number' ? p : p.v)} />}
                     </td>
                     <td className="vars-inspect-cell">
+                      <button
+                        className="vars-copy-btn"
+                        title="Copy as C# literal"
+                        onClick={() => navigator.clipboard.writeText(formatCSharpLiteral(v.value, v.typeName))}
+                      >
+                        ⧉
+                      </button>
                       {onInspect && (
                         <button
                           className="vars-inspect-btn"

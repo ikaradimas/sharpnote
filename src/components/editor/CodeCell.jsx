@@ -63,6 +63,7 @@ export function CodeCell({
   onDelete, onCopy,
   onMoveUp, onMoveDown,
   columns = 0, onColumnsChange,
+  onToggleBookmark,
   onOutputModeChange,
   onToggleLock,
   onToggleFold,
@@ -86,6 +87,7 @@ export function CodeCell({
   onUnretain,
   onNextCellsChange,
   onPrevCellsChange,
+  cellElapsed,
 }) {
   const outputMode = cell.outputMode || 'auto';
   const locked = cell.locked || false;
@@ -218,12 +220,13 @@ export function CodeCell({
               <option value="graph">graph</option>
             </select>
           </div>
-          <CellControls onCopy={onCopy} onMoveUp={onMoveUp} onMoveDown={onMoveDown} onDelete={onDelete} columns={columns} onColumnsChange={onColumnsChange} />
+          <CellControls onCopy={onCopy} onMoveUp={onMoveUp} onMoveDown={onMoveDown} onDelete={onDelete} columns={columns} onColumnsChange={onColumnsChange} bookmarked={cell.bookmarked} onToggleBookmark={onToggleBookmark} />
         </div>
       </div>
       {codeFolded ? (
         <div className="cell-fold-preview" onClick={onToggleFold} title="Click to expand">
           {(cell.content || '').split('\n')[0] || '(empty)'}
+          {cellElapsed != null && <span className="cell-elapsed-badge">{formatElapsed(cellElapsed)}</span>}
         </div>
       ) : (
         <CodeEditor

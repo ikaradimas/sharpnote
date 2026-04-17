@@ -20,6 +20,7 @@ export function HttpCell({
   onMoveUp,
   onMoveDown,
   columns = 0, onColumnsChange,
+  onToggleBookmark,
   onNameChange,
   onColorChange,
 }) {
@@ -32,7 +33,7 @@ export function HttpCell({
         <span className="cell-id-label" title={`Cell ID: ${cell.id}`}>{cell.id}</span>
         <CellRunGroup onRun={onRun} onRunFrom={onRunFrom} onRunTo={onRunTo} isRunning={isRunning} disabled={anyRunning || !kernelReady} />
         <div className="header-right">
-          <CellControls onCopy={onCopy} onMoveUp={onMoveUp} onMoveDown={onMoveDown} onDelete={onDelete} columns={columns} onColumnsChange={onColumnsChange} />
+          <CellControls onCopy={onCopy} onMoveUp={onMoveUp} onMoveDown={onMoveDown} onDelete={onDelete} columns={columns} onColumnsChange={onColumnsChange} bookmarked={cell.bookmarked} onToggleBookmark={onToggleBookmark} />
         </div>
       </div>
       <CodeEditor

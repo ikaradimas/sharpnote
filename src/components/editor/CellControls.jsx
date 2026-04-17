@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowUp, ArrowDown, Trash2, Check, X, Copy, Columns2 } from 'lucide-react';
+import { ArrowUp, ArrowDown, Trash2, Check, X, Copy, Columns2, Bookmark, BookmarkCheck } from 'lucide-react';
 import { useOutsideClick } from '../../hooks/useOutsideClick.js';
 
 const COLUMN_OPTIONS = [
@@ -46,7 +46,7 @@ function ColumnPicker({ columns, onChange }) {
   );
 }
 
-export function CellControls({ onMoveUp, onMoveDown, onCopy, onDelete, columns = 0, onColumnsChange }) {
+export function CellControls({ onMoveUp, onMoveDown, onCopy, onDelete, columns = 0, onColumnsChange, bookmarked, onToggleBookmark }) {
   const [confirming, setConfirming] = useState(false);
 
   useEffect(() => {
@@ -68,6 +68,11 @@ export function CellControls({ onMoveUp, onMoveDown, onCopy, onDelete, columns =
   return (
     <>
       {onColumnsChange && <ColumnPicker columns={columns} onChange={onColumnsChange} />}
+      {onToggleBookmark && (
+        <button className={`cell-ctrl-btn${bookmarked ? ' cell-ctrl-bookmark-active' : ''}`} title={bookmarked ? 'Remove bookmark' : 'Bookmark cell'} onClick={onToggleBookmark}>
+          {bookmarked ? <BookmarkCheck size={12} /> : <Bookmark size={12} />}
+        </button>
+      )}
       {onCopy && <button className="cell-ctrl-btn" title="Copy cell" onClick={onCopy}><Copy size={12} /></button>}
       <button className="cell-ctrl-btn" title="Move Up" onClick={onMoveUp}><ArrowUp size={12} /></button>
       <button className="cell-ctrl-btn" title="Move Down" onClick={onMoveDown}><ArrowDown size={12} /></button>

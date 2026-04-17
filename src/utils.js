@@ -237,3 +237,17 @@ export function generateDockerCompose(dockerCells) {
 
   return lines.join('\n');
 }
+
+export function formatCSharpLiteral(value, typeName) {
+  if (value === null || value === 'null') return 'null';
+  const t = (typeName || '').toLowerCase();
+  if (t === 'boolean' || t === 'bool') return value.toLowerCase() === 'true' ? 'true' : 'false';
+  if (t === 'int32' || t === 'int') return value;
+  if (t === 'int64' || t === 'long') return `${value}L`;
+  if (t === 'single' || t === 'float') return `${value}f`;
+  if (t === 'double') return value.includes('.') ? `${value}d` : `${value}.0d`;
+  if (t === 'decimal') return `${value}m`;
+  if (t === 'char') return `'${value.replace(/'/g, "\\'")}'`;
+  // Default: treat as string
+  return `"${(value || '').replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r').replace(/\t/g, '\\t')}"`;
+}

@@ -22,6 +22,7 @@ export function SqlCell({
   onMoveUp,
   onMoveDown,
   columns = 0, onColumnsChange,
+  onToggleBookmark,
   onNameChange,
   onColorChange,
 }) {
@@ -50,7 +51,7 @@ export function SqlCell({
         </select>
         <CellRunGroup onRun={onRun} onRunFrom={onRunFrom} onRunTo={onRunTo} isRunning={isRunning} disabled={anyRunning || !kernelReady || readyDbs.length === 0 || !selectedDb} />
         <div className="header-right">
-          <CellControls onCopy={onCopy} onMoveUp={onMoveUp} onMoveDown={onMoveDown} onDelete={onDelete} columns={columns} onColumnsChange={onColumnsChange} />
+          <CellControls onCopy={onCopy} onMoveUp={onMoveUp} onMoveDown={onMoveDown} onDelete={onDelete} columns={columns} onColumnsChange={onColumnsChange} bookmarked={cell.bookmarked} onToggleBookmark={onToggleBookmark} />
         </div>
       </div>
       <CodeEditor

@@ -8538,3 +8538,65 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 .debug-paused-label { color: #daa84e; font-size: 10px; margin-left: auto; }
 .strong-cues .cell.debug-paused { border-left-width: 4px; }
 .strong-cues .cell-debug-controls { border-bottom-width: 2px; }
+
+/* Feature 5: Execution cost badge on folded cells */
+.cell-elapsed-badge {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--text-dim);
+  font-family: var(--font-code);
+  padding: 0 6px;
+  opacity: 0.7;
+}
+
+/* Feature 4: Bookmark button active state */
+.cell-ctrl-bookmark-active { color: var(--accent-primary); }
+.toc-bookmarks-header {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+  padding: 6px 10px 2px;
+}
+.toc-bookmark-star {
+  color: var(--accent-primary);
+  margin-right: 4px;
+  font-size: 11px;
+}
+.toc-bookmarked { font-weight: 500; }
+
+/* Feature 29: Copy button in vars panel */
+.vars-copy-btn {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 0 3px;
+  opacity: 0.5;
+  transition: opacity 0.15s;
+}
+.vars-copy-btn:hover { opacity: 1; color: var(--accent-primary); }
+
+/* Feature 12: Shell streaming dot */
+.shell-streaming-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-primary);
+  margin-left: 5px;
+  vertical-align: middle;
+  animation: pulse-dot 1s ease-in-out infinite;
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* Feature 42: Named regex group badge */
+.rx-group-named {
+  background: rgba(86, 156, 214, 0.15);
+  border-radius: 3px;
+  padding: 0 3px;
+}

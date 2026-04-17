@@ -26,6 +26,7 @@ export function DecisionCell({
   onMoveUp,
   onMoveDown,
   columns = 0, onColumnsChange,
+  onToggleBookmark,
 }) {
   const result = decisionResult?.result;
   const message = decisionResult?.message;
@@ -130,7 +131,7 @@ export function DecisionCell({
         </div>
         <div className="decision-cell-actions">
           <CellRunGroup onRun={onRun} onRunFrom={onRunFrom} onRunTo={onRunTo} isRunning={isRunning} disabled={anyRunning || !kernelReady || !cell.content.trim()} />
-          <CellControls onCopy={onCopy} onMoveUp={onMoveUp} onMoveDown={onMoveDown} onDelete={onDelete} columns={columns} onColumnsChange={onColumnsChange} />
+          <CellControls onCopy={onCopy} onMoveUp={onMoveUp} onMoveDown={onMoveDown} onDelete={onDelete} columns={columns} onColumnsChange={onColumnsChange} bookmarked={cell.bookmarked} onToggleBookmark={onToggleBookmark} />
         </div>
       </div>
     </div>

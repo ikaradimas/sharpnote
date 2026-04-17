@@ -172,6 +172,7 @@ export function NotebookView({
   };
 
   const toggleFold = (id) => updateCellProp(id, 'codeFolded', !(cells.find((c) => c.id === id)?.codeFolded || false));
+  const toggleBookmark = (id) => updateCellProp(id, 'bookmarked', !(cells.find((c) => c.id === id)?.bookmarked || false));
 
   const { hidden: collapsedCellIds, counts: collapsedCounts } = useMemo(
     () => getCollapsedSections(cells),
@@ -284,7 +285,8 @@ export function NotebookView({
         onDelete={() => deleteCell(cell.id)}
         onCopy={() => copyCell(cell.id)}
         onMoveUp={() => moveCell(cell.id, -1)} onMoveDown={() => moveCell(cell.id, 1)}
-        columns={cell.columns || 0} onColumnsChange={(v) => updateCellProp(cell.id, 'columns', v || undefined)} />
+        columns={cell.columns || 0} onColumnsChange={(v) => updateCellProp(cell.id, 'columns', v || undefined)}
+        onToggleBookmark={() => toggleBookmark(cell.id)} />
     );
     if (cell.type === 'sql') return (
       <SqlCell cell={cell} cellIndex={index} outputs={outputs[cell.id]} notebookId={nb.id}
@@ -298,7 +300,8 @@ export function NotebookView({
         onMoveUp={() => moveCell(cell.id, -1)} onMoveDown={() => moveCell(cell.id, 1)}
         columns={cell.columns || 0} onColumnsChange={(v) => updateCellProp(cell.id, 'columns', v || undefined)}
         onNameChange={(name) => updateCellProp(cell.id, 'name', name)}
-        onColorChange={(color) => updateCellProp(cell.id, 'color', color)} />
+        onColorChange={(color) => updateCellProp(cell.id, 'color', color)}
+        onToggleBookmark={() => toggleBookmark(cell.id)} />
     );
     if (cell.type === 'http') return (
       <HttpCell cell={cell} cellIndex={index} outputs={outputs[cell.id]} notebookId={nb.id}
@@ -311,7 +314,8 @@ export function NotebookView({
         onMoveUp={() => moveCell(cell.id, -1)} onMoveDown={() => moveCell(cell.id, 1)}
         columns={cell.columns || 0} onColumnsChange={(v) => updateCellProp(cell.id, 'columns', v || undefined)}
         onNameChange={(name) => updateCellProp(cell.id, 'name', name)}
-        onColorChange={(color) => updateCellProp(cell.id, 'color', color)} />
+        onColorChange={(color) => updateCellProp(cell.id, 'color', color)}
+        onToggleBookmark={() => toggleBookmark(cell.id)} />
     );
     if (cell.type === 'shell') return (
       <ShellCell cell={cell} cellIndex={index} outputs={outputs[cell.id]} notebookId={nb.id}
@@ -324,7 +328,8 @@ export function NotebookView({
         onMoveUp={() => moveCell(cell.id, -1)} onMoveDown={() => moveCell(cell.id, 1)}
         columns={cell.columns || 0} onColumnsChange={(v) => updateCellProp(cell.id, 'columns', v || undefined)}
         onNameChange={(name) => updateCellProp(cell.id, 'name', name)}
-        onColorChange={(color) => updateCellProp(cell.id, 'color', color)} />
+        onColorChange={(color) => updateCellProp(cell.id, 'color', color)}
+        onToggleBookmark={() => toggleBookmark(cell.id)} />
     );
     if (cell.type === 'docker') return (
       <DockerCell cell={cell} cellIndex={index} outputs={outputs[cell.id]} notebookId={nb.id}
@@ -341,7 +346,8 @@ export function NotebookView({
         onMoveUp={() => moveCell(cell.id, -1)} onMoveDown={() => moveCell(cell.id, 1)}
         columns={cell.columns || 0} onColumnsChange={(v) => updateCellProp(cell.id, 'columns', v || undefined)}
         onNameChange={(name) => updateCellProp(cell.id, 'name', name)}
-        onColorChange={(color) => updateCellProp(cell.id, 'color', color)} />
+        onColorChange={(color) => updateCellProp(cell.id, 'color', color)}
+        onToggleBookmark={() => toggleBookmark(cell.id)} />
     );
     if (cell.type === 'check') return (
       <CheckCell cell={cell} cellIndex={index} checkResult={nb.checkResults?.[cell.id] ?? null}
@@ -355,7 +361,8 @@ export function NotebookView({
         onMoveUp={() => moveCell(cell.id, -1)} onMoveDown={() => moveCell(cell.id, 1)}
         columns={cell.columns || 0} onColumnsChange={(v) => updateCellProp(cell.id, 'columns', v || undefined)}
         onNameChange={(name) => updateCellProp(cell.id, 'name', name)}
-        onColorChange={(color) => updateCellProp(cell.id, 'color', color)} />
+        onColorChange={(color) => updateCellProp(cell.id, 'color', color)}
+        onToggleBookmark={() => toggleBookmark(cell.id)} />
     );
     if (cell.type === 'decision') return (
       <DecisionCell cell={cell} cellIndex={index} decisionResult={nb.decisionResults?.[cell.id] ?? null}
@@ -374,7 +381,8 @@ export function NotebookView({
         onDelete={() => deleteCell(cell.id)}
         onCopy={() => copyCell(cell.id)}
         onMoveUp={() => moveCell(cell.id, -1)} onMoveDown={() => moveCell(cell.id, 1)}
-        columns={cell.columns || 0} onColumnsChange={(v) => updateCellProp(cell.id, 'columns', v || undefined)} />
+        columns={cell.columns || 0} onColumnsChange={(v) => updateCellProp(cell.id, 'columns', v || undefined)}
+        onToggleBookmark={() => toggleBookmark(cell.id)} />
     );
     return (
       <CodeCell cell={cell} cellIndex={index} outputs={outputs[cell.id]}
@@ -408,7 +416,9 @@ export function NotebookView({
         onRetain={() => onRetainOutput?.(nb.id, cell.id)}
         onUnretain={() => onUnretainOutput?.(nb.id, cell.id)}
         onNextCellsChange={(ids) => updateCellProp(cell.id, 'nextCells', ids === null ? undefined : ids)}
-        onPrevCellsChange={(ids) => updateCellProp(cell.id, 'prevCells', ids === null ? undefined : ids)} />
+        onPrevCellsChange={(ids) => updateCellProp(cell.id, 'prevCells', ids === null ? undefined : ids)}
+        cellElapsed={nb.cellElapsed?.[cell.id] ?? null}
+        onToggleBookmark={() => toggleBookmark(cell.id)} />
     );
   };
 

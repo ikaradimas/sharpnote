@@ -309,7 +309,7 @@ export function RegexPanel() {
                   <div className="rx-groups">
                     {m.groups.map(g => (
                       <div key={g.index} className="rx-group">
-                        <span className="rx-group-label">{g.name ?? `$${g.index}`}</span>
+                        <span className={`rx-group-label${g.name ? ' rx-group-named' : ''}`}>{g.name ?? `$${g.index}`}</span>
                         <span className="rx-group-val">"{g.value}"</span>
                       </div>
                     ))}

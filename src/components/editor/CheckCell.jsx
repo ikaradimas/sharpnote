@@ -19,6 +19,7 @@ export function CheckCell({
   onMoveUp,
   onMoveDown,
   columns = 0, onColumnsChange,
+  onToggleBookmark,
   onNameChange,
   onColorChange,
 }) {
@@ -66,7 +67,7 @@ export function CheckCell({
         </div>
         <div className="check-cell-actions">
           <CellRunGroup onRun={onRun} onRunFrom={onRunFrom} onRunTo={onRunTo} isRunning={isRunning} disabled={anyRunning || !kernelReady || !cell.content.trim()} />
-          <CellControls onCopy={onCopy} onMoveUp={onMoveUp} onMoveDown={onMoveDown} onDelete={onDelete} columns={columns} onColumnsChange={onColumnsChange} />
+          <CellControls onCopy={onCopy} onMoveUp={onMoveUp} onMoveDown={onMoveDown} onDelete={onDelete} columns={columns} onColumnsChange={onColumnsChange} bookmarked={cell.bookmarked} onToggleBookmark={onToggleBookmark} />
         </div>
       </div>
     </div>

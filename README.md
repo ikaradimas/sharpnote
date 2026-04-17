@@ -88,7 +88,8 @@
 - **Reactive Cell Dependencies** — after a successful execution, downstream cells that reference any variable whose value changed are flagged with a "↺ upstream variables changed" banner, clearing automatically when those cells are run
 - **Cell Output History** — re-running a cell preserves the previous outputs; a ‹ › navigator in the cell footer lets you browse the last 5 runs to compare results across executions
 - **`Util` helper** — LinqPAD-compatible utilities available as a global: `.Dump()` / `.DumpTable()` aliases, `Util.Cmd()` shell command execution, `Util.Time()` benchmarking, `Util.Dif()` LCS line diff, `Util.HorizontalRun()` side-by-side layout, `Util.Metatext()` / `Util.Highlight()` styled output, `Util.Cache<T>()` cross-execution memoization cleared on kernel reset, `Util.ConfirmAsync()` interactive OK/Cancel dialogs that pause execution, `Util.PromptAsync()` text-input dialogs
-- **Cell folding** — collapse any code cell to a single-line preview using the ▾/▸ toggle in the cell header; the cell remains executable while folded; fold state is persisted in the `.cnb` file
+- **Cell folding** — collapse any code cell to a single-line preview using the ▾/▸ toggle in the cell header; the cell remains executable while folded; folded cells show their last execution time as a badge; fold state is persisted in the `.cnb` file
+- **Cell bookmarks** — bookmark any cell via the bookmark icon in the cell controls; bookmarked cells appear in a dedicated section at the top of the Table of Contents panel for quick navigation
 - **Cell output toggle** — show or hide cell output with the ▾ Output / ▸ Output toggle above each output block; useful for decluttering long-running cells
 - **Find in Notebook** — `Ctrl+F` opens a floating search bar that searches across all cell contents; ↑ / ↓ buttons (or Enter / Shift+Enter) navigate between matches; matched cells are highlighted; press Escape to close
 - **Auto-run on open** — the ⚡ toolbar button enables auto-run mode per notebook; when enabled, all code cells are run automatically when the notebook opens and the kernel becomes ready; state is saved in the `.cnb` file
@@ -122,6 +123,7 @@
 - **Variables panel** — live snapshot of the kernel's global state after each execution
 - **Variable Sparklines** — the Variables panel tracks the history of numeric variables and renders a mini trend sparkline for each one, updated after every execution
 - **Variable Inspection** — click ⊕ in the Variables panel to open a full-value inspection dialog; Load Full Value fetches the complete JSON-serialised representation from the kernel with a copy-to-clipboard button
+- **Copy as C# literal** — click ⧉ on any variable row to copy its value as a type-aware C# literal (strings are quoted/escaped, numbers get correct suffixes, booleans produce true/false)
 - **Log panel** — structured, time-stamped kernel log stream with `NOTEBOOK` lifecycle entries and `USER` entries written by `.Log()` calls in scripts
 - **Log panel cell links** — cell IDs that appear in log entries are rendered as clickable links that navigate directly to the corresponding cell; code cells show their ID in muted text in the header
 - **Table of Contents** — live heading outline from markdown cells; click any entry to scroll to it

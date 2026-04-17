@@ -30,6 +30,7 @@ function AddCellMenu({ cellId, onAddCell, onClose }) {
 
 export function TocPanel({ cells, onAddCell }) {
   const headings = useMemo(() => extractHeadings(cells), [cells]);
+  const bookmarkedCells = useMemo(() => cells.filter(c => c.bookmarked), [cells]);
   const [query, setQuery] = useState('');
   const [addMenuCellId, setAddMenuCellId] = useState(null);
 
@@ -67,6 +68,20 @@ export function TocPanel({ cells, onAddCell }) {
           <button className="toc-search-clear" onClick={() => setQuery('')} title="Clear">✕</button>
         )}
       </div>
+      {bookmarkedCells.length > 0 && !query && (
+        <div className="toc-bookmarks-section">
+          <div className="toc-bookmarks-header">Bookmarks</div>
+          {bookmarkedCells.map(c => (
+            <div key={c.id} className="toc-item-row">
+              <button className="toc-item toc-h2 toc-cell toc-bookmarked" onClick={() => scroll(c.id)}>
+                <span className="toc-bookmark-star">★</span>
+                <span className="toc-cell-badge">{c.type}</span>
+                {c.name || c.content?.split('\n')[0]?.slice(0, 40) || c.id}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
       {filtered.length === 0 ? (
         <div className="toc-empty">
           {headings.length === 0 ? 'No headings found' : 'No matches'}
