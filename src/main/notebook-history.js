@@ -73,6 +73,15 @@ function register(ipcMain) {
     deleteHistory(filePath);
     return { success: true };
   });
+
+  ipcMain.handle('notebook-history-snapshot', (_event, { filePath, data }) => {
+    try {
+      saveSnapshot(filePath, data);
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
 }
 
 module.exports = { loadHistory, saveSnapshot, restoreSnapshot, deleteHistory, register, MAX_SNAPSHOTS };

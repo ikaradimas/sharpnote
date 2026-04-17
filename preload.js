@@ -179,6 +179,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getNotebookHistory: (filePath) => ipcRenderer.invoke('notebook-history-list', filePath),
   restoreNotebookSnapshot: (filePath, index) => ipcRenderer.invoke('notebook-history-restore', { filePath, index }),
   deleteNotebookHistory: (filePath) => ipcRenderer.invoke('notebook-history-delete', filePath),
+  saveNotebookSnapshot: (filePath, data) => ipcRenderer.invoke('notebook-history-snapshot', { filePath, data }),
 
   // Renderer-side logging (appears in Logs panel)
   rendererLog: (tag, message) => ipcRenderer.send('renderer-log', { tag, message }),
@@ -190,6 +191,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   fsMkdir:    (dirPath)           => ipcRenderer.invoke('fs-mkdir', dirPath),
   fsOpenPath: (filePath)          => ipcRenderer.invoke('fs-open-path', filePath),
   fsGetHome:  ()                  => ipcRenderer.invoke('fs-get-home'),
+  fsReadPreview: (filePath)       => ipcRenderer.invoke('fs-read-preview', filePath),
   pickEmbedFile: ()               => ipcRenderer.invoke('pick-embed-file'),
   getEnvVar:  (name)              => ipcRenderer.invoke('get-env-var', name),
 

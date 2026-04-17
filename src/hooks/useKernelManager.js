@@ -817,9 +817,19 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
     window.electronAPI?.interruptKernel(notebookId);
   }, []);
 
-  const handleReset = useCallback((notebookId) => {
+  const handleReset = useCallback(async (notebookId) => {
     if (!window.electronAPI) return;
     const nb = notebooksRef.current.find((n) => n.id === notebookId);
+    // Feature 44: Auto-snapshot before destructive reset
+    if (nb?.filePath && window.electronAPI.saveNotebookSnapshot) {
+      try {
+        await window.electronAPI.saveNotebookSnapshot(nb.filePath, {
+          title: nb.title,
+          cells: nb.cells,
+          config: nb.config,
+        });
+      } catch { /* snapshot failure should not block reset */ }
+    }
     if (nb) cancelPendingCells(nb.cells);
     setNb(notebookId, (n) => ({
       kernelStatus: 'starting',

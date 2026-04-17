@@ -36,6 +36,10 @@ export function FilesPanel({ currentDir, onNavigate, onOpenNotebook, notebookDir
   const ctxRef = useRef(null);
   useOutsideClick(ctxRef, () => setCtxMenu(null), !!ctxMenu);
 
+  // Feature 31: File preview on hover
+  const [preview, setPreview] = useState(null); // { name, data, top }
+  const previewTimerRef = useRef(null);
+
   // Feature 32: Git status badges
   const [gitStatuses, setGitStatuses] = useState(null); // Map<filename, statusChar>
 
@@ -158,6 +162,25 @@ export function FilesPanel({ currentDir, onNavigate, onOpenNotebook, notebookDir
     if (abs.startsWith(notebookDir)) return abs.slice(notebookDir.replace(/\/?$/, '/').length);
     return abs;
   };
+
+  const handlePreviewEnter = useCallback((entry, e) => {
+    if (entry.isDirectory || entry.unreadable) return;
+    clearTimeout(previewTimerRef.current);
+    const rect = e.currentTarget.getBoundingClientRect();
+    const listRect = e.currentTarget.closest('.files-list')?.getBoundingClientRect();
+    const top = rect.top - (listRect?.top || 0);
+    previewTimerRef.current = setTimeout(async () => {
+      if (!currentDir) return;
+      const full = currentDir.replace(/\/?$/, '/') + entry.name;
+      const result = await window.electronAPI.fsReadPreview(full);
+      if (result?.success) setPreview({ name: entry.name, data: result, top });
+    }, 400);
+  }, [currentDir]);
+
+  const handlePreviewLeave = useCallback(() => {
+    clearTimeout(previewTimerRef.current);
+    setPreview(null);
+  }, []);
 
   const isFavorite = currentDir && favoriteFolders.includes(currentDir);
 
@@ -303,6 +326,8 @@ export function FilesPanel({ currentDir, onNavigate, onOpenNotebook, notebookDir
             onClick={() => setSelected(entry.name)}
             onDoubleClick={() => handleOpen(entry)}
             onContextMenu={(e) => handleContextMenu(e, entry)}
+            onMouseEnter={(e) => handlePreviewEnter(entry, e)}
+            onMouseLeave={handlePreviewLeave}
           >
             <span className="files-icon">
               {entry.isDirectory ? <IconFolderSvg /> : <IconFileSvg isNotebook={entry.name.endsWith('.cnb')} />}
@@ -363,6 +388,22 @@ export function FilesPanel({ currentDir, onNavigate, onOpenNotebook, notebookDir
             <button className="files-ctx-item" onClick={() => copyToClipboard(ctxMenu.name)}>
               Copy filename
             </button>
+          </div>
+        )}
+
+        {/* Feature 31: File preview tooltip */}
+        {preview && (
+          <div className="files-preview-tooltip" style={{ top: preview.top }}>
+            {preview.data.isImage && !preview.data.tooLarge && (
+              <img className="files-preview-image" src={preview.data.dataUri} alt={preview.name} />
+            )}
+            {preview.data.isImage && preview.data.tooLarge && (
+              <span>Image too large for preview</span>
+            )}
+            {preview.data.isText && preview.data.lines.map((line, i) => (
+              <div key={i}>{line || '\u00A0'}</div>
+            ))}
+            {preview.data.isBinary && <span>Binary file</span>}
           </div>
         )}
       </div>

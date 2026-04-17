@@ -1,12 +1,31 @@
 import React, { useState } from 'react';
 import { parseDiff } from '../../../utils/diff-parser.js';
+import { MergeConflictView } from './MergeConflictView.jsx';
 
 export function DiffView({ diffText, fileName, diffMode, onToggleDiffMode, blameToggle }) {
   const [viewMode, setViewMode] = useState('unified'); // 'unified' | 'split'
+  const [showConflictResolver, setShowConflictResolver] = useState(false);
   const hunks = parseDiff(diffText);
+
+  const hasConflicts = diffText && diffText.includes('<<<<<<<');
 
   if (!diffText) {
     return <div className="git-diff-empty">Select a file to view its diff</div>;
+  }
+
+  if (showConflictResolver && hasConflicts) {
+    return (
+      <div className="git-diff-view">
+        <div className="git-diff-header">
+          <span className="git-diff-filename">{fileName}</span>
+          <button
+            className="git-diff-head-btn active"
+            onClick={() => setShowConflictResolver(false)}
+          >Back to Diff</button>
+        </div>
+        <MergeConflictView diffText={diffText} />
+      </div>
+    );
   }
 
   if (hunks.length === 0) {
@@ -19,6 +38,13 @@ export function DiffView({ diffText, fileName, diffMode, onToggleDiffMode, blame
     <div className="git-diff-view">
       <div className="git-diff-header">
         <span className="git-diff-filename">{fileName}</span>
+        {hasConflicts && (
+          <button
+            className="git-diff-head-btn"
+            onClick={() => setShowConflictResolver(true)}
+            title="Open merge conflict resolver"
+          >Resolve Conflicts</button>
+        )}
         {!isCommitDiff && onToggleDiffMode && (
           <button
             className={`git-diff-head-btn${diffMode === 'head' ? ' active' : ''}`}

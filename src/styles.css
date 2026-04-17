@@ -9018,3 +9018,59 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 }
 .db-health-dot-error { background: #d16969; }
 .db-health-dot-connecting { background: #e0a040; }
+
+/* ── Feature 35: Merge Conflict Resolver ─────────────────────────────────── */
+.merge-conflict-view { padding: 8px; }
+.merge-conflict-summary { font-size: 11px; color: var(--text-dim); padding: 0 0 6px; }
+.merge-section { margin-bottom: 4px; }
+.merge-normal { font-family: var(--font-code); font-size: 11px; padding: 2px 8px; white-space: pre; }
+.merge-conflict-block { border: 1px solid var(--border-default); border-radius: 4px; margin: 4px 0; overflow: hidden; }
+.merge-conflict-header { display: flex; gap: 4px; padding: 4px 8px; background: rgba(0,0,0,0.15); }
+.merge-accept-btn {
+  background: none; border: 1px solid var(--border-strong);
+  color: var(--text-dim); font-size: 9px; padding: 1px 6px;
+  border-radius: 3px; cursor: pointer;
+}
+.merge-accept-btn:hover { color: var(--text-primary); border-color: var(--border-default); }
+.merge-accept-btn.active { border-color: var(--accent-primary); color: var(--accent-primary); background: rgba(196,150,74,0.1); }
+.merge-ours, .merge-theirs {
+  font-family: var(--font-code); font-size: 11px; padding: 4px 8px; white-space: pre;
+}
+.merge-ours { background: rgba(106, 153, 85, 0.1); border-bottom: 1px solid var(--border-subtle); }
+.merge-theirs { background: rgba(209, 105, 105, 0.1); }
+.merge-resolved { background: rgba(196, 150, 74, 0.1); padding: 4px 8px; font-family: var(--font-code); font-size: 11px; white-space: pre; }
+.merge-copy-btn {
+  background: var(--accent-primary); border: none; color: #fff;
+  font-size: 10px; padding: 3px 12px; border-radius: 3px; cursor: pointer;
+}
+.merge-copy-btn:hover { opacity: 0.85; }
+.merge-copy-btn:disabled { opacity: 0.4; cursor: default; }
+
+/* ── Feature 41: Regex Replace ───────────────────────────────────────────── */
+.rx-replace-row { padding: 6px 12px; }
+.rx-replace-input {
+  width: 100%; background: var(--bg-mid); border: 1px solid var(--border-default);
+  color: var(--text-primary); font-family: var(--font-code); font-size: 12px;
+  padding: 4px 8px; border-radius: 4px; outline: none;
+  box-sizing: border-box;
+}
+.rx-replace-input:focus { border-color: var(--accent-primary); }
+.rx-replace-preview {
+  margin: 8px 12px; padding: 8px; background: rgba(0,0,0,0.15);
+  border-radius: 4px; font-family: var(--font-code); font-size: 12px;
+  white-space: pre-wrap; color: var(--text-secondary);
+}
+.rx-replace-label { font-size: 10px; color: var(--text-dim); padding: 0 0 4px; }
+
+/* ── Feature 31: File Preview Tooltip ────────────────────────────────────── */
+.files-preview-tooltip {
+  position: absolute; z-index: 200; left: 100%; top: 0;
+  background: var(--bg-mid); border: 1px solid var(--border-default);
+  border-radius: 4px; padding: 6px 8px; min-width: 250px; max-width: 400px;
+  max-height: 250px; overflow: auto;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  font-family: var(--font-code); font-size: 10px;
+  white-space: pre-wrap; color: var(--text-secondary);
+  pointer-events: none;
+}
+.files-preview-image { max-width: 100%; max-height: 200px; border-radius: 3px; }

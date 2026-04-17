@@ -168,6 +168,7 @@ export function RegexPanel() {
   const [error,   setError]   = useState(null);
   const [matches, setMatches] = useState([]);
   const [refOpen, setRefOpen] = useState(false);
+  const [replacement, setReplacement] = useState('');
   const backdropRef = useRef(null);
   const textareaRef = useRef(null);
 
@@ -292,6 +293,32 @@ export function RegexPanel() {
           />
         </div>
       </div>
+
+      {/* ── Replace input ──────────────────────────────────────────────── */}
+      <div className="rx-replace-row">
+        <div className="rx-replace-label">Replace With</div>
+        <input
+          className="rx-replace-input"
+          value={replacement}
+          onChange={e => setReplacement(e.target.value)}
+          placeholder="replacement (supports $1, $&, etc.)"
+          spellCheck={false}
+          aria-label="Replacement string"
+        />
+      </div>
+
+      {/* ── Replace preview ──────────────────────────────────────────────── */}
+      {replacement && pattern && !error && testStr && (
+        <div className="rx-replace-preview">
+          {(() => {
+            try {
+              const flagStr = Object.entries(flags).filter(([, v]) => v).map(([k]) => k).join('');
+              const re = new RegExp(pattern, flagStr);
+              return testStr.replace(re, replacement);
+            } catch { return '(invalid replacement)'; }
+          })()}
+        </div>
+      )}
 
       {/* ── Matches list ──────────────────────────────────────────────────── */}
       <div className="rx-matches-section">

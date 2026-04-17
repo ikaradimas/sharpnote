@@ -18,6 +18,13 @@ partial class Program
     private static readonly HashSet<string> ValidHttpMethods = new(StringComparer.OrdinalIgnoreCase)
         { "GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS" };
 
+    /// <summary>
+    /// Persistent cookie jar shared across all HTTP cell executions within
+    /// the same kernel session. Cookies received from servers are automatically
+    /// stored and sent with subsequent requests.
+    /// </summary>
+    internal static readonly System.Net.CookieContainer HttpCookieJar = new();
+
     internal static async Task HandleExecuteHttp(
         JsonElement msg,
         ScriptOptions options,
@@ -102,7 +109,10 @@ partial class Program
 
             var sb = new StringBuilder();
             sb.AppendLine("{");
-            sb.AppendLine("    var __http_client__ = new System.Net.Http.HttpClient();");
+            sb.AppendLine("    var __http_handler__ = new System.Net.Http.HttpClientHandler();");
+            sb.AppendLine("    __http_handler__.CookieContainer = SharpNoteKernel.Program.HttpCookieJar;");
+            sb.AppendLine("    __http_handler__.UseCookies = true;");
+            sb.AppendLine("    var __http_client__ = new System.Net.Http.HttpClient(__http_handler__);");
             sb.AppendLine($"    __http_client__.Timeout = TimeSpan.FromSeconds(30);");
 
             foreach (var (k, v) in resolvedHeaders)

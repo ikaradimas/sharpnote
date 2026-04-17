@@ -74,6 +74,37 @@ function register(ipcMain, { app, shell }) {
 
   handle('fs-get-home', () => app.getPath('home'));
 
+  handle('fs-read-preview', (_event, filePath) => {
+    try {
+      const stat = fs.statSync(filePath);
+      if (stat.isDirectory()) return { success: false, error: 'Is a directory' };
+      const ext = path.extname(filePath).toLowerCase();
+      const imageExts = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.svg', '.webp', '.ico'];
+      if (imageExts.includes(ext)) {
+        // Return a data URI for image preview
+        const mimeMap = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+          '.gif': 'image/gif', '.bmp': 'image/bmp', '.svg': 'image/svg+xml',
+          '.webp': 'image/webp', '.ico': 'image/x-icon' };
+        const mime = mimeMap[ext] || 'application/octet-stream';
+        const buf = fs.readFileSync(filePath);
+        if (buf.length > 2 * 1024 * 1024) return { success: true, isImage: true, tooLarge: true };
+        return { success: true, isImage: true, dataUri: `data:${mime};base64,${buf.toString('base64')}` };
+      }
+      // Text preview: read first 2KB
+      const fd = fs.openSync(filePath, 'r');
+      const buf = Buffer.alloc(2048);
+      const bytesRead = fs.readSync(fd, buf, 0, 2048, 0);
+      fs.closeSync(fd);
+      const text = buf.slice(0, bytesRead).toString('utf-8');
+      // Check for binary content
+      if (text.includes('\0')) return { success: true, isBinary: true };
+      const lines = text.split('\n').slice(0, 20);
+      return { success: true, isText: true, lines };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
   handle('pick-embed-file', async () => {
     const { dialog } = require('electron');
     const result = await dialog.showOpenDialog({
