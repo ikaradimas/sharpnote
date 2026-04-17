@@ -18,10 +18,11 @@ function emptyApiDef() {
   };
 }
 
-export function ApiEditorPanel({ onToggle, requestedApiId, onRequestedApiHandled }) {
+export function ApiEditorPanel({ onToggle, requestedApiId, onRequestedApiHandled, lastApiId, onApiSelectionChange }) {
   const [apiDef, setApiDef] = useState(emptyApiDef);
   const [savedApis, setSavedApis] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
+  const initializedRef = useRef(false);
   const [runningServers, setRunningServers] = useState([]); // [{ id, port, title }]
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const cleanSnapshotRef = useRef(JSON.stringify(apiDef));
@@ -44,6 +45,23 @@ export function ApiEditorPanel({ onToggle, requestedApiId, onRequestedApiHandled
     }
     onRequestedApiHandled?.();
   }, [requestedApiId, savedApis]);
+
+  // Restore last selected API from notebook on initial load
+  useEffect(() => {
+    if (initializedRef.current || !lastApiId || savedApis.length === 0) return;
+    const match = savedApis.find(a => a.id === lastApiId);
+    if (match) {
+      setSelectedId(match.id);
+      setApiDef(match);
+      cleanSnapshotRef.current = JSON.stringify(match);
+    }
+    initializedRef.current = true;
+  }, [lastApiId, savedApis]);
+
+  // Notify parent when selection changes so it can persist per-notebook
+  useEffect(() => {
+    onApiSelectionChange?.(selectedId);
+  }, [selectedId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const refreshServerList = useCallback(() => {
     window.electronAPI?.listMockServers?.().then(list => setRunningServers(list ?? [])).catch(() => {});

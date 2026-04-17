@@ -1141,6 +1141,8 @@ export function App() {
         onToggle: () => setPanelVisible('api-editor', null),
         requestedApiId: apiEditorRequestedId,
         onRequestedApiHandled: () => setApiEditorRequestedId(null),
+        lastApiId: activeNb?.apiEditorSelectedId ?? null,
+        onApiSelectionChange: nbId ? (id) => setNb(nbId, { apiEditorSelectedId: id }) : null,
       },
       git: {
         onToggle: () => setPanelVisible('git', null),

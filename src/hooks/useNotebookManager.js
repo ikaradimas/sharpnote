@@ -24,7 +24,11 @@ function applyPanelLayout(data) {
       if (v && flag) flags[flag] = true;
     }
   }
-  return { ...flags, ...(pl.dockLayout ? { dockLayout: pl.dockLayout } : {}) };
+  return {
+    ...flags,
+    ...(pl.dockLayout ? { dockLayout: pl.dockLayout } : {}),
+    ...(pl.apiEditorSelectedId ? { apiEditorSelectedId: pl.apiEditorSelectedId } : {}),
+  };
 }
 
 /**
@@ -104,6 +108,7 @@ export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef, for
             .map(([k]) => [k, true])
         ),
         dockLayout: nb.dockLayout || null,
+        apiEditorSelectedId: nb.apiEditorSelectedId || null,
       },
     };
   }, []);
