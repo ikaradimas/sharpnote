@@ -89,41 +89,78 @@ function exportMacOS(app, appName, notebookData, outputDir) {
   // Clear quarantine xattrs
   try { execSync(`xattr -cr "${destApp}"`); } catch {}
 
-  // Re-sign the Electron app bundle with ad-hoc signatures.
-  // --deep is unreliable for Electron — sign each nested component
-  // individually in dependency order: frameworks → helpers → main app.
+  // Re-sign the Electron app with ad-hoc signatures, preserving entitlements.
+  // V8 requires com.apple.security.cs.allow-jit for JIT compilation — without
+  // it macOS kills the process with EXC_BREAKPOINT before any JS runs.
   try {
     const contentsDir = path.join(destApp, 'Contents');
     const frameworksDir = path.join(contentsDir, 'Frameworks');
 
-    // 1. Sign all nested frameworks and dylibs
-    if (fs.existsSync(frameworksDir)) {
-      const entries = fs.readdirSync(frameworksDir);
-      for (const entry of entries) {
-        const full = path.join(frameworksDir, entry);
-        try {
-          execSync(`codesign --force --sign - "${full}"`, { stdio: 'pipe' });
-        } catch {}
+    // Extract entitlements from the original app binary
+    const mainExe = path.join(contentsDir, 'MacOS', 'SharpNote');
+    let entitlementsFile = null;
+    try {
+      const entXml = execSync(
+        `codesign -d --entitlements - --xml "${mainExe}" 2>/dev/null`,
+        { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }
+      );
+      if (entXml && entXml.includes('<!DOCTYPE plist')) {
+        entitlementsFile = path.join(outputDir, '.tmp-entitlements.plist');
+        fs.writeFileSync(entitlementsFile, entXml, 'utf-8');
       }
-      // Sign nested helper apps inside frameworks
-      const efDir = path.join(frameworksDir, 'Electron Framework.framework');
-      if (fs.existsSync(efDir)) {
-        try { execSync(`codesign --force --sign - "${efDir}"`, { stdio: 'pipe' }); } catch {}
-      }
+    } catch {}
+
+    // If we couldn't extract entitlements, create minimal ones for Electron
+    if (!entitlementsFile) {
+      entitlementsFile = path.join(outputDir, '.tmp-entitlements.plist');
+      fs.writeFileSync(entitlementsFile, `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>com.apple.security.cs.allow-jit</key><true/>
+  <key>com.apple.security.cs.allow-unsigned-executable-memory</key><true/>
+  <key>com.apple.security.cs.disable-library-validation</key><true/>
+</dict>
+</plist>`, 'utf-8');
     }
 
-    // 2. Sign helper apps
+    const signWithEnt = (target) => {
+      try {
+        execSync(
+          `codesign --force --sign - --entitlements "${entitlementsFile}" "${target}"`,
+          { stdio: 'pipe' }
+        );
+      } catch {
+        // Fallback: sign without entitlements (frameworks/dylibs don't need them)
+        try { execSync(`codesign --force --sign - "${target}"`, { stdio: 'pipe' }); } catch {}
+      }
+    };
+
+    const signPlain = (target) => {
+      try { execSync(`codesign --force --sign - "${target}"`, { stdio: 'pipe' }); } catch {}
+    };
+
+    // 1. Sign frameworks and dylibs (no entitlements needed)
     if (fs.existsSync(frameworksDir)) {
       for (const entry of fs.readdirSync(frameworksDir)) {
-        if (entry.endsWith('.app')) {
-          const helperApp = path.join(frameworksDir, entry);
-          try { execSync(`codesign --force --sign - "${helperApp}"`, { stdio: 'pipe' }); } catch {}
-        }
+        const full = path.join(frameworksDir, entry);
+        if (entry.endsWith('.app')) continue; // helpers signed separately
+        signPlain(full);
       }
     }
 
-    // 3. Sign the main app bundle last
-    execSync(`codesign --force --sign - "${destApp}"`, { stdio: 'pipe' });
+    // 2. Sign helper apps (need entitlements for JIT)
+    if (fs.existsSync(frameworksDir)) {
+      for (const entry of fs.readdirSync(frameworksDir)) {
+        if (entry.endsWith('.app')) signWithEnt(path.join(frameworksDir, entry));
+      }
+    }
+
+    // 3. Sign the main app bundle last (with entitlements)
+    signWithEnt(destApp);
+
+    // Cleanup
+    try { fs.unlinkSync(entitlementsFile); } catch {}
   } catch {}
 
   return { success: true, filePath: destApp };
