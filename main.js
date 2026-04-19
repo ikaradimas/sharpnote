@@ -522,6 +522,8 @@ app.whenReady().then(() => {
 
     // Decrypt embedded settings if present
     let embeddedSettings = null;
+    let viewerNeedsPassphrase = false;
+    let viewerEncBlob = null;
     if (viewerMode.hasSettings) {
       try {
         const encPath = path.join(viewerDataDir, 'settings.enc');
@@ -530,7 +532,13 @@ app.whenReady().then(() => {
           const { decryptSettings } = require('./src/main/export-app.js');
           const blob = fs.readFileSync(encPath, 'utf-8');
           const nbJson = fs.readFileSync(nbPath, 'utf-8');
-          embeddedSettings = decryptSettings(blob, nbJson);
+          const result = decryptSettings(blob, nbJson);
+          if (result && result.needsPassphrase) {
+            viewerNeedsPassphrase = true;
+            viewerEncBlob = blob;
+          } else {
+            embeddedSettings = result;
+          }
         }
       } catch {}
     }
@@ -540,12 +548,26 @@ app.whenReady().then(() => {
       ipcMain.handle('app-settings-load-viewer', () => embeddedSettings);
     }
 
+    // IPC handler for passphrase-protected viewer decryption
+    if (viewerNeedsPassphrase) {
+      ipcMain.handle('decrypt-viewer-settings', async (_ev, { passphrase }) => {
+        try {
+          const { decryptSettingsWithPassphrase } = require('./src/main/export-app.js');
+          const settings = decryptSettingsWithPassphrase(viewerEncBlob, passphrase);
+          return { success: true, settings };
+        } catch {
+          return { success: false, error: 'Invalid passphrase' };
+        }
+      });
+    }
+
     mainWindow.webContents.on('did-finish-load', () => {
       const notebookPath = path.join(viewerDataDir, viewerMode.notebook);
       mainWindow.webContents.send('viewer-mode', {
         ...viewerMode,
         notebookPath,
         embeddedSettings,
+        needsPassphrase: viewerNeedsPassphrase || false,
       });
     });
   }

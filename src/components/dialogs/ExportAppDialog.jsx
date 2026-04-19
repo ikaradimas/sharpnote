@@ -7,6 +7,10 @@ export function ExportAppDialog({ notebookTitle, onExport, onClose }) {
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState(null);
   const [result, setResult] = useState(null);
+  const [usePassphrase, setUsePassphrase] = useState(false);
+  const [passphrase, setPassphrase] = useState('');
+  const [passphraseConfirm, setPassphraseConfirm] = useState('');
+  const [stripSecrets, setStripSecrets] = useState(false);
 
   useEffect(() => {
     window.electronAPI?.getExportAppInfo?.().then((data) => {
@@ -30,10 +34,12 @@ export function ExportAppDialog({ notebookTitle, onExport, onClose }) {
   };
 
   const handleExport = async () => {
+    if (usePassphrase && passphrase !== passphraseConfirm) { setError('Passphrases don\'t match'); return; }
+    if (usePassphrase && passphrase.length < 4) { setError('Passphrase must be at least 4 characters'); return; }
     setExporting(true);
     setError(null);
     try {
-      const res = await onExport(appName, outputDir);
+      const res = await onExport(appName, outputDir, usePassphrase ? passphrase : null, stripSecrets);
       if (res?.success) {
         setResult(res.filePath);
       } else {
@@ -81,6 +87,30 @@ export function ExportAppDialog({ notebookTitle, onExport, onClose }) {
                   <button className="kafka-btn" onClick={handleBrowse} disabled={exporting}>Browse</button>
                 </div>
               </div>
+              <div className="export-app-field">
+                <label className="export-app-checkbox">
+                  <input type="checkbox" checked={usePassphrase} onChange={(e) => setUsePassphrase(e.target.checked)} disabled={exporting} />
+                  <span>Protect with passphrase</span>
+                </label>
+                {usePassphrase && (
+                  <div className="export-app-passphrase-fields">
+                    <input className="export-app-input" type="password" placeholder="Passphrase" value={passphrase}
+                      onChange={(e) => setPassphrase(e.target.value)} disabled={exporting} />
+                    <input className="export-app-input" type="password" placeholder="Confirm passphrase" value={passphraseConfirm}
+                      onChange={(e) => setPassphraseConfirm(e.target.value)} disabled={exporting} />
+                    {passphrase && passphraseConfirm && passphrase !== passphraseConfirm && (
+                      <div className="export-app-error">Passphrases don't match</div>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="export-app-field">
+                <label className="export-app-checkbox">
+                  <input type="checkbox" checked={stripSecrets} onChange={(e) => setStripSecrets(e.target.checked)} disabled={exporting} />
+                  <span>Strip credentials</span>
+                </label>
+                <div className="export-app-hint">DB connections, config secrets, and API keys will be removed. The viewer will prompt for them on launch.</div>
+              </div>
               {targetPath && (
                 <div className="export-app-target">
                   <span className="export-app-info-label">Target</span>
@@ -108,7 +138,7 @@ export function ExportAppDialog({ notebookTitle, onExport, onClose }) {
                 <button
                   className="kafka-btn kafka-btn-primary"
                   onClick={handleExport}
-                  disabled={exporting || !appName.trim() || !outputDir || !info?.isPackaged}
+                  disabled={exporting || !appName.trim() || !outputDir || !info?.isPackaged || (usePassphrase && (passphrase.length < 4 || passphrase !== passphraseConfirm))}
                 >
                   {exporting ? 'Exporting...' : 'Export'}
                 </button>

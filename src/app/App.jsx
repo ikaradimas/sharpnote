@@ -37,6 +37,8 @@ import { VarInspectDialog } from '../components/dialogs/VarInspectDialog.jsx';
 import { DbConnectionDialog } from '../components/dialogs/DbConnectionDialog.jsx';
 import { NewNotebookDialog } from '../components/dialogs/NewNotebookDialog.jsx';
 import { ExportAppDialog } from '../components/dialogs/ExportAppDialog.jsx';
+import { PassphraseDialog } from '../components/dialogs/PassphraseDialog.jsx';
+import { CredentialsDialog } from '../components/dialogs/CredentialsDialog.jsx';
 import { KeyboardShortcutsOverlay } from '../components/dialogs/KeyboardShortcutsOverlay.jsx';
 import { StatusBar } from './StatusBar.jsx';
 import { renderPanelContent } from '../components/dock/renderPanelContent.jsx';
@@ -112,6 +114,8 @@ export function App() {
   const [dbConnDialog, setDbConnDialog] = useState(null); // null | connection object (edit) | opened with null (new)
   const [exportAppOpen, setExportAppOpen] = useState(false);
   const [viewerMode, setViewerMode] = useState(null);
+  const [passphraseDialogOpen, setPassphraseDialogOpen] = useState(false);
+  const [credentialsDialogData, setCredentialsDialogData] = useState(null);
 
   const [dashboardMode, setDashboardMode] = useState(false);
   const [highlightedCellIds, setHighlightedCellIds] = useState(null);
@@ -979,42 +983,87 @@ export function App() {
     };
   }, []);
 
+  // ── Viewer mode helpers ──────────────────────────────────────────────
+  const applyEmbeddedSettings = useCallback((s) => {
+    if (!s) return;
+    // Visual / appearance
+    if (s.theme) setTheme(s.theme);
+    if (typeof s.lineAltEnabled === 'boolean') setLineAltEnabled(s.lineAltEnabled);
+    if (typeof s.lintEnabled === 'boolean') setLintEnabled(s.lintEnabled);
+    if (typeof s.strongCuesEnabled === 'boolean') setStrongCuesEnabled(s.strongCuesEnabled);
+    if (typeof s.formatOnSave === 'boolean') setFormatOnSave(s.formatOnSave);
+    if (typeof s.showFish === 'boolean') setShowFish(s.showFish);
+    if (typeof s.showCircuit === 'boolean') setShowCircuit(s.showCircuit);
+    if (typeof s.showGhost === 'boolean') setShowGhost(s.showGhost);
+    if (typeof s.showSkyline === 'boolean') setShowSkyline(s.showSkyline);
+    if (s.notebookBg) setNotebookBg(s.notebookBg);
+    if (typeof s.notebookBgOpacity === 'number') setNotebookBgOpacity(s.notebookBgOpacity);
+    if (typeof s.tablePageSize === 'number') setTablePageSize(s.tablePageSize);
+    // Keyboard shortcuts
+    if (s.customShortcuts && typeof s.customShortcuts === 'object') {
+      setCustomShortcuts(s.customShortcuts);
+      window.electronAPI?.rebuildMenu?.(s.customShortcuts);
+    }
+    // Favorite folders
+    if (Array.isArray(s.favoriteFolders)) setFavoriteFolders(s.favoriteFolders);
+    // DB connections
+    if (Array.isArray(s.dbConnections) && s.dbConnections.length > 0) {
+      setDbConnections(s.dbConnections);
+      window.electronAPI?.saveDbConnections?.(s.dbConnections);
+    }
+    // API saved configs
+    if (Array.isArray(s.apiSaved) && s.apiSaved.length > 0) {
+      window.electronAPI?.saveApiSaved?.(s.apiSaved);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const findStrippedCredentials = useCallback((s) => {
+    const items = [];
+    if (Array.isArray(s.dbConnections)) {
+      for (const c of s.dbConnections) {
+        if (c.stripped) items.push({ type: 'db', id: c.id, name: c.name, field: 'connectionString', label: `DB: ${c.name}` });
+      }
+    }
+    return items;
+  }, []);
+
+  const handlePassphraseSubmit = useCallback(async (passphrase) => {
+    const result = await window.electronAPI?.decryptViewerSettings?.({ passphrase });
+    if (result?.success) {
+      setPassphraseDialogOpen(false);
+      applyEmbeddedSettings(result.settings);
+      const stripped = findStrippedCredentials(result.settings);
+      if (stripped.length > 0) setCredentialsDialogData(stripped);
+      if (viewerMode?.notebookPath) {
+        window.electronAPI?.openRecentFile?.(viewerMode.notebookPath);
+      }
+      return { success: true };
+    }
+    return { success: false, error: result?.error || 'Decryption failed' };
+  }, [viewerMode, applyEmbeddedSettings, findStrippedCredentials]);
+
+  const handleCredentialsSubmit = useCallback((filled) => {
+    for (const item of filled) {
+      if (item.type === 'db') {
+        setDbConnections(prev => prev.map(c => c.id === item.id ? { ...c, connectionString: item.value, stripped: false } : c));
+      }
+    }
+    setCredentialsDialogData(null);
+  }, []);
+
   // ── Viewer mode listener ─────────────────────────────────────────────
   useEffect(() => {
     window.electronAPI?.onViewerMode?.((data) => {
       setViewerMode(data);
+      if (data.needsPassphrase) {
+        setPassphraseDialogOpen(true);
+        return;
+      }
       // Apply embedded settings if present
       if (data.embeddedSettings) {
-        const s = data.embeddedSettings;
-        // Visual / appearance
-        if (s.theme) setTheme(s.theme);
-        if (typeof s.lineAltEnabled === 'boolean') setLineAltEnabled(s.lineAltEnabled);
-        if (typeof s.lintEnabled === 'boolean') setLintEnabled(s.lintEnabled);
-        if (typeof s.strongCuesEnabled === 'boolean') setStrongCuesEnabled(s.strongCuesEnabled);
-        if (typeof s.formatOnSave === 'boolean') setFormatOnSave(s.formatOnSave);
-        if (typeof s.showFish === 'boolean') setShowFish(s.showFish);
-        if (typeof s.showCircuit === 'boolean') setShowCircuit(s.showCircuit);
-        if (typeof s.showGhost === 'boolean') setShowGhost(s.showGhost);
-        if (typeof s.showSkyline === 'boolean') setShowSkyline(s.showSkyline);
-        if (s.notebookBg) setNotebookBg(s.notebookBg);
-        if (typeof s.notebookBgOpacity === 'number') setNotebookBgOpacity(s.notebookBgOpacity);
-        if (typeof s.tablePageSize === 'number') setTablePageSize(s.tablePageSize);
-        // Keyboard shortcuts
-        if (s.customShortcuts && typeof s.customShortcuts === 'object') {
-          setCustomShortcuts(s.customShortcuts);
-          window.electronAPI?.rebuildMenu?.(s.customShortcuts);
-        }
-        // Favorite folders
-        if (Array.isArray(s.favoriteFolders)) setFavoriteFolders(s.favoriteFolders);
-        // DB connections
-        if (Array.isArray(s.dbConnections) && s.dbConnections.length > 0) {
-          setDbConnections(s.dbConnections);
-          window.electronAPI?.saveDbConnections?.(s.dbConnections);
-        }
-        // API saved configs
-        if (Array.isArray(s.apiSaved) && s.apiSaved.length > 0) {
-          window.electronAPI?.saveApiSaved?.(s.apiSaved);
-        }
+        applyEmbeddedSettings(data.embeddedSettings);
+        const stripped = findStrippedCredentials(data.embeddedSettings);
+        if (stripped.length > 0) setCredentialsDialogData(stripped);
       }
       if (data.notebookPath) {
         window.electronAPI?.loadNotebookFromPath?.(data.notebookPath).then((result) => {
@@ -1024,7 +1073,7 @@ export function App() {
         });
       }
     });
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Quit guard ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -1558,7 +1607,7 @@ export function App() {
       {exportAppOpen && (
         <ExportAppDialog
           notebookTitle={activeNb?.title || 'Notebook'}
-          onExport={async (appName, outputDir) => {
+          onExport={async (appName, outputDir, passphrase, stripSecrets) => {
             const nb = activeNb;
             if (!nb) return { success: false, error: 'No notebook open' };
             const notebookData = buildNotebookData(nb.id);
@@ -1582,11 +1631,17 @@ export function App() {
               dbConnections: dbConnectionsRef.current,
               apiSaved,
             };
-            return window.electronAPI?.exportStandaloneApp({ notebookData, title: nb.title, appName, outputDir, appSettings });
+            return window.electronAPI?.exportStandaloneApp({
+              notebookData, title: nb.title, appName, outputDir, appSettings,
+              passphrase: passphrase || undefined,
+              stripSecrets: stripSecrets || false,
+            });
           }}
           onClose={() => setExportAppOpen(false)}
         />
       )}
+      {passphraseDialogOpen && <PassphraseDialog onSubmit={handlePassphraseSubmit} />}
+      {credentialsDialogData && <CredentialsDialog items={credentialsDialogData} onSubmit={handleCredentialsSubmit} />}
       {newNbDialogOpen && (
         <NewNotebookDialog
           onSelect={(templateKey) => { setNewNbDialogOpen(false); handleNew(templateKey); }}

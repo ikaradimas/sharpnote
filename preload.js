@@ -127,6 +127,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   pickOutputDir: () => ipcRenderer.invoke('pick-output-dir'),
   onViewerMode: (cb) => ipcRenderer.on('viewer-mode', (_, data) => cb(data)),
   loadNotebookFromPath: (filePath) => ipcRenderer.invoke('load-notebook-from-path', filePath),
+  decryptViewerSettings: (data) => ipcRenderer.invoke('decrypt-viewer-settings', data),
 
   // API Editor — OpenAPI export + mock server
   exportOpenApi: (data) => ipcRenderer.invoke('export-openapi', data),
