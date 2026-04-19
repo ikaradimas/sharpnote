@@ -4,6 +4,18 @@
 // gears: 1 = minor fix/tweak, 2 = notable feature, 3 = major feature/architecture
 
 export const CHANGELOG = [
+  { version: '2.3.0', date: '2026-04-19', title: 'Export as App, Kafka Enhancements, Notebook Backgrounds, Orchestration Redesign', gears: 3, items: [
+    'Export as App (Beta): export any notebook as a standalone macOS/Windows application that opens directly in viewer mode with full fidelity — same renderer, kernel, and interactive experience',
+    'Viewer mode: exported apps open in a locked-down mode — no file open/import, no tools menu, no panel toggles; only Run, Edit, View, and Help menus',
+    'Embedded settings: exported apps bundle the exporter\'s theme, background, DB connections, API configs, shortcuts, and favorites — all encrypted with AES-256-GCM keyed to the notebook content',
+    'Notebook backgrounds: 8 decorative SVG patterns (Tribal, Cyber, FPS, Relaxing, Glitch, Topology, Waveform, Blueprint) that fade from left to center; configurable in Settings with opacity slider',
+    'Kafka: pin messages to top of feed, compare two messages side-by-side with LCS diff highlighting, Ctrl+F search focus shortcut',
+    'Orchestration panel redesign: depth-based layout replacing layers, icon + name + collapsible inbox/outbox per node, implicit Start/End nodes, design/execution mode toggle, port-based drag-to-connect wiring, Add Node button, Auto Layout, critical path always visible',
+    'Database example revamp: Docker PostgreSQL container with SQL seed scripts, live queries replacing commented-out code, in-memory SQLite kept as alternative',
+    'API Editor: controllers moved above models in the panel layout',
+    'Variable peek: collection/list/array preview showing first 5 items with count, improved visual hierarchy with header band and distinct type/name/value styling',
+    'npm audit: all vulnerabilities fixed — Electron 35→41, xmldom, dompurify, lodash, vite, happy-dom, brace-expansion patched',
+  ]},
   { version: '2.2.0', date: '2026-04-17', title: '45 UI Improvements Across All Tools', gears: 3, items: [
     'Code Cells: diff view when stale, output pinning with comparison, inline variable peek on hover (collection preview), execution cost badge on folded cells, cell bookmarks',
     'SQL Cell: schema sidebar with table/column browser, query history with recall',
