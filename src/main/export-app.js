@@ -82,9 +82,16 @@ function exportMacOS(app, appName, notebookData, outputDir) {
     fs.writeFileSync(plistPath, plist, 'utf-8');
   } catch {}
 
-  // Strip code signing (required after modification)
+  // Clear quarantine xattrs
   try { execSync(`xattr -cr "${destApp}"`); } catch {}
-  try { execSync(`codesign --remove-signature "${destApp}"`); } catch {}
+
+  // Re-sign the entire bundle with an ad-hoc signature.
+  // Electron apps have nested signed binaries (framework, helpers) —
+  // stripping the signature leaves them invalid. Ad-hoc re-signing
+  // fixes all nested signatures so macOS will launch the app.
+  try {
+    execSync(`codesign --force --deep --sign - "${destApp}"`, { stdio: 'pipe' });
+  } catch {}
 
   return { success: true, filePath: destApp };
 }
