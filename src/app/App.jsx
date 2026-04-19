@@ -983,9 +983,10 @@ export function App() {
   useEffect(() => {
     window.electronAPI?.onViewerMode?.((data) => {
       setViewerMode(data);
-      // Apply embedded settings if present (theme, background, etc.)
+      // Apply embedded settings if present
       if (data.embeddedSettings) {
         const s = data.embeddedSettings;
+        // Visual / appearance
         if (s.theme) setTheme(s.theme);
         if (typeof s.lineAltEnabled === 'boolean') setLineAltEnabled(s.lineAltEnabled);
         if (typeof s.lintEnabled === 'boolean') setLintEnabled(s.lintEnabled);
@@ -998,6 +999,22 @@ export function App() {
         if (s.notebookBg) setNotebookBg(s.notebookBg);
         if (typeof s.notebookBgOpacity === 'number') setNotebookBgOpacity(s.notebookBgOpacity);
         if (typeof s.tablePageSize === 'number') setTablePageSize(s.tablePageSize);
+        // Keyboard shortcuts
+        if (s.customShortcuts && typeof s.customShortcuts === 'object') {
+          setCustomShortcuts(s.customShortcuts);
+          window.electronAPI?.rebuildMenu?.(s.customShortcuts);
+        }
+        // Favorite folders
+        if (Array.isArray(s.favoriteFolders)) setFavoriteFolders(s.favoriteFolders);
+        // DB connections
+        if (Array.isArray(s.dbConnections) && s.dbConnections.length > 0) {
+          setDbConnections(s.dbConnections);
+          window.electronAPI?.saveDbConnections?.(s.dbConnections);
+        }
+        // API saved configs
+        if (Array.isArray(s.apiSaved) && s.apiSaved.length > 0) {
+          window.electronAPI?.saveApiSaved?.(s.apiSaved);
+        }
       }
       if (data.notebookPath) {
         window.electronAPI?.loadNotebookFromPath?.(data.notebookPath).then((result) => {
@@ -1546,6 +1563,7 @@ export function App() {
             if (!nb) return { success: false, error: 'No notebook open' };
             const notebookData = buildNotebookData(nb.id);
             // Capture current settings to embed in the exported app
+            const apiSaved = await window.electronAPI?.loadApiSaved?.() ?? [];
             const appSettings = {
               theme: themeRef.current,
               lineAltEnabled: lineAltEnabledRef.current,
@@ -1559,6 +1577,10 @@ export function App() {
               notebookBg: notebookBgRef.current,
               notebookBgOpacity: notebookBgOpacityRef.current,
               tablePageSize: tablePageSizeRef.current,
+              customShortcuts: customShortcutsRef.current,
+              favoriteFolders: favoriteFoldersRef.current,
+              dbConnections: dbConnectionsRef.current,
+              apiSaved,
             };
             return window.electronAPI?.exportStandaloneApp({ notebookData, title: nb.title, appName, outputDir, appSettings });
           }}
