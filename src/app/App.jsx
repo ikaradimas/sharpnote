@@ -983,10 +983,25 @@ export function App() {
   useEffect(() => {
     window.electronAPI?.onViewerMode?.((data) => {
       setViewerMode(data);
+      // Apply embedded settings if present (theme, background, etc.)
+      if (data.embeddedSettings) {
+        const s = data.embeddedSettings;
+        if (s.theme) setTheme(s.theme);
+        if (typeof s.lineAltEnabled === 'boolean') setLineAltEnabled(s.lineAltEnabled);
+        if (typeof s.lintEnabled === 'boolean') setLintEnabled(s.lintEnabled);
+        if (typeof s.strongCuesEnabled === 'boolean') setStrongCuesEnabled(s.strongCuesEnabled);
+        if (typeof s.formatOnSave === 'boolean') setFormatOnSave(s.formatOnSave);
+        if (typeof s.showFish === 'boolean') setShowFish(s.showFish);
+        if (typeof s.showCircuit === 'boolean') setShowCircuit(s.showCircuit);
+        if (typeof s.showGhost === 'boolean') setShowGhost(s.showGhost);
+        if (typeof s.showSkyline === 'boolean') setShowSkyline(s.showSkyline);
+        if (s.notebookBg) setNotebookBg(s.notebookBg);
+        if (typeof s.notebookBgOpacity === 'number') setNotebookBgOpacity(s.notebookBgOpacity);
+        if (typeof s.tablePageSize === 'number') setTablePageSize(s.tablePageSize);
+      }
       if (data.notebookPath) {
         window.electronAPI?.loadNotebookFromPath?.(data.notebookPath).then((result) => {
           if (result?.success && result.data) {
-            // Use the existing open-recent path to load the bundled notebook
             window.electronAPI?.openRecentFile?.(data.notebookPath);
           }
         });
@@ -1530,7 +1545,22 @@ export function App() {
             const nb = activeNb;
             if (!nb) return { success: false, error: 'No notebook open' };
             const notebookData = buildNotebookData(nb.id);
-            return window.electronAPI?.exportStandaloneApp({ notebookData, title: nb.title, appName, outputDir });
+            // Capture current settings to embed in the exported app
+            const appSettings = {
+              theme: themeRef.current,
+              lineAltEnabled: lineAltEnabledRef.current,
+              lintEnabled: lintEnabledRef.current,
+              strongCuesEnabled: strongCuesRef.current,
+              formatOnSave: formatOnSaveRef.current,
+              showFish: showFishRef.current,
+              showCircuit: showCircuitRef.current,
+              showGhost: showGhostRef.current,
+              showSkyline: showSkylineRef.current,
+              notebookBg: notebookBgRef.current,
+              notebookBgOpacity: notebookBgOpacityRef.current,
+              tablePageSize: tablePageSizeRef.current,
+            };
+            return window.electronAPI?.exportStandaloneApp({ notebookData, title: nb.title, appName, outputDir, appSettings });
           }}
           onClose={() => setExportAppOpen(false)}
         />

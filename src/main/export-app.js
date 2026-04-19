@@ -1,19 +1,51 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { execSync } = require('child_process');
 
-/**
- * Export the current notebook as a standalone app.
- *
- * macOS: Creates a wrapper .app bundle containing a small launcher script
- * that runs the real SharpNote binary with the notebook path. The original
- * Electron binary and its signature are never modified — they're symlinked.
- *
- * Windows: Copies the app directory and injects notebook + config.
- */
+// ── Settings encryption ─────────────────────────────────────────────────────
+// Settings are encrypted with AES-256-GCM. The key is derived from a SHA-256
+// hash of the notebook content + a fixed salt. This ties the settings to the
+// specific notebook — only the bundled app (which has the notebook) can decrypt.
+// The output is base64(salt + iv + authTag + ciphertext).
+
+const SETTINGS_SALT = 'sharpnote-viewer-settings-v1';
+
+function deriveSettingsKey(notebookJson) {
+  const material = SETTINGS_SALT + ':' + crypto.createHash('sha256').update(notebookJson).digest('hex');
+  return crypto.createHash('sha256').update(material).digest();
+}
+
+function encryptSettings(settingsObj, notebookJson) {
+  const key = deriveSettingsKey(notebookJson);
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  const plaintext = JSON.stringify(settingsObj);
+  const enc = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  // Prepend a version byte (0x01) for future format changes
+  return Buffer.concat([Buffer.from([0x01]), iv, tag, enc]).toString('base64');
+}
+
+function decryptSettings(base64Blob, notebookJson) {
+  const key = deriveSettingsKey(notebookJson);
+  const buf = Buffer.from(base64Blob, 'base64');
+  const version = buf[0];
+  if (version !== 0x01) return null;
+  const iv = buf.subarray(1, 13);
+  const tag = buf.subarray(13, 29);
+  const enc = buf.subarray(29);
+  const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+  decipher.setAuthTag(tag);
+  const plaintext = decipher.update(enc, undefined, 'utf8') + decipher.final('utf8');
+  return JSON.parse(plaintext);
+}
+
+// ── Export ────────────────────────────────────────────────────────────────────
+
 function register(ipcMain, { app, dialog, mainWindow }) {
-  ipcMain.handle('export-standalone-app', async (_ev, { notebookData, title, appName, outputDir }) => {
+  ipcMain.handle('export-standalone-app', async (_ev, { notebookData, title, appName, outputDir, appSettings }) => {
     const name = (appName || title || 'Notebook').replace(/[^a-zA-Z0-9 _-]/g, '').trim() || 'Notebook';
 
     if (!app.isPackaged) {
@@ -26,9 +58,9 @@ function register(ipcMain, { app, dialog, mainWindow }) {
 
     try {
       if (process.platform === 'darwin') {
-        return exportMacOS(app, name, notebookData, outputDir);
+        return exportMacOS(app, name, notebookData, appSettings, outputDir);
       } else if (process.platform === 'win32') {
-        return exportWindows(app, name, notebookData, outputDir);
+        return exportWindows(app, name, notebookData, appSettings, outputDir);
       } else {
         return { success: false, error: `Unsupported platform: ${process.platform}` };
       }
@@ -54,19 +86,28 @@ function register(ipcMain, { app, dialog, mainWindow }) {
   });
 }
 
-function exportMacOS(app, appName, notebookData, outputDir) {
-  // Strategy: copy the ENTIRE .app bundle byte-for-byte with ditto
-  // (preserves code signature perfectly), then place standalone config
-  // and notebook OUTSIDE the signed bundle in a sibling directory.
-  //
-  // Structure:
-  //   MyApp.app/                     ← exact copy of SharpNote.app (signature intact)
-  //   MyApp.app.standalone/          ← data directory (outside signed bundle)
-  //     standalone.json
-  //     notebook.cnb
-  //
-  // main.js checks for this sibling directory on startup.
+function writeStandaloneData(dataDir, appName, notebookData, appSettings) {
+  fs.mkdirSync(dataDir, { recursive: true });
 
+  const notebookJson = JSON.stringify(notebookData, null, 2);
+  fs.writeFileSync(path.join(dataDir, 'notebook.cnb'), notebookJson, 'utf-8');
+
+  fs.writeFileSync(
+    path.join(dataDir, 'standalone.json'),
+    JSON.stringify({ notebook: 'notebook.cnb', title: appName, hasSettings: !!appSettings }, null, 2),
+    'utf-8'
+  );
+
+  // Encrypt and write settings if provided
+  if (appSettings && typeof appSettings === 'object') {
+    try {
+      const encrypted = encryptSettings(appSettings, notebookJson);
+      fs.writeFileSync(path.join(dataDir, 'settings.enc'), encrypted, 'utf-8');
+    } catch {}
+  }
+}
+
+function exportMacOS(app, appName, notebookData, appSettings, outputDir) {
   const appBundlePath = path.resolve(process.resourcesPath, '..', '..');
   const destApp = path.join(outputDir, `${appName}.app`);
   const dataDir = path.join(outputDir, `${appName}.app.standalone`);
@@ -74,29 +115,15 @@ function exportMacOS(app, appName, notebookData, outputDir) {
   if (fs.existsSync(destApp)) fs.rmSync(destApp, { recursive: true, force: true });
   if (fs.existsSync(dataDir)) fs.rmSync(dataDir, { recursive: true, force: true });
 
-  // Copy the .app bundle exactly — signature stays valid
   execSync(`ditto "${appBundlePath}" "${destApp}"`);
-
-  // Clear quarantine (doesn't break the signature)
   try { execSync(`xattr -cr "${destApp}"`); } catch {}
 
-  // Write standalone data OUTSIDE the bundle
-  fs.mkdirSync(dataDir, { recursive: true });
-  fs.writeFileSync(
-    path.join(dataDir, 'notebook.cnb'),
-    JSON.stringify(notebookData, null, 2),
-    'utf-8'
-  );
-  fs.writeFileSync(
-    path.join(dataDir, 'standalone.json'),
-    JSON.stringify({ notebook: 'notebook.cnb', title: appName }, null, 2),
-    'utf-8'
-  );
+  writeStandaloneData(dataDir, appName, notebookData, appSettings);
 
   return { success: true, filePath: destApp };
 }
 
-function exportWindows(app, appName, notebookData, outputDir) {
+function exportWindows(app, appName, notebookData, appSettings, outputDir) {
   const appDir = path.resolve(process.resourcesPath, '..');
   const destDir = path.join(outputDir, appName);
 
@@ -104,18 +131,8 @@ function exportWindows(app, appName, notebookData, outputDir) {
 
   copyDirSync(appDir, destDir);
 
-  // On Windows, put data inside resources (no signing issues)
   const resourcesDir = path.join(destDir, 'resources');
-  fs.writeFileSync(
-    path.join(resourcesDir, 'notebook.cnb'),
-    JSON.stringify(notebookData, null, 2),
-    'utf-8'
-  );
-  fs.writeFileSync(
-    path.join(resourcesDir, 'standalone.json'),
-    JSON.stringify({ notebook: 'notebook.cnb', title: appName }, null, 2),
-    'utf-8'
-  );
+  writeStandaloneData(resourcesDir, appName, notebookData, appSettings);
 
   const exes = fs.readdirSync(destDir).filter(f => f.endsWith('.exe'));
   if (exes.length > 0) {
@@ -137,4 +154,4 @@ function copyDirSync(src, dest) {
   }
 }
 
-module.exports = { register };
+module.exports = { register, decryptSettings, SETTINGS_SALT, deriveSettingsKey };

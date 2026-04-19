@@ -519,11 +519,33 @@ app.whenReady().then(() => {
 
   if (viewerMode && viewerDataDir) {
     mainWindow.setTitle(viewerMode.title || 'SharpNote');
+
+    // Decrypt embedded settings if present
+    let embeddedSettings = null;
+    if (viewerMode.hasSettings) {
+      try {
+        const encPath = path.join(viewerDataDir, 'settings.enc');
+        const nbPath = path.join(viewerDataDir, viewerMode.notebook);
+        if (fs.existsSync(encPath) && fs.existsSync(nbPath)) {
+          const { decryptSettings } = require('./src/main/export-app.js');
+          const blob = fs.readFileSync(encPath, 'utf-8');
+          const nbJson = fs.readFileSync(nbPath, 'utf-8');
+          embeddedSettings = decryptSettings(blob, nbJson);
+        }
+      } catch {}
+    }
+
+    // Override app-settings-load to return embedded settings in viewer mode
+    if (embeddedSettings) {
+      ipcMain.handle('app-settings-load-viewer', () => embeddedSettings);
+    }
+
     mainWindow.webContents.on('did-finish-load', () => {
       const notebookPath = path.join(viewerDataDir, viewerMode.notebook);
       mainWindow.webContents.send('viewer-mode', {
         ...viewerMode,
         notebookPath,
+        embeddedSettings,
       });
     });
   }
