@@ -467,26 +467,26 @@ function registerAllHandlers() {
 
 // ── App lifecycle ─────────────────────────────────────────────────────────────
 app.whenReady().then(() => {
-  // ── Standalone mode detection ──────────────────────────────────────────────
+  // ── Viewer mode detection ───────────────────────────────────────────────
   // Check two locations:
   // 1. Inside Resources (Windows, or if injected into bundle)
   // 2. Sibling .standalone directory next to the .app (macOS — keeps the
   //    signed bundle untouched to avoid code signature crashes on Sequoia)
-  let standaloneMode = null;
-  let standaloneDataDir = null;
+  let viewerMode = null;
+  let viewerDataDir = null;
   try {
     const internalPath = path.join(process.resourcesPath || __dirname, 'standalone.json');
     if (fs.existsSync(internalPath)) {
-      standaloneMode = JSON.parse(fs.readFileSync(internalPath, 'utf-8'));
-      standaloneDataDir = process.resourcesPath || __dirname;
+      viewerMode = JSON.parse(fs.readFileSync(internalPath, 'utf-8'));
+      viewerDataDir = process.resourcesPath || __dirname;
     }
-    if (!standaloneMode && process.platform === 'darwin') {
+    if (!viewerMode && process.platform === 'darwin') {
       const appBundlePath = path.resolve(process.resourcesPath || __dirname, '..', '..');
       const siblingDir = appBundlePath + '.standalone';
       const siblingPath = path.join(siblingDir, 'standalone.json');
       if (fs.existsSync(siblingPath)) {
-        standaloneMode = JSON.parse(fs.readFileSync(siblingPath, 'utf-8'));
-        standaloneDataDir = siblingDir;
+        viewerMode = JSON.parse(fs.readFileSync(siblingPath, 'utf-8'));
+        viewerDataDir = siblingDir;
       }
     }
   } catch {}
@@ -507,7 +507,7 @@ app.whenReady().then(() => {
   fs.mkdirSync(libraryDir, { recursive: true });
 
   registerAllHandlers();
-  Menu.setApplicationMenu(menuBuilder.buildMenu());
+  Menu.setApplicationMenu(menuBuilder.buildMenu({}, !!viewerMode));
 
   if (process.platform === 'darwin' && !process.env.VITEST) {
     const { nativeImage } = require('electron');
@@ -517,12 +517,12 @@ app.whenReady().then(() => {
 
   createWindow();
 
-  if (standaloneMode && standaloneDataDir) {
-    mainWindow.setTitle(standaloneMode.title || 'SharpNote');
+  if (viewerMode && viewerDataDir) {
+    mainWindow.setTitle(viewerMode.title || 'SharpNote');
     mainWindow.webContents.on('did-finish-load', () => {
-      const notebookPath = path.join(standaloneDataDir, standaloneMode.notebook);
-      mainWindow.webContents.send('standalone-mode', {
-        ...standaloneMode,
+      const notebookPath = path.join(viewerDataDir, viewerMode.notebook);
+      mainWindow.webContents.send('viewer-mode', {
+        ...viewerMode,
         notebookPath,
       });
     });

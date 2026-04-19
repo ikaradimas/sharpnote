@@ -13,7 +13,8 @@ export function TabBar({ notebooks, activeId, onActivate, onClose, onNew, onRena
                   kafkaTabOpen, onActivateKafka, onCloseKafka,
                   libEditors, onCloseLibEditor,
                   pinnedPaths, onTogglePin,
-                  panelTabs, onActivatePanelTab, onClosePanelTab, onReturnPanelToPanel }) {
+                  panelTabs, onActivatePanelTab, onClosePanelTab, onReturnPanelToPanel,
+                  viewerMode = false }) {
   const [dragId, setDragId] = useState(null);
   const [dragOverId, setDragOverId] = useState(null);
 
@@ -145,7 +146,7 @@ export function TabBar({ notebooks, activeId, onActivate, onClose, onNew, onRena
         renderItem={renderItem}
         onMoveToFront={onReorder}
       />
-      <button className="tab-new" onClick={onNew} title="New notebook">+</button>
+      {!viewerMode && <button className="tab-new" onClick={onNew} title="New notebook">+</button>}
       {panelTabs?.size > 0 && (
         <>
           <div className="tab-bar-panel-spacer" />

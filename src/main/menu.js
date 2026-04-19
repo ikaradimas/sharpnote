@@ -33,7 +33,7 @@ function toAccelerator(keys) {
   return keys.replace(/\bCtrl\b/g, 'CmdOrCtrl');
 }
 
-function buildMenu(customShortcuts = {}) {
+function buildMenu(customShortcuts = {}, viewerMode = false) {
   const accel = (id, def) => toAccelerator(customShortcuts[id] || def);
   const recentFiles = _getRecentFiles ? _getRecentFiles() : [];
 
@@ -85,54 +85,71 @@ function buildMenu(customShortcuts = {}) {
     });
   }
 
-  const recentSubmenu = recentFiles.length === 0
-    ? [{ label: 'No Recent Files', enabled: false }]
-    : [
-        ...recentFiles.map((r) => ({
-          label: r.name,
-          click: () => {
-            if (_mainWindow) _mainWindow.webContents.send('menu-action', { type: 'open-recent', path: r.path });
-          },
-        })),
+  // ── File menu ────────────────────────────────────────────────────────────
+  if (viewerMode) {
+    template.push({
+      label: 'File',
+      submenu: [
+        { label: 'Save',           accelerator: accel('nb-save',    'Ctrl+S'),       click: () => send('save') },
+        { label: 'Save As…',       accelerator: accel('nb-save-as', 'Ctrl+Shift+S'), click: () => send('save-as') },
         { type: 'separator' },
-        {
-          label: 'Clear Recent Files',
-          click: () => {
-            if (_saveRecentFiles) _saveRecentFiles([]);
-            if (_Menu) _Menu.setApplicationMenu(buildMenu());
+        { label: 'Export as PDF…',  click: () => send('export-pdf') },
+        ...(process.platform !== 'darwin' ? [
+          { type: 'separator' },
+          { role: 'quit' },
+        ] : []),
+      ],
+    });
+  } else {
+    const recentSubmenu = recentFiles.length === 0
+      ? [{ label: 'No Recent Files', enabled: false }]
+      : [
+          ...recentFiles.map((r) => ({
+            label: r.name,
+            click: () => {
+              if (_mainWindow) _mainWindow.webContents.send('menu-action', { type: 'open-recent', path: r.path });
+            },
+          })),
+          { type: 'separator' },
+          {
+            label: 'Clear Recent Files',
+            click: () => {
+              if (_saveRecentFiles) _saveRecentFiles([]);
+              if (_Menu) _Menu.setApplicationMenu(buildMenu());
+            },
           },
-        },
-      ];
+        ];
 
-  template.push({
-    label: 'File',
-    submenu: [
-      { label: 'New Notebook',   accelerator: accel('nb-new',     'Ctrl+N'),       click: () => send('new') },
-      { type: 'separator' },
-      { label: 'Open…',          accelerator: accel('nb-open',    'Ctrl+O'),       click: () => send('open') },
-      { label: 'Open Recent',    submenu: recentSubmenu },
-      { label: 'Import Polyglot Notebook…',                                        click: () => send('import-polyglot') },
-      { label: 'Import Data File…', accelerator: accel('import-data', 'Ctrl+Shift+I'), click: () => send('import-data') },
-      { type: 'separator' },
-      { label: 'Save',           accelerator: accel('nb-save',    'Ctrl+S'),       click: () => send('save') },
-      { label: 'Save As…',       accelerator: accel('nb-save-as', 'Ctrl+Shift+S'), click: () => send('save-as') },
-      { type: 'separator' },
-      { label: 'Export as HTML…', click: () => send('export-html') },
-      { label: 'Export as PDF…',        click: () => send('export-pdf') },
-      { label: 'Export as Executable…', click: () => send('export-exe') },
-      { label: 'Export as App (Beta)…', click: () => send('export-app') },
-      { label: 'Export as Docker Compose…', click: () => send('export-docker-compose') },
-      { label: 'Export for Google Docs…', submenu: [
-        { label: 'Code + Results', click: () => send('export-gdoc-all') },
-        { label: 'Code Only',     click: () => send('export-gdoc-code') },
-        { label: 'Results Only',  click: () => send('export-gdoc-results') },
-      ]},
-      ...(process.platform !== 'darwin' ? [
+    template.push({
+      label: 'File',
+      submenu: [
+        { label: 'New Notebook',   accelerator: accel('nb-new',     'Ctrl+N'),       click: () => send('new') },
         { type: 'separator' },
-        { role: 'quit' },
-      ] : []),
-    ],
-  });
+        { label: 'Open…',          accelerator: accel('nb-open',    'Ctrl+O'),       click: () => send('open') },
+        { label: 'Open Recent',    submenu: recentSubmenu },
+        { label: 'Import Polyglot Notebook…',                                        click: () => send('import-polyglot') },
+        { label: 'Import Data File…', accelerator: accel('import-data', 'Ctrl+Shift+I'), click: () => send('import-data') },
+        { type: 'separator' },
+        { label: 'Save',           accelerator: accel('nb-save',    'Ctrl+S'),       click: () => send('save') },
+        { label: 'Save As…',       accelerator: accel('nb-save-as', 'Ctrl+Shift+S'), click: () => send('save-as') },
+        { type: 'separator' },
+        { label: 'Export as HTML…', click: () => send('export-html') },
+        { label: 'Export as PDF…',        click: () => send('export-pdf') },
+        { label: 'Export as Executable…', click: () => send('export-exe') },
+        { label: 'Export as App (Beta)…', click: () => send('export-app') },
+        { label: 'Export as Docker Compose…', click: () => send('export-docker-compose') },
+        { label: 'Export for Google Docs…', submenu: [
+          { label: 'Code + Results', click: () => send('export-gdoc-all') },
+          { label: 'Code Only',     click: () => send('export-gdoc-code') },
+          { label: 'Results Only',  click: () => send('export-gdoc-results') },
+        ]},
+        ...(process.platform !== 'darwin' ? [
+          { type: 'separator' },
+          { role: 'quit' },
+        ] : []),
+      ],
+    });
+  }
 
   template.push({
     label: 'Edit',
@@ -163,33 +180,35 @@ function buildMenu(customShortcuts = {}) {
     ],
   });
 
-  template.push({
-    label: 'Tools',
-    submenu: [
-      { label: 'Config',            accelerator: accel('panel-config',   'Ctrl+Shift+,'), click: () => send('toggle-config') },
-      { label: 'Packages',          accelerator: accel('panel-packages', 'Ctrl+Shift+P'), click: () => send('toggle-packages') },
-      { label: 'Logs',              accelerator: accel('panel-logs',     'Ctrl+Shift+G'), click: () => send('toggle-logs') },
-      { label: 'Database',          accelerator: accel('panel-db',       'Ctrl+Shift+D'), click: () => send('toggle-db') },
-      { label: 'Variables',         accelerator: accel('panel-vars',     'Ctrl+Shift+V'), click: () => send('toggle-vars') },
-      { label: 'Table of Contents', accelerator: accel('panel-toc',      'Ctrl+Shift+T'), click: () => send('toggle-toc') },
-      { label: 'Library',           accelerator: accel('panel-library',  'Ctrl+Shift+L'), click: () => send('toggle-library') },
-      { label: 'File Explorer',     accelerator: accel('panel-files',    'Ctrl+Shift+E'), click: () => send('toggle-files') },
-      { label: 'API Browser',       accelerator: accel('panel-api',      'Ctrl+Shift+A'), click: () => send('toggle-api') },
-      { label: 'API Editor',        accelerator: accel('panel-api-editor', 'Ctrl+Shift+Q'), click: () => send('toggle-api-editor') },
-      { label: 'Git',               accelerator: accel('panel-git',        'Ctrl+Shift+J'), click: () => send('toggle-git') },
-      { label: 'Graph',             accelerator: accel('panel-graph',    'Ctrl+Shift+R'), click: () => send('toggle-graph') },
-      { label: 'To Do',             accelerator: accel('panel-todo',     'Ctrl+Shift+O'), click: () => send('toggle-todo') },
-      { label: 'Regex',             accelerator: accel('panel-regex',    'Ctrl+Shift+X'), click: () => send('toggle-regex') },
-      { label: 'Kafka',             accelerator: accel('panel-kafka',    'Ctrl+Shift+K'), click: () => send('toggle-kafka') },
-      { label: 'History',            accelerator: accel('panel-history',  'Ctrl+Shift+H'), click: () => send('toggle-history') },
-      { label: 'Orchestration',     accelerator: accel('panel-deps',     'Ctrl+Shift+Y'), click: () => send('toggle-deps') },
-      { label: 'Embedded Files',    accelerator: accel('panel-embed',    'Ctrl+Shift+E'), click: () => send('toggle-embed') },
-      { type: 'separator' },
-      { label: 'Command Palette',   accelerator: accel('app-palette',  'Ctrl+K'), click: () => send('command-palette') },
-      { type: 'separator' },
-      { label: 'Settings…',         accelerator: accel('app-settings', 'Ctrl+,'), click: () => send('settings') },
-    ],
-  });
+  if (!viewerMode) {
+    template.push({
+      label: 'Tools',
+      submenu: [
+        { label: 'Config',            accelerator: accel('panel-config',   'Ctrl+Shift+,'), click: () => send('toggle-config') },
+        { label: 'Packages',          accelerator: accel('panel-packages', 'Ctrl+Shift+P'), click: () => send('toggle-packages') },
+        { label: 'Logs',              accelerator: accel('panel-logs',     'Ctrl+Shift+G'), click: () => send('toggle-logs') },
+        { label: 'Database',          accelerator: accel('panel-db',       'Ctrl+Shift+D'), click: () => send('toggle-db') },
+        { label: 'Variables',         accelerator: accel('panel-vars',     'Ctrl+Shift+V'), click: () => send('toggle-vars') },
+        { label: 'Table of Contents', accelerator: accel('panel-toc',      'Ctrl+Shift+T'), click: () => send('toggle-toc') },
+        { label: 'Library',           accelerator: accel('panel-library',  'Ctrl+Shift+L'), click: () => send('toggle-library') },
+        { label: 'File Explorer',     accelerator: accel('panel-files',    'Ctrl+Shift+E'), click: () => send('toggle-files') },
+        { label: 'API Browser',       accelerator: accel('panel-api',      'Ctrl+Shift+A'), click: () => send('toggle-api') },
+        { label: 'API Editor',        accelerator: accel('panel-api-editor', 'Ctrl+Shift+Q'), click: () => send('toggle-api-editor') },
+        { label: 'Git',               accelerator: accel('panel-git',        'Ctrl+Shift+J'), click: () => send('toggle-git') },
+        { label: 'Graph',             accelerator: accel('panel-graph',    'Ctrl+Shift+R'), click: () => send('toggle-graph') },
+        { label: 'To Do',             accelerator: accel('panel-todo',     'Ctrl+Shift+O'), click: () => send('toggle-todo') },
+        { label: 'Regex',             accelerator: accel('panel-regex',    'Ctrl+Shift+X'), click: () => send('toggle-regex') },
+        { label: 'Kafka',             accelerator: accel('panel-kafka',    'Ctrl+Shift+K'), click: () => send('toggle-kafka') },
+        { label: 'History',            accelerator: accel('panel-history',  'Ctrl+Shift+H'), click: () => send('toggle-history') },
+        { label: 'Orchestration',     accelerator: accel('panel-deps',     'Ctrl+Shift+Y'), click: () => send('toggle-deps') },
+        { label: 'Embedded Files',    accelerator: accel('panel-embed',    'Ctrl+Shift+E'), click: () => send('toggle-embed') },
+        { type: 'separator' },
+        { label: 'Command Palette',   accelerator: accel('app-palette',  'Ctrl+K'), click: () => send('command-palette') },
+        { type: 'separator' },
+        { label: 'Settings…',         accelerator: accel('app-settings', 'Ctrl+,'), click: () => send('settings') },
+      ],
+    });
+  }
 
   const windowSubmenu = _windowTabs.length === 0
     ? [{ label: 'No open tabs', enabled: false }]
@@ -207,7 +226,9 @@ function buildMenu(customShortcuts = {}) {
     ],
   });
 
-  template.push({ label: 'Window', submenu: windowSubmenu });
+  if (!viewerMode) {
+    template.push({ label: 'Window', submenu: windowSubmenu });
+  }
 
   template.push({
     label: 'Help',

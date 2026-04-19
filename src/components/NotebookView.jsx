@@ -127,6 +127,7 @@ export function NotebookView({
   notebookBgOpacity = 0.15,
   highlightedCellIds,
   onHighlightCells,
+  viewerMode = false,
 }) {
   const { cells, outputs, outputHistory, cellResults, running, kernelStatus,
           config, logPanelOpen, nugetPanelOpen, configPanelOpen, inlineDiagnostics,
@@ -321,6 +322,7 @@ export function NotebookView({
       notebookScheduleMs={scheduledNotebooks?.get(nb.id) ?? null}
       onNotebookScheduleStart={onNotebookScheduleStart}
       onNotebookScheduleStop={onNotebookScheduleStop}
+      viewerMode={viewerMode}
     />
   );
 

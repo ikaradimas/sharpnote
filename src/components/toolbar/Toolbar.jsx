@@ -77,6 +77,7 @@ export function Toolbar({
   notebookScheduleMs,
   onNotebookScheduleStart,
   onNotebookScheduleStop,
+  viewerMode = false,
 }) {
   const [editing,      setEditing]      = useState(false);
   const [draft,        setDraft]        = useState('');
@@ -250,8 +251,8 @@ export function Toolbar({
         </>
       )}
 
-      {/* ── Tools menu (always visible) ───────────────────────────────────── */}
-      <ToolsMenu {...toolsMenuProps} />
+      {/* ── Tools menu (hidden in viewer mode) ─────────────────────────────── */}
+      {!viewerMode && <ToolsMenu {...toolsMenuProps} />}
 
       {/* ── Full mode: layout + theme ─────────────────────────────────────── */}
       {!compact && dockLayout && (

@@ -111,7 +111,7 @@ export function App() {
   const [varInspectDialog, setVarInspectDialog] = useState(null);
   const [dbConnDialog, setDbConnDialog] = useState(null); // null | connection object (edit) | opened with null (new)
   const [exportAppOpen, setExportAppOpen] = useState(false);
-  const [standaloneMode, setStandaloneMode] = useState(null);
+  const [viewerMode, setViewerMode] = useState(null);
 
   const [dashboardMode, setDashboardMode] = useState(false);
   const [highlightedCellIds, setHighlightedCellIds] = useState(null);
@@ -362,7 +362,7 @@ export function App() {
       if (Array.isArray(s?.savedLayouts)) setSavedLayouts(s.savedLayouts);
       if (Array.isArray(s?.favoriteFolders)) setFavoriteFolders(s.favoriteFolders);
       settingsLoadedRef.current = true;
-      const pinned = Array.isArray(s?.pinnedTabs) ? s.pinnedTabs : [];
+      const pinned = (!viewerMode && Array.isArray(s?.pinnedTabs)) ? s.pinnedTabs : [];
       if (pinned.length > 0) {
         openPinnedNotebooks(pinned);
       } else {
@@ -979,10 +979,10 @@ export function App() {
     };
   }, []);
 
-  // ── Standalone mode listener ────────────────────────────────────────────
+  // ── Viewer mode listener ─────────────────────────────────────────────
   useEffect(() => {
-    window.electronAPI?.onStandaloneMode?.((data) => {
-      setStandaloneMode(data);
+    window.electronAPI?.onViewerMode?.((data) => {
+      setViewerMode(data);
       if (data.notebookPath) {
         window.electronAPI?.loadNotebookFromPath?.(data.notebookPath).then((result) => {
           if (result?.success && result.data) {
@@ -1323,6 +1323,7 @@ export function App() {
         onClose={handleCloseTabWithSchedules}
         onNew={() => setNewNbDialogOpen(true)}
         onRename={handleRenameTab}
+        viewerMode={!!viewerMode}
         onReorder={handleReorder}
         onSetColor={handleSetTabColor}
         activeTabColor={notebooks.find((n) => n.id === activeId)?.color ?? null}
@@ -1346,7 +1347,7 @@ export function App() {
       />
       <div id="toolbar-portal-root" />
       <div className="dock-workspace" key={layoutKey}>
-        <DockZone zone="left" {...dockZoneProps} />
+        {!viewerMode && <DockZone zone="left" {...dockZoneProps} />}
         <div className="dock-center-col">
           <div className="dock-content-row">
             <div id="notebooks-container">
@@ -1441,6 +1442,7 @@ export function App() {
                     notebookBgOpacity={notebookBgOpacity}
                     highlightedCellIds={highlightedCellIds}
                     onHighlightCells={setHighlightedCellIds}
+                    viewerMode={!!viewerMode}
                   />
                 </div>
               ))}
@@ -1494,16 +1496,16 @@ export function App() {
                 );
               })}
             </div>
-            <DockZone zone="right" {...dockZoneProps} />
+            {!viewerMode && <DockZone zone="right" {...dockZoneProps} />}
           </div>
-          <DockZone zone="bottom" {...dockZoneProps} />
+          {!viewerMode && <DockZone zone="bottom" {...dockZoneProps} />}
         </div>
       </div>
       <StatusBar notebooks={notebooks} activeId={activeId} showFish={showFish}
         showSkyline={showSkyline} onTriggerSkyline={() => skylineTriggerRef.current?.()} />
       {showGhost && <Ghost />}
       {showSkyline && <IdleSkyline triggerRef={skylineTriggerRef} />}
-      {Object.entries(dockLayout.assignments)
+      {!viewerMode && Object.entries(dockLayout.assignments)
         .filter(([panelId, z]) => z === 'float' && !!effectiveOpenFlags[panelId])
         .map(([panelId]) => {
           const p = panelPropsMap[panelId];
