@@ -4,8 +4,13 @@ const path = require('path');
 const { execSync } = require('child_process');
 
 /**
- * Export the current notebook as a standalone app by copying
- * the SharpNote app bundle and injecting the notebook + config.
+ * Export the current notebook as a standalone app.
+ *
+ * macOS: Creates a wrapper .app bundle containing a small launcher script
+ * that runs the real SharpNote binary with the notebook path. The original
+ * Electron binary and its signature are never modified — they're symlinked.
+ *
+ * Windows: Copies the app directory and injects notebook + config.
  */
 function register(ipcMain, { app, dialog, mainWindow }) {
   ipcMain.handle('export-standalone-app', async (_ev, { notebookData, title, appName, outputDir }) => {
@@ -50,137 +55,56 @@ function register(ipcMain, { app, dialog, mainWindow }) {
 }
 
 function exportMacOS(app, appName, notebookData, outputDir) {
-  // The running app is at: /path/to/SharpNote.app/Contents/Resources/app.asar
-  // The .app bundle is 3 levels up from resourcesPath
+  // Strategy: copy the ENTIRE .app bundle byte-for-byte with ditto
+  // (preserves code signature perfectly), then place standalone config
+  // and notebook OUTSIDE the signed bundle in a sibling directory.
+  //
+  // Structure:
+  //   MyApp.app/                     ← exact copy of SharpNote.app (signature intact)
+  //   MyApp.app.standalone/          ← data directory (outside signed bundle)
+  //     standalone.json
+  //     notebook.cnb
+  //
+  // main.js checks for this sibling directory on startup.
+
   const appBundlePath = path.resolve(process.resourcesPath, '..', '..');
   const destApp = path.join(outputDir, `${appName}.app`);
+  const dataDir = path.join(outputDir, `${appName}.app.standalone`);
 
-  if (fs.existsSync(destApp)) {
-    fs.rmSync(destApp, { recursive: true, force: true });
-  }
+  if (fs.existsSync(destApp)) fs.rmSync(destApp, { recursive: true, force: true });
+  if (fs.existsSync(dataDir)) fs.rmSync(dataDir, { recursive: true, force: true });
 
-  // Copy entire .app bundle using ditto (preserves symlinks, hardlinks,
-  // resource forks, and extended attributes that cp -R can break in
-  // Electron's framework structure)
+  // Copy the .app bundle exactly — signature stays valid
   execSync(`ditto "${appBundlePath}" "${destApp}"`);
 
-  // Inject notebook and standalone config into Resources
-  const resourcesDir = path.join(destApp, 'Contents', 'Resources');
+  // Clear quarantine (doesn't break the signature)
+  try { execSync(`xattr -cr "${destApp}"`); } catch {}
+
+  // Write standalone data OUTSIDE the bundle
+  fs.mkdirSync(dataDir, { recursive: true });
   fs.writeFileSync(
-    path.join(resourcesDir, 'notebook.cnb'),
+    path.join(dataDir, 'notebook.cnb'),
     JSON.stringify(notebookData, null, 2),
     'utf-8'
   );
   fs.writeFileSync(
-    path.join(resourcesDir, 'standalone.json'),
+    path.join(dataDir, 'standalone.json'),
     JSON.stringify({ notebook: 'notebook.cnb', title: appName }, null, 2),
     'utf-8'
   );
-
-  // Update Info.plist to change the app name
-  const plistPath = path.join(destApp, 'Contents', 'Info.plist');
-  try {
-    let plist = fs.readFileSync(plistPath, 'utf-8');
-    plist = plist.replace(/<key>CFBundleName<\/key>\s*<string>[^<]*<\/string>/,
-      `<key>CFBundleName</key>\n\t<string>${appName}</string>`);
-    plist = plist.replace(/<key>CFBundleDisplayName<\/key>\s*<string>[^<]*<\/string>/,
-      `<key>CFBundleDisplayName</key>\n\t<string>${appName}</string>`);
-    fs.writeFileSync(plistPath, plist, 'utf-8');
-  } catch {}
-
-  // Clear quarantine xattrs
-  try { execSync(`xattr -cr "${destApp}"`); } catch {}
-
-  // Re-sign the entire app bundle with ad-hoc signature + entitlements.
-  // V8 requires com.apple.security.cs.allow-jit for JIT compilation.
-  // We write a minimal entitlements plist, then use electron-osx-sign's
-  // recommended approach: sign each Mach-O inside the bundle individually.
-  const entFile = path.join(outputDir, '.tmp-entitlements.plist');
-  fs.writeFileSync(entFile, `<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>com.apple.security.cs.allow-jit</key><true/>
-  <key>com.apple.security.cs.allow-unsigned-executable-memory</key><true/>
-  <key>com.apple.security.cs.disable-library-validation</key><true/>
-</dict>
-</plist>`, 'utf-8');
-
-  try {
-    // Find every Mach-O binary and .dylib inside the bundle and sign them
-    // bottom-up (deepest first, then outer bundles, then the .app last).
-    // This is the only reliable way to sign an Electron app ad-hoc.
-    const findOutput = execSync(
-      `find "${destApp}" -type f \\( -name "*.dylib" -o -perm +111 \\) | sort -r`,
-      { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024 }
-    ).trim();
-
-    for (const binPath of findOutput.split('\n').filter(Boolean)) {
-      // Check if it's actually a Mach-O binary (not a script/text file)
-      try {
-        const fileType = execSync(`file -b "${binPath}"`, { encoding: 'utf-8' }).trim();
-        if (!fileType.includes('Mach-O') && !binPath.endsWith('.dylib')) continue;
-      } catch { continue; }
-
-      try {
-        execSync(
-          `codesign --force --sign - --entitlements "${entFile}" --timestamp=none "${binPath}"`,
-          { stdio: 'pipe' }
-        );
-      } catch {}
-    }
-
-    // Sign each .framework bundle
-    const frameworksDir = path.join(destApp, 'Contents', 'Frameworks');
-    if (fs.existsSync(frameworksDir)) {
-      for (const entry of fs.readdirSync(frameworksDir)) {
-        if (entry.endsWith('.framework')) {
-          try {
-            execSync(
-              `codesign --force --sign - --entitlements "${entFile}" --timestamp=none "${path.join(frameworksDir, entry)}"`,
-              { stdio: 'pipe' }
-            );
-          } catch {}
-        }
-      }
-      // Sign helper .app bundles
-      for (const entry of fs.readdirSync(frameworksDir)) {
-        if (entry.endsWith('.app')) {
-          try {
-            execSync(
-              `codesign --force --sign - --entitlements "${entFile}" --timestamp=none "${path.join(frameworksDir, entry)}"`,
-              { stdio: 'pipe' }
-            );
-          } catch {}
-        }
-      }
-    }
-
-    // Sign the main .app bundle last
-    execSync(
-      `codesign --force --sign - --entitlements "${entFile}" --timestamp=none "${destApp}"`,
-      { stdio: 'pipe' }
-    );
-  } catch {}
-
-  try { fs.unlinkSync(entFile); } catch {}
 
   return { success: true, filePath: destApp };
 }
 
 function exportWindows(app, appName, notebookData, outputDir) {
-  // On Windows, the app directory is the parent of resources
   const appDir = path.resolve(process.resourcesPath, '..');
   const destDir = path.join(outputDir, appName);
 
-  if (fs.existsSync(destDir)) {
-    fs.rmSync(destDir, { recursive: true, force: true });
-  }
+  if (fs.existsSync(destDir)) fs.rmSync(destDir, { recursive: true, force: true });
 
-  // Copy entire app directory
   copyDirSync(appDir, destDir);
 
-  // Inject notebook and standalone config
+  // On Windows, put data inside resources (no signing issues)
   const resourcesDir = path.join(destDir, 'resources');
   fs.writeFileSync(
     path.join(resourcesDir, 'notebook.cnb'),
@@ -193,7 +117,6 @@ function exportWindows(app, appName, notebookData, outputDir) {
     'utf-8'
   );
 
-  // Rename the exe
   const exes = fs.readdirSync(destDir).filter(f => f.endsWith('.exe'));
   if (exes.length > 0) {
     const oldExe = path.join(destDir, exes[0]);

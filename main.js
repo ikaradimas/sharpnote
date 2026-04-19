@@ -468,11 +468,26 @@ function registerAllHandlers() {
 // ── App lifecycle ─────────────────────────────────────────────────────────────
 app.whenReady().then(() => {
   // ── Standalone mode detection ──────────────────────────────────────────────
+  // Check two locations:
+  // 1. Inside Resources (Windows, or if injected into bundle)
+  // 2. Sibling .standalone directory next to the .app (macOS — keeps the
+  //    signed bundle untouched to avoid code signature crashes on Sequoia)
   let standaloneMode = null;
+  let standaloneDataDir = null;
   try {
-    const standaloneConfigPath = path.join(process.resourcesPath || __dirname, 'standalone.json');
-    if (fs.existsSync(standaloneConfigPath)) {
-      standaloneMode = JSON.parse(fs.readFileSync(standaloneConfigPath, 'utf-8'));
+    const internalPath = path.join(process.resourcesPath || __dirname, 'standalone.json');
+    if (fs.existsSync(internalPath)) {
+      standaloneMode = JSON.parse(fs.readFileSync(internalPath, 'utf-8'));
+      standaloneDataDir = process.resourcesPath || __dirname;
+    }
+    if (!standaloneMode && process.platform === 'darwin') {
+      const appBundlePath = path.resolve(process.resourcesPath || __dirname, '..', '..');
+      const siblingDir = appBundlePath + '.standalone';
+      const siblingPath = path.join(siblingDir, 'standalone.json');
+      if (fs.existsSync(siblingPath)) {
+        standaloneMode = JSON.parse(fs.readFileSync(siblingPath, 'utf-8'));
+        standaloneDataDir = siblingDir;
+      }
     }
   } catch {}
 
@@ -502,10 +517,10 @@ app.whenReady().then(() => {
 
   createWindow();
 
-  if (standaloneMode) {
+  if (standaloneMode && standaloneDataDir) {
     mainWindow.setTitle(standaloneMode.title || 'SharpNote');
     mainWindow.webContents.on('did-finish-load', () => {
-      const notebookPath = path.join(process.resourcesPath || __dirname, standaloneMode.notebook);
+      const notebookPath = path.join(standaloneDataDir, standaloneMode.notebook);
       mainWindow.webContents.send('standalone-mode', {
         ...standaloneMode,
         notebookPath,
