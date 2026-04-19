@@ -9440,6 +9440,17 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
   border-radius: 4px; outline: none;
 }
 .export-app-input:focus { border-color: var(--accent-primary); }
+.export-app-path-row { display: flex; gap: 6px; }
+.export-app-path-input { flex: 1; font-size: 11px; font-family: var(--font-code); }
+.export-app-target {
+  display: flex; gap: 6px; align-items: baseline;
+  margin-bottom: 10px; padding: 6px 8px;
+  background: rgba(0,0,0,0.15); border-radius: 4px;
+}
+.export-app-target-path {
+  font-size: 10px; font-family: var(--font-code);
+  color: var(--text-secondary); word-break: break-all;
+}
 .export-app-info { margin-bottom: 12px; }
 .export-app-info-row {
   display: flex; justify-content: space-between;

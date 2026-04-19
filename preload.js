@@ -124,6 +124,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Standalone app export
   exportStandaloneApp: (data) => ipcRenderer.invoke('export-standalone-app', data),
   getExportAppInfo: () => ipcRenderer.invoke('get-export-app-info'),
+  pickOutputDir: () => ipcRenderer.invoke('pick-output-dir'),
   onStandaloneMode: (cb) => ipcRenderer.on('standalone-mode', (_, data) => cb(data)),
   loadNotebookFromPath: (filePath) => ipcRenderer.invoke('load-notebook-from-path', filePath),
 

@@ -2,24 +2,38 @@ import React, { useState, useEffect } from 'react';
 
 export function ExportAppDialog({ notebookTitle, onExport, onClose }) {
   const [appName, setAppName] = useState(notebookTitle || 'My Notebook');
+  const [outputDir, setOutputDir] = useState('');
   const [info, setInfo] = useState(null);
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState(null);
   const [result, setResult] = useState(null);
 
   useEffect(() => {
-    window.electronAPI?.getExportAppInfo?.().then(setInfo);
+    window.electronAPI?.getExportAppInfo?.().then((data) => {
+      setInfo(data);
+      if (data?.defaultOutputDir) setOutputDir(data.defaultOutputDir);
+    });
   }, []);
 
   const platformLabel = info
     ? `${info.platform === 'darwin' ? 'macOS' : info.platform === 'win32' ? 'Windows' : info.platform} ${info.arch}`
     : 'detecting...';
 
+  const ext = info?.platform === 'darwin' ? '.app' : '';
+  const targetPath = outputDir && appName.trim()
+    ? `${outputDir}/${appName.trim().replace(/[^a-zA-Z0-9 _-]/g, '')}${ext}`
+    : '';
+
+  const handleBrowse = async () => {
+    const picked = await window.electronAPI?.pickOutputDir?.();
+    if (picked) setOutputDir(picked);
+  };
+
   const handleExport = async () => {
     setExporting(true);
     setError(null);
     try {
-      const res = await onExport(appName);
+      const res = await onExport(appName, outputDir);
       if (res?.success) {
         setResult(res.filePath);
       } else {
@@ -53,6 +67,26 @@ export function ExportAppDialog({ notebookTitle, onExport, onClose }) {
                   disabled={exporting}
                 />
               </div>
+              <div className="export-app-field">
+                <label className="export-app-label">Output Folder</label>
+                <div className="export-app-path-row">
+                  <input
+                    className="export-app-input export-app-path-input"
+                    value={outputDir}
+                    onChange={(e) => setOutputDir(e.target.value)}
+                    spellCheck={false}
+                    disabled={exporting}
+                    placeholder="Select a folder..."
+                  />
+                  <button className="kafka-btn" onClick={handleBrowse} disabled={exporting}>Browse</button>
+                </div>
+              </div>
+              {targetPath && (
+                <div className="export-app-target">
+                  <span className="export-app-info-label">Target</span>
+                  <span className="export-app-target-path">{targetPath}</span>
+                </div>
+              )}
               <div className="export-app-info">
                 <div className="export-app-info-row">
                   <span className="export-app-info-label">Platform</span>
@@ -74,7 +108,7 @@ export function ExportAppDialog({ notebookTitle, onExport, onClose }) {
                 <button
                   className="kafka-btn kafka-btn-primary"
                   onClick={handleExport}
-                  disabled={exporting || !appName.trim() || !info?.isPackaged}
+                  disabled={exporting || !appName.trim() || !outputDir || !info?.isPackaged}
                 >
                   {exporting ? 'Exporting...' : 'Export'}
                 </button>

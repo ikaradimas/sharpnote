@@ -1524,11 +1524,11 @@ export function App() {
       {exportAppOpen && (
         <ExportAppDialog
           notebookTitle={activeNb?.title || 'Notebook'}
-          onExport={async (appName) => {
+          onExport={async (appName, outputDir) => {
             const nb = activeNb;
             if (!nb) return { success: false, error: 'No notebook open' };
             const notebookData = buildNotebookData(nb.id);
-            return window.electronAPI?.exportStandaloneApp({ notebookData, title: nb.title, appName });
+            return window.electronAPI?.exportStandaloneApp({ notebookData, title: nb.title, appName, outputDir });
           }}
           onClose={() => setExportAppOpen(false)}
         />

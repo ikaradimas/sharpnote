@@ -8,21 +8,16 @@ const { execSync } = require('child_process');
  * the SharpNote app bundle and injecting the notebook + config.
  */
 function register(ipcMain, { app, dialog, mainWindow }) {
-  ipcMain.handle('export-standalone-app', async (_ev, { notebookData, title, appName }) => {
+  ipcMain.handle('export-standalone-app', async (_ev, { notebookData, title, appName, outputDir }) => {
     const name = (appName || title || 'Notebook').replace(/[^a-zA-Z0-9 _-]/g, '').trim() || 'Notebook';
 
     if (!app.isPackaged) {
       return { success: false, error: 'Export as App is only available in the packaged version of SharpNote.' };
     }
 
-    // Ask for output directory
-    const result = await dialog.showOpenDialog(mainWindow, {
-      title: 'Export as App — Choose Output Folder',
-      properties: ['openDirectory', 'createDirectory'],
-    });
-    if (result.canceled || !result.filePaths?.[0]) return { success: false };
-
-    const outputDir = result.filePaths[0];
+    if (!outputDir) {
+      return { success: false, error: 'No output folder specified.' };
+    }
 
     try {
       if (process.platform === 'darwin') {
@@ -37,12 +32,21 @@ function register(ipcMain, { app, dialog, mainWindow }) {
     }
   });
 
-  // Provide platform info to the renderer
   ipcMain.handle('get-export-app-info', () => ({
     isPackaged: app.isPackaged,
     platform: process.platform,
     arch: process.arch,
+    defaultOutputDir: app.getPath('desktop'),
   }));
+
+  ipcMain.handle('pick-output-dir', async () => {
+    const result = await dialog.showOpenDialog(mainWindow, {
+      title: 'Choose Output Folder',
+      properties: ['openDirectory', 'createDirectory'],
+    });
+    if (result.canceled || !result.filePaths?.[0]) return null;
+    return result.filePaths[0];
+  });
 }
 
 function exportMacOS(app, appName, notebookData, outputDir) {
