@@ -85,12 +85,41 @@ function exportMacOS(app, appName, notebookData, outputDir) {
   // Clear quarantine xattrs
   try { execSync(`xattr -cr "${destApp}"`); } catch {}
 
-  // Re-sign the entire bundle with an ad-hoc signature.
-  // Electron apps have nested signed binaries (framework, helpers) —
-  // stripping the signature leaves them invalid. Ad-hoc re-signing
-  // fixes all nested signatures so macOS will launch the app.
+  // Re-sign the Electron app bundle with ad-hoc signatures.
+  // --deep is unreliable for Electron — sign each nested component
+  // individually in dependency order: frameworks → helpers → main app.
   try {
-    execSync(`codesign --force --deep --sign - "${destApp}"`, { stdio: 'pipe' });
+    const contentsDir = path.join(destApp, 'Contents');
+    const frameworksDir = path.join(contentsDir, 'Frameworks');
+
+    // 1. Sign all nested frameworks and dylibs
+    if (fs.existsSync(frameworksDir)) {
+      const entries = fs.readdirSync(frameworksDir);
+      for (const entry of entries) {
+        const full = path.join(frameworksDir, entry);
+        try {
+          execSync(`codesign --force --sign - "${full}"`, { stdio: 'pipe' });
+        } catch {}
+      }
+      // Sign nested helper apps inside frameworks
+      const efDir = path.join(frameworksDir, 'Electron Framework.framework');
+      if (fs.existsSync(efDir)) {
+        try { execSync(`codesign --force --sign - "${efDir}"`, { stdio: 'pipe' }); } catch {}
+      }
+    }
+
+    // 2. Sign helper apps
+    if (fs.existsSync(frameworksDir)) {
+      for (const entry of fs.readdirSync(frameworksDir)) {
+        if (entry.endsWith('.app')) {
+          const helperApp = path.join(frameworksDir, entry);
+          try { execSync(`codesign --force --sign - "${helperApp}"`, { stdio: 'pipe' }); } catch {}
+        }
+      }
+    }
+
+    // 3. Sign the main app bundle last
+    execSync(`codesign --force --sign - "${destApp}"`, { stdio: 'pipe' });
   } catch {}
 
   return { success: true, filePath: destApp };
