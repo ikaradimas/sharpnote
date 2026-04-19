@@ -59,8 +59,10 @@ function exportMacOS(app, appName, notebookData, outputDir) {
     fs.rmSync(destApp, { recursive: true, force: true });
   }
 
-  // Copy entire .app bundle
-  execSync(`cp -R "${appBundlePath}" "${destApp}"`);
+  // Copy entire .app bundle using ditto (preserves symlinks, hardlinks,
+  // resource forks, and extended attributes that cp -R can break in
+  // Electron's framework structure)
+  execSync(`ditto "${appBundlePath}" "${destApp}"`);
 
   // Inject notebook and standalone config into Resources
   const resourcesDir = path.join(destApp, 'Contents', 'Resources');
@@ -89,31 +91,12 @@ function exportMacOS(app, appName, notebookData, outputDir) {
   // Clear quarantine xattrs
   try { execSync(`xattr -cr "${destApp}"`); } catch {}
 
-  // Re-sign the Electron app with ad-hoc signatures, preserving entitlements.
-  // V8 requires com.apple.security.cs.allow-jit for JIT compilation — without
-  // it macOS kills the process with EXC_BREAKPOINT before any JS runs.
-  try {
-    const contentsDir = path.join(destApp, 'Contents');
-    const frameworksDir = path.join(contentsDir, 'Frameworks');
-
-    // Extract entitlements from the original app binary
-    const mainExe = path.join(contentsDir, 'MacOS', 'SharpNote');
-    let entitlementsFile = null;
-    try {
-      const entXml = execSync(
-        `codesign -d --entitlements - --xml "${mainExe}" 2>/dev/null`,
-        { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }
-      );
-      if (entXml && entXml.includes('<!DOCTYPE plist')) {
-        entitlementsFile = path.join(outputDir, '.tmp-entitlements.plist');
-        fs.writeFileSync(entitlementsFile, entXml, 'utf-8');
-      }
-    } catch {}
-
-    // If we couldn't extract entitlements, create minimal ones for Electron
-    if (!entitlementsFile) {
-      entitlementsFile = path.join(outputDir, '.tmp-entitlements.plist');
-      fs.writeFileSync(entitlementsFile, `<?xml version="1.0" encoding="UTF-8"?>
+  // Re-sign the entire app bundle with ad-hoc signature + entitlements.
+  // V8 requires com.apple.security.cs.allow-jit for JIT compilation.
+  // We write a minimal entitlements plist, then use electron-osx-sign's
+  // recommended approach: sign each Mach-O inside the bundle individually.
+  const entFile = path.join(outputDir, '.tmp-entitlements.plist');
+  fs.writeFileSync(entFile, `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
@@ -122,46 +105,65 @@ function exportMacOS(app, appName, notebookData, outputDir) {
   <key>com.apple.security.cs.disable-library-validation</key><true/>
 </dict>
 </plist>`, 'utf-8');
-    }
 
-    const signWithEnt = (target) => {
+  try {
+    // Find every Mach-O binary and .dylib inside the bundle and sign them
+    // bottom-up (deepest first, then outer bundles, then the .app last).
+    // This is the only reliable way to sign an Electron app ad-hoc.
+    const findOutput = execSync(
+      `find "${destApp}" -type f \\( -name "*.dylib" -o -perm +111 \\) | sort -r`,
+      { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024 }
+    ).trim();
+
+    for (const binPath of findOutput.split('\n').filter(Boolean)) {
+      // Check if it's actually a Mach-O binary (not a script/text file)
+      try {
+        const fileType = execSync(`file -b "${binPath}"`, { encoding: 'utf-8' }).trim();
+        if (!fileType.includes('Mach-O') && !binPath.endsWith('.dylib')) continue;
+      } catch { continue; }
+
       try {
         execSync(
-          `codesign --force --sign - --entitlements "${entitlementsFile}" "${target}"`,
+          `codesign --force --sign - --entitlements "${entFile}" --timestamp=none "${binPath}"`,
           { stdio: 'pipe' }
         );
-      } catch {
-        // Fallback: sign without entitlements (frameworks/dylibs don't need them)
-        try { execSync(`codesign --force --sign - "${target}"`, { stdio: 'pipe' }); } catch {}
-      }
-    };
+      } catch {}
+    }
 
-    const signPlain = (target) => {
-      try { execSync(`codesign --force --sign - "${target}"`, { stdio: 'pipe' }); } catch {}
-    };
-
-    // 1. Sign frameworks and dylibs (no entitlements needed)
+    // Sign each .framework bundle
+    const frameworksDir = path.join(destApp, 'Contents', 'Frameworks');
     if (fs.existsSync(frameworksDir)) {
       for (const entry of fs.readdirSync(frameworksDir)) {
-        const full = path.join(frameworksDir, entry);
-        if (entry.endsWith('.app')) continue; // helpers signed separately
-        signPlain(full);
+        if (entry.endsWith('.framework')) {
+          try {
+            execSync(
+              `codesign --force --sign - --entitlements "${entFile}" --timestamp=none "${path.join(frameworksDir, entry)}"`,
+              { stdio: 'pipe' }
+            );
+          } catch {}
+        }
+      }
+      // Sign helper .app bundles
+      for (const entry of fs.readdirSync(frameworksDir)) {
+        if (entry.endsWith('.app')) {
+          try {
+            execSync(
+              `codesign --force --sign - --entitlements "${entFile}" --timestamp=none "${path.join(frameworksDir, entry)}"`,
+              { stdio: 'pipe' }
+            );
+          } catch {}
+        }
       }
     }
 
-    // 2. Sign helper apps (need entitlements for JIT)
-    if (fs.existsSync(frameworksDir)) {
-      for (const entry of fs.readdirSync(frameworksDir)) {
-        if (entry.endsWith('.app')) signWithEnt(path.join(frameworksDir, entry));
-      }
-    }
-
-    // 3. Sign the main app bundle last (with entitlements)
-    signWithEnt(destApp);
-
-    // Cleanup
-    try { fs.unlinkSync(entitlementsFile); } catch {}
+    // Sign the main .app bundle last
+    execSync(
+      `codesign --force --sign - --entitlements "${entFile}" --timestamp=none "${destApp}"`,
+      { stdio: 'pipe' }
+    );
   } catch {}
+
+  try { fs.unlinkSync(entFile); } catch {}
 
   return { success: true, filePath: destApp };
 }
