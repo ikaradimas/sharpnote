@@ -264,6 +264,21 @@ function registerAllHandlers() {
     }
   });
 
+  // Standalone app export
+  const exportApp = require('./src/main/export-app.js');
+  exportApp.register(ipcMain, { app, dialog, mainWindow });
+
+  // Load notebook from a specific file path (used by standalone mode)
+  ipcMain.handle('load-notebook-from-path', async (_ev, filePath) => {
+    try {
+      const content = fs.readFileSync(filePath, 'utf-8');
+      const data = JSON.parse(content);
+      return { success: true, data, filePath };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
   // Export notebook as standalone .NET console project
   ipcMain.handle('export-executable', async (_ev, { cells, packages, config, title }) => {
     const { generateExecutableProject, slugify } = require('./src/main/export-exe.js');
@@ -452,6 +467,15 @@ function registerAllHandlers() {
 
 // ── App lifecycle ─────────────────────────────────────────────────────────────
 app.whenReady().then(() => {
+  // ── Standalone mode detection ──────────────────────────────────────────────
+  let standaloneMode = null;
+  try {
+    const standaloneConfigPath = path.join(process.resourcesPath || __dirname, 'standalone.json');
+    if (fs.existsSync(standaloneConfigPath)) {
+      standaloneMode = JSON.parse(fs.readFileSync(standaloneConfigPath, 'utf-8'));
+    }
+  } catch {}
+
   // ── Headless CLI execution ───────────────────────────────────────────────────
   const cliArgs = process.argv.slice(process.defaultApp ? 3 : 2);
   if (cliArgs[0] === 'run' && cliArgs.length > 1) {
@@ -477,6 +501,17 @@ app.whenReady().then(() => {
   }
 
   createWindow();
+
+  if (standaloneMode) {
+    mainWindow.setTitle(standaloneMode.title || 'SharpNote');
+    mainWindow.webContents.on('did-finish-load', () => {
+      const notebookPath = path.join(process.resourcesPath || __dirname, standaloneMode.notebook);
+      mainWindow.webContents.send('standalone-mode', {
+        ...standaloneMode,
+        notebookPath,
+      });
+    });
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

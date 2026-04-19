@@ -121,6 +121,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Executable export
   exportExecutable: (data) => ipcRenderer.invoke('export-executable', data),
 
+  // Standalone app export
+  exportStandaloneApp: (data) => ipcRenderer.invoke('export-standalone-app', data),
+  getExportAppInfo: () => ipcRenderer.invoke('get-export-app-info'),
+  onStandaloneMode: (cb) => ipcRenderer.on('standalone-mode', (_, data) => cb(data)),
+  loadNotebookFromPath: (filePath) => ipcRenderer.invoke('load-notebook-from-path', filePath),
+
   // API Editor — OpenAPI export + mock server
   exportOpenApi: (data) => ipcRenderer.invoke('export-openapi', data),
   startMockServer: (data) => ipcRenderer.invoke('mock-server-start', data),

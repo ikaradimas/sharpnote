@@ -1215,6 +1215,27 @@ export const DOCS_SECTIONS = [
     ],
   },
   {
+    id: 'export-standalone-app', title: 'Export as App (Beta)',
+    content: [
+      { type: 'p', text: 'Export the current notebook as a standalone Electron app that opens directly to that notebook with full fidelity. The exported app is a complete copy of SharpNote with your notebook and settings embedded.' },
+      { type: 'p', text: 'Use File \u2192 Export as App (Beta)\u2026 to open the export dialog. Enter a name for the app and choose an output folder.' },
+      { type: 'h3', text: 'How It Works' },
+      { type: 'ul', items: [
+        'The entire SharpNote app bundle is copied to the output folder',
+        'Your notebook (.cnb) and a standalone.json config file are injected into the app resources',
+        'On macOS, the .app bundle\'s Info.plist is updated with the chosen app name and code signing is stripped',
+        'On Windows, the app directory is copied and the .exe is renamed to match the app name',
+        'When the exported app launches, it detects standalone.json and loads the embedded notebook automatically',
+      ]},
+      { type: 'h3', text: 'Requirements' },
+      { type: 'ul', items: [
+        'Only available in the packaged (production) version of SharpNote',
+        'Supported on macOS and Windows',
+        'The exported app is approximately 350 MB (full Electron + .NET runtime)',
+      ]},
+    ],
+  },
+  {
     id: 'api-editor', title: 'API Editor',
     content: [
       { type: 'p', text: 'The API Editor is a visual tool for designing REST APIs directly inside SharpNote. Define controllers, endpoints, typed models, and export the result as an OpenAPI 3.0 specification or spin up a built-in mock HTTP server for testing.' },

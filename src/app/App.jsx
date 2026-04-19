@@ -36,6 +36,7 @@ import { CommandPalette } from '../components/dialogs/CommandPalette.jsx';
 import { VarInspectDialog } from '../components/dialogs/VarInspectDialog.jsx';
 import { DbConnectionDialog } from '../components/dialogs/DbConnectionDialog.jsx';
 import { NewNotebookDialog } from '../components/dialogs/NewNotebookDialog.jsx';
+import { ExportAppDialog } from '../components/dialogs/ExportAppDialog.jsx';
 import { KeyboardShortcutsOverlay } from '../components/dialogs/KeyboardShortcutsOverlay.jsx';
 import { StatusBar } from './StatusBar.jsx';
 import { renderPanelContent } from '../components/dock/renderPanelContent.jsx';
@@ -109,6 +110,8 @@ export function App() {
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [varInspectDialog, setVarInspectDialog] = useState(null);
   const [dbConnDialog, setDbConnDialog] = useState(null); // null | connection object (edit) | opened with null (new)
+  const [exportAppOpen, setExportAppOpen] = useState(false);
+  const [standaloneMode, setStandaloneMode] = useState(null);
 
   const [dashboardMode, setDashboardMode] = useState(false);
   const [highlightedCellIds, setHighlightedCellIds] = useState(null);
@@ -854,6 +857,7 @@ export function App() {
     'export-gdoc-code':   () => handleExportGoogleDoc({ includeCode: true, includeResults: false }),
     'export-gdoc-results': () => handleExportGoogleDoc({ includeCode: false, includeResults: true }),
     'export-pdf':      () => window.electronAPI?.exportPdf(),
+    'export-app':      () => setExportAppOpen(true),
     'export-exe':      () => {
       const nb = notebooksRef.current.find((n) => n.id === activeIdRef.current);
       if (!nb) return;
@@ -973,6 +977,21 @@ export function App() {
       document.removeEventListener('keydown', onKeyDown);
       document.removeEventListener('keyup', onKeyUp);
     };
+  }, []);
+
+  // ── Standalone mode listener ────────────────────────────────────────────
+  useEffect(() => {
+    window.electronAPI?.onStandaloneMode?.((data) => {
+      setStandaloneMode(data);
+      if (data.notebookPath) {
+        window.electronAPI?.loadNotebookFromPath?.(data.notebookPath).then((result) => {
+          if (result?.success && result.data) {
+            // Use the existing open-recent path to load the bundled notebook
+            window.electronAPI?.openRecentFile?.(data.notebookPath);
+          }
+        });
+      }
+    });
   }, []);
 
   // ── Quit guard ────────────────────────────────────────────────────────────
@@ -1502,6 +1521,18 @@ export function App() {
         hovered={hoveredDropZone}
       />
       {aboutOpen && <AboutDialog onClose={() => setAboutOpen(false)} />}
+      {exportAppOpen && (
+        <ExportAppDialog
+          notebookTitle={activeNb?.title || 'Notebook'}
+          onExport={async (appName) => {
+            const nb = activeNb;
+            if (!nb) return { success: false, error: 'No notebook open' };
+            const notebookData = buildNotebookData(nb.id);
+            return window.electronAPI?.exportStandaloneApp({ notebookData, title: nb.title, appName });
+          }}
+          onClose={() => setExportAppOpen(false)}
+        />
+      )}
       {newNbDialogOpen && (
         <NewNotebookDialog
           onSelect={(templateKey) => { setNewNbDialogOpen(false); handleNew(templateKey); }}

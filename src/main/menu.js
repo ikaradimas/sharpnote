@@ -120,6 +120,7 @@ function buildMenu(customShortcuts = {}) {
       { label: 'Export as HTML…', click: () => send('export-html') },
       { label: 'Export as PDF…',        click: () => send('export-pdf') },
       { label: 'Export as Executable…', click: () => send('export-exe') },
+      { label: 'Export as App (Beta)…', click: () => send('export-app') },
       { label: 'Export as Docker Compose…', click: () => send('export-docker-compose') },
       { label: 'Export for Google Docs…', submenu: [
         { label: 'Code + Results', click: () => send('export-gdoc-all') },
