@@ -28,11 +28,62 @@ function encryptSettings(settingsObj, notebookJson) {
   return Buffer.concat([Buffer.from([0x01]), iv, tag, enc]).toString('base64');
 }
 
+// Version 0x02: passphrase-based encryption (PBKDF2 + AES-256-GCM)
+function derivePassphraseKey(passphrase, salt) {
+  return crypto.pbkdf2Sync(passphrase, salt, 100000, 32, 'sha512');
+}
+
+function encryptSettingsWithPassphrase(settingsObj, passphrase) {
+  const salt = crypto.randomBytes(16);
+  const key = derivePassphraseKey(passphrase, salt);
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  const plaintext = JSON.stringify(settingsObj);
+  const enc = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return Buffer.concat([Buffer.from([0x02]), salt, iv, tag, enc]).toString('base64');
+}
+
+function decryptSettingsWithPassphrase(base64Blob, passphrase) {
+  const buf = Buffer.from(base64Blob, 'base64');
+  if (buf[0] !== 0x02) return null;
+  const salt = buf.subarray(1, 17);
+  const iv = buf.subarray(17, 29);
+  const tag = buf.subarray(29, 45);
+  const enc = buf.subarray(45);
+  const key = derivePassphraseKey(passphrase, salt);
+  const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+  decipher.setAuthTag(tag);
+  const plaintext = decipher.update(enc, undefined, 'utf8') + decipher.final('utf8');
+  return JSON.parse(plaintext);
+}
+
+// ── Secret stripping ────────────────────────────────────────────────────────
+function stripSecretsFromSettings(settings) {
+  const stripped = { ...settings };
+  // Strip DB connection strings
+  if (Array.isArray(stripped.dbConnections)) {
+    stripped.dbConnections = stripped.dbConnections.map(c => ({
+      ...c, connectionString: '', stripped: true
+    }));
+  }
+  // Strip API saved auth tokens
+  if (Array.isArray(stripped.apiSaved)) {
+    stripped.apiSaved = stripped.apiSaved.map(a => {
+      const clean = { ...a };
+      if (clean.auth) clean.auth = { type: clean.auth.type || 'none', stripped: true };
+      return clean;
+    });
+  }
+  return stripped;
+}
+
 function decryptSettings(base64Blob, notebookJson) {
-  const key = deriveSettingsKey(notebookJson);
   const buf = Buffer.from(base64Blob, 'base64');
   const version = buf[0];
+  if (version === 0x02) return { needsPassphrase: true };
   if (version !== 0x01) return null;
+  const key = deriveSettingsKey(notebookJson);
   const iv = buf.subarray(1, 13);
   const tag = buf.subarray(13, 29);
   const enc = buf.subarray(29);
@@ -45,7 +96,7 @@ function decryptSettings(base64Blob, notebookJson) {
 // ── Export ────────────────────────────────────────────────────────────────────
 
 function register(ipcMain, { app, dialog, mainWindow }) {
-  ipcMain.handle('export-standalone-app', async (_ev, { notebookData, title, appName, outputDir, appSettings }) => {
+  ipcMain.handle('export-standalone-app', async (_ev, { notebookData, title, appName, outputDir, appSettings, passphrase, stripSecrets }) => {
     const name = (appName || title || 'Notebook').replace(/[^a-zA-Z0-9 _-]/g, '').trim() || 'Notebook';
 
     if (!app.isPackaged) {
@@ -58,9 +109,9 @@ function register(ipcMain, { app, dialog, mainWindow }) {
 
     try {
       if (process.platform === 'darwin') {
-        return exportMacOS(app, name, notebookData, appSettings, outputDir);
+        return exportMacOS(app, name, notebookData, appSettings, outputDir, passphrase, stripSecrets);
       } else if (process.platform === 'win32') {
-        return exportWindows(app, name, notebookData, appSettings, outputDir);
+        return exportWindows(app, name, notebookData, appSettings, outputDir, passphrase, stripSecrets);
       } else {
         return { success: false, error: `Unsupported platform: ${process.platform}` };
       }
@@ -86,28 +137,36 @@ function register(ipcMain, { app, dialog, mainWindow }) {
   });
 }
 
-function writeStandaloneData(dataDir, appName, notebookData, appSettings) {
+function writeStandaloneData(dataDir, appName, notebookData, appSettings, passphrase, stripSecrets) {
   fs.mkdirSync(dataDir, { recursive: true });
 
   const notebookJson = JSON.stringify(notebookData, null, 2);
   fs.writeFileSync(path.join(dataDir, 'notebook.cnb'), notebookJson, 'utf-8');
 
+  const hasSettings = !!appSettings;
+  const hasPassphrase = !!passphrase;
+
   fs.writeFileSync(
     path.join(dataDir, 'standalone.json'),
-    JSON.stringify({ notebook: 'notebook.cnb', title: appName, hasSettings: !!appSettings }, null, 2),
+    JSON.stringify({ notebook: 'notebook.cnb', title: appName, hasSettings, hasPassphrase }, null, 2),
     'utf-8'
   );
 
   // Encrypt and write settings if provided
   if (appSettings && typeof appSettings === 'object') {
     try {
-      const encrypted = encryptSettings(appSettings, notebookJson);
+      let settingsToEncrypt = appSettings;
+      if (stripSecrets) settingsToEncrypt = stripSecretsFromSettings(settingsToEncrypt);
+
+      const encrypted = passphrase
+        ? encryptSettingsWithPassphrase(settingsToEncrypt, passphrase)
+        : encryptSettings(settingsToEncrypt, notebookJson);
       fs.writeFileSync(path.join(dataDir, 'settings.enc'), encrypted, 'utf-8');
     } catch {}
   }
 }
 
-function exportMacOS(app, appName, notebookData, appSettings, outputDir) {
+function exportMacOS(app, appName, notebookData, appSettings, outputDir, passphrase, stripSecrets) {
   const appBundlePath = path.resolve(process.resourcesPath, '..', '..');
   const destApp = path.join(outputDir, `${appName}.app`);
   const dataDir = path.join(outputDir, `${appName}.app.standalone`);
@@ -118,12 +177,12 @@ function exportMacOS(app, appName, notebookData, appSettings, outputDir) {
   execSync(`ditto "${appBundlePath}" "${destApp}"`);
   try { execSync(`xattr -cr "${destApp}"`); } catch {}
 
-  writeStandaloneData(dataDir, appName, notebookData, appSettings);
+  writeStandaloneData(dataDir, appName, notebookData, appSettings, passphrase, stripSecrets);
 
   return { success: true, filePath: destApp };
 }
 
-function exportWindows(app, appName, notebookData, appSettings, outputDir) {
+function exportWindows(app, appName, notebookData, appSettings, outputDir, passphrase, stripSecrets) {
   const appDir = path.resolve(process.resourcesPath, '..');
   const destDir = path.join(outputDir, appName);
 
@@ -132,7 +191,7 @@ function exportWindows(app, appName, notebookData, appSettings, outputDir) {
   copyDirSync(appDir, destDir);
 
   const resourcesDir = path.join(destDir, 'resources');
-  writeStandaloneData(resourcesDir, appName, notebookData, appSettings);
+  writeStandaloneData(resourcesDir, appName, notebookData, appSettings, passphrase, stripSecrets);
 
   const exes = fs.readdirSync(destDir).filter(f => f.endsWith('.exe'));
   if (exes.length > 0) {
@@ -154,4 +213,4 @@ function copyDirSync(src, dest) {
   }
 }
 
-module.exports = { register, decryptSettings, SETTINGS_SALT, deriveSettingsKey };
+module.exports = { register, decryptSettings, decryptSettingsWithPassphrase, SETTINGS_SALT, deriveSettingsKey };

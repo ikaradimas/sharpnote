@@ -9464,6 +9464,19 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
   border: 1px solid rgba(224, 160, 64, 0.2);
   border-radius: 4px; padding: 8px 10px; margin-bottom: 12px;
 }
+.export-app-checkbox {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; color: var(--text-primary); cursor: pointer;
+}
+.export-app-checkbox input[type="checkbox"] { accent-color: var(--accent-primary); }
+.export-app-passphrase-fields {
+  display: flex; flex-direction: column; gap: 6px;
+  margin-top: 6px; padding-left: 24px;
+}
+.export-app-hint {
+  font-size: 10px; color: var(--text-dim);
+  padding: 2px 0 0 24px; line-height: 1.4;
+}
 .export-app-error {
   font-size: 11px; color: #d16969;
   padding: 4px 0; margin-bottom: 8px;
