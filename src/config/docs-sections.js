@@ -1222,10 +1222,15 @@ export const DOCS_SECTIONS = [
       { type: 'h3', text: 'How It Works' },
       { type: 'ul', items: [
         'The entire SharpNote app bundle is copied to the output folder',
-        'Your notebook (.cnb) and a standalone.json config file are injected into the app resources',
-        'On macOS, the .app bundle\'s Info.plist is updated with the chosen app name and code signing is stripped',
+        'Your notebook (.cnb) and a standalone.json config file are placed in a sibling .standalone directory (macOS) or the resources directory (Windows)',
         'On Windows, the app directory is copied and the .exe is renamed to match the app name',
-        'When the exported app launches, it detects standalone.json and loads the embedded notebook automatically',
+        'When the exported app launches, it detects standalone.json and loads the embedded notebook automatically in viewer mode',
+      ]},
+      { type: 'h3', text: 'Security Options' },
+      { type: 'ul', items: [
+        'Passphrase protection: encrypts embedded settings with PBKDF2 (100K iterations, SHA-512) key derivation and AES-256-GCM; the viewer prompts for the passphrase on launch and retries on incorrect entry',
+        'Strip credentials: removes DB connection strings and API auth tokens from the exported settings; the viewer prompts the user to enter missing credentials on launch with per-field inputs and a skip option',
+        'Both options can be combined: the viewer prompts for the passphrase first, then for any missing credentials',
       ]},
       { type: 'h3', text: 'Requirements' },
       { type: 'ul', items: [

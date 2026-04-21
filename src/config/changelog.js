@@ -4,10 +4,12 @@
 // gears: 1 = minor fix/tweak, 2 = notable feature, 3 = major feature/architecture
 
 export const CHANGELOG = [
-  { version: '2.3.0', date: '2026-04-19', title: 'Export as App, Kafka Enhancements, Notebook Backgrounds, Orchestration Redesign', gears: 3, items: [
+  { version: '2.3.0', date: '2026-04-21', title: 'Export as App, Kafka Enhancements, Notebook Backgrounds, Orchestration Redesign', gears: 3, items: [
     'Export as App (Beta): export any notebook as a standalone macOS/Windows application that opens directly in viewer mode with full fidelity — same renderer, kernel, and interactive experience',
     'Viewer mode: exported apps open in a locked-down mode — no file open/import, no tools menu, no panel toggles; only Run, Edit, View, and Help menus',
     'Embedded settings: exported apps bundle the exporter\'s theme, background, DB connections, API configs, shortcuts, and favorites — all encrypted with AES-256-GCM keyed to the notebook content',
+    'Export passphrase protection: optional PBKDF2 (100K iterations, SHA-512) key derivation with AES-256-GCM encryption — viewer prompts for passphrase on launch with retry on failure',
+    'Export credential stripping: optional removal of DB connection strings and API auth tokens — viewer prompts for missing credentials on launch with per-field inputs and skip option',
     'Notebook backgrounds: 8 decorative SVG patterns (Tribal, Cyber, FPS, Relaxing, Glitch, Topology, Waveform, Blueprint) that fade from left to center; configurable in Settings with opacity slider',
     'Kafka: pin messages to top of feed, compare two messages side-by-side with LCS diff highlighting, Ctrl+F search focus shortcut',
     'Orchestration panel redesign: depth-based layout replacing layers, icon + name + collapsible inbox/outbox per node, implicit Start/End nodes, design/execution mode toggle, port-based drag-to-connect wiring, Add Node button, Auto Layout, critical path always visible',
