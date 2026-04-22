@@ -259,12 +259,18 @@ public sealed class WorkspaceManager : IDisposable
     /// </summary>
     public async Task<string> FormatDocumentAsync()
     {
-        var doc       = _workspace.CurrentSolution.GetDocument(_docId)!;
-        var formatted = await Microsoft.CodeAnalysis.Formatting.Formatter.FormatAsync(doc);
+        var doc        = _workspace.CurrentSolution.GetDocument(_docId)!;
+        var sourceText = await doc.GetTextAsync();
+        var totalLen   = sourceText.Length;
+        var preambleLen = TotalPreambleLength;
+
+        // Format only the user-code span so the formatter never reshapes the
+        // preamble — this keeps the preamble length stable and avoids slicing
+        // into user code when extracting the result.
+        var userSpan  = Microsoft.CodeAnalysis.Text.TextSpan.FromBounds(preambleLen, totalLen);
+        var formatted = await Microsoft.CodeAnalysis.Formatting.Formatter.FormatAsync(doc, userSpan);
         var text      = (await formatted.GetTextAsync()).ToString();
-        // Strip the preamble — return only the user code, trimming leading blank lines
-        // that the formatter may insert at the preamble/code boundary.
-        return text[TotalPreambleLength..].TrimStart('\r', '\n');
+        return text[preambleLen..].TrimStart('\r', '\n');
     }
 
     /// <summary>
