@@ -6973,6 +6973,33 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 .cell-add-paste { border-left: 1px solid var(--border-subtle) !important; margin-left: 4px; padding-left: 8px; }
 .cell-add-paste:hover { color: #c084d0 !important; }
 
+/* ── Floci Cell ──────────────────────────────────────────────────────── */
+.floci-label { color: #ff9900 !important; }
+.floci-cell.floci-running { border-left-color: #ff9900; }
+.floci-icon { color: #ff9900; }
+.floci-config-form { display: flex; flex-direction: column; gap: 6px; }
+.floci-config-row { display: flex; gap: 8px; }
+.floci-config-row > .docker-field { flex: 1; }
+.floci-select-field { max-width: 160px; }
+.floci-services-section { padding: 4px 8px; }
+.floci-services-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px 12px; padding: 4px 0; }
+.floci-service-checkbox { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--fg-secondary, #bbb); cursor: pointer; }
+.floci-service-checkbox input[type="checkbox"] { accent-color: #ff9900; }
+.floci-more-toggle { background: none; border: none; color: #ff990099; font-size: 11px; cursor: pointer; display: flex; align-items: center; gap: 3px; padding: 2px 0; }
+.floci-more-toggle:hover { color: #ff9900; }
+.floci-init-script { resize: vertical; min-height: 48px; font-size: 12px; }
+.floci-hint { color: #888; font-size: 11px; font-weight: normal; }
+.floci-snippet-btn { display: flex; align-items: center; gap: 3px; background: #ff990020; border: 1px solid #ff990040; color: #ff9900; border-radius: 3px; padding: 2px 8px; font-size: 11px; cursor: pointer; }
+.floci-snippet-btn:hover { background: #ff990030; }
+.floci-snippet-btn:disabled { opacity: 0.4; cursor: default; }
+.floci-snippet-popup { max-width: 700px; }
+.floci-snippet-code { font-size: 12px; max-height: 350px; }
+.floci-snippet-actions { display: flex; gap: 6px; padding: 8px 12px; justify-content: flex-end; }
+.floci-btn-primary { background: #ff990030; border-color: #ff990060; color: #ff9900; }
+.floci-btn-primary:hover { background: #ff990040; }
+.cell-add-floci { color: #ff990099 !important; }
+.cell-add-floci:hover { color: #ff9900 !important; }
+
 /* ── Docker Logs ─────────────────────────────────────────────────────── */
 .docker-logs-btn {
   background: none; border: 1px solid var(--border-default); color: var(--text-dim);

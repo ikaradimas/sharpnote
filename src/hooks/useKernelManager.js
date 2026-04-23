@@ -106,6 +106,18 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
               }, 200);
             }
 
+            // Auto-execute floci cells with runOnStartup
+            const startupFlociCells = nb.cells.filter((c) => c.type === 'floci' && c.runOnStartup && c.services?.length > 0);
+            if (startupFlociCells.length > 0) {
+              setTimeout(async () => {
+                for (const cell of startupFlociCells) {
+                  const nbNow = notebooksRef.current.find((n) => n.id === notebookId);
+                  if (!nbNow || nbNow.kernelStatus !== 'ready') break;
+                  await runFlociCell(notebookId, cell);
+                }
+              }, 350);
+            }
+
             // Auto-execute docker cells with runOnStartup
             const startupDockerCells = nb.cells.filter((c) => c.type === 'docker' && c.runOnStartup && c.image);
             if (startupDockerCells.length > 0) {
@@ -732,6 +744,50 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
     });
   }, [setNb]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const runFlociCell = useCallback((notebookId, cell) => {
+    if (!window.electronAPI || cell.type !== 'floci') return Promise.resolve();
+
+    const services = (cell.services || []);
+    const region = cell.region || 'us-east-1';
+    const storageMode = cell.storageMode || 'memory';
+    const endpoint = cell.endpoint || 'http://localhost:4566';
+    const port = (() => { try { return new URL(endpoint).port || '4566'; } catch { return '4566'; } })();
+
+    // Build env vars for floci configuration
+    const envParts = [`FLOCI_DEFAULT_REGION=${region}`, `FLOCI_STORAGE_MODE=${storageMode}`];
+    for (const svc of services) envParts.push(`FLOCI_SERVICES_${svc.toUpperCase()}_ENABLED=true`);
+    const envStr = envParts.join(', ');
+
+    // Port mappings: main API + ranges for container services
+    const portMappings = [`${port}:4566`];
+    if (services.includes('elasticache')) portMappings.push('6379-6399:6379-6399');
+    if (services.includes('rds'))         portMappings.push('7001-7099:7001-7099');
+    if (services.includes('lambda'))      portMappings.push('9200-9299:9200-9299');
+    if (services.includes('opensearch'))  portMappings.push('9400-9499:9400-9499');
+    const portsStr = portMappings.join(', ');
+
+    // Volume for persistent/hybrid storage
+    const volumeStr = (storageMode === 'persistent' || storageMode === 'hybrid') ? '/tmp/floci-data:/app/data' : '';
+
+    // Docker socket mount for container-based services (Lambda, RDS, ElastiCache, ECS, EKS, MSK, OpenSearch)
+    const needsDocker = services.some((s) => ['lambda', 'rds', 'elasticache', 'ecs', 'eks', 'msk', 'opensearch'].includes(s));
+    const finalVolume = [volumeStr, needsDocker ? '/var/run/docker.sock:/var/run/docker.sock' : ''].filter(Boolean).join(', ');
+
+    return new Promise((resolve) => {
+      prepareCellRun(setNb, pendingResolversRef, notebookId, cell.id, resolve);
+      window.electronAPI.sendToKernel(notebookId, {
+        type: 'execute_docker',
+        id: cell.id,
+        image: 'floci/floci:latest',
+        containerName: `floci-${cell.id}`,
+        ports: portsStr,
+        env: envStr,
+        volume: finalVolume,
+        command: '',
+      });
+    });
+  }, [setNb]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const stopDockerCell = useCallback((notebookId, cellId, containerId) => {
     if (!window.electronAPI) return;
     window.electronAPI.sendToKernel(notebookId, {
@@ -876,6 +932,7 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
     runHttpCell,
     runShellCell,
     runDockerCell,
+    runFlociCell,
     stopDockerCell,
     pollDockerStatus,
     fetchDockerLogs,

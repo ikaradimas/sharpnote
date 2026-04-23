@@ -106,6 +106,7 @@
 - **HTTP environment switcher** — HTTP cells support named environment profiles (dev, staging, prod) that swap variable sets; response timeline shows request phases (DNS, connect, TLS, TTFB, download)
 - **Shell working directory indicator** — shell cells display the current working directory in the header; a streaming dot animates while output is being received
 - **Docker resource meter** — Docker cells show live CPU and memory gauges; a health check badge reflects container health status; quick shell opens an interactive `docker exec` session
+- **Floci cell** — visual cell for running [floci](https://github.com/floci-io/floci) local AWS emulator containers; per-service toggles for 24 AWS services, region/storage config, init scripts, auto-start on kernel ready, and one-click C# SDK snippet generation with NuGet references
 - **Decision branch preview** — hover over a decision cell to preview its downstream branch paths; a decision history timeline shows past evaluation results
 - **Orchestration minimap** — the Orchestration panel includes a minimap for large graphs, critical path highlighting, parallel execution group indicators, and animated run progress
 

@@ -12,6 +12,7 @@ import { ShellCell } from './editor/ShellCell.jsx';
 import { CheckCell } from './editor/CheckCell.jsx';
 import { DecisionCell } from './editor/DecisionCell.jsx';
 import { DockerCell } from './editor/DockerCell.jsx';
+import { FlociCell } from './editor/FlociCell.jsx';
 import { AddBar } from './editor/AddBar.jsx';
 import { FindBar } from './FindBar.jsx';
 import { CircuitBoard } from './CircuitBoard.jsx';
@@ -71,6 +72,7 @@ export function NotebookView({
   onRunHttpCell,
   onRunShellCell,
   onRunDockerCell,
+  onRunFlociCell,
   onStopDockerCell,
   onPollDockerStatus,
   onFetchDockerLogs,
@@ -263,6 +265,7 @@ export function NotebookView({
       onAddHttp={() => addCell('http')}
       onAddShell={() => addCell('shell')}
       onAddDocker={() => addCell('docker')}
+      onAddFloci={() => addCell('floci')}
       onAddCheck={() => addCell('check')}
       onAddDecision={() => addCell('decision')}
       autoRun={autoRun || false}
@@ -404,6 +407,32 @@ export function NotebookView({
         onColorChange={(color) => updateCellProp(cell.id, 'color', color)}
         onToggleBookmark={() => toggleBookmark(cell.id)} />
     );
+    if (cell.type === 'floci') return (
+      <FlociCell cell={cell} cellIndex={index} outputs={outputs[cell.id]} notebookId={nb.id}
+        isRunning={running.has(cell.id)} anyRunning={running.size > 0}
+        kernelReady={kernelStatus === 'ready'}
+        onUpdate={(fields) => {
+          if (typeof fields === 'string') updateCell(cell.id, fields);
+          else onSetNbDirty((n) => ({ cells: n.cells.map((c) => c.id === cell.id ? { ...c, ...fields } : c) }));
+        }}
+        onRun={() => onRunFlociCell(nb.id, cell)} onStopDocker={onStopDockerCell}
+        onPollDockerStatus={onPollDockerStatus} onFetchDockerLogs={onFetchDockerLogs}
+        onInsertCodeCell={(snippet) => {
+          const newCell = makeCell('code', snippet);
+          onSetNbDirty((n) => {
+            const idx = n.cells.findIndex((c) => c.id === cell.id);
+            const cells = [...n.cells];
+            cells.splice(idx + 1, 0, newCell);
+            return { cells };
+          });
+        }}
+        onDelete={() => deleteCell(cell.id)}
+        onCopy={() => copyCell(cell.id)}
+        onMoveUp={() => moveCell(cell.id, -1)} onMoveDown={() => moveCell(cell.id, 1)}
+        onNameChange={(name) => updateCellProp(cell.id, 'name', name)}
+        onColorChange={(color) => updateCellProp(cell.id, 'color', color)}
+        onToggleBookmark={() => toggleBookmark(cell.id)} />
+    );
     if (cell.type === 'check') return (
       <CheckCell cell={cell} cellIndex={index} checkResult={nb.checkResults?.[cell.id] ?? null}
         notebookId={nb.id} isRunning={running.has(cell.id)} anyRunning={running.size > 0}
@@ -511,6 +540,7 @@ export function NotebookView({
             onAddHttp={() => addCell('http', -1)}
             onAddShell={() => addCell('shell', -1)}
             onAddDocker={() => addCell('docker', -1)}
+            onAddFloci={() => addCell('floci', -1)}
             onAddCheck={() => addCell('check', -1)}
             onAddDecision={() => addCell('decision', -1)}
             onPaste={clipCell ? () => pasteCell(-1) : undefined}
@@ -569,6 +599,7 @@ export function NotebookView({
                 onAddHttp={() => addCell('http', index)}
                 onAddShell={() => addCell('shell', index)}
                 onAddDocker={() => addCell('docker', index)}
+                onAddFloci={() => addCell('floci', index)}
                 onAddCheck={() => addCell('check', index)}
                 onAddDecision={() => addCell('decision', index)}
                 onPaste={clipCell ? () => pasteCell(index) : undefined}

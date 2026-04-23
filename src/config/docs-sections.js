@@ -1215,6 +1215,29 @@ export const DOCS_SECTIONS = [
     ],
   },
   {
+    id: 'floci-cell', title: 'Floci Cell',
+    content: [
+      { type: 'p', text: 'The Floci cell runs a floci local AWS emulator container (floci/floci) and provides a visual form for configuring which AWS services to enable. Floci is a lightweight, open-source LocalStack alternative that emulates 35+ AWS services on a single endpoint.' },
+      { type: 'h3', text: 'Configuration' },
+      { type: 'ul', items: [
+        'Endpoint: the local URL where floci will listen (default http://localhost:4566)',
+        'Region: the AWS region to emulate (e.g. us-east-1)',
+        'Storage: memory (ephemeral), persistent (data survives restarts), or hybrid',
+        'Services: toggle individual AWS services (S3, DynamoDB, SQS, Lambda, SNS, RDS, ElastiCache, IAM, KMS, STS, CloudWatch, ECS, and 12 more under "More services")',
+        'Init Script: shell commands that run after the container starts (e.g. creating S3 buckets or DynamoDB tables via the AWS CLI)',
+        'Run on startup: automatically start the floci container when the kernel is ready',
+      ]},
+      { type: 'h3', text: 'SDK Snippet' },
+      { type: 'p', text: 'Click the SDK button to generate C# code with NuGet package references and pre-configured AWS SDK clients for all enabled services. You can copy the snippet or insert it directly as a new code cell below the Floci cell.' },
+      { type: 'h3', text: 'Requirements' },
+      { type: 'ul', items: [
+        'Docker must be installed and running',
+        'The floci/floci:latest Docker image is pulled automatically on first run',
+        'Container-based services (Lambda, RDS, ElastiCache, ECS, EKS, MSK, OpenSearch) require Docker socket access, which is configured automatically',
+      ]},
+    ],
+  },
+  {
     id: 'export-standalone-app', title: 'Export as App (Beta)',
     content: [
       { type: 'p', text: 'Export the current notebook as a standalone Electron app that opens directly to that notebook with full fidelity. The exported app is a complete copy of SharpNote with your notebook and settings embedded.' },

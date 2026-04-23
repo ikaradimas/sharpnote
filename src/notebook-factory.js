@@ -27,6 +27,7 @@ export function makeCell(type = 'code', content = '') {
     ...(type === 'check'    ? { label: '' } : {}),
     ...(type === 'decision' ? { label: '', mode: 'bool', truePath: [], falsePath: [], switchPaths: {} } : {}),
     ...(type === 'docker'   ? { image: '', containerName: '', ports: '', env: '', volume: '', command: '', runOnStartup: false, runOnShutdown: false, presenting: false } : {}),
+    ...(type === 'floci'    ? { endpoint: 'http://localhost:4566', region: 'us-east-1', storageMode: 'memory', services: ['s3', 'dynamodb', 'sqs'], initScript: '', runOnStartup: false, presenting: false } : {}),
   };
 }
 
