@@ -8972,9 +8972,22 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 .sql-schema-table { padding: 2px 8px; cursor: pointer; }
 .sql-schema-table:hover { background: var(--bg-hover); }
 .sql-schema-table-name { font-weight: 500; color: var(--accent-secondary); }
-.sql-schema-col { padding: 1px 8px 1px 20px; cursor: pointer; color: var(--text-secondary); }
-.sql-schema-col:hover { background: var(--bg-hover); color: var(--text-primary); }
-.sql-schema-col-type { color: var(--text-dim); font-size: 10px; margin-left: 6px; }
+.sql-schema-col-table {
+  width: calc(100% - 12px); margin: 2px 6px 4px; border-collapse: collapse; font-size: 10px;
+}
+.sql-schema-col-table th {
+  text-align: left; padding: 2px 6px; color: var(--text-dim); font-weight: 500;
+  border-bottom: 1px solid var(--border-secondary);
+}
+.sql-schema-col-table td {
+  padding: 1px 6px; border-bottom: 1px solid var(--border-faint, #ffffff08);
+}
+.sql-schema-col-table tr { cursor: pointer; }
+.sql-schema-col-table tr:hover { background: var(--bg-hover); }
+.sql-schema-col-name { color: var(--text-secondary); }
+.sql-schema-col-type { color: var(--text-dim); }
+.sql-schema-col-null { color: var(--text-dim); text-align: center; }
+.sql-schema-col-key { color: var(--accent-primary); font-weight: 600; font-size: 9px; }
 .sql-schema-toggle {
   background: none; border: none; color: var(--text-dim);
   cursor: pointer; font-size: 11px; padding: 2px 6px;

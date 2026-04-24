@@ -145,17 +145,28 @@ export function SqlCell({
                   <span>{isOpen ? '▾' : '▸'}</span>{' '}
                   <span className="sql-schema-table-name">{tableKey}</span>
                 </div>
-                {isOpen && cols.map((col) => (
-                  <div
-                    key={col.name}
-                    className="sql-schema-col"
-                    onClick={() => copyColumnName(col.name)}
-                    title={`Click to copy "${col.name}"`}
-                  >
-                    {col.name}
-                    {col.type && <span className="sql-schema-col-type">{col.type}</span>}
-                  </div>
-                ))}
+                {isOpen && cols.length > 0 && (
+                  <table className="sql-schema-col-table">
+                    <thead>
+                      <tr>
+                        <th>Column</th>
+                        <th>Type</th>
+                        <th>Null</th>
+                        <th>Key</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {cols.map((col) => (
+                        <tr key={col.name} onClick={() => copyColumnName(col.name)} title={`Click to copy "${col.name}"`}>
+                          <td className="sql-schema-col-name">{col.name}</td>
+                          <td className="sql-schema-col-type">{col.dbType || col.type || ''}</td>
+                          <td className="sql-schema-col-null">{col.isNullable ? '✓' : ''}</td>
+                          <td className="sql-schema-col-key">{col.isPrimaryKey ? 'PK' : col.isIdentity ? 'ID' : ''}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
               </div>
             );
           })}
