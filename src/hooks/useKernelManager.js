@@ -780,7 +780,7 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
         type: 'execute_docker',
         id: cell.id,
         image: 'floci/floci:latest',
-        containerName: `floci-${cell.id}`,
+        containerName: cell.containerName || `floci-${port}`,
         ports: portsStr,
         env: envStr,
         volume: finalVolume,
