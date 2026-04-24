@@ -2708,7 +2708,7 @@ var creds = new BasicAWSCredentials("test", "test");
 var endpoint = "http://localhost:4566";
 
 var sqs  = new AmazonSQSClient(creds, new AmazonSQSConfig  { ServiceURL = endpoint });
-var sns  = new AmazonSNSClient(creds, new AmazonSimpleNotificationServiceConfig { ServiceURL = endpoint });
+var sns  = new AmazonSimpleNotificationServiceClient(creds, new AmazonSimpleNotificationServiceConfig { ServiceURL = endpoint });
 var ddb  = new AmazonDynamoDBClient(creds, new AmazonDynamoDBConfig { ServiceURL = endpoint });
 var s3   = new AmazonS3Client(creds, new AmazonS3Config { ServiceURL = endpoint, ForcePathStyle = true });
 var http = new HttpClient();
