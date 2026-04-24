@@ -2430,7 +2430,7 @@ foreach (var (name, url) in endpoints) {
     var sw = System.Diagnostics.Stopwatch.StartNew();
     bool ok = false;
     try {
-        using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
+        var client = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
         var resp = await client.GetAsync(url);
         ok = resp.IsSuccessStatusCode;
     } catch { }
@@ -3000,8 +3000,10 @@ for (int i = 1; i <= 8; i++) {
     var result = await breaker.Execute(
         action: async () => {
             if (shouldFail) throw new Exception("Connection refused");
-            var resp = await http.GetStringAsync($"http://localhost:{paymentPort}/api/payments/charge");
-            return "OK: " + resp.Substring(0, Math.Min(40, resp.Length));
+            var resp = await http.PostAsync($"http://localhost:{paymentPort}/api/payments/charge",
+                new StringContent("{}", System.Text.Encoding.UTF8, "application/json"));
+            var body = await resp.Content.ReadAsStringAsync();
+            return "OK: " + body.Substring(0, Math.Min(40, body.Length));
         },
         fallback: async () => { await Task.CompletedTask; return "FALLBACK: cached/default response"; }
     );
