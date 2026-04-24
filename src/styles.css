@@ -6918,9 +6918,12 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
   font-family: var(--font-ui); font-size: 10px; font-weight: 600;
   padding: 1px 8px; border-radius: 10px; letter-spacing: 0.04em;
 }
-.docker-badge-running { background: #0db7ed20; color: #0db7ed; }
-.docker-badge-stopped { background: var(--bg-deepest); color: var(--text-dim); }
-.docker-badge-error   { background: rgba(224,96,112,0.15); color: var(--status-error); }
+.docker-badge-running  { background: #0db7ed20; color: #0db7ed; }
+.docker-badge-starting { background: #e0a04020; color: #e0a040; animation: pulse-badge 1.2s ease-in-out infinite; }
+.docker-badge-stopping { background: #e0a04020; color: #e0a040; animation: pulse-badge 1.2s ease-in-out infinite; }
+.docker-badge-stopped  { background: var(--bg-deepest); color: var(--text-dim); }
+.docker-badge-error    { background: rgba(224,96,112,0.15); color: var(--status-error); }
+@keyframes pulse-badge { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
 /* ── Docker Presentation Mode ───────────────────────────────────────── */
 .docker-presenting {

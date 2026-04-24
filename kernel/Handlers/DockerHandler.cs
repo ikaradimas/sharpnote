@@ -57,6 +57,35 @@ partial class Program
 
         try
         {
+            // If a container with this name already exists and is running, reuse it
+            if (!string.IsNullOrEmpty(containerName))
+            {
+                var docker = new DockerHelper(realStdout);
+                if (docker.IsRunning(containerName))
+                {
+                    var existingFullId = "";
+                    try { existingFullId = DockerHelper.RunDocker($"inspect -f {{{{.Id}}}} {containerName}").Trim(); }
+                    catch { /* ignore */ }
+                    var reusedId = TrackContainer(existingFullId);
+                    lock (realStdout)
+                    {
+                        realStdout.WriteLine(JsonSerializer.Serialize(new
+                        {
+                            type = "docker_started",
+                            id = cellId,
+                            containerId = reusedId,
+                            containerImage = image,
+                            containerName,
+                        }));
+                        realStdout.WriteLine(JsonSerializer.Serialize(new
+                            { type = "complete", id = cellId, success = true }));
+                    }
+                    return;
+                }
+                // Container exists but is stopped — remove it so we can recreate
+                try { docker.Remove(containerName); } catch { /* ignore */ }
+            }
+
             var fullId = await Task.Run(() =>
             {
                 // Parse ports: "8080:80, 3000:3000" → Dictionary

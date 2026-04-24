@@ -726,6 +726,9 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
 
     return new Promise((resolve) => {
       prepareCellRun(setNb, pendingResolversRef, notebookId, cell.id, resolve);
+      setNb(notebookId, (n) => ({
+        cells: n.cells.map((c) => c.id === cell.id ? { ...c, containerState: 'starting' } : c),
+      }));
       window.electronAPI.sendToKernel(notebookId, {
         type: 'execute_docker',
         id: cell.id,
@@ -770,6 +773,9 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
 
     return new Promise((resolve) => {
       prepareCellRun(setNb, pendingResolversRef, notebookId, cell.id, resolve);
+      setNb(notebookId, (n) => ({
+        cells: n.cells.map((c) => c.id === cell.id ? { ...c, containerState: 'starting' } : c),
+      }));
       window.electronAPI.sendToKernel(notebookId, {
         type: 'execute_docker',
         id: cell.id,
@@ -785,12 +791,15 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
 
   const stopDockerCell = useCallback((notebookId, cellId, containerId) => {
     if (!window.electronAPI) return;
+    setNb(notebookId, (n) => ({
+      cells: n.cells.map((c) => c.id === cellId ? { ...c, containerState: 'stopping' } : c),
+    }));
     window.electronAPI.sendToKernel(notebookId, {
       type: 'stop_docker',
       id: cellId,
       containerId,
     });
-  }, []);
+  }, [setNb]);
 
   const pollDockerStatus = useCallback((notebookId, cellId, containerId) => {
     if (!window.electronAPI) return;

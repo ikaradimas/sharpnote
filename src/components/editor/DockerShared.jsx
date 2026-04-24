@@ -2,11 +2,15 @@ import React, { useEffect, useState, useRef } from 'react';
 import { ScrollText, Terminal, X } from 'lucide-react';
 
 export function StatusBadge({ state }) {
-  const cls = state === 'running' ? 'docker-badge-running'
-            : state === 'error'   ? 'docker-badge-error'
+  const cls = state === 'running'  ? 'docker-badge-running'
+            : state === 'starting' ? 'docker-badge-starting'
+            : state === 'stopping' ? 'docker-badge-stopping'
+            : state === 'error'    ? 'docker-badge-error'
             : 'docker-badge-stopped';
-  const label = state === 'running' ? 'Running'
-              : state === 'error'   ? 'Error'
+  const label = state === 'running'  ? 'Running'
+              : state === 'starting' ? 'Starting…'
+              : state === 'stopping' ? 'Stopping…'
+              : state === 'error'    ? 'Error'
               : 'Stopped';
   return <span className={`docker-status-badge ${cls}`}>{label}</span>;
 }
