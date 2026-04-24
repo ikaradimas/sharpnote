@@ -2695,6 +2695,7 @@ Display.StatCard("Notification Service", $":{notifPort}", color: "#c084d0", icon
 #r "nuget: AWSSDK.SimpleNotificationService"
 #r "nuget: AWSSDK.DynamoDBv2"
 #r "nuget: AWSSDK.S3"
+#r "nuget: StackExchange.Redis"
 using Amazon.Runtime;
 using Amazon.SQS;
 using Amazon.SQS.Model;
@@ -3037,8 +3038,6 @@ Display.Html($@"<div style='background:#111118;border:1px solid #333;border-left
   // ── Pattern 5: Cache-Aside ─────────────────────────────────────────────────
   const cacheAside = { ...cs(`// Pattern 5 — Cache-Aside: Lazy-load from DynamoDB, cache in Redis
 // Read-through: check Redis first → miss → fetch from DynamoDB → cache → return
-
-#r "nuget: StackExchange.Redis"
 using StackExchange.Redis;
 
 var redis = await ConnectionMultiplexer.ConnectAsync("localhost:6379");
