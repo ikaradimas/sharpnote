@@ -4,12 +4,20 @@
 // gears: 1 = minor fix/tweak, 2 = notable feature, 3 = major feature/architecture
 
 export const CHANGELOG = [
-  { version: '2.4.0', date: '2026-04-23', title: 'Floci Cell — Local AWS Emulation', gears: 2, items: [
-    'Floci cell type: visual form-based cell for running floci (local AWS emulator) containers with per-service toggles, region/storage configuration, init scripts, and lifecycle management',
+  { version: '2.5.0', date: '2026-04-24', title: 'Floci Cell, Cloud Architecture Patterns, Docker Lifecycle', gears: 3, items: [
+    'Floci cell type: visual form-based cell for running floci (local AWS emulator) containers with per-service toggles for 24 AWS services, region/storage configuration, init scripts, and lifecycle management',
     'SDK Snippet generator: one-click C# code generation with NuGet references and pre-configured AWS SDK clients for all enabled services, with Insert as Code Cell option',
-    'Service grid: 24 AWS services across primary (S3, DynamoDB, SQS, Lambda, SNS, RDS, ElastiCache, IAM, KMS, STS, CloudWatch, ECS) and extended (API Gateway, CloudFormation, EventBridge, Kinesis, Secrets Manager, SSM, Step Functions, Cognito, OpenSearch, MSK, EKS, ECR) categories',
-    'Smart port mapping: automatic port range allocation for container-based services (ElastiCache, RDS, Lambda, OpenSearch) and Docker socket forwarding',
-    'Orchestration support: Floci cells participate in cell dependency graphs and can be wired in pipelines',
+    'Cloud Architecture Patterns template: 6 patterns (Event Fan-Out, CQRS, Saga, Circuit Breaker, Cache-Aside, API Gateway Aggregation) running locally via Floci, Redis, and Mock APIs',
+    'Service Mesh template updated with Floci cell replacing Redis, plus AWS SDK integration section',
+    'Docker/Floci Starting… and Stopping… intermediate states with pulsing amber badge',
+    'Already-running container detection: kernel reuses existing containers instead of failing with name conflicts',
+    'Run All now executes all cell types (SQL, HTTP, Shell, Docker, Floci, Check, Decision) — previously only ran code cells',
+    'Run All button disabled with Running… label and pulse animation while executing',
+    'Run From / Run To now dispatch all cell types consistently with Run All',
+    'Shared Docker sub-components extracted (StatusBadge, StatsRow, LogsPopup, ExecSection) — used by both Docker and Floci cells',
+    'Dispatch logic deduplicated: single dispatchCellRun exported from useKernelManager, consumed by orchestrator',
+    'Fix: format-on-save no longer eats characters from cell start (Roslyn formatter scoped to user code span only)',
+    'Fix: CodeMirror empty mark decoration crash when diagnostic spans to end of document',
   ]},
   { version: '2.3.0', date: '2026-04-21', title: 'Export as App, Kafka Enhancements, Notebook Backgrounds, Orchestration Redesign', gears: 3, items: [
     'Export as App (Beta): export any notebook as a standalone macOS/Windows application that opens directly in viewer mode with full fidelity — same renderer, kernel, and interactive experience',
