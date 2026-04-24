@@ -2817,7 +2817,7 @@ Display.Html($@"<div style='background:#111118;border:1px solid #333;border-left
   <div style='color:#569cd6;font-weight:600;margin-bottom:8px'>📖 Read Side (Query)</div>
   <div style='font-size:12px;color:#bbb'>User: <span style='color:#ff9900'>user-42</span></div>
   <div style='font-size:12px;color:#bbb'>Latest Order: <span style='color:#4ec9b0'>{item["latestOrderId"].S}</span></div>
-  <div style='font-size:12px;color:#bbb'>Total Spent: <span style='color:#4ec9b0'>${item["totalSpent"].N}</span></div>
+  <div style='font-size:12px;color:#bbb'>Total Spent: <span style='color:#4ec9b0'>{"$"}{item["totalSpent"].N}</span></div>
   <div style='font-size:12px;color:#bbb'>Order Count: {item["orderCount"].N}</div>
   <div style='margin-top:8px;color:#888;font-size:11px'>The read model is denormalized — no joins needed at query time</div>
 </div>");`), columns: 2 };
