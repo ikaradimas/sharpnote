@@ -18,7 +18,7 @@ import { FindBar } from './FindBar.jsx';
 import { CircuitBoard } from './CircuitBoard.jsx';
 
 function NotebookBgOverlay({ file, opacity }) {
-  const src = `../assets/backgrounds/${file}`;
+  const src = `assets/backgrounds/${file}`;
   return (
     <div className="notebook-bg-overlay" style={{ opacity }}>
       <img src={src} className="notebook-bg-image" alt="" draggable={false} />

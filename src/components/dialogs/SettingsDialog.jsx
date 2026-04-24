@@ -194,7 +194,7 @@ function AppearanceSection({ theme, fontSize, onThemeChange, onFontSizeChange, p
             >
               <img
                 className="settings-bg-preview settings-bg-img"
-                src={`../assets/backgrounds/${bg.file}`}
+                src={`assets/backgrounds/${bg.file}`}
                 alt={bg.name}
                 draggable={false}
               />
