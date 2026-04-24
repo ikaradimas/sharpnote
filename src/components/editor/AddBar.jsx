@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Plus, Code, FileText, Database, Globe, Terminal, CheckCircle, GitBranch, Container, Clipboard, MoreHorizontal } from 'lucide-react';
+import { Plus, Code, FileText, Database, Globe, Terminal, CheckCircle, GitBranch, Container, Cloud, Clipboard, MoreHorizontal } from 'lucide-react';
 import { useOutsideClick } from '../../hooks/useOutsideClick.js';
 
 const CELL_TYPES = [
@@ -9,6 +9,7 @@ const CELL_TYPES = [
   { key: 'http',     icon: Globe,       label: 'HTTP',      prop: 'onAddHttp' },
   { key: 'shell',    icon: Terminal,    label: 'Shell',     prop: 'onAddShell' },
   { key: 'docker',   icon: Container,   label: 'Docker',    prop: 'onAddDocker' },
+  { key: 'floci',    icon: Cloud,       label: 'Floci',     prop: 'onAddFloci' },
   { key: 'check',    icon: CheckCircle, label: 'Check',     prop: 'onAddCheck' },
   { key: 'decision', icon: GitBranch,   label: 'Decision',  prop: 'onAddDecision' },
   { key: 'paste',    icon: Clipboard,   label: 'Paste',     prop: 'onPaste', noPlusIcon: true },

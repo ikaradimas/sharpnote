@@ -257,7 +257,7 @@ export function App() {
     }
   }, [setActiveId]);
 
-  const { runCell, runCellWithFormData, runSqlCell, runHttpCell, runShellCell, runDockerCell, stopDockerCell, pollDockerStatus, fetchDockerLogs, runCheckCell, runDecisionCell, runAll, runFrom, runTo, handleInterrupt, handleReset,
+  const { runCell, runCellWithFormData, runSqlCell, runHttpCell, runShellCell, runDockerCell, runFlociCell, dispatchCellRun, stopDockerCell, pollDockerStatus, fetchDockerLogs, runCheckCell, runDecisionCell, runAll, runFrom, runTo, handleInterrupt, handleReset,
           cancelPendingCells, debugResume, debugStep, toggleBreakpoint } =
     useKernelManager({
       setNb, notebooksRef, dbConnectionsRef, setVarInspectDialog,
@@ -1096,7 +1096,7 @@ export function App() {
   const depGraph = useCellDependencies(activeNb);
   const orchestrator = useCellOrchestrator({
     notebooksRef, nodes: depGraph.nodes, edges: depGraph.edges,
-    runCell, runSqlCell, runHttpCell, runShellCell, runDockerCell, runCheckCell, runDecisionCell,
+    dispatchCellRun,
   });
 
   // ── Per-notebook dock layout sync ──────────────────────────────────────────
@@ -1449,6 +1449,7 @@ export function App() {
                     onRunHttpCell={runHttpCell}
                     onRunShellCell={runShellCell}
                     onRunDockerCell={runDockerCell}
+                    onRunFlociCell={runFlociCell}
                     onStopDockerCell={stopDockerCell}
                     onPollDockerStatus={pollDockerStatus}
                     onFetchDockerLogs={fetchDockerLogs}

@@ -9,6 +9,7 @@ import { LayoutManager } from '../dock/LayoutManager.jsx';
 
 export function Toolbar({
   kernelStatus,
+  anyRunning,
   notebookPath,
   notebookTitle,
   onRename,
@@ -205,10 +206,10 @@ export function Toolbar({
         <>
           <button
             onClick={onRunAll}
-            disabled={kernelStatus !== 'ready'}
-            title={kernelStatus === 'ready' ? 'Run all code cells' : 'Waiting for kernel…'}
-            className="toolbar-run-all"
-          ><PlayCircle size={14} /> Run All</button>
+            disabled={kernelStatus !== 'ready' || anyRunning}
+            title={anyRunning ? 'Running…' : kernelStatus === 'ready' ? 'Run all cells' : 'Waiting for kernel…'}
+            className={`toolbar-run-all${anyRunning ? ' toolbar-run-all--active' : ''}`}
+          ><PlayCircle size={14} /> {anyRunning ? 'Running…' : 'Run All'}</button>
           <div className="toolbar-add-cell-wrap" ref={schedRef}>
             <button
               className={`toolbar-text-btn${notebookScheduleMs ? ' toolbar-autorun-btn--on' : ''}`}
@@ -280,11 +281,11 @@ export function Toolbar({
           {overflowOpen && (
             <div ref={overflowRef} className="toolbar-overflow-menu">
               <button
-                className="toolbar-overflow-item toolbar-run-all"
+                className={`toolbar-overflow-item toolbar-run-all${anyRunning ? ' toolbar-run-all--active' : ''}`}
                 onClick={() => { onRunAll(); closeOverflow(); }}
-                disabled={kernelStatus !== 'ready'}
-                title={kernelStatus === 'ready' ? 'Run all code cells' : 'Waiting for kernel…'}
-              ><PlayCircle size={14} /> Run All</button>
+                disabled={kernelStatus !== 'ready' || anyRunning}
+                title={anyRunning ? 'Running…' : kernelStatus === 'ready' ? 'Run all cells' : 'Waiting for kernel…'}
+              ><PlayCircle size={14} /> {anyRunning ? 'Running…' : 'Run All'}</button>
               <button className="toolbar-overflow-item" onClick={() => { onAddMarkdown(); closeOverflow(); }}><Plus size={12} /> Markdown</button>
               <button className="toolbar-overflow-item" onClick={() => { onAddCode();     closeOverflow(); }}><Plus size={12} /> Code</button>
               <button className="toolbar-overflow-item" onClick={() => { onAddSql();      closeOverflow(); }}><Plus size={12} /> SQL</button>

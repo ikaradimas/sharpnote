@@ -455,8 +455,9 @@ const inlineDiagsField = StateField.define({
           const to = d.endLine === d.line
             ? Math.min(line.from + (d.endCol - 1), line.to)
             : line.to;
-          const actualTo = Math.max(to, from + 1); // at least 1 char wide
-          decos.push((d.severity === 'error' ? errorUnderline : warningUnderline).range(from, Math.min(actualTo, doc.length)));
+          const actualTo = Math.min(Math.max(to, from + 1), doc.length);
+          if (actualTo <= from) continue; // skip empty ranges (CodeMirror rejects them)
+          decos.push((d.severity === 'error' ? errorUnderline : warningUnderline).range(from, actualTo));
         }
         return { decorations: Decoration.set(decos, true), diagnostics: diags };
       }

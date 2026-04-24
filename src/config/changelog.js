@@ -4,6 +4,13 @@
 // gears: 1 = minor fix/tweak, 2 = notable feature, 3 = major feature/architecture
 
 export const CHANGELOG = [
+  { version: '2.4.0', date: '2026-04-23', title: 'Floci Cell — Local AWS Emulation', gears: 2, items: [
+    'Floci cell type: visual form-based cell for running floci (local AWS emulator) containers with per-service toggles, region/storage configuration, init scripts, and lifecycle management',
+    'SDK Snippet generator: one-click C# code generation with NuGet references and pre-configured AWS SDK clients for all enabled services, with Insert as Code Cell option',
+    'Service grid: 24 AWS services across primary (S3, DynamoDB, SQS, Lambda, SNS, RDS, ElastiCache, IAM, KMS, STS, CloudWatch, ECS) and extended (API Gateway, CloudFormation, EventBridge, Kinesis, Secrets Manager, SSM, Step Functions, Cognito, OpenSearch, MSK, EKS, ECR) categories',
+    'Smart port mapping: automatic port range allocation for container-based services (ElastiCache, RDS, Lambda, OpenSearch) and Docker socket forwarding',
+    'Orchestration support: Floci cells participate in cell dependency graphs and can be wired in pipelines',
+  ]},
   { version: '2.3.0', date: '2026-04-21', title: 'Export as App, Kafka Enhancements, Notebook Backgrounds, Orchestration Redesign', gears: 3, items: [
     'Export as App (Beta): export any notebook as a standalone macOS/Windows application that opens directly in viewer mode with full fidelity — same renderer, kernel, and interactive experience',
     'Viewer mode: exported apps open in a locked-down mode — no file open/import, no tools menu, no panel toggles; only Run, Edit, View, and Help menus',

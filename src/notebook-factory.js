@@ -27,6 +27,7 @@ export function makeCell(type = 'code', content = '') {
     ...(type === 'check'    ? { label: '' } : {}),
     ...(type === 'decision' ? { label: '', mode: 'bool', truePath: [], falsePath: [], switchPaths: {} } : {}),
     ...(type === 'docker'   ? { image: '', containerName: '', ports: '', env: '', volume: '', command: '', runOnStartup: false, runOnShutdown: false, presenting: false } : {}),
+    ...(type === 'floci'    ? { endpoint: 'http://localhost:4566', region: 'us-east-1', storageMode: 'memory', services: ['s3', 'dynamodb', 'sqs'], initScript: '', runOnStartup: false, presenting: false } : {}),
   };
 }
 
@@ -43,6 +44,7 @@ const cs = (content, outputMode = 'auto') =>
   ({ ...makeCell('code', content), outputMode });
 const http = (content) => makeCell('http', content);
 const docker = (image, opts = {}) => ({ ...makeCell('docker', ''), image, ...opts });
+const floci = (opts = {}) => ({ ...makeCell('floci', ''), ...opts });
 
 // ── Template registry ────────────────────────────────────────────────────────
 
@@ -58,6 +60,7 @@ export const NOTEBOOK_TEMPLATES = [
   { key: 'raytracer',        label: 'Raytracer',               description: 'Build a raytracer with live preview using Display.Image' },
   { key: 'service-mesh',    label: 'Service Mesh',            description: 'Docker containers, mock APIs, health checks, traffic routing' },
   { key: 'infographic',     label: 'Infographic Dashboard',   description: 'Column layouts, stat cards, marquees, progress bars, CSS animations' },
+  { key: 'cloud-patterns',  label: 'Cloud Architecture Patterns', description: 'Event fan-out, CQRS, saga, circuit breaker, cache-aside, API gateway — all local via Floci' },
 ];
 
 function cellsForTemplate(key) {
@@ -73,6 +76,7 @@ function cellsForTemplate(key) {
     case 'raytracer':        return makeRaytracerCells();
     case 'service-mesh':    return makeServiceMeshCells();
     case 'infographic':     return makeInfographicCells();
+    case 'cloud-patterns':  return makeCloudPatternsCells();
     default:                 return [];
   }
 }
@@ -1482,7 +1486,7 @@ var port = await Mock.StartAsync(new {
 });
 
 // Call the mock from C#
-using var http = new HttpClient();
+var http = new HttpClient();
 var items = await http.GetStringAsync($"http://localhost:{port}/api/items");
 Display.Html($"<div style='color:#4ec9b0'>Mock on :{port}</div>");
 items.Display();`), columns: 2 },
@@ -2341,9 +2345,12 @@ function makeServiceMeshCells() {
     ports: '8080:80', runOnStartup: true, presenting: true,
   }), columns: 3 };
 
-  const redis = { ...docker('redis:7-alpine', {
-    containerName: 'mesh-cache', name: 'Cache (Redis)', color: 'red',
-    ports: '6379:6379', runOnStartup: true, presenting: true,
+  const awsEmulator = { ...floci({
+    name: 'AWS (Floci)', color: 'orange',
+    services: ['s3', 'sqs', 'dynamodb', 'secretsmanager'],
+    region: 'us-east-1', storageMode: 'memory',
+    initScript: 'aws s3 mb s3://mesh-assets --endpoint-url=http://localhost:4566\naws sqs create-queue --queue-name mesh-events --endpoint-url=http://localhost:4566',
+    runOnStartup: true, presenting: true,
   }), columns: 3 };
 
   const postgres = { ...docker('postgres:16-alpine', {
@@ -2409,6 +2416,7 @@ Display.StatCard("Product Service", $":{productPort}", color: "#c084d0", icon: "
   const healthCheck = { ...cs(`// Verify all services are reachable
 var endpoints = new[] {
     ("Gateway",  "http://localhost:8080"),
+    ("Floci AWS","http://localhost:4566/_localstack/health"),
     ("User API", $"http://localhost:{userPort}/api/users"),
     ("Orders",   $"http://localhost:{orderPort}/api/orders"),
     ("Products", $"http://localhost:{productPort}/api/products"),
@@ -2437,6 +2445,7 @@ Display.Html(sb.ToString());`, 'html'), columns: 2 };
   const healthNotes = { ...cs(`Display.Html(@"<div style='background:#111118;border:1px solid #333;border-radius:6px;padding:14px;font-size:12px;color:#aaa;line-height:1.7'>
 <div style='color:#569cd6;font-weight:600;margin-bottom:8px'>📋 Health Check Notes</div>
 <div>• The Gateway responds even without upstream config — nginx returns its default page</div>
+<div>• Floci exposes all enabled AWS services on port 4566 with a health endpoint</div>
 <div>• Mock services start on random ports above 9000 and are assigned automatically</div>
 <div>• Latency shown is round-trip from the kernel process, not end-user latency</div>
 <div>• If a service shows as Down, run its cell above to start it</div>
@@ -2445,7 +2454,7 @@ Display.Html(sb.ToString());`, 'html'), columns: 2 };
 
   // Cross-service call + sidebar
   const crossCall = { ...cs(`// Simulate Order Service assembling an order from multiple services
-using var http = new HttpClient();
+var http = new HttpClient();
 var user = await http.GetStringAsync($"http://localhost:{userPort}/api/users/2");
 var product1 = await http.GetStringAsync($"http://localhost:{productPort}/api/products/42");
 var product2 = await http.GetStringAsync($"http://localhost:{productPort}/api/products/17");
@@ -2480,12 +2489,12 @@ Order Service → assemble response
   return [
     md(`# Service Mesh Simulation
 
-A fully automated **microservice mesh** using Docker containers for infrastructure, \`Mock\` API for services, and the new column layout. **Run All** to spin up everything.`),
+A fully automated **microservice mesh** using Docker containers, **Floci** (local AWS emulator) for cloud services, and \`Mock\` API for microservices. **Run All** to spin up everything.`),
 
-    cs(`Display.Marquee("  🚀  SERVICE MESH DEMO  ●  Docker + Mock APIs + Column Layouts  ●  Run All to start  ●  ", speed: 25, color: "#569cd6", background: "#0a0a12");`),
+    cs(`Display.Marquee("  🚀  SERVICE MESH DEMO  ●  Docker + Floci AWS + Mock APIs  ●  Run All to start  ●  ", speed: 25, color: "#569cd6", background: "#0a0a12");`),
 
-    md('## Infrastructure — Docker Containers'),
-    gateway, redis, postgres,
+    md('## Infrastructure — Docker + Floci'),
+    gateway, awsEmulator, postgres,
 
     md('## Mock API Services'),
     userSvc, orderSvc, productSvc,
@@ -2495,6 +2504,49 @@ A fully automated **microservice mesh** using Docker containers for infrastructu
 
     md('## Cross-Service Communication'),
     crossCall, crossNotes,
+
+    md('## AWS Integration via Floci'),
+    { ...cs(`// Use the AWS SDK against the local Floci emulator
+#r "nuget: AWSSDK.S3"
+#r "nuget: AWSSDK.SQS"
+using Amazon.Runtime;
+using Amazon.S3;
+using Amazon.S3.Model;
+using Amazon.SQS;
+using Amazon.SQS.Model;
+
+var creds = new BasicAWSCredentials("test", "test");
+
+// S3: list buckets created by the init script
+var s3 = new AmazonS3Client(creds, new AmazonS3Config { ServiceURL = "http://localhost:4566", ForcePathStyle = true });
+var buckets = await s3.ListBucketsAsync();
+
+// SQS: send and receive a message
+var sqs = new AmazonSQSClient(creds, new AmazonSQSConfig { ServiceURL = "http://localhost:4566" });
+var queues = await sqs.ListQueuesAsync(new ListQueuesRequest { QueueNamePrefix = "mesh-" });
+if (queues.QueueUrls.Count > 0) {
+    await sqs.SendMessageAsync(queues.QueueUrls[0], "{\\"event\\":\\"order.created\\",\\"orderId\\":1001}");
+    var msgs = await sqs.ReceiveMessageAsync(new ReceiveMessageRequest { QueueUrl = queues.QueueUrls[0], MaxNumberOfMessages = 1 });
+    Display.Html($@"<div style='display:grid;grid-template-columns:1fr 1fr;gap:10px'>
+  <div style='background:#1a1a22;border:1px solid #333;border-left:3px solid #ff9900;border-radius:6px;padding:12px'>
+    <div style='color:#ff9900;font-weight:600;margin-bottom:6px'>S3 Buckets</div>
+    {string.Join("", buckets.Buckets.Select(b => $"<div style='font-size:12px;color:#bbb'>📦 {b.BucketName}</div>"))}
+  </div>
+  <div style='background:#1a1a22;border:1px solid #333;border-left:3px solid #ff9900;border-radius:6px;padding:12px'>
+    <div style='color:#ff9900;font-weight:600;margin-bottom:6px'>SQS Message Received</div>
+    <pre style='font-size:11px;color:#bbb;margin:0'>{msgs.Messages.FirstOrDefault()?.Body ?? "(empty)"}</pre>
+  </div>
+</div>");
+}`, 'html'), columns: 2 },
+    { ...cs(`Display.Html(@"<div style='background:#111118;border:1px solid #333;border-radius:6px;padding:14px;font-size:12px;color:#aaa;line-height:1.7'>
+<div style='color:#ff9900;font-weight:600;margin-bottom:8px'>☁️ AWS via Floci</div>
+<div>The Floci cell above provides a local AWS emulator with S3, SQS, DynamoDB, and Secrets Manager.</div>
+<div style='margin-top:6px'>This cell demonstrates:</div>
+<div>• Listing S3 buckets created by the init script</div>
+<div>• Sending and receiving SQS messages</div>
+<div>• All traffic stays local — no AWS account needed</div>
+<div style='margin-top:8px;color:#4ec9b0'>💡 <strong>Tip:</strong> Click <strong>SDK</strong> on the Floci cell to generate ready-to-use C# client code for any enabled service</div>
+</div>");`, 'html'), columns: 2 },
 
     md('## Service Dashboard'),
     cs(`// Render live dashboard from running mocks
@@ -2508,14 +2560,15 @@ foreach (var svc in mocks) {
 </div>");
 }
 
-// Add Docker containers
-foreach (var c in new[] { ("API Gateway", "8080", "#569cd6"), ("Redis Cache", "6379", "#e06070"), ("Postgres DB", "5432", "#b48ead") }) {
-    var running = Docker.IsRunning($"mesh-{(c.Item1 == "API Gateway" ? "gateway" : c.Item1 == "Redis Cache" ? "cache" : "db")}");
+// Add Docker + Floci infrastructure
+foreach (var c in new[] { ("API Gateway", "8080", "#569cd6", "mesh-gateway"), ("Floci AWS", "4566", "#ff9900", "floci-"), ("Postgres DB", "5432", "#b48ead", "mesh-db") }) {
+    var running = c.Item4.EndsWith("-") ? Docker.List().Any(x => x.Contains(c.Item4)) : Docker.IsRunning(c.Item4);
     var status = running ? "Running" : "Stopped";
     var statusColor = running ? "#4ec9b0" : "#e06070";
+    var kind = c.Item4.StartsWith("floci") ? "Floci" : "Docker";
     html.AppendLine($@"<div style='background:#1a1a22;border:1px solid #333;border-left:3px solid {c.Item3};border-radius:6px;padding:12px'>
   <div style='font-weight:600;color:{c.Item3};margin-bottom:4px'>{c.Item1}</div>
-  <div style='font-size:11px;color:#888'>Docker · :{c.Item2} · <span style=""color:{statusColor}"">{status}</span></div>
+  <div style='font-size:11px;color:#888'>{kind} · :{c.Item2} · <span style=""color:{statusColor}"">{status}</span></div>
 </div>");
 }
 html.AppendLine("</div>");
@@ -2525,8 +2578,9 @@ Display.Html(html.ToString());`, 'html'),
     cs(`// Stop all mock servers and Docker containers in one call
 await Mock.StopAllAsync();
 Docker.StopAndRemove("mesh-gateway");
-Docker.StopAndRemove("mesh-cache");
 Docker.StopAndRemove("mesh-db");
+// Floci container is stopped by its own cell — or stop all tracked containers:
+Docker.StopAllTracked();
 Display.Html("<div style='color:#4ec9b0;font-weight:600'>✓ All services stopped and cleaned up.</div>");`),
 
     md(`---
@@ -2547,6 +2601,603 @@ Display.Html("<div style='color:#4ec9b0;font-weight:600'>✓ All services stoppe
 | \`Docker.List()\` | List all containers |
 
 > **Tip:** Use **File → Export as Docker Compose…** to export infrastructure as a standalone \`docker-compose.yml\`.`),
+  ];
+}
+
+// Template 12 — Cloud Architecture Patterns
+
+function makeCloudPatternsCells() {
+  // ── Infrastructure ─────────────────────────────────────────────────────────
+  const cloud = { ...floci({
+    name: 'Cloud Services', color: 'orange',
+    services: ['s3', 'sqs', 'sns', 'dynamodb', 'secretsmanager', 'lambda'],
+    region: 'us-east-1', storageMode: 'memory',
+    initScript: [
+      '# S3 buckets',
+      'aws s3 mb s3://orders-events --endpoint-url=http://localhost:4566',
+      'aws s3 mb s3://user-avatars --endpoint-url=http://localhost:4566',
+      '# SQS queues',
+      'aws sqs create-queue --queue-name order-commands --endpoint-url=http://localhost:4566',
+      'aws sqs create-queue --queue-name order-events --endpoint-url=http://localhost:4566',
+      'aws sqs create-queue --queue-name notification-queue --endpoint-url=http://localhost:4566',
+      'aws sqs create-queue --queue-name analytics-queue --endpoint-url=http://localhost:4566',
+      '# SNS topic for fan-out',
+      'aws sns create-topic --name order-completed --endpoint-url=http://localhost:4566',
+      '# DynamoDB tables',
+      'aws dynamodb create-table --table-name Orders --attribute-definitions AttributeName=orderId,AttributeType=S --key-schema AttributeName=orderId,KeyType=HASH --billing-mode PAY_PER_REQUEST --endpoint-url=http://localhost:4566',
+      'aws dynamodb create-table --table-name OrderReadModel --attribute-definitions AttributeName=userId,AttributeType=S --key-schema AttributeName=userId,KeyType=HASH --billing-mode PAY_PER_REQUEST --endpoint-url=http://localhost:4566',
+      'aws dynamodb create-table --table-name Inventory --attribute-definitions AttributeName=productId,AttributeType=S --key-schema AttributeName=productId,KeyType=HASH --billing-mode PAY_PER_REQUEST --endpoint-url=http://localhost:4566',
+      '# Seed inventory',
+      'aws dynamodb put-item --table-name Inventory --item \'{"productId":{"S":"WIDGET-01"},"name":{"S":"Wireless Keyboard"},"stock":{"N":"150"},"price":{"N":"79.99"}}\' --endpoint-url=http://localhost:4566',
+      'aws dynamodb put-item --table-name Inventory --item \'{"productId":{"S":"WIDGET-02"},"name":{"S":"USB-C Hub"},"stock":{"N":"89"},"price":{"N":"34.50"}}\' --endpoint-url=http://localhost:4566',
+      'aws dynamodb put-item --table-name Inventory --item \'{"productId":{"S":"WIDGET-03"},"name":{"S":"Desk Lamp"},"stock":{"N":"0"},"price":{"N":"45.00"}}\' --endpoint-url=http://localhost:4566',
+    ].join('\n'),
+    runOnStartup: true, presenting: true,
+  }), columns: 2 };
+
+  const redis = { ...docker('redis:7-alpine', {
+    containerName: 'pattern-cache', name: 'Cache (Redis)', color: 'red',
+    ports: '6379:6379', runOnStartup: true, presenting: true,
+  }), columns: 2 };
+
+  // ── Mock backend services ──────────────────────────────────────────────────
+  const paymentSvc = { ...cs(`// Payment Service — Mock
+var paymentPort = await Mock.StartAsync(new {
+    id = "payment-svc",
+    title = "Payment Service",
+    controllers = new[] { new {
+        basePath = "/api/payments",
+        endpoints = new object[] {
+            new { method = "POST", path = "/charge",  summary = "Charge card",
+                  mockResponse = new { status = 200, body = @"{""transactionId"":""txn-7891"",""status"":""approved"",""amount"":114.49}" } },
+            new { method = "POST", path = "/refund",  summary = "Refund",
+                  mockResponse = new { status = 200, body = @"{""transactionId"":""txn-7891"",""status"":""refunded""}" } },
+        }
+    } }
+});
+Display.StatCard("Payment Service", $":{paymentPort}", color: "#4ec9b0", icon: "💳");`), columns: 3 };
+
+  const shippingSvc = { ...cs(`// Shipping Service — Mock
+var shippingPort = await Mock.StartAsync(new {
+    id = "shipping-svc",
+    title = "Shipping Service",
+    controllers = new[] { new {
+        basePath = "/api/shipping",
+        endpoints = new object[] {
+            new { method = "POST", path = "/reserve",  summary = "Reserve shipping slot",
+                  mockResponse = new { status = 200, body = @"{""trackingId"":""SHIP-4421"",""status"":""reserved"",""eta"":""2026-04-28""}" } },
+            new { method = "POST", path = "/cancel",   summary = "Cancel reservation",
+                  mockResponse = new { status = 200, body = @"{""trackingId"":""SHIP-4421"",""status"":""cancelled""}" } },
+        }
+    } }
+});
+Display.StatCard("Shipping Service", $":{shippingPort}", color: "#e0a040", icon: "📦");`), columns: 3 };
+
+  const notifSvc = { ...cs(`// Notification Service — Mock
+var notifPort = await Mock.StartAsync(new {
+    id = "notif-svc",
+    title = "Notification Service",
+    controllers = new[] { new {
+        basePath = "/api/notifications",
+        endpoints = new object[] {
+            new { method = "POST", path = "/email",  summary = "Send email",
+                  mockResponse = new { status = 200, body = @"{""messageId"":""msg-0012"",""status"":""sent""}" } },
+            new { method = "POST", path = "/sms",    summary = "Send SMS",
+                  mockResponse = new { status = 200, body = @"{""messageId"":""msg-0013"",""status"":""sent""}" } },
+        }
+    } }
+});
+Display.StatCard("Notification Service", $":{notifPort}", color: "#c084d0", icon: "🔔");`), columns: 3 };
+
+  // ── Shared SDK setup ───────────────────────────────────────────────────────
+  const sdkSetup = cs(`// Shared AWS SDK clients — run this cell first after infrastructure is up
+#r "nuget: AWSSDK.SQS"
+#r "nuget: AWSSDK.SimpleNotificationService"
+#r "nuget: AWSSDK.DynamoDBv2"
+#r "nuget: AWSSDK.S3"
+#r "nuget: StackExchange.Redis"
+using Amazon.Runtime;
+using Amazon.SQS;
+using Amazon.SQS.Model;
+using Amazon.SimpleNotificationService;
+using Amazon.SimpleNotificationService.Model;
+using Amazon.DynamoDBv2;
+using Amazon.DynamoDBv2.Model;
+using Amazon.S3;
+
+var creds = new BasicAWSCredentials("test", "test");
+var endpoint = "http://localhost:4566";
+
+var sqs  = new AmazonSQSClient(creds, new AmazonSQSConfig  { ServiceURL = endpoint });
+var sns  = new AmazonSimpleNotificationServiceClient(creds, new AmazonSimpleNotificationServiceConfig { ServiceURL = endpoint });
+var ddb  = new AmazonDynamoDBClient(creds, new AmazonDynamoDBConfig { ServiceURL = endpoint });
+var s3   = new AmazonS3Client(creds, new AmazonS3Config { ServiceURL = endpoint, ForcePathStyle = true });
+var http = new HttpClient();
+
+// Idempotent helpers — create-if-not-exists, safe to call repeatedly
+async Task<string> QueueUrl(string name) =>
+    (await sqs.CreateQueueAsync(new CreateQueueRequest { QueueName = name })).QueueUrl;
+
+async Task<string> EnsureTopicArn(string name) =>
+    (await sns.CreateTopicAsync(new CreateTopicRequest { Name = name })).TopicArn;
+
+async Task EnsureTable(string name, string keyName, string keyType = "S") {
+    try {
+        await ddb.CreateTableAsync(new CreateTableRequest {
+            TableName = name,
+            AttributeDefinitions = new() { new(keyName, keyType == "N" ? ScalarAttributeType.N : ScalarAttributeType.S) },
+            KeySchema = new() { new(keyName, KeyType.HASH) },
+            BillingMode = BillingMode.PAY_PER_REQUEST,
+        });
+    } catch (Amazon.DynamoDBv2.Model.ResourceInUseException) { /* already exists */ }
+}
+
+// Ensure all tables exist (idempotent — safe if init script already ran)
+await EnsureTable("Orders", "orderId");
+await EnsureTable("OrderReadModel", "userId");
+await EnsureTable("Inventory", "productId");
+
+// Seed inventory if empty
+var scan = await ddb.ScanAsync(new ScanRequest { TableName = "Inventory", Limit = 1 });
+if (scan.Count == 0) {
+    var items = new[] {
+        new Dictionary<string, AttributeValue> { ["productId"] = new() { S = "WIDGET-01" }, ["name"] = new() { S = "Wireless Keyboard" }, ["stock"] = new() { N = "150" }, ["price"] = new() { N = "79.99" } },
+        new Dictionary<string, AttributeValue> { ["productId"] = new() { S = "WIDGET-02" }, ["name"] = new() { S = "USB-C Hub" }, ["stock"] = new() { N = "89" }, ["price"] = new() { N = "34.50" } },
+        new Dictionary<string, AttributeValue> { ["productId"] = new() { S = "WIDGET-03" }, ["name"] = new() { S = "Desk Lamp" }, ["stock"] = new() { N = "0" }, ["price"] = new() { N = "45.00" } },
+    };
+    foreach (var item in items) await ddb.PutItemAsync("Inventory", item);
+}
+
+Display.Html("<div style='color:#4ec9b0;font-weight:600'>✓ AWS SDK clients ready — tables, queues, and topics ensured</div>");`);
+
+  // ── Pattern 1: Event-Driven Fan-Out (SNS → SQS) ───────────────────────────
+  const fanOutSetup = { ...cs(`// Pattern 1 — Event-Driven Fan-Out: SNS topic → multiple SQS queues
+// Subscribe notification and analytics queues to the "order-completed" topic
+var topicArn = await EnsureTopicArn("order-completed");
+var notifQueueUrl = await QueueUrl("notification-queue");
+var analyticsQueueUrl = await QueueUrl("analytics-queue");
+
+// Get queue ARNs for subscription
+var notifArn = (await sqs.GetQueueAttributesAsync(notifQueueUrl, new List<string>{"QueueArn"})).Attributes["QueueArn"];
+var analyticsArn = (await sqs.GetQueueAttributesAsync(analyticsQueueUrl, new List<string>{"QueueArn"})).Attributes["QueueArn"];
+
+await sns.SubscribeAsync(topicArn, "sqs", notifArn);
+await sns.SubscribeAsync(topicArn, "sqs", analyticsArn);
+
+var subs = await sns.ListSubscriptionsByTopicAsync(topicArn);
+Display.Html($@"<div style='background:#111118;border:1px solid #333;border-left:3px solid #ff9900;border-radius:6px;padding:14px'>
+  <div style='color:#ff9900;font-weight:600;margin-bottom:8px'>📡 Fan-Out Topology</div>
+  <div style='font-family:monospace;font-size:12px;color:#bbb;line-height:1.8'>
+    SNS: order-completed<br/>
+    {string.Join("<br/>", subs.Subscriptions.Select(s => $"  └→ {s.Protocol}: {s.Endpoint.Split(':').Last()}"))}
+  </div>
+  <div style='margin-top:8px;color:#888;font-size:11px'>Publishing to the topic delivers to ALL subscribers simultaneously</div>
+</div>");`), columns: 2 };
+
+  const fanOutPublish = { ...cs(`// Publish an event — it fans out to both notification and analytics queues
+var topicArn = await EnsureTopicArn("order-completed");
+
+var orderEvent = new { eventType = "OrderCompleted", orderId = "ORD-2001", userId = "user-42", total = 114.49, timestamp = DateTime.UtcNow };
+await sns.PublishAsync(topicArn, System.Text.Json.JsonSerializer.Serialize(orderEvent));
+
+// Small delay then read from both queues
+await Task.Delay(500);
+
+var notifMsgs = await sqs.ReceiveMessageAsync(new ReceiveMessageRequest { QueueUrl = await QueueUrl("notification-queue"), MaxNumberOfMessages = 5 });
+var analyticsMsgs = await sqs.ReceiveMessageAsync(new ReceiveMessageRequest { QueueUrl = await QueueUrl("analytics-queue"), MaxNumberOfMessages = 5 });
+
+Display.Html($@"<div style='display:grid;grid-template-columns:1fr 1fr;gap:10px'>
+  <div style='background:#1a1a22;border:1px solid #333;border-left:3px solid #c084d0;border-radius:6px;padding:12px'>
+    <div style='color:#c084d0;font-weight:600;margin-bottom:4px'>🔔 Notification Queue</div>
+    <div style='font-size:11px;color:#888'>{notifMsgs.Messages.Count} message(s) received</div>
+    <pre style='font-size:10px;color:#bbb;margin:6px 0 0 0;max-height:80px;overflow:auto'>{notifMsgs.Messages.FirstOrDefault()?.Body ?? "(empty)"}</pre>
+  </div>
+  <div style='background:#1a1a22;border:1px solid #333;border-left:3px solid #569cd6;border-radius:6px;padding:12px'>
+    <div style='color:#569cd6;font-weight:600;margin-bottom:4px'>📊 Analytics Queue</div>
+    <div style='font-size:11px;color:#888'>{analyticsMsgs.Messages.Count} message(s) received</div>
+    <pre style='font-size:10px;color:#bbb;margin:6px 0 0 0;max-height:80px;overflow:auto'>{analyticsMsgs.Messages.FirstOrDefault()?.Body ?? "(empty)"}</pre>
+  </div>
+</div>");`), columns: 2 };
+
+  // ── Pattern 2: CQRS ────────────────────────────────────────────────────────
+  const cqrsWrite = { ...cs(`// Pattern 2 — CQRS: Separate write (command) and read (query) models
+// WRITE SIDE: Create an order in the Orders table (command model)
+var orderId = "ORD-" + new Random().Next(3000, 9999);
+var order = new Dictionary<string, AttributeValue> {
+    ["orderId"]   = new() { S = orderId },
+    ["userId"]    = new() { S = "user-42" },
+    ["items"]     = new() { S = @"[{""productId"":""WIDGET-01"",""qty"":2},{""productId"":""WIDGET-02"",""qty"":1}]" },
+    ["total"]     = new() { N = "194.48" },
+    ["status"]    = new() { S = "confirmed" },
+    ["createdAt"] = new() { S = DateTime.UtcNow.ToString("o") },
+};
+await ddb.PutItemAsync("Orders", order);
+
+// PROJECT to read model: denormalized view optimized for "orders by user" queries
+var readItem = new Dictionary<string, AttributeValue> {
+    ["userId"]       = new() { S = "user-42" },
+    ["latestOrderId"]= new() { S = orderId },
+    ["totalSpent"]   = new() { N = "194.48" },
+    ["orderCount"]   = new() { N = "1" },
+    ["lastOrderAt"]  = new() { S = DateTime.UtcNow.ToString("o") },
+};
+await ddb.PutItemAsync("OrderReadModel", readItem);
+
+// Also publish domain event to SQS for downstream consumers
+await sqs.SendMessageAsync(await QueueUrl("order-events"),
+    System.Text.Json.JsonSerializer.Serialize(new { eventType = "OrderCreated", orderId, userId = "user-42", total = 194.48 }));
+
+Display.Html($@"<div style='background:#111118;border:1px solid #333;border-left:3px solid #4ec9b0;border-radius:6px;padding:14px'>
+  <div style='color:#4ec9b0;font-weight:600;margin-bottom:8px'>✍️ Write Side (Command)</div>
+  <div style='font-size:12px;color:#bbb'>Order <span style='color:#ff9900'>{orderId}</span> written to <code>Orders</code> table</div>
+  <div style='font-size:12px;color:#bbb'>Read model projected to <code>OrderReadModel</code> table</div>
+  <div style='font-size:12px;color:#bbb'>Domain event published to <code>order-events</code> queue</div>
+</div>");`), columns: 2 };
+
+  const cqrsRead = { ...cs(`// READ SIDE: Query the denormalized read model (fast, pre-joined)
+var readResult = await ddb.GetItemAsync("OrderReadModel", new Dictionary<string, AttributeValue> {
+    ["userId"] = new() { S = "user-42" }
+});
+
+var item = readResult.Item;
+Display.Html($@"<div style='background:#111118;border:1px solid #333;border-left:3px solid #569cd6;border-radius:6px;padding:14px'>
+  <div style='color:#569cd6;font-weight:600;margin-bottom:8px'>📖 Read Side (Query)</div>
+  <div style='font-size:12px;color:#bbb'>User: <span style='color:#ff9900'>user-42</span></div>
+  <div style='font-size:12px;color:#bbb'>Latest Order: <span style='color:#4ec9b0'>{item["latestOrderId"].S}</span></div>
+  <div style='font-size:12px;color:#bbb'>Total Spent: <span style='color:#4ec9b0'>{"$"}{item["totalSpent"].N}</span></div>
+  <div style='font-size:12px;color:#bbb'>Order Count: {item["orderCount"].N}</div>
+  <div style='margin-top:8px;color:#888;font-size:11px'>The read model is denormalized — no joins needed at query time</div>
+</div>");`), columns: 2 };
+
+  // ── Pattern 3: Saga (Orchestrated) ─────────────────────────────────────────
+  const sagaOrch = cs(`// Pattern 3 — Saga: Orchestrated multi-step transaction with compensation
+// An order saga: Reserve Inventory → Charge Payment → Reserve Shipping
+// If any step fails, compensate previous steps in reverse order
+
+var sagaId = "SAGA-" + new Random().Next(1000, 9999);
+var steps = new List<(string name, string status, string detail, string color)>();
+var failed = false;
+
+Display.Html($"<div style='color:#e0a040;font-weight:600;margin-bottom:8px'>⚙️ Saga {sagaId} — executing steps...</div>");
+
+// Step 1: Reserve inventory (DynamoDB conditional update)
+try {
+    var inv = await ddb.GetItemAsync("Inventory", new Dictionary<string, AttributeValue> {
+        ["productId"] = new() { S = "WIDGET-01" }
+    });
+    var stock = int.Parse(inv.Item["stock"].N);
+    if (stock < 2) throw new Exception("Insufficient stock");
+
+    await ddb.UpdateItemAsync(new UpdateItemRequest {
+        TableName = "Inventory", Key = new() { ["productId"] = new() { S = "WIDGET-01" } },
+        UpdateExpression = "SET stock = stock - :qty",
+        ExpressionAttributeValues = new() { [":qty"] = new() { N = "2" } },
+    });
+    steps.Add(("Reserve Inventory", "✓", $"WIDGET-01 × 2 (stock: {stock} → {stock - 2})", "#4ec9b0"));
+} catch (Exception ex) {
+    steps.Add(("Reserve Inventory", "✗", ex.Message, "#e06070"));
+    failed = true;
+}
+
+// Step 2: Charge payment (mock service)
+if (!failed) {
+    try {
+        var resp = await http.PostAsync($"http://localhost:{paymentPort}/api/payments/charge",
+            new StringContent(@"{""amount"":159.98,""card"":""**** 4242""}", System.Text.Encoding.UTF8, "application/json"));
+        var body = await resp.Content.ReadAsStringAsync();
+        steps.Add(("Charge Payment", "✓", $"$159.98 → txn-7891 approved", "#4ec9b0"));
+    } catch (Exception ex) {
+        steps.Add(("Charge Payment", "✗", ex.Message, "#e06070"));
+        failed = true;
+    }
+}
+
+// Step 3: Reserve shipping (mock service)
+if (!failed) {
+    try {
+        var resp = await http.PostAsync($"http://localhost:{shippingPort}/api/shipping/reserve",
+            new StringContent(@"{""orderId"":""ORD-2001"",""address"":""123 Main St""}", System.Text.Encoding.UTF8, "application/json"));
+        var body = await resp.Content.ReadAsStringAsync();
+        steps.Add(("Reserve Shipping", "✓", "SHIP-4421 reserved, ETA 2026-04-28", "#4ec9b0"));
+    } catch (Exception ex) {
+        steps.Add(("Reserve Shipping", "✗", ex.Message, "#e06070"));
+        failed = true;
+    }
+}
+
+// Compensation (if failed — demo: uncomment the throw above a step to trigger)
+if (failed) {
+    var compensated = new List<string>();
+    foreach (var s in steps.AsEnumerable().Reverse()) {
+        if (s.status == "✓") {
+            compensated.Add($"↩ Compensating: {s.name}");
+            if (s.name == "Reserve Inventory") {
+                await ddb.UpdateItemAsync(new UpdateItemRequest {
+                    TableName = "Inventory", Key = new() { ["productId"] = new() { S = "WIDGET-01" } },
+                    UpdateExpression = "SET stock = stock + :qty",
+                    ExpressionAttributeValues = new() { [":qty"] = new() { N = "2" } },
+                });
+            }
+            if (s.name == "Charge Payment") {
+                await http.PostAsync($"http://localhost:{paymentPort}/api/payments/refund",
+                    new StringContent("{}", System.Text.Encoding.UTF8, "application/json"));
+            }
+        }
+    }
+    steps.Add(("Compensation", "↩", string.Join(", ", compensated), "#e0a040"));
+}
+
+// Render saga timeline
+var timeline = string.Join("", steps.Select(s =>
+    $@"<div style='display:flex;gap:10px;padding:6px 0;border-bottom:1px solid #222'>
+      <span style='color:{s.color};font-weight:600;width:16px'>{s.status}</span>
+      <span style='color:#ddd;min-width:140px'>{s.name}</span>
+      <span style='color:#888;font-size:11px'>{s.detail}</span>
+    </div>"));
+
+Display.Html($@"<div style='background:#111118;border:1px solid #333;border-left:3px solid {(failed ? "#e06070" : "#4ec9b0")};border-radius:6px;padding:14px'>
+  <div style='color:{(failed ? "#e06070" : "#4ec9b0")};font-weight:600;margin-bottom:10px'>⚙️ Saga {sagaId} — {(failed ? "ROLLED BACK" : "COMMITTED")}</div>
+  {timeline}
+</div>");`, 'html');
+
+  // ── Pattern 4: Circuit Breaker ─────────────────────────────────────────────
+  const circuitBreaker = { ...cs(`// Pattern 4 — Circuit Breaker: Protect calls to unreliable services
+// States: Closed (allow) → Open (block) → Half-Open (probe)
+
+class CircuitBreaker {
+    public string State { get; private set; } = "Closed";
+    public int FailureCount { get; private set; }
+    public int SuccessCount { get; private set; }
+    private readonly int _threshold;
+    private readonly TimeSpan _timeout;
+    private DateTime _openedAt;
+    private List<(DateTime time, string state, string detail)> _log = new();
+
+    public CircuitBreaker(int threshold = 3, int timeoutMs = 2000) {
+        _threshold = threshold; _timeout = TimeSpan.FromMilliseconds(timeoutMs);
+    }
+
+    public async Task<string> Execute(Func<Task<string>> action, Func<Task<string>> fallback) {
+        if (State == "Open") {
+            if (DateTime.UtcNow - _openedAt > _timeout) {
+                State = "Half-Open";
+                _log.Add((DateTime.UtcNow, "Half-Open", "Timeout elapsed, probing..."));
+            } else {
+                _log.Add((DateTime.UtcNow, "Open", "Blocked — using fallback"));
+                return await fallback();
+            }
+        }
+        try {
+            var result = await action();
+            SuccessCount++;
+            if (State == "Half-Open") {
+                State = "Closed"; FailureCount = 0;
+                _log.Add((DateTime.UtcNow, "Closed", "Probe succeeded — circuit closed"));
+            } else {
+                _log.Add((DateTime.UtcNow, "Closed", $"Success #{SuccessCount}"));
+            }
+            return result;
+        } catch (Exception ex) {
+            FailureCount++;
+            _log.Add((DateTime.UtcNow, State, $"Failure #{FailureCount}: {ex.Message}"));
+            if (FailureCount >= _threshold) {
+                State = "Open"; _openedAt = DateTime.UtcNow;
+                _log.Add((DateTime.UtcNow, "Open", $"Threshold ({_threshold}) reached — circuit opened"));
+            }
+            return await fallback();
+        }
+    }
+    public List<(DateTime time, string state, string detail)> Log => _log;
+}
+
+// Simulate: 2 successes, 3 failures (trips breaker), 1 blocked, then recovery
+var breaker = new CircuitBreaker(threshold: 3, timeoutMs: 800);
+var results = new List<(int call, string result, string state)>();
+
+for (int i = 1; i <= 8; i++) {
+    var callNum = i;
+    var shouldFail = i >= 3 && i <= 5; // calls 3-5 fail
+    var result = await breaker.Execute(
+        action: async () => {
+            if (shouldFail) throw new Exception("Connection refused");
+            var resp = await http.GetStringAsync($"http://localhost:{paymentPort}/api/payments/charge");
+            return "OK: " + resp.Substring(0, Math.Min(40, resp.Length));
+        },
+        fallback: async () => { await Task.CompletedTask; return "FALLBACK: cached/default response"; }
+    );
+    results.Add((callNum, result, breaker.State));
+    if (breaker.State == "Open") await Task.Delay(900); // wait for half-open
+}
+
+var stateColors = new Dictionary<string, string> { ["Closed"] = "#4ec9b0", ["Open"] = "#e06070", ["Half-Open"] = "#e0a040" };
+var rows = string.Join("", results.Select(r =>
+    $"<tr><td style='padding:4px 8px'>#{r.call}</td><td style='padding:4px 8px;color:{stateColors.GetValueOrDefault(r.state, "#888")}'>{r.state}</td><td style='padding:4px 8px;font-size:11px;color:#bbb'>{r.result}</td></tr>"));
+
+Display.Html($@"<div style='background:#111118;border:1px solid #333;border-left:3px solid #e0a040;border-radius:6px;padding:14px'>
+  <div style='color:#e0a040;font-weight:600;margin-bottom:10px'>⚡ Circuit Breaker Simulation</div>
+  <table style='width:100%;border-collapse:collapse;font-size:12px'>
+    <tr style='border-bottom:1px solid #333'><th style='text-align:left;padding:4px 8px'>Call</th><th style='text-align:left;padding:4px 8px'>State</th><th style='text-align:left;padding:4px 8px'>Result</th></tr>
+    {rows}
+  </table>
+  <div style='margin-top:8px;font-size:11px;color:#888'>Calls 3-5 fail → breaker opens → call 6 uses fallback → timeout → half-open probe → recovery</div>
+</div>");`), columns: 2 };
+
+  const circuitNotes = { ...cs(`Display.Html(@"<div style='background:#111118;border:1px solid #333;border-radius:6px;padding:14px;font-size:12px;color:#aaa;line-height:1.7'>
+<div style='color:#e0a040;font-weight:600;margin-bottom:8px'>⚡ Circuit Breaker States</div>
+<div style='display:flex;align-items:center;gap:8px;margin-bottom:4px'><span style='color:#4ec9b0;font-weight:600'>●</span> <strong>Closed</strong> — requests flow normally; failures are counted</div>
+<div style='display:flex;align-items:center;gap:8px;margin-bottom:4px'><span style='color:#e06070;font-weight:600'>●</span> <strong>Open</strong> — requests blocked immediately; fallback used; timer running</div>
+<div style='display:flex;align-items:center;gap:8px;margin-bottom:4px'><span style='color:#e0a040;font-weight:600'>●</span> <strong>Half-Open</strong> — one probe request allowed; success → Closed, failure → Open</div>
+<div style='margin-top:10px;border-top:1px solid #333;padding-top:8px'>
+<div style='color:#569cd6;font-weight:600;margin-bottom:4px'>Real-world implementations:</div>
+<div>• <strong>Polly</strong> (.NET) — <code>Policy.Handle&lt;Exception&gt;().CircuitBreaker(3, TimeSpan.FromSeconds(30))</code></div>
+<div>• <strong>Istio</strong> — mesh-level circuit breaking with outlier detection</div>
+<div>• <strong>AWS App Mesh</strong> — connection pool limits and health checks</div>
+</div>
+</div>");`, 'html'), columns: 2 };
+
+  // ── Pattern 5: Cache-Aside ─────────────────────────────────────────────────
+  const cacheAside = { ...cs(`// Pattern 5 — Cache-Aside: Lazy-load from DynamoDB, cache in Redis
+// Read-through: check Redis first → miss → fetch from DynamoDB → cache → return
+using StackExchange.Redis;
+
+var redis = await ConnectionMultiplexer.ConnectAsync("localhost:6379");
+var cache = redis.GetDatabase();
+
+async Task<string> GetProduct(string productId) {
+    // 1. Check cache
+    var cached = await cache.StringGetAsync($"product:{productId}");
+    if (cached.HasValue) return $"CACHE HIT: {cached}";
+
+    // 2. Cache miss — fetch from DynamoDB
+    var item = await ddb.GetItemAsync("Inventory", new Dictionary<string, AttributeValue> {
+        ["productId"] = new() { S = productId }
+    });
+    var json = System.Text.Json.JsonSerializer.Serialize(new {
+        productId = item.Item["productId"].S,
+        name = item.Item["name"].S,
+        stock = item.Item["stock"].N,
+        price = item.Item["price"].N,
+    });
+
+    // 3. Store in cache with 60s TTL
+    await cache.StringSetAsync($"product:{productId}", json, TimeSpan.FromSeconds(60));
+    return $"CACHE MISS (fetched + cached): {json}";
+}
+
+// First call: cache miss → DynamoDB fetch → cache
+var result1 = await GetProduct("WIDGET-01");
+// Second call: cache hit → no DynamoDB call
+var result2 = await GetProduct("WIDGET-01");
+// Different product: cache miss
+var result3 = await GetProduct("WIDGET-02");
+
+Display.Html($@"<div style='background:#111118;border:1px solid #333;border-left:3px solid #e06070;border-radius:6px;padding:14px'>
+  <div style='color:#e06070;font-weight:600;margin-bottom:10px'>🗄️ Cache-Aside Pattern</div>
+  <div style='font-size:12px;color:#bbb;margin-bottom:6px'><span style='color:#e06070'>1.</span> {result1}</div>
+  <div style='font-size:12px;color:#bbb;margin-bottom:6px'><span style='color:#4ec9b0'>2.</span> {result2}</div>
+  <div style='font-size:12px;color:#bbb;margin-bottom:6px'><span style='color:#e06070'>3.</span> {result3}</div>
+  <div style='margin-top:8px;color:#888;font-size:11px'>Miss → DB fetch → cache with TTL. Hit → return cached value (no DB call)</div>
+</div>");
+
+redis.Dispose();`), columns: 2 };
+
+  const cacheNotes = { ...cs(`Display.Html(@"<div style='background:#111118;border:1px solid #333;border-radius:6px;padding:14px;font-size:12px;color:#aaa;line-height:1.7'>
+<div style='color:#e06070;font-weight:600;margin-bottom:8px'>🗄️ Cache-Aside vs Other Strategies</div>
+<div style='margin-bottom:6px'><strong style='color:#e06070'>Cache-Aside</strong> (this demo) — app controls cache; lazy load on miss</div>
+<div style='margin-bottom:6px'><strong style='color:#ff9900'>Read-Through</strong> — cache itself fetches on miss (e.g. DynamoDB DAX)</div>
+<div style='margin-bottom:6px'><strong style='color:#569cd6'>Write-Through</strong> — writes go to cache AND store synchronously</div>
+<div style='margin-bottom:6px'><strong style='color:#4ec9b0'>Write-Behind</strong> — writes go to cache, async flush to store</div>
+<div style='margin-top:10px;border-top:1px solid #333;padding-top:8px'>
+<div><strong>Cache invalidation:</strong></div>
+<div>• <strong>TTL</strong> — keys expire after N seconds (used here: 60s)</div>
+<div>• <strong>Event-driven</strong> — invalidate on write via SNS/SQS event</div>
+<div>• <strong>Version tagging</strong> — embed version in key, bump on write</div>
+</div>
+</div>");`, 'html'), columns: 2 };
+
+  // ── Pattern 6: API Gateway Aggregation ─────────────────────────────────────
+  const gatewayAgg = cs(`// Pattern 6 — API Gateway Aggregation (BFF pattern)
+// A single gateway call assembles data from multiple backend services + AWS
+// This is what an API Gateway Lambda or BFF service would do
+
+async Task<object> GetOrderSummary(string orderId) {
+    var body = new StringContent("{}", System.Text.Encoding.UTF8, "application/json");
+
+    // Parallel calls to multiple backends (POST endpoints)
+    var paymentTask = http.PostAsync($"http://localhost:{paymentPort}/api/payments/charge", body);
+    var shippingTask = http.PostAsync($"http://localhost:{shippingPort}/api/shipping/reserve", body);
+
+    // DynamoDB lookup
+    var orderTask = ddb.GetItemAsync("Orders", new Dictionary<string, AttributeValue> {
+        ["orderId"] = new() { S = orderId }
+    });
+
+    await Task.WhenAll(paymentTask, shippingTask, orderTask);
+
+    return new {
+        order = orderTask.Result.Item.ToDictionary(k => k.Key, v => v.Value.S ?? v.Value.N),
+        payment = System.Text.Json.JsonSerializer.Deserialize<object>(await paymentTask.Result.Content.ReadAsStringAsync()),
+        shipping = System.Text.Json.JsonSerializer.Deserialize<object>(await shippingTask.Result.Content.ReadAsStringAsync()),
+        aggregatedAt = DateTime.UtcNow,
+    };
+}
+
+// Simulate gateway call — use the order ID created in the CQRS step
+var allOrders = await ddb.ScanAsync(new ScanRequest { TableName = "Orders", Limit = 1 });
+var firstOrderId = allOrders.Items.FirstOrDefault()?["orderId"]?.S ?? "ORD-0001";
+
+var summary = await GetOrderSummary(firstOrderId);
+Display.Html($@"<div style='background:#111118;border:1px solid #333;border-left:3px solid #569cd6;border-radius:6px;padding:14px'>
+  <div style='color:#569cd6;font-weight:600;margin-bottom:8px'>🌐 API Gateway Aggregation</div>
+  <div style='font-size:11px;color:#888;margin-bottom:8px'>Single gateway call → 3 parallel backend requests → aggregated response</div>
+  <pre style='font-size:11px;color:#bbb;margin:0;max-height:200px;overflow:auto'>{System.Text.Json.JsonSerializer.Serialize(summary, new System.Text.Json.JsonSerializerOptions { WriteIndented = true })}</pre>
+</div>");`, 'html');
+
+  // ── Cleanup ────────────────────────────────────────────────────────────────
+  const cleanup = cs(`// Tear down all services
+await Mock.StopAllAsync();
+Docker.StopAllTracked();
+Display.Html("<div style='color:#4ec9b0;font-weight:600'>✓ All services stopped and cleaned up.</div>");`);
+
+  return [
+    md(`# Cloud Architecture Patterns
+
+Six essential cloud patterns demonstrated locally using **Floci** (AWS emulator), **Redis**, and **Mock** API services. No cloud account required — everything runs on your machine.
+
+**Run All** to spin up infrastructure and execute every pattern sequentially.`),
+
+    cs('Display.Marquee("  ☁️  CLOUD PATTERNS  ●  Event Fan-Out · CQRS · Saga · Circuit Breaker · Cache-Aside · Gateway Aggregation  ●  ", speed: 25, color: "#ff9900", background: "#0a0a12");'),
+
+    md('## Infrastructure'),
+    cloud, redis,
+
+    md('## Backend Services'),
+    paymentSvc, shippingSvc, notifSvc,
+
+    md('## SDK Setup'),
+    sdkSetup,
+
+    md(`## Pattern 1 — Event-Driven Fan-Out
+**SNS → SQS**: publish one event, deliver to multiple consumers simultaneously. The order-completed topic fans out to notification and analytics queues.`),
+    fanOutSetup, fanOutPublish,
+
+    md(`## Pattern 2 — CQRS
+**Command Query Responsibility Segregation**: separate write model (normalized, optimized for consistency) from read model (denormalized, optimized for queries). Domain events bridge the two.`),
+    cqrsWrite, cqrsRead,
+
+    md(`## Pattern 3 — Saga (Orchestrated)
+**Distributed transactions** without 2PC: execute steps sequentially, compensate in reverse on failure. Each step is an independent service call. Try changing the failure logic to see compensation in action.`),
+    sagaOrch,
+
+    md(`## Pattern 4 — Circuit Breaker
+**Prevent cascading failures**: when a dependency fails repeatedly, stop calling it (open circuit), use a fallback, then probe periodically to detect recovery.`),
+    circuitBreaker, circuitNotes,
+
+    md(`## Pattern 5 — Cache-Aside
+**Lazy-load cache**: check Redis first; on miss, fetch from DynamoDB, cache the result with a TTL. Reduces database load and latency for repeated reads.`),
+    cacheAside, cacheNotes,
+
+    md(`## Pattern 6 — API Gateway Aggregation
+**Backend for Frontend (BFF)**: a single gateway endpoint fans out to multiple backend services in parallel, aggregates their responses, and returns a unified result. Reduces client round-trips.`),
+    gatewayAgg,
+
+    md('## Cleanup'),
+    cleanup,
+
+    md(`---
+
+### Pattern Summary
+
+| # | Pattern | AWS Services | Key Concept |
+|---|---------|-------------|-------------|
+| 1 | **Event Fan-Out** | SNS, SQS | Pub/sub: one event, many consumers |
+| 2 | **CQRS** | DynamoDB (×2 tables) | Separate read/write models; event sourcing |
+| 3 | **Saga** | DynamoDB, Mock APIs | Distributed tx with compensating actions |
+| 4 | **Circuit Breaker** | Mock APIs | Fail-fast + fallback + recovery |
+| 5 | **Cache-Aside** | DynamoDB, Redis | Lazy-load cache with TTL |
+| 6 | **Gateway Aggregation** | DynamoDB, Mock APIs | BFF: parallel fetch + aggregate |
+
+> **All patterns run locally** via Floci (AWS emulator) and Docker. No AWS account, no credentials, no cost.`),
   ];
 }
 
