@@ -6033,6 +6033,16 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
   object-position: center;
   display: block;
 }
+.notebook-bg-tinted .notebook-bg-image {
+  filter: grayscale(1) contrast(1.1);
+}
+.notebook-bg-tint-layer {
+  position: absolute;
+  inset: 0;
+  background: var(--accent-primary);
+  mix-blend-mode: color;
+  pointer-events: none;
+}
 
 /* Path rows */
 .settings-path-row {

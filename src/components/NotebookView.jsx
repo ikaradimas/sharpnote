@@ -17,11 +17,12 @@ import { AddBar } from './editor/AddBar.jsx';
 import { FindBar } from './FindBar.jsx';
 import { CircuitBoard } from './CircuitBoard.jsx';
 
-function NotebookBgOverlay({ file, opacity }) {
+function NotebookBgOverlay({ file, opacity, tint }) {
   const src = `assets/backgrounds/${file}`;
   return (
-    <div className="notebook-bg-overlay" style={{ opacity }}>
+    <div className={`notebook-bg-overlay${tint ? ' notebook-bg-tinted' : ''}`} style={{ opacity }}>
       <img src={src} className="notebook-bg-image" alt="" draggable={false} />
+      {tint && <div className="notebook-bg-tint-layer" />}
     </div>
   );
 }
@@ -91,6 +92,7 @@ export function NotebookView({
   showCircuit = true,
   notebookBg = 'none',
   notebookBgOpacity = 0.15,
+  notebookBgTint = false,
   highlightedCellIds,
   onHighlightCells,
   viewerMode = false,
@@ -487,7 +489,7 @@ export function NotebookView({
         {notebookBg !== 'none' && (() => {
           const bg = NOTEBOOK_BACKGROUNDS.find(b => b.id === notebookBg);
           if (!bg) return null;
-          return <NotebookBgOverlay file={bg.file} opacity={notebookBgOpacity} />;
+          return <NotebookBgOverlay file={bg.file} opacity={notebookBgOpacity} tint={notebookBgTint} />;
         })()}
         {cells.length === 0 && (
           <div className="empty-notebook">

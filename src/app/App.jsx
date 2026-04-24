@@ -86,6 +86,9 @@ export function App() {
   const [notebookBgOpacity, setNotebookBgOpacity] = useState(0.15);
   const notebookBgOpacityRef = useRef(0.15);
   useEffect(() => { notebookBgOpacityRef.current = notebookBgOpacity; }, [notebookBgOpacity]);
+  const [notebookBgTint, setNotebookBgTint] = useState(false);
+  const notebookBgTintRef = useRef(false);
+  useEffect(() => { notebookBgTintRef.current = notebookBgTint; }, [notebookBgTint]);
 
   const [tablePageSize, setTablePageSize] = useState(10);
   const tablePageSizeRef = useRef(10);
@@ -314,6 +317,7 @@ export function App() {
       showSkyline: showSkylineRef.current,
       notebookBg: notebookBgRef.current,
       notebookBgOpacity: notebookBgOpacityRef.current,
+      notebookBgTint: notebookBgTintRef.current,
       tablePageSize: tablePageSizeRef.current,
       customShortcuts: customShortcutsRef.current,
       pinnedTabs: [...pinnedPathsRef.current],
@@ -350,6 +354,7 @@ export function App() {
       if (typeof s?.showSkyline === 'boolean') setShowSkyline(s.showSkyline);
       if (s?.notebookBg) setNotebookBg(s.notebookBg);
       if (typeof s?.notebookBgOpacity === 'number') setNotebookBgOpacity(s.notebookBgOpacity);
+      if (typeof s?.notebookBgTint === 'boolean') setNotebookBgTint(s.notebookBgTint);
       if (typeof s?.tablePageSize === 'number') setTablePageSize(s.tablePageSize);
       if (s?.customShortcuts && typeof s.customShortcuts === 'object') {
         setCustomShortcuts(s.customShortcuts);
@@ -455,7 +460,7 @@ export function App() {
   useEffect(() => {
     if (!settingsLoadedRef.current) return;
     saveSettingsRef.current();
-  }, [notebookBg, notebookBgOpacity]);
+  }, [notebookBg, notebookBgOpacity, notebookBgTint]);
 
   const handleShortcutsChange = useCallback((id, combo) => {
     setCustomShortcuts((prev) => {
@@ -998,6 +1003,7 @@ export function App() {
     if (typeof s.showSkyline === 'boolean') setShowSkyline(s.showSkyline);
     if (s.notebookBg) setNotebookBg(s.notebookBg);
     if (typeof s.notebookBgOpacity === 'number') setNotebookBgOpacity(s.notebookBgOpacity);
+    if (typeof s.notebookBgTint === 'boolean') setNotebookBgTint(s.notebookBgTint);
     if (typeof s.tablePageSize === 'number') setTablePageSize(s.tablePageSize);
     // Keyboard shortcuts
     if (s.customShortcuts && typeof s.customShortcuts === 'object') {
@@ -1522,6 +1528,7 @@ export function App() {
                     showCircuit={showCircuit}
                     notebookBg={notebookBg}
                     notebookBgOpacity={notebookBgOpacity}
+                    notebookBgTint={notebookBgTint}
                     highlightedCellIds={highlightedCellIds}
                     onHighlightCells={setHighlightedCellIds}
                     viewerMode={!!viewerMode}
@@ -1677,6 +1684,8 @@ export function App() {
           onNotebookBgChange={setNotebookBg}
           notebookBgOpacity={notebookBgOpacity}
           onNotebookBgOpacityChange={setNotebookBgOpacity}
+          notebookBgTint={notebookBgTint}
+          onNotebookBgTintChange={setNotebookBgTint}
           tablePageSize={tablePageSize}
           onTablePageSizeChange={setTablePageSize}
           customShortcuts={customShortcuts}

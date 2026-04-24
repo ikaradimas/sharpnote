@@ -12,7 +12,7 @@ const PANEL_FONT_SIZE_DEFAULT = 11.5;
 
 // ── Appearance section ────────────────────────────────────────────────────────
 
-function AppearanceSection({ theme, fontSize, onThemeChange, onFontSizeChange, panelFontSize, onPanelFontSizeChange, lineAltEnabled, onLineAltChange, lintEnabled, onLintEnabledChange, strongCuesEnabled, onStrongCuesChange, formatOnSave, onFormatOnSaveChange, showFish, onShowFishChange, showCircuit, onShowCircuitChange, showGhost, onShowGhostChange, showSkyline, onShowSkylineChange, notebookBg = 'none', onNotebookBgChange, notebookBgOpacity = 0.15, onNotebookBgOpacityChange, tablePageSize = 10, onTablePageSizeChange }) {
+function AppearanceSection({ theme, fontSize, onThemeChange, onFontSizeChange, panelFontSize, onPanelFontSizeChange, lineAltEnabled, onLineAltChange, lintEnabled, onLintEnabledChange, strongCuesEnabled, onStrongCuesChange, formatOnSave, onFormatOnSaveChange, showFish, onShowFishChange, showCircuit, onShowCircuitChange, showGhost, onShowGhostChange, showSkyline, onShowSkylineChange, notebookBg = 'none', onNotebookBgChange, notebookBgOpacity = 0.15, onNotebookBgOpacityChange, notebookBgTint = false, onNotebookBgTintChange, tablePageSize = 10, onTablePageSizeChange }) {
   return (
     <div className="settings-section">
       <div className="settings-group">
@@ -202,7 +202,7 @@ function AppearanceSection({ theme, fontSize, onThemeChange, onFontSizeChange, p
             </button>
           ))}
         </div>
-        {notebookBg !== 'none' && (
+        {notebookBg !== 'none' && (<>
           <div className="settings-font-row" style={{ marginTop: 8 }}>
             <span className="settings-path-label">Opacity</span>
             <input
@@ -216,7 +216,11 @@ function AppearanceSection({ theme, fontSize, onThemeChange, onFontSizeChange, p
             />
             <span className="settings-font-value">{Math.round(notebookBgOpacity * 100)}%</span>
           </div>
-        )}
+          <label className="settings-row-label" style={{ marginTop: 6, cursor: 'pointer' }}>
+            <input type="checkbox" checked={notebookBgTint} onChange={(e) => onNotebookBgTintChange(e.target.checked)} />
+            <span style={{ marginLeft: 6 }}>Tint with theme color</span>
+          </label>
+        </>)}
       </div>
     </div>
   );
@@ -505,6 +509,8 @@ export function SettingsDialog({
   onNotebookBgChange,
   notebookBgOpacity,
   onNotebookBgOpacityChange,
+  notebookBgTint,
+  onNotebookBgTintChange,
   tablePageSize = 10,
   onTablePageSizeChange,
   customShortcuts,
@@ -630,6 +636,8 @@ export function SettingsDialog({
                 onNotebookBgChange={onNotebookBgChange}
                 notebookBgOpacity={notebookBgOpacity}
                 onNotebookBgOpacityChange={onNotebookBgOpacityChange}
+                notebookBgTint={notebookBgTint}
+                onNotebookBgTintChange={onNotebookBgTintChange}
                 tablePageSize={tablePageSize}
                 onTablePageSizeChange={onTablePageSizeChange}
               />
