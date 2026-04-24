@@ -17,48 +17,12 @@ import { AddBar } from './editor/AddBar.jsx';
 import { FindBar } from './FindBar.jsx';
 import { CircuitBoard } from './CircuitBoard.jsx';
 
-function NotebookBgOverlay({ svg, opacity }) {
-  const ref = React.useRef(null);
-
-  React.useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    // Get the computed text-secondary color to replace currentColor
-    const color = getComputedStyle(el).getPropertyValue('color').trim() || '#b8ccd8';
-    // Parse viewBox
-    const vbMatch = svg.match(/viewBox="(\d+)\s+(\d+)\s+(\d+)\s+(\d+)"/);
-    const vbW = vbMatch ? +vbMatch[3] : 300;
-    const vbH = vbMatch ? +vbMatch[4] : 400;
-    // Extract outer <svg> attributes and inner content
-    const outerMatch = svg.match(/^<svg([^>]*)>/);
-    const outerAttrs = outerMatch ? outerMatch[1] : '';
-    const inner = svg.replace(/^<svg[^>]*>/, '').replace(/<\/svg>\s*$/, '');
-    // Preserve fill/stroke from outer tag as group attributes
-    const fillMatch = outerAttrs.match(/fill="([^"]*)"/);
-    const strokeMatch = outerAttrs.match(/stroke="([^"]*)"/);
-    const slcMatch = outerAttrs.match(/stroke-linecap="([^"]*)"/);
-    const sljMatch = outerAttrs.match(/stroke-linejoin="([^"]*)"/);
-    const gFill = fillMatch ? fillMatch[1].replace(/currentColor/g, color) : 'none';
-    const gStroke = strokeMatch ? strokeMatch[1].replace(/currentColor/g, color) : color;
-    let gAttrs = `fill="${gFill}" stroke="${gStroke}"`;
-    if (slcMatch) gAttrs += ` stroke-linecap="${slcMatch[1]}"`;
-    if (sljMatch) gAttrs += ` stroke-linejoin="${sljMatch[1]}"`;
-    // Build tiling SVG using <pattern>
-    const patId = 'nb-bg-' + Math.random().toString(36).slice(2, 8);
-    el.innerHTML =
-      `<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" style="display:block">` +
-      `<defs><pattern id="${patId}" patternUnits="userSpaceOnUse" width="${vbW}" height="${vbH}">` +
-      `<g ${gAttrs}>${inner.replace(/currentColor/g, color)}</g>` +
-      `</pattern></defs>` +
-      `<rect width="100%" height="100%" fill="url(#${patId})"/></svg>`;
-  }, [svg]);
-
+function NotebookBgOverlay({ file, opacity }) {
+  const src = `../assets/backgrounds/${file}`;
   return (
-    <div
-      ref={ref}
-      className="notebook-bg-overlay"
-      style={{ opacity, color: 'var(--text-secondary)' }}
-    />
+    <div className="notebook-bg-overlay" style={{ opacity }}>
+      <img src={src} className="notebook-bg-image" alt="" draggable={false} />
+    </div>
   );
 }
 
@@ -523,7 +487,7 @@ export function NotebookView({
         {notebookBg !== 'none' && (() => {
           const bg = NOTEBOOK_BACKGROUNDS.find(b => b.id === notebookBg);
           if (!bg) return null;
-          return <NotebookBgOverlay svg={bg.svg} opacity={notebookBgOpacity} />;
+          return <NotebookBgOverlay file={bg.file} opacity={notebookBgOpacity} />;
         })()}
         {cells.length === 0 && (
           <div className="empty-notebook">

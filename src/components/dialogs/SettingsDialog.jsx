@@ -192,9 +192,11 @@ function AppearanceSection({ theme, fontSize, onThemeChange, onFontSizeChange, p
               onClick={() => onNotebookBgChange(bg.id)}
               title={bg.name}
             >
-              <div
-                className="settings-bg-preview"
-                dangerouslySetInnerHTML={{ __html: bg.svg.replace(/currentColor/g, 'var(--text-secondary)') }}
+              <img
+                className="settings-bg-preview settings-bg-img"
+                src={`../assets/backgrounds/${bg.file}`}
+                alt={bg.name}
+                draggable={false}
               />
               <span className="settings-bg-name">{bg.name}</span>
             </button>
