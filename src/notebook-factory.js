@@ -3101,9 +3101,11 @@ redis.Dispose();`), columns: 2 };
 // This is what an API Gateway Lambda or BFF service would do
 
 async Task<object> GetOrderSummary(string orderId) {
-    // Parallel calls to multiple backends
-    var paymentTask = http.GetStringAsync($"http://localhost:{paymentPort}/api/payments/charge");
-    var shippingTask = http.GetStringAsync($"http://localhost:{shippingPort}/api/shipping/reserve");
+    var body = new StringContent("{}", System.Text.Encoding.UTF8, "application/json");
+
+    // Parallel calls to multiple backends (POST endpoints)
+    var paymentTask = http.PostAsync($"http://localhost:{paymentPort}/api/payments/charge", body);
+    var shippingTask = http.PostAsync($"http://localhost:{shippingPort}/api/shipping/reserve", body);
 
     // DynamoDB lookup
     var orderTask = ddb.GetItemAsync("Orders", new Dictionary<string, AttributeValue> {
@@ -3114,8 +3116,8 @@ async Task<object> GetOrderSummary(string orderId) {
 
     return new {
         order = orderTask.Result.Item.ToDictionary(k => k.Key, v => v.Value.S ?? v.Value.N),
-        payment = System.Text.Json.JsonSerializer.Deserialize<object>(paymentTask.Result),
-        shipping = System.Text.Json.JsonSerializer.Deserialize<object>(shippingTask.Result),
+        payment = System.Text.Json.JsonSerializer.Deserialize<object>(await paymentTask.Result.Content.ReadAsStringAsync()),
+        shipping = System.Text.Json.JsonSerializer.Deserialize<object>(await shippingTask.Result.Content.ReadAsStringAsync()),
         aggregatedAt = DateTime.UtcNow,
     };
 }
