@@ -44,6 +44,7 @@ const cs = (content, outputMode = 'auto') =>
   ({ ...makeCell('code', content), outputMode });
 const http = (content) => makeCell('http', content);
 const docker = (image, opts = {}) => ({ ...makeCell('docker', ''), image, ...opts });
+const floci = (opts = {}) => ({ ...makeCell('floci', ''), ...opts });
 
 // ── Template registry ────────────────────────────────────────────────────────
 
@@ -2342,9 +2343,12 @@ function makeServiceMeshCells() {
     ports: '8080:80', runOnStartup: true, presenting: true,
   }), columns: 3 };
 
-  const redis = { ...docker('redis:7-alpine', {
-    containerName: 'mesh-cache', name: 'Cache (Redis)', color: 'red',
-    ports: '6379:6379', runOnStartup: true, presenting: true,
+  const awsEmulator = { ...floci({
+    name: 'AWS (Floci)', color: 'orange',
+    services: ['s3', 'sqs', 'dynamodb', 'secretsmanager'],
+    region: 'us-east-1', storageMode: 'memory',
+    initScript: 'aws s3 mb s3://mesh-assets --endpoint-url=http://localhost:4566\naws sqs create-queue --queue-name mesh-events --endpoint-url=http://localhost:4566',
+    runOnStartup: true, presenting: true,
   }), columns: 3 };
 
   const postgres = { ...docker('postgres:16-alpine', {
@@ -2410,6 +2414,7 @@ Display.StatCard("Product Service", $":{productPort}", color: "#c084d0", icon: "
   const healthCheck = { ...cs(`// Verify all services are reachable
 var endpoints = new[] {
     ("Gateway",  "http://localhost:8080"),
+    ("Floci AWS","http://localhost:4566/_localstack/health"),
     ("User API", $"http://localhost:{userPort}/api/users"),
     ("Orders",   $"http://localhost:{orderPort}/api/orders"),
     ("Products", $"http://localhost:{productPort}/api/products"),
@@ -2438,6 +2443,7 @@ Display.Html(sb.ToString());`, 'html'), columns: 2 };
   const healthNotes = { ...cs(`Display.Html(@"<div style='background:#111118;border:1px solid #333;border-radius:6px;padding:14px;font-size:12px;color:#aaa;line-height:1.7'>
 <div style='color:#569cd6;font-weight:600;margin-bottom:8px'>📋 Health Check Notes</div>
 <div>• The Gateway responds even without upstream config — nginx returns its default page</div>
+<div>• Floci exposes all enabled AWS services on port 4566 with a health endpoint</div>
 <div>• Mock services start on random ports above 9000 and are assigned automatically</div>
 <div>• Latency shown is round-trip from the kernel process, not end-user latency</div>
 <div>• If a service shows as Down, run its cell above to start it</div>
@@ -2481,12 +2487,12 @@ Order Service → assemble response
   return [
     md(`# Service Mesh Simulation
 
-A fully automated **microservice mesh** using Docker containers for infrastructure, \`Mock\` API for services, and the new column layout. **Run All** to spin up everything.`),
+A fully automated **microservice mesh** using Docker containers, **Floci** (local AWS emulator) for cloud services, and \`Mock\` API for microservices. **Run All** to spin up everything.`),
 
-    cs(`Display.Marquee("  🚀  SERVICE MESH DEMO  ●  Docker + Mock APIs + Column Layouts  ●  Run All to start  ●  ", speed: 25, color: "#569cd6", background: "#0a0a12");`),
+    cs(`Display.Marquee("  🚀  SERVICE MESH DEMO  ●  Docker + Floci AWS + Mock APIs  ●  Run All to start  ●  ", speed: 25, color: "#569cd6", background: "#0a0a12");`),
 
-    md('## Infrastructure — Docker Containers'),
-    gateway, redis, postgres,
+    md('## Infrastructure — Docker + Floci'),
+    gateway, awsEmulator, postgres,
 
     md('## Mock API Services'),
     userSvc, orderSvc, productSvc,
@@ -2496,6 +2502,49 @@ A fully automated **microservice mesh** using Docker containers for infrastructu
 
     md('## Cross-Service Communication'),
     crossCall, crossNotes,
+
+    md('## AWS Integration via Floci'),
+    { ...cs(`// Use the AWS SDK against the local Floci emulator
+#r "nuget: AWSSDK.S3"
+#r "nuget: AWSSDK.SQS"
+using Amazon.Runtime;
+using Amazon.S3;
+using Amazon.S3.Model;
+using Amazon.SQS;
+using Amazon.SQS.Model;
+
+var creds = new BasicAWSCredentials("test", "test");
+
+// S3: list buckets created by the init script
+var s3 = new AmazonS3Client(creds, new AmazonS3Config { ServiceURL = "http://localhost:4566", ForcePathStyle = true });
+var buckets = await s3.ListBucketsAsync();
+
+// SQS: send and receive a message
+var sqs = new AmazonSQSClient(creds, new AmazonSQSConfig { ServiceURL = "http://localhost:4566" });
+var queues = await sqs.ListQueuesAsync(new ListQueuesRequest { QueueNamePrefix = "mesh-" });
+if (queues.QueueUrls.Count > 0) {
+    await sqs.SendMessageAsync(queues.QueueUrls[0], "{\\"event\\":\\"order.created\\",\\"orderId\\":1001}");
+    var msgs = await sqs.ReceiveMessageAsync(new ReceiveMessageRequest { QueueUrl = queues.QueueUrls[0], MaxNumberOfMessages = 1 });
+    Display.Html($@"<div style='display:grid;grid-template-columns:1fr 1fr;gap:10px'>
+  <div style='background:#1a1a22;border:1px solid #333;border-left:3px solid #ff9900;border-radius:6px;padding:12px'>
+    <div style='color:#ff9900;font-weight:600;margin-bottom:6px'>S3 Buckets</div>
+    {string.Join("", buckets.Buckets.Select(b => $"<div style='font-size:12px;color:#bbb'>📦 {b.BucketName}</div>"))}
+  </div>
+  <div style='background:#1a1a22;border:1px solid #333;border-left:3px solid #ff9900;border-radius:6px;padding:12px'>
+    <div style='color:#ff9900;font-weight:600;margin-bottom:6px'>SQS Message Received</div>
+    <pre style='font-size:11px;color:#bbb;margin:0'>{msgs.Messages.FirstOrDefault()?.Body ?? "(empty)"}</pre>
+  </div>
+</div>");
+}`, 'html'), columns: 2 },
+    { ...cs(`Display.Html(@"<div style='background:#111118;border:1px solid #333;border-radius:6px;padding:14px;font-size:12px;color:#aaa;line-height:1.7'>
+<div style='color:#ff9900;font-weight:600;margin-bottom:8px'>☁️ AWS via Floci</div>
+<div>The Floci cell above provides a local AWS emulator with S3, SQS, DynamoDB, and Secrets Manager.</div>
+<div style='margin-top:6px'>This cell demonstrates:</div>
+<div>• Listing S3 buckets created by the init script</div>
+<div>• Sending and receiving SQS messages</div>
+<div>• All traffic stays local — no AWS account needed</div>
+<div style='margin-top:8px;color:#4ec9b0'>💡 <strong>Tip:</strong> Click <strong>SDK</strong> on the Floci cell to generate ready-to-use C# client code for any enabled service</div>
+</div>");`, 'html'), columns: 2 },
 
     md('## Service Dashboard'),
     cs(`// Render live dashboard from running mocks
@@ -2509,14 +2558,15 @@ foreach (var svc in mocks) {
 </div>");
 }
 
-// Add Docker containers
-foreach (var c in new[] { ("API Gateway", "8080", "#569cd6"), ("Redis Cache", "6379", "#e06070"), ("Postgres DB", "5432", "#b48ead") }) {
-    var running = Docker.IsRunning($"mesh-{(c.Item1 == "API Gateway" ? "gateway" : c.Item1 == "Redis Cache" ? "cache" : "db")}");
+// Add Docker + Floci infrastructure
+foreach (var c in new[] { ("API Gateway", "8080", "#569cd6", "mesh-gateway"), ("Floci AWS", "4566", "#ff9900", "floci-"), ("Postgres DB", "5432", "#b48ead", "mesh-db") }) {
+    var running = c.Item4.EndsWith("-") ? Docker.List().Any(x => x.Contains(c.Item4)) : Docker.IsRunning(c.Item4);
     var status = running ? "Running" : "Stopped";
     var statusColor = running ? "#4ec9b0" : "#e06070";
+    var kind = c.Item4.StartsWith("floci") ? "Floci" : "Docker";
     html.AppendLine($@"<div style='background:#1a1a22;border:1px solid #333;border-left:3px solid {c.Item3};border-radius:6px;padding:12px'>
   <div style='font-weight:600;color:{c.Item3};margin-bottom:4px'>{c.Item1}</div>
-  <div style='font-size:11px;color:#888'>Docker · :{c.Item2} · <span style=""color:{statusColor}"">{status}</span></div>
+  <div style='font-size:11px;color:#888'>{kind} · :{c.Item2} · <span style=""color:{statusColor}"">{status}</span></div>
 </div>");
 }
 html.AppendLine("</div>");
@@ -2526,8 +2576,9 @@ Display.Html(html.ToString());`, 'html'),
     cs(`// Stop all mock servers and Docker containers in one call
 await Mock.StopAllAsync();
 Docker.StopAndRemove("mesh-gateway");
-Docker.StopAndRemove("mesh-cache");
 Docker.StopAndRemove("mesh-db");
+// Floci container is stopped by its own cell — or stop all tracked containers:
+Docker.StopAllTracked();
 Display.Html("<div style='color:#4ec9b0;font-weight:600'>✓ All services stopped and cleaned up.</div>");`),
 
     md(`---
