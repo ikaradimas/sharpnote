@@ -8980,6 +8980,15 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
   cursor: pointer; font-size: 11px; padding: 2px 6px;
 }
 .sql-schema-toggle:hover { color: var(--accent-primary); }
+.sql-schema-search {
+  display: block; width: calc(100% - 16px); margin: 4px 8px; padding: 3px 6px;
+  background: var(--bg-deepest); border: 1px solid var(--border-secondary); border-radius: 3px;
+  color: var(--text-primary); font-size: 11px; font-family: var(--font-code);
+  outline: none;
+}
+.sql-schema-search:focus { border-color: var(--accent-primary); }
+.sql-schema-search::placeholder { color: var(--text-dim); }
+.sql-schema-no-match { padding: 4px 8px; color: var(--text-dim); font-size: 11px; font-style: italic; }
 
 /* ── SQL Query History ───────────────────────────────────────────────────── */
 .sql-history-btn { background: none; border: none; color: var(--text-dim); cursor: pointer; padding: 2px 4px; }
