@@ -2692,7 +2692,7 @@ Display.StatCard("Notification Service", $":{notifPort}", color: "#c084d0", icon
   // ── Shared SDK setup ───────────────────────────────────────────────────────
   const sdkSetup = cs(`// Shared AWS SDK clients — run this cell first after infrastructure is up
 #r "nuget: AWSSDK.SQS"
-#r "nuget: AWSSDK.SNS"
+#r "nuget: AWSSDK.SimpleNotificationService"
 #r "nuget: AWSSDK.DynamoDBv2"
 #r "nuget: AWSSDK.S3"
 using Amazon.Runtime;
