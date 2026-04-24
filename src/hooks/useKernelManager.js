@@ -665,14 +665,7 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
     });
   }, [setNb]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const runAll = useCallback(async (notebookId) => {
-    const nb = notebooksRef.current.find((n) => n.id === notebookId);
-    if (!nb) return;
-    for (const cell of nb.cells.filter((c) => c.type === 'code')) await runCell(notebookId, cell);
-  }, [runCell]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Keep the ref in sync so the ready handler can call runAll
-  runAllRef.current = runAll;
+  // runAllRef is assigned after all individual run* functions are defined (below)
 
   const runSqlCell = useCallback(async (notebookId, cell) => {
     if (!window.electronAPI || cell.type !== 'sql') return;
@@ -868,6 +861,41 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
     for (const cell of nb.cells.slice(0, idx + 1).filter((c) => c.type === 'code'))
       await runCell(notebookId, cell);
   }, [runCell]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Run All (after all individual run* functions) ──────────────────────────
+  const RUNNABLE_TYPES = new Set(['code', 'sql', 'http', 'shell', 'check', 'decision', 'docker', 'floci']);
+
+  const dispatchCellRun = useCallback((notebookId, cell) => {
+    switch (cell.type) {
+      case 'code':     return runCell(notebookId, cell);
+      case 'sql':      return runSqlCell(notebookId, cell);
+      case 'http':     return runHttpCell(notebookId, cell);
+      case 'shell':    return runShellCell(notebookId, cell);
+      case 'check':    return runCheckCell(notebookId, cell);
+      case 'decision': return runDecisionCell(notebookId, cell);
+      case 'docker':   return runDockerCell(notebookId, cell);
+      case 'floci':    return runFlociCell(notebookId, cell);
+      default:         return Promise.resolve();
+    }
+  }, [runCell, runSqlCell, runHttpCell, runShellCell, runCheckCell, runDecisionCell, runDockerCell, runFlociCell]);
+
+  const runAll = useCallback(async (notebookId) => {
+    const nb = notebooksRef.current.find((n) => n.id === notebookId);
+    if (!nb) return;
+    setNb(notebookId, () => ({ runningAll: true }));
+    try {
+      for (const cell of nb.cells.filter((c) => RUNNABLE_TYPES.has(c.type))) {
+        const nbNow = notebooksRef.current.find((n) => n.id === notebookId);
+        if (!nbNow || nbNow.kernelStatus !== 'ready') break;
+        await dispatchCellRun(notebookId, cell);
+      }
+    } finally {
+      setNb(notebookId, () => ({ runningAll: false }));
+    }
+  }, [dispatchCellRun, setNb]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Keep the ref in sync so the ready handler can call runAll
+  runAllRef.current = runAll;
 
   const handleInterrupt = useCallback((notebookId) => {
     window.electronAPI?.interruptKernel(notebookId);

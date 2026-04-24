@@ -214,6 +214,12 @@ body {
   transition: background 0.15s, box-shadow 0.2s, transform 0.15s;
 }
 
+.toolbar button.toolbar-run-all--active {
+  color: #e0a040; border-color: #e0a04060;
+  background: linear-gradient(180deg, #2a2210 0%, #1a1810 100%);
+  animation: pulse-run-all 1.5s ease-in-out infinite;
+}
+@keyframes pulse-run-all { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
 .toolbar button.toolbar-run-all:hover {
   color: var(--accent-primary);
   border-color: var(--accent-primary);

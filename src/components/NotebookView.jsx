@@ -134,7 +134,7 @@ export function NotebookView({
   const { cells, outputs, outputHistory, cellResults, running, kernelStatus,
           config, logPanelOpen, nugetPanelOpen, configPanelOpen, inlineDiagnostics,
           dbPanelOpen, varsPanelOpen, tocPanelOpen, graphPanelOpen, todoPanelOpen, regexPanelOpen, historyPanelOpen, depsPanelOpen, embedPanelOpen,
-          path: notebookPath, staleCellIds, attachedDbs, autoRun, breakpoints, debugState } = nb;
+          path: notebookPath, staleCellIds, attachedDbs, autoRun, breakpoints, debugState, runningAll } = nb;
 
   const [findOpen, setFindOpen] = useState(false);
   const [findHighlighted, setFindHighlighted] = useState(new Set());
@@ -258,6 +258,7 @@ export function NotebookView({
       notebookPath={notebookPath}
       notebookTitle={nb.title}
       onRename={onRename}
+      anyRunning={running.size > 0 || !!runningAll}
       onRunAll={() => onRunAll(nb.id)}
       onAddMarkdown={() => addCell('markdown')}
       onAddCode={() => addCell('code')}
