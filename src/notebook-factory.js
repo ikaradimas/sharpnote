@@ -2713,15 +2713,41 @@ var ddb  = new AmazonDynamoDBClient(creds, new AmazonDynamoDBConfig { ServiceURL
 var s3   = new AmazonS3Client(creds, new AmazonS3Config { ServiceURL = endpoint, ForcePathStyle = true });
 var http = new HttpClient();
 
-// Helper to get-or-create queue URL (CreateQueue is idempotent)
+// Idempotent helpers — create-if-not-exists, safe to call repeatedly
 async Task<string> QueueUrl(string name) =>
     (await sqs.CreateQueueAsync(new CreateQueueRequest { QueueName = name })).QueueUrl;
 
-// Helper to ensure SNS topic exists and return ARN (CreateTopic is idempotent)
 async Task<string> EnsureTopicArn(string name) =>
     (await sns.CreateTopicAsync(new CreateTopicRequest { Name = name })).TopicArn;
 
-Display.Html("<div style='color:#4ec9b0;font-weight:600'>✓ AWS SDK clients ready (SQS, SNS, DynamoDB, S3)</div>");`);
+async Task EnsureTable(string name, string keyName, string keyType = "S") {
+    try {
+        await ddb.CreateTableAsync(new CreateTableRequest {
+            TableName = name,
+            AttributeDefinitions = new() { new(keyName, keyType == "N" ? ScalarAttributeType.N : ScalarAttributeType.S) },
+            KeySchema = new() { new(keyName, KeyType.HASH) },
+            BillingMode = BillingMode.PAY_PER_REQUEST,
+        });
+    } catch (Amazon.DynamoDBv2.Model.ResourceInUseException) { /* already exists */ }
+}
+
+// Ensure all tables exist (idempotent — safe if init script already ran)
+await EnsureTable("Orders", "orderId");
+await EnsureTable("OrderReadModel", "userId");
+await EnsureTable("Inventory", "productId");
+
+// Seed inventory if empty
+var scan = await ddb.ScanAsync(new ScanRequest { TableName = "Inventory", Limit = 1 });
+if (scan.Count == 0) {
+    var items = new[] {
+        new Dictionary<string, AttributeValue> { ["productId"] = new() { S = "WIDGET-01" }, ["name"] = new() { S = "Wireless Keyboard" }, ["stock"] = new() { N = "150" }, ["price"] = new() { N = "79.99" } },
+        new Dictionary<string, AttributeValue> { ["productId"] = new() { S = "WIDGET-02" }, ["name"] = new() { S = "USB-C Hub" }, ["stock"] = new() { N = "89" }, ["price"] = new() { N = "34.50" } },
+        new Dictionary<string, AttributeValue> { ["productId"] = new() { S = "WIDGET-03" }, ["name"] = new() { S = "Desk Lamp" }, ["stock"] = new() { N = "0" }, ["price"] = new() { N = "45.00" } },
+    };
+    foreach (var item in items) await ddb.PutItemAsync("Inventory", item);
+}
+
+Display.Html("<div style='color:#4ec9b0;font-weight:600'>✓ AWS SDK clients ready — tables, queues, and topics ensured</div>");`);
 
   // ── Pattern 1: Event-Driven Fan-Out (SNS → SQS) ───────────────────────────
   const fanOutSetup = { ...cs(`// Pattern 1 — Event-Driven Fan-Out: SNS topic → multiple SQS queues
