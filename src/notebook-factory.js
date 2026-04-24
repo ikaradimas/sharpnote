@@ -1486,7 +1486,7 @@ var port = await Mock.StartAsync(new {
 });
 
 // Call the mock from C#
-using var http = new HttpClient();
+var http = new HttpClient();
 var items = await http.GetStringAsync($"http://localhost:{port}/api/items");
 Display.Html($"<div style='color:#4ec9b0'>Mock on :{port}</div>");
 items.Display();`), columns: 2 },
@@ -2454,7 +2454,7 @@ Display.Html(sb.ToString());`, 'html'), columns: 2 };
 
   // Cross-service call + sidebar
   const crossCall = { ...cs(`// Simulate Order Service assembling an order from multiple services
-using var http = new HttpClient();
+var http = new HttpClient();
 var user = await http.GetStringAsync($"http://localhost:{userPort}/api/users/2");
 var product1 = await http.GetStringAsync($"http://localhost:{productPort}/api/products/42");
 var product2 = await http.GetStringAsync($"http://localhost:{productPort}/api/products/17");
