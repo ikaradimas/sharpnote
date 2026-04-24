@@ -1,6 +1,8 @@
 import { useRef, useCallback, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 
+const RUNNABLE_TYPES = new Set(['code', 'sql', 'http', 'shell', 'check', 'decision', 'docker', 'floci']);
+
 async function resolveConfig(nb) {
   const configEntries = nb?.config || [];
   const resolved = {};
@@ -844,27 +846,9 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
     });
   }, [setNb]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const runFrom = useCallback(async (notebookId, cellId) => {
-    const nb = notebooksRef.current.find((n) => n.id === notebookId);
-    if (!nb || nb.running.size > 0) return;
-    const idx = nb.cells.findIndex((c) => c.id === cellId);
-    if (idx < 0) return;
-    for (const cell of nb.cells.slice(idx).filter((c) => c.type === 'code'))
-      await runCell(notebookId, cell);
-  }, [runCell]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const runTo = useCallback(async (notebookId, cellId) => {
-    const nb = notebooksRef.current.find((n) => n.id === notebookId);
-    if (!nb || nb.running.size > 0) return;
-    const idx = nb.cells.findIndex((c) => c.id === cellId);
-    if (idx < 0) return;
-    for (const cell of nb.cells.slice(0, idx + 1).filter((c) => c.type === 'code'))
-      await runCell(notebookId, cell);
-  }, [runCell]); // eslint-disable-line react-hooks/exhaustive-deps
+  // runFrom / runTo defined after dispatchCellRun
 
   // ── Run All (after all individual run* functions) ──────────────────────────
-  const RUNNABLE_TYPES = new Set(['code', 'sql', 'http', 'shell', 'check', 'decision', 'docker', 'floci']);
-
   const dispatchCellRun = useCallback((notebookId, cell) => {
     switch (cell.type) {
       case 'code':     return runCell(notebookId, cell);
@@ -896,6 +880,24 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
 
   // Keep the ref in sync so the ready handler can call runAll
   runAllRef.current = runAll;
+
+  const runFrom = useCallback(async (notebookId, cellId) => {
+    const nb = notebooksRef.current.find((n) => n.id === notebookId);
+    if (!nb || nb.running.size > 0) return;
+    const idx = nb.cells.findIndex((c) => c.id === cellId);
+    if (idx < 0) return;
+    for (const cell of nb.cells.slice(idx).filter((c) => RUNNABLE_TYPES.has(c.type)))
+      await dispatchCellRun(notebookId, cell);
+  }, [dispatchCellRun]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const runTo = useCallback(async (notebookId, cellId) => {
+    const nb = notebooksRef.current.find((n) => n.id === notebookId);
+    if (!nb || nb.running.size > 0) return;
+    const idx = nb.cells.findIndex((c) => c.id === cellId);
+    if (idx < 0) return;
+    for (const cell of nb.cells.slice(0, idx + 1).filter((c) => RUNNABLE_TYPES.has(c.type)))
+      await dispatchCellRun(notebookId, cell);
+  }, [dispatchCellRun]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleInterrupt = useCallback((notebookId) => {
     window.electronAPI?.interruptKernel(notebookId);
@@ -961,6 +963,7 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
     runShellCell,
     runDockerCell,
     runFlociCell,
+    dispatchCellRun,
     stopDockerCell,
     pollDockerStatus,
     fetchDockerLogs,

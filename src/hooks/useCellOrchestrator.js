@@ -9,31 +9,10 @@ export function useCellOrchestrator({
   notebooksRef,
   nodes,
   edges,
-  runCell,
-  runSqlCell,
-  runHttpCell,
-  runShellCell,
-  runCheckCell,
-  runDecisionCell,
-  runDockerCell,
-  runFlociCell,
+  dispatchRun,
 }) {
   const [executionProgress, setProgress] = useState(null);
   const cancelledRef = useRef(false);
-
-  const dispatchRun = useCallback(async (notebookId, cell) => {
-    switch (cell.type) {
-      case 'code':     return runCell(notebookId, cell);
-      case 'sql':      return runSqlCell(notebookId, cell);
-      case 'http':     return runHttpCell(notebookId, cell);
-      case 'shell':    return runShellCell(notebookId, cell);
-      case 'check':    return runCheckCell(notebookId, cell);
-      case 'decision': return runDecisionCell(notebookId, cell);
-      case 'docker':   return runDockerCell(notebookId, cell);
-      case 'floci':    return runFlociCell(notebookId, cell);
-      default:         return null;
-    }
-  }, [runCell, runSqlCell, runHttpCell, runShellCell, runCheckCell, runDecisionCell, runDockerCell, runFlociCell]);
 
   const executeQueue = useCallback(async (notebookId, orderedCellIds) => {
     const nb = notebooksRef.current.find((n) => n.id === notebookId);

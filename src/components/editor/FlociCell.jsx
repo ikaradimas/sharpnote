@@ -1,8 +1,10 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { Play, Square, Monitor, Cloud, Clock, Wifi, X, ScrollText, Terminal, Copy, ChevronDown, ChevronRight } from 'lucide-react';
+import React, { useEffect, useState, useMemo } from 'react';
+import { Play, Square, Monitor, Cloud, Clock, Wifi, X, ScrollText, Copy, ChevronDown, ChevronRight } from 'lucide-react';
 import { CellNameColor } from './CellNameColor.jsx';
 import { CellControls } from './CellControls.jsx';
 import { CellOutput } from '../output/OutputBlock.jsx';
+import { StatusBadge, StatsRow, LogsPopup, ExecSection } from './DockerShared.jsx';
+import { useClipboard } from '../../hooks/useClipboard.js';
 
 // ── AWS service catalogue ────────────────────────────────────────────────────
 
@@ -36,6 +38,7 @@ const MORE_SERVICES = [
   { key: 'ecr',            label: 'ECR' },
 ];
 
+const EMPTY_SERVICES = [];
 const REGIONS = ['us-east-1', 'us-west-2', 'eu-west-1', 'eu-central-1', 'ap-southeast-1', 'ap-northeast-1'];
 const STORAGE_MODES = ['memory', 'persistent', 'hybrid'];
 
@@ -74,128 +77,16 @@ function generateSnippet(services, endpoint, region) {
   return `${nugets}\n\n${usings}\n\n${clients}`;
 }
 
-// ── Shared sub-components (from DockerCell pattern) ──────────────────────────
-
-function StatusBadge({ state }) {
-  const cls = state === 'running' ? 'docker-badge-running'
-            : state === 'error'   ? 'docker-badge-error'
-            : 'docker-badge-stopped';
-  const label = state === 'running' ? 'Running'
-              : state === 'error'   ? 'Error'
-              : 'Stopped';
-  return <span className={`docker-status-badge ${cls}`}>{label}</span>;
-}
-
-function StatsRow({ stats }) {
-  if (!stats) return null;
-  const formatMem = (bytes) => {
-    if (!bytes && bytes !== 0) return '—';
-    if (bytes >= 1073741824) return `${(bytes / 1073741824).toFixed(1)} GB`;
-    if (bytes >= 1048576) return `${(bytes / 1048576).toFixed(1)} MB`;
-    return `${(bytes / 1024).toFixed(0)} KB`;
-  };
-  return (
-    <div className="docker-stats-row">
-      <span className="docker-stat-label">CPU:</span>
-      <span className="docker-stat-value">{stats.cpuPercent != null ? `${stats.cpuPercent.toFixed(1)}%` : '—'}</span>
-      <span className="docker-stat-label">Mem:</span>
-      <span className="docker-stat-value">
-        {formatMem(stats.memUsage)}{stats.memLimit ? ` / ${formatMem(stats.memLimit)}` : ''}
-      </span>
-    </div>
-  );
-}
-
-function LogsPopup({ logs, onClose, onRefresh }) {
-  const preRef = useRef(null);
-  useEffect(() => { if (preRef.current) preRef.current.scrollTop = preRef.current.scrollHeight; }, [logs]);
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [onClose]);
-  return (
-    <div className="docker-logs-overlay" onClick={onClose}>
-      <div className="docker-logs-popup" onClick={(e) => e.stopPropagation()}>
-        <div className="docker-logs-header">
-          <ScrollText size={14} />
-          <span className="docker-logs-title">Container Logs</span>
-          <button className="docker-logs-refresh" onClick={onRefresh} title="Refresh logs">↻</button>
-          <button className="docker-logs-close" onClick={onClose} title="Close"><X size={14} /></button>
-        </div>
-        <pre ref={preRef} className="docker-logs-content">{logs || '(no logs)'}</pre>
-      </div>
-    </div>
-  );
-}
-
-function ExecSection({ notebookId, cellId, containerId }) {
-  const [execOpen, setExecOpen] = useState(false);
-  const [execOutput, setExecOutput] = useState([]);
-  const [execInput, setExecInput] = useState('');
-  const [execActive, setExecActive] = useState(false);
-  const outputRef = useRef(null);
-
-  useEffect(() => {
-    if (!execActive || !window.electronAPI) return;
-    const handler = (_ev, nbId, msg) => {
-      if (nbId !== notebookId) return;
-      if (msg.type === 'docker_exec_output' && msg.id === cellId) setExecOutput((prev) => [...prev.slice(-500), msg.data || '']);
-      if (msg.type === 'docker_exec_ended' && msg.id === cellId) setExecActive(false);
-    };
-    window.electronAPI.onKernelMessage(handler);
-    return () => window.electronAPI.offKernelMessage(handler);
-  }, [execActive, notebookId, cellId]);
-
-  useEffect(() => { if (outputRef.current) outputRef.current.scrollTop = outputRef.current.scrollHeight; }, [execOutput]);
-
-  const handleAttach = () => {
-    setExecOutput([]); setExecActive(true); setExecOpen(true);
-    window.electronAPI?.sendToKernel(notebookId, { type: 'docker_exec', id: cellId, containerId });
-  };
-  const handleSend = () => {
-    if (!execInput.trim()) return;
-    window.electronAPI?.sendToKernel(notebookId, { type: 'docker_exec_input', id: cellId, containerId, input: execInput + '\n' });
-    setExecOutput((prev) => [...prev, `$ ${execInput}\n`]);
-    setExecInput('');
-  };
-
-  if (!execOpen) return (
-    <div className="docker-exec-section">
-      <button className="docker-logs-btn" onClick={handleAttach} title="Attach shell"><Terminal size={12} /></button>
-    </div>
-  );
-
-  return (
-    <div className="docker-exec-section">
-      <div className="docker-exec-header">
-        <Terminal size={12} /><span>Exec{execActive ? '' : ' (disconnected)'}</span>
-        <button className="docker-logs-close" onClick={() => { setExecOpen(false); setExecActive(false); }} title="Close"><X size={12} /></button>
-      </div>
-      {execOutput.length > 0 && <pre ref={outputRef} className="docker-logs-content" style={{ maxHeight: 150, margin: '0 8px', borderRadius: 3 }}>{execOutput.join('')}</pre>}
-      <div className="docker-exec-input-row">
-        <input className="docker-exec-input" value={execInput} onChange={(e) => setExecInput(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSend(); } }}
-          placeholder={execActive ? 'Type command...' : 'Disconnected'} disabled={!execActive} spellCheck={false} />
-        <button className="docker-exec-send" onClick={handleSend} disabled={!execActive}>Send</button>
-      </div>
-    </div>
-  );
-}
-
 // ── Snippet popup ────────────────────────────────────────────────────────────
 
 function SnippetPopup({ snippet, onClose, onInsert }) {
+  const [copied, copy] = useClipboard();
+
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [onClose]);
-
-  const [copied, setCopied] = useState(false);
-  const handleCopy = () => {
-    navigator.clipboard.writeText(snippet).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); });
-  };
 
   return (
     <div className="docker-logs-overlay" onClick={onClose}>
@@ -207,7 +98,7 @@ function SnippetPopup({ snippet, onClose, onInsert }) {
         </div>
         <pre className="docker-logs-content floci-snippet-code">{snippet}</pre>
         <div className="floci-snippet-actions">
-          <button className="docker-btn" onClick={handleCopy}><Copy size={12} /> {copied ? 'Copied!' : 'Copy'}</button>
+          <button className="docker-btn" onClick={() => copy(snippet)}><Copy size={12} /> {copied ? 'Copied!' : 'Copy'}</button>
           {onInsert && <button className="docker-btn floci-btn-primary" onClick={() => { onInsert(snippet); onClose(); }}>Insert as Code Cell</button>}
         </div>
       </div>
@@ -307,11 +198,12 @@ export function FlociCell({
     <button className="docker-logs-btn" onClick={handleOpenLogs} title="Container logs"><ScrollText size={12} /></button>
   ) : null;
 
+  const services = cell.services || EMPTY_SERVICES;
   const endpoint = cell.endpoint || 'http://localhost:4566';
   const region = cell.region || 'us-east-1';
-  const snippet = generateSnippet(cell.services || [], endpoint, region);
+  const snippet = useMemo(() => generateSnippet(services, endpoint, region), [services, endpoint, region]);
 
-  const canStart = (cell.services || []).length > 0 && kernelReady;
+  const canStart = services.length > 0 && kernelReady;
 
   // ── Presentation mode ──────────────────────────────────────────────────────
   if (presenting) {
@@ -330,7 +222,7 @@ export function FlociCell({
         <div className="docker-present-details">
           <div className="docker-detail-chip"><Cloud size={12} /> {region}</div>
           <div className="docker-detail-chip"><Wifi size={12} /> {endpoint}</div>
-          {(cell.services || []).length > 0 && <div className="docker-detail-chip">{(cell.services || []).join(', ')}</div>}
+          {services.length > 0 && <div className="docker-detail-chip">{services.join(', ')}</div>}
           {containerId && <div className="docker-detail-chip">ID: {containerId}</div>}
         </div>
         <StatsRow stats={stats} />
@@ -366,7 +258,7 @@ export function FlociCell({
           ) : (
             <button className="cell-run-btn" onClick={onRun} disabled={anyRunning || !canStart} title="Start Floci"><Play size={12} /> Run</button>
           )}
-          <button className="floci-snippet-btn" title="SDK Snippet" onClick={() => setSnippetOpen(true)} disabled={(cell.services || []).length === 0}>
+          <button className="floci-snippet-btn" title="SDK Snippet" onClick={() => setSnippetOpen(true)} disabled={services.length === 0}>
             <Copy size={12} /> SDK
           </button>
           <button className={`cell-present-btn${presenting ? ' active' : ''}`} title="Presentation mode" onClick={() => updateField('presenting', !presenting)}>
