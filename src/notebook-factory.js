@@ -2713,20 +2713,20 @@ var ddb  = new AmazonDynamoDBClient(creds, new AmazonDynamoDBConfig { ServiceURL
 var s3   = new AmazonS3Client(creds, new AmazonS3Config { ServiceURL = endpoint, ForcePathStyle = true });
 var http = new HttpClient();
 
-// Helper to get queue URL
+// Helper to get-or-create queue URL (CreateQueue is idempotent)
 async Task<string> QueueUrl(string name) =>
-    (await sqs.GetQueueUrlAsync(name)).QueueUrl;
+    (await sqs.CreateQueueAsync(new CreateQueueRequest { QueueName = name })).QueueUrl;
 
-// Helper to get topic ARN — construct directly (avoids floci ListTopics compat issues)
-string TopicArn(string name) =>
-    $"arn:aws:sns:us-east-1:000000000000:{name}";
+// Helper to ensure SNS topic exists and return ARN (CreateTopic is idempotent)
+async Task<string> EnsureTopicArn(string name) =>
+    (await sns.CreateTopicAsync(new CreateTopicRequest { Name = name })).TopicArn;
 
 Display.Html("<div style='color:#4ec9b0;font-weight:600'>✓ AWS SDK clients ready (SQS, SNS, DynamoDB, S3)</div>");`);
 
   // ── Pattern 1: Event-Driven Fan-Out (SNS → SQS) ───────────────────────────
   const fanOutSetup = { ...cs(`// Pattern 1 — Event-Driven Fan-Out: SNS topic → multiple SQS queues
 // Subscribe notification and analytics queues to the "order-completed" topic
-var topicArn = TopicArn("order-completed");
+var topicArn = await EnsureTopicArn("order-completed");
 var notifQueueUrl = await QueueUrl("notification-queue");
 var analyticsQueueUrl = await QueueUrl("analytics-queue");
 
@@ -2748,7 +2748,7 @@ Display.Html($@"<div style='background:#111118;border:1px solid #333;border-left
 </div>");`), columns: 2 };
 
   const fanOutPublish = { ...cs(`// Publish an event — it fans out to both notification and analytics queues
-var topicArn = TopicArn("order-completed");
+var topicArn = await EnsureTopicArn("order-completed");
 
 var orderEvent = new { eventType = "OrderCompleted", orderId = "ORD-2001", userId = "user-42", total = 114.49, timestamp = DateTime.UtcNow };
 await sns.PublishAsync(topicArn, System.Text.Json.JsonSerializer.Serialize(orderEvent));
