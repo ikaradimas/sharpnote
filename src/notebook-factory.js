@@ -2717,9 +2717,11 @@ var http = new HttpClient();
 async Task<string> QueueUrl(string name) =>
     (await sqs.GetQueueUrlAsync(name)).QueueUrl;
 
-// Helper to get topic ARN
-async Task<string> TopicArn(string name) =>
-    (await sns.FindTopicAsync(name)).TopicArn;
+// Helper to get topic ARN (ListTopicsAsync instead of FindTopicAsync for floci compat)
+async Task<string> TopicArn(string name) {
+    var topics = await sns.ListTopicsAsync();
+    return topics.Topics.First(t => t.TopicArn.EndsWith(":" + name)).TopicArn;
+}
 
 Display.Html("<div style='color:#4ec9b0;font-weight:600'>✓ AWS SDK clients ready (SQS, SNS, DynamoDB, S3)</div>");`);
 
