@@ -7,6 +7,7 @@ import { MarkdownOutput } from './MarkdownOutput.jsx';
 import { HorizontalOutput } from './HorizontalOutput.jsx';
 import { ConfirmWidget } from './ConfirmWidget.jsx';
 import { ImageOutput } from './ImageOutput.jsx';
+import { MapOutput } from './MapOutput.jsx';
 import { PromptWidget } from './PromptWidget.jsx';
 import { ProgressOutput } from './ProgressOutput.jsx';
 import { ObjectTree } from './ObjectTree.jsx';
@@ -81,6 +82,8 @@ export function OutputBlock({ msg, index, notebookId, allCells, onRunCellByName 
       inner = <ConfirmWidget spec={msg.content} notebookId={notebookId} />;
     } else if (msg.format === 'image') {
       inner = <ImageOutput spec={msg.content} notebookId={notebookId} handleId={msg.handleId} />;
+    } else if (msg.format === 'map') {
+      inner = <MapOutput spec={msg.content} />;
     } else if (msg.format === 'prompt') {
       inner = <PromptWidget spec={msg.content} notebookId={notebookId} />;
     } else if (msg.format === 'progress') {

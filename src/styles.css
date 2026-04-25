@@ -6840,6 +6840,27 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
   margin: 4px 0;
 }
 
+/* ── Geo.Map output ──────────────────────────────────────────────────────── */
+.output-map {
+  border-radius: 4px;
+  border: 1px solid var(--border-subtle);
+  margin: 4px 0;
+  background: #1a1a22;
+  overflow: hidden;
+}
+.output-map .leaflet-container {
+  width: 100%;
+  height: 100%;
+  background: #1a1a22;
+  border-radius: 4px;
+}
+.output-map .leaflet-control-attribution {
+  font-size: 9px;
+  background: rgba(0, 0, 0, 0.5);
+  color: #888;
+}
+.output-map .leaflet-control-attribution a { color: #aaa; }
+
 /* ── SQL status message ──────────────────────────────────────────────────── */
 .sql-status {
   font-family: var(--font-mono); font-size: 12px;
