@@ -15,6 +15,16 @@ async function resolveConfig(nb) {
   return resolved;
 }
 
+function resolveParams(nb) {
+  return (nb?.params || [])
+    .filter((p) => p.name?.trim())
+    .map((p) => ({
+      name:  p.name,
+      type:  p.type || 'string',
+      value: p.value !== undefined ? p.value : p.default,
+    }));
+}
+
 function prepareCellRun(setNb, pendingResolversRef, notebookId, cellId, resolve) {
   setNb(notebookId, (n) => {
     const prevOutputs = n.outputs[cellId];
@@ -636,6 +646,7 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
         staleCellIds: (n.staleCellIds || []).filter((id) => id !== cell.id),
       }));
       const breakpoints = nb?.breakpoints?.[cell.id] || [];
+      const params = resolveParams(nb);
       window.electronAPI.sendToKernel(notebookId, {
         type: 'execute',
         id: cell.id,
@@ -643,6 +654,7 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
         outputMode: cell.outputMode || 'auto',
         sources: nb ? nb.nugetSources.filter((s) => s.enabled).map((s) => s.url) : [],
         config: resolvedConfig,
+        ...(params.length > 0 ? { params } : {}),
         ...(breakpoints.length > 0 ? { breakpoints } : {}),
       });
     });
@@ -655,6 +667,7 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
 
     return new Promise((resolve) => {
       prepareCellRun(setNb, pendingResolversRef, notebookId, cell.id, resolve);
+      const params = resolveParams(nb);
       window.electronAPI.sendToKernel(notebookId, {
         type: 'execute',
         id: cell.id,
@@ -662,6 +675,7 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
         outputMode: cell.outputMode || 'auto',
         sources: nb ? nb.nugetSources.filter((s) => s.enabled).map((s) => s.url) : [],
         config: resolvedConfig,
+        ...(params.length > 0 ? { params } : {}),
         formData,
       });
     });

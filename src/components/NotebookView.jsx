@@ -4,6 +4,7 @@ import { makeCell } from '../notebook-factory.js';
 import { getSectionHeadingLevel, getCollapsedSections } from '../utils.js';
 import { NOTEBOOK_BACKGROUNDS } from '../config/notebook-backgrounds.js';
 import { Toolbar } from './toolbar/Toolbar.jsx';
+import { NotebookParams } from './NotebookParams.jsx';
 import { CodeCell } from './editor/CodeCell.jsx';
 import { MarkdownCell } from './editor/MarkdownCell.jsx';
 import { SqlCell } from './editor/SqlCell.jsx';
@@ -519,6 +520,12 @@ export function NotebookView({
             Exit Dashboard
           </button>
         )}
+
+        <NotebookParams
+          params={nb.params}
+          onChange={(next) => onSetNbDirty((n) => ({ params: next }))}
+        />
+
 
         {cells.map((cell, index) => {
           const isHidden = collapsedCellIds.has(cell.id);

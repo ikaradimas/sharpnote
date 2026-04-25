@@ -199,6 +199,48 @@ public class DisplayTests : IClassFixture<KernelFixture>, IAsyncLifetime
         content.GetProperty("layout").GetString().Should().Be("circle");
     }
 
+    // ── Notebook params preamble injection ───────────────────────────────────
+
+    [Fact]
+    public async Task Execute_InjectsTypedLocalsForNotebookParams()
+    {
+        var id = KernelFixture.NewId();
+        _k.ClearMessages();
+        var msg = new
+        {
+            type = "execute",
+            id,
+            code = "Display.Html($\"th={(int)(Threshold*100)} region={Region} dry={Dry}\");",
+            paramsArr = new object[]
+            {
+                new { name = "Threshold", type = "double", value = 0.7 },
+                new { name = "Region",    type = "string", value = "EU" },
+                new { name = "Dry",       type = "bool",   value = true },
+            },
+        };
+        // The "params" key is a C# reserved word in anonymous objects — reach
+        // through JsonSerializer with a workaround via Dictionary<string, object>.
+        var payload = new System.Collections.Generic.Dictionary<string, object>
+        {
+            ["type"]   = msg.type,
+            ["id"]     = msg.id,
+            ["code"]   = msg.code,
+            ["params"] = msg.paramsArr,
+        };
+        await _k.SendAsync(payload);
+
+        await _k.WaitForMessageAsync(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "complete" &&
+            el.TryGetProperty("id", out var i) && i.GetString() == id);
+
+        var output = _k.GetMessages().FirstOrDefault(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "display" &&
+            el.TryGetProperty("format", out var f) && f.GetString() == "html");
+
+        output.ValueKind.Should().NotBe(JsonValueKind.Undefined);
+        output.GetProperty("content").GetString().Should().Be("th=70 region=EU dry=True");
+    }
+
     // ── Display.Plot ──────────────────────────────────────────────────────────
 
     [Fact]

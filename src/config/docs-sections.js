@@ -709,6 +709,21 @@ export const DOCS_SECTIONS = [
     ],
   },
   {
+    id: 'params', title: 'Parameterised Notebooks',
+    content: [
+      { type: 'p', text: 'A notebook can declare typed parameters that show up as a small form at the top of the view. Cell code references them as if they were local variables (no Params.Get<T> ceremony) and the same notebook can be re-run with different values, including from the command line for headless / scheduled jobs.' },
+      { type: 'h3', text: 'Schema' },
+      { type: 'p', text: 'In the .cnb JSON, top-level params is an array of:' },
+      { type: 'code', lang: 'json', text: '{\n  "name":    "Threshold",      // C# identifier\n  "type":    "double",          // double | int | string | bool | choice\n  "default": 0.5,\n  "value":   0.7,                // optional override; persisted on save\n  "label":   "Risk threshold",  // optional UI label\n  "options": ["EU","US","APAC"] // for type=choice\n}' },
+      { type: 'h3', text: 'In cell code' },
+      { type: 'p', text: 'The kernel injects a typed local for every declared param before each cell runs. So if a notebook declares a `double Threshold = 0.5` and a `string Region = "EU"`, every code cell can simply write:' },
+      { type: 'code', lang: 'csharp', text: 'var filtered = data.Where(x => x.Score >= Threshold);\nDisplay.Markdown($"## {Region} report\\n\\n{filtered.Count()} rows above {Threshold}");' },
+      { type: 'h3', text: 'CLI override' },
+      { type: 'p', text: 'For headless / cron / CI runs, override values from the command line. Names must match a declared param; values are coerced to the declared type. Unknown names cause exit code 2.' },
+      { type: 'code', lang: 'bash', text: 'sharpnote run report.cnb \\\n  --param Threshold=0.9 \\\n  --param Region=US \\\n  --output q1.txt' },
+    ],
+  },
+  {
     id: 'fileformat', title: 'File Format',
     content: [
       { type: 'p', text: 'Notebooks are saved as .cnb files — plain JSON that is human-readable and version-control friendly.' },
@@ -720,6 +735,7 @@ export const DOCS_SECTIONS = [
         'packages — array of { id, version } NuGet package references',
         'sources — array of feed objects with name, url, enabled',
         'config — array of { key, value } configuration pairs',
+        'params — array of { name, type, default, value?, options?, label? } typed parameters (see Parameterised Notebooks)',
         'attachedDbIds — array of global connection IDs to re-attach on open',
       ]},
       { type: 'h3', text: 'Cell Object' },

@@ -112,6 +112,14 @@ partial class Program
         globals.Mock.SetCancellationToken(execToken);
         var interrupted = false;
 
+        // Inject typed locals for notebook parameters before user code so that
+        // `Threshold` is `double Threshold = 0.7;` not `Params["Threshold"]`.
+        if (msg.TryGetProperty("params", out var paramsProp) && paramsProp.ValueKind == JsonValueKind.Array)
+        {
+            var preamble = BuildParamsPreamble(paramsProp);
+            if (preamble.Length > 0) cleanCode = preamble + cleanCode;
+        }
+
         // Inject FormData variable when the execute message contains form submission data.
         if (msg.TryGetProperty("formData", out var formDataProp) && formDataProp.ValueKind == JsonValueKind.Object)
         {
@@ -287,6 +295,39 @@ partial class Program
     // captures its return value.  Only fires when the final top-level statement
     // is an expression statement (method call, comparison, etc.) — assignments,
     // declarations, and control-flow are left untouched.
+    internal static string BuildParamsPreamble(JsonElement paramsArray)
+    {
+        var sb = new StringBuilder();
+        foreach (var p in paramsArray.EnumerateArray())
+        {
+            if (!p.TryGetProperty("name", out var nameEl)) continue;
+            var name = nameEl.GetString();
+            if (string.IsNullOrWhiteSpace(name)) continue;
+            // Only accept identifiers — defence in depth against code injection
+            // through a maliciously-crafted .cnb. (The renderer also enforces this.)
+            if (!System.Text.RegularExpressions.Regex.IsMatch(name, @"^[A-Za-z_][A-Za-z0-9_]*$")) continue;
+
+            var type  = p.TryGetProperty("type", out var t) ? t.GetString() : "string";
+            var value = p.TryGetProperty("value", out var v) ? v : (JsonElement)default;
+
+            string literal = (type, value.ValueKind) switch
+            {
+                ("double", JsonValueKind.Number) => value.GetDouble().ToString(System.Globalization.CultureInfo.InvariantCulture) + "d",
+                ("int",    JsonValueKind.Number) => ((int)value.GetDouble()).ToString(System.Globalization.CultureInfo.InvariantCulture),
+                ("bool",   JsonValueKind.True)   => "true",
+                ("bool",   JsonValueKind.False)  => "false",
+                ("choice", JsonValueKind.String) => JsonSerializer.Serialize(value.GetString() ?? ""),
+                ("string", JsonValueKind.String) => JsonSerializer.Serialize(value.GetString() ?? ""),
+                ("string", _)                    => "\"\"",
+                _                                => null!,
+            };
+            if (literal == null) continue;
+            string cs = type switch { "double" => "double", "int" => "int", "bool" => "bool", _ => "string" };
+            sb.Append(cs).Append(' ').Append(name).Append(" = ").Append(literal).Append(";\n");
+        }
+        return sb.ToString();
+    }
+
     private static string TrimFinalExprSemicolon(string code)
     {
         var tree = CSharpSyntaxTree.ParseText(code,

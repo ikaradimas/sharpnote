@@ -3864,6 +3864,7 @@ export function createNotebook(templateKey = null) {
     nugetPackages: [],
     nugetSources: [...DEFAULT_NUGET_SOURCES],
     config: templateKey ? configForTemplate(templateKey) : [],
+    params: [],
     logPanelOpen: false,
     nugetPanelOpen: false,
     configPanelOpen: false,

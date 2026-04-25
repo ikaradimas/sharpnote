@@ -83,6 +83,7 @@ export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef, for
       packages: nb.nugetPackages.map(({ id, version }) => ({ id, version: version || null })),
       sources: nb.nugetSources,
       config: nb.config.filter((e) => e.key.trim()),
+      params: (nb.params || []).filter((p) => p.name?.trim()),
       attachedDbIds: nb.attachedDbs.filter((d) => d.status === 'ready').map((d) => d.connectionId),
       autoRun: nb.autoRun || false,
       cells: nb.cells.map(({ id, type, content, name, color, columns, nextCells, prevCells, outputMode, locked, codeFolded, presenting, presentInterval, db, label, mode, truePath, falsePath, switchPaths, image, containerName, ports, env, volume, command, runOnStartup, runOnShutdown }) => ({
@@ -210,6 +211,7 @@ export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef, for
       nugetPackages: (result.data.packages || []).map((p) => ({ ...p, status: 'pending' })),
       nugetSources: result.data.sources || [...DEFAULT_NUGET_SOURCES],
       config: result.data.config || [],
+      params: result.data.params || [],
       attachedDbs: (result.data.attachedDbIds || []).map((id) => ({
         connectionId: id, status: 'connecting', varName: '', schema: null, error: undefined,
       })),
@@ -240,6 +242,7 @@ export function useNotebookManager({ cancelPendingCellsRef, saveSettingsRef, for
       nugetPackages: (result.data.packages || []).map((p) => ({ ...p, status: 'pending' })),
       nugetSources: result.data.sources || [...DEFAULT_NUGET_SOURCES],
       config: result.data.config || [],
+      params: result.data.params || [],
       attachedDbs: (result.data.attachedDbIds || []).map((id) => ({
         connectionId: id, status: 'connecting', varName: '', schema: null, error: undefined,
       })),
@@ -614,6 +617,7 @@ ${cellsHtml}
           nugetPackages: (r.value.data.packages || []).map((p) => ({ ...p, status: 'pending' })),
           nugetSources: r.value.data.sources || [...DEFAULT_NUGET_SOURCES],
           config: r.value.data.config || [],
+          params: r.value.data.params || [],
           attachedDbs: (r.value.data.attachedDbIds || []).map((id) => ({
             connectionId: id, status: 'connecting', varName: '', schema: null, error: undefined,
           })),

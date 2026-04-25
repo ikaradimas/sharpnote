@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 
-// parseArgs and applyConfigOverrides are pure functions — test directly.
-const { parseArgs, applyConfigOverrides } = require('../../src/main/headless');
+// parseArgs, applyConfigOverrides, applyParamOverrides are pure functions — test directly.
+const { parseArgs, applyConfigOverrides, applyParamOverrides } = require('../../src/main/headless');
 
 describe('headless parseArgs', () => {
   it('extracts notebook path', () => {
@@ -98,5 +98,37 @@ describe('headless applyConfigOverrides', () => {
     const config = [{ key: 'X', value: '1', type: 'text' }];
     applyConfigOverrides(config, { X: '2' });
     expect(config[0].value).toBe('1');
+  });
+});
+
+describe('headless --param', () => {
+  it('parseArgs extracts repeatable --param flags', () => {
+    const result = parseArgs([
+      'nb.cnb',
+      '--param', 'Threshold=0.7',
+      '--param', 'Region=US',
+    ]);
+    expect(result.params).toEqual({ Threshold: '0.7', Region: 'US' });
+  });
+
+  it('applyParamOverrides coerces values to declared types', () => {
+    const params = [
+      { name: 'Threshold', type: 'double', default: 0.5 },
+      { name: 'Tries',     type: 'int',    default: 3   },
+      { name: 'Dry',       type: 'bool',   default: false },
+      { name: 'Label',     type: 'string', default: 'foo' },
+    ];
+    const { entries } = applyParamOverrides(params, {
+      Threshold: '0.9', Tries: '5', Dry: 'true', Label: 'bar',
+    });
+    expect(entries[0].value).toBe(0.9);
+    expect(entries[1].value).toBe(5);
+    expect(entries[2].value).toBe(true);
+    expect(entries[3].value).toBe('bar');
+  });
+
+  it('applyParamOverrides errors on unknown param name', () => {
+    const result = applyParamOverrides([{ name: 'A', type: 'string', default: '' }], { B: 'x' });
+    expect(result.error).toMatch(/Unknown --param "B"/);
   });
 });

@@ -88,3 +88,24 @@ describe('Config secret encryption round-trip', () => {
     }
   });
 });
+
+describe('Notebook params round-trip', () => {
+  it('persists params verbatim through write/read', () => {
+    const filePath = path.join(tmpDir, 'test-params.cnb');
+    const params = [
+      { name: 'Threshold', type: 'double', default: 0.5,  value: 0.7 },
+      { name: 'Region',    type: 'choice', default: 'EU', options: ['EU', 'US', 'APAC'] },
+      { name: 'Dry',       type: 'bool',   default: false },
+    ];
+    nbIo.writeNotebookFile(filePath, { title: 'P', cells: [], params });
+    const raw = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+    expect(raw.params).toEqual(params);
+  });
+
+  it('writing without a params field keeps the file backwards-compatible', () => {
+    const filePath = path.join(tmpDir, 'test-no-params.cnb');
+    nbIo.writeNotebookFile(filePath, { title: 'NP', cells: [] });
+    const raw = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+    expect(raw.params).toBeUndefined();
+  });
+});
