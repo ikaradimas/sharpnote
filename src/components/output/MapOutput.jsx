@@ -106,10 +106,14 @@ export function MapOutput({ spec }) {
       }
 
       if (spec.heat?.length) {
+        // Tuned so points stay visible at world-level zoom (≤3) without being
+        // overwhelming when zoomed in. leaflet.heat scales intensity by
+        // current_zoom / maxZoom, so a low maxZoom keeps low-zoom views legible.
         const heat = L.heatLayer(spec.heat, {
-          radius: 25,
-          blur: 18,
-          maxZoom: 9,
+          radius: spec.heatRadius  ?? 35,
+          blur:   spec.heatBlur    ?? 25,
+          maxZoom: spec.heatMaxZoom ?? 4,
+          max:    spec.heatMax     ?? 1.0,
         }).addTo(mapRef.current);
         layersRef.current.push(heat);
         spec.heat.forEach((p) => bounds.push([p[0], p[1]]));
