@@ -40,9 +40,12 @@ export function MapOutput({ spec }) {
           zoom: spec.zoom ?? 2,
           scrollWheelZoom: true,
         });
-        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '© OpenStreetMap',
-          maxZoom: 19,
+        // Carto dark basemap — free, no key, no Referer requirement (OSM's
+        // tile.openstreetmap.org rejects file:// origin requests with a 403).
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+          attribution: '© OpenStreetMap contributors © CARTO',
+          subdomains: 'abcd',
+          maxZoom: 20,
         }).addTo(mapRef.current);
       } else {
         mapRef.current.setView(spec.center || [0, 0], spec.zoom ?? 2);

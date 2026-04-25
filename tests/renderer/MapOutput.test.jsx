@@ -59,13 +59,13 @@ describe('MapOutput', () => {
     cleanup();
   });
 
-  it('renders a container with the OSM tile layer at the requested center/zoom', async () => {
+  it('renders a container with the Carto tile layer at the requested center/zoom', async () => {
     render(<MapOutput spec={{ center: [40, -74], zoom: 5 }} />);
 
     await waitFor(() => expect(L.map).toHaveBeenCalledTimes(1));
     expect(L.map.mock.calls[0][1]).toMatchObject({ center: [40, -74], zoom: 5 });
     expect(L.tileLayer).toHaveBeenCalledWith(
-      expect.stringContaining('openstreetmap.org'),
+      expect.stringContaining('cartocdn.com'),
       expect.any(Object),
     );
   });
