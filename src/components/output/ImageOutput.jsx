@@ -19,7 +19,7 @@ export function ImageOutput({ spec, notebookId, handleId }) {
 
   const handleMove = useCallback((e) => {
     const now = Date.now();
-    if (now - lastMoveRef.current < 16) return; // throttle to ~60fps
+    if (now - lastMoveRef.current < 16) return;
     lastMoveRef.current = now;
     sendEvent('canvas_move', e);
   }, [sendEvent]);
@@ -33,8 +33,7 @@ export function ImageOutput({ spec, notebookId, handleId }) {
       src={src}
       alt={alt || ''}
       style={{
-        maxWidth: width ? `${width}px` : '100%',
-        ...(height ? { maxHeight: `${height}px` } : {}),
+        ...(width ? { maxWidth: `${width}px` } : {}),
         ...(interactive ? { cursor: 'crosshair' } : {}),
       }}
       onClick={interactive ? (e) => sendEvent('canvas_click', e) : undefined}
