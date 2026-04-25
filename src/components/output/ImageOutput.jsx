@@ -24,6 +24,8 @@ export function ImageOutput({ spec, notebookId, handleId }) {
     sendEvent('canvas_move', e);
   }, [sendEvent]);
 
+  if (!src) return null;
+
   return (
     <img
       ref={imgRef}

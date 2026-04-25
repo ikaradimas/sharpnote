@@ -444,7 +444,8 @@ public class CanvasHandle
     public void Flush()
     {
         var uri = BmpEncoder.EncodeBase64DataUri(_pixels, _width, _height);
-        _display.SendUpdate("image", new { src = uri, width = _width, height = _height }, _handleId);
+        bool isInteractive = _onClick != null || _onMove != null || _clickTcs != null;
+        _display.SendUpdate("image", new { src = uri, width = _width, height = _height, interactive = isInteractive }, _handleId);
     }
 
     /// <summary>
@@ -495,11 +496,10 @@ public class CanvasHandle
     private Action<int, int>? _onMove;
     private TaskCompletionSource<(int x, int y, int button)>? _clickTcs;
 
-    /// <summary>Registers this canvas for mouse events.</summary>
+    /// <summary>Registers this canvas for mouse events. The next Flush() will include the interactive flag.</summary>
     public void EnableMouse()
     {
         _registry[_handleId] = this;
-        _display.SendUpdate("image", new { src = (string?)null, width = _width, height = _height, interactive = true }, _handleId);
     }
 
     /// <summary>Called when the user clicks on the canvas image.</summary>
