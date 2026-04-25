@@ -172,7 +172,7 @@ public class DisplayHandle
 
     /// <summary>Updates a live image with raw RGB bytes.</summary>
     public void UpdateImageBytes(byte[] rgb, int width, int height) =>
-        UpdateImage(BmpEncoder.EncodeBase64DataUri(rgb, width, height), width: width, height: height);
+        UpdateImage(PngEncoder.EncodeBase64DataUri(rgb, width, height), width: width, height: height);
 
     public void Clear() =>
         _display.SendUpdate("html", (object)"", HandleId);
@@ -443,7 +443,7 @@ public class CanvasHandle
     /// <summary>Encodes the current pixel buffer as BMP and pushes the update to the display.</summary>
     public void Flush()
     {
-        var uri = BmpEncoder.EncodeBase64DataUri(_pixels, _width, _height);
+        var uri = PngEncoder.EncodeBase64DataUri(_pixels, _width, _height);
         bool isInteractive = _onClick != null || _onMove != null || _clickTcs != null;
         _display.SendUpdate("image", new { src = uri, width = _width, height = _height, interactive = isInteractive }, _handleId);
     }
@@ -496,10 +496,12 @@ public class CanvasHandle
     private Action<int, int>? _onMove;
     private TaskCompletionSource<(int x, int y, int button)>? _clickTcs;
 
-    /// <summary>Registers this canvas for mouse events. The next Flush() will include the interactive flag.</summary>
+    /// <summary>Registers this canvas for mouse events and re-emits the current frame so
+    /// the renderer attaches click/move handlers. Safe to call repeatedly.</summary>
     public void EnableMouse()
     {
         _registry[_handleId] = this;
+        Flush();
     }
 
     /// <summary>Called when the user clicks on the canvas image.</summary>
@@ -792,7 +794,7 @@ public class DisplayHelper
     /// </summary>
     public void ImageBytes(byte[] rgb, int width, int height, string? title = null)
     {
-        var uri = BmpEncoder.EncodeBase64DataUri(rgb, width, height);
+        var uri = PngEncoder.EncodeBase64DataUri(rgb, width, height);
         Send(new { type = "display", id = _currentId, format = "image",
                    content = new { src = uri, width, height }, title });
     }
@@ -819,7 +821,7 @@ public class DisplayHelper
     {
         var handleId = NewHandle().HandleId;
         // Send initial blank image
-        var uri = BmpEncoder.EncodeBase64DataUri(new byte[width * height * 3], width, height);
+        var uri = PngEncoder.EncodeBase64DataUri(new byte[width * height * 3], width, height);
         Send(new { type = "display", id = _currentId, format = "image",
                    content = new { src = uri, width, height },
                    handleId, title });
