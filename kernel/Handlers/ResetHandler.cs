@@ -17,6 +17,7 @@ partial class Program
     {
         script = null;
         UtilHelper.ClearCacheStatic();
+        CanvasHandle.ClearRegistry();
         _workspaceManager.ClearScriptPreamble();
         foreach (var info in attachedDbs.Values)
         {

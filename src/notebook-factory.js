@@ -3523,6 +3523,176 @@ for (int frame = 0; frame < 400; frame++) {
     await Task.Delay(25);
 }`),
 
+    md(`## 9 — Alpha Blending
+Overlapping semi-transparent rectangles with smooth color mixing.`),
+
+    cs(`var W = 240; var H = 160;
+var canvas = Display.Canvas(W, H);
+
+for (int frame = 0; frame < 200; frame++) {
+    if (__ct__.IsCancellationRequested) break;
+    canvas.Fill(12, 12, 20);
+    double t = frame * 0.03;
+
+    // Three orbiting transparent rectangles
+    for (int i = 0; i < 3; i++) {
+        double angle = t + i * Math.PI * 2 / 3;
+        int cx = W / 2 + (int)(Math.Cos(angle) * 50) - 30;
+        int cy = H / 2 + (int)(Math.Sin(angle) * 30) - 25;
+        byte r = i == 0 ? (byte)255 : (byte)40;
+        byte g = i == 1 ? (byte)255 : (byte)40;
+        byte b = i == 2 ? (byte)255 : (byte)40;
+        canvas.FillRectAlpha(cx, cy, 60, 50, r, g, b, 120);
+    }
+
+    // Pulsing center circle with alpha
+    byte pulse = (byte)(80 + Math.Sin(t * 3) * 60);
+    for (int dy = -20; dy <= 20; dy++)
+        for (int dx = -20; dx <= 20; dx++)
+            if (dx * dx + dy * dy <= 400)
+                canvas.SetPixelAlpha(W / 2 + dx, H / 2 + dy, 255, 220, 140, pulse);
+
+    canvas.Flush();
+    await Task.Delay(25);
+}`),
+
+    md(`## 10 — Text & Triangles
+DrawText for HUD overlay and FillTriangle for a rotating shape.`),
+
+    cs(`var W = 280; var H = 180;
+var canvas = Display.Canvas(W, H);
+var sw = System.Diagnostics.Stopwatch.StartNew();
+
+for (int frame = 0; frame < 300; frame++) {
+    if (__ct__.IsCancellationRequested) break;
+    canvas.Fill(10, 10, 18);
+    double t = frame * 0.04;
+
+    // Rotating triangle
+    int cx = W / 2, cy = H / 2 + 10;
+    int r = 55;
+    for (int i = 0; i < 3; i++) {
+        double a0 = t + i * Math.PI * 2 / 3;
+        double a1 = t + (i + 1) * Math.PI * 2 / 3;
+        int x0 = cx + (int)(Math.Cos(a0) * r), y0 = cy + (int)(Math.Sin(a0) * r);
+        int x1 = cx + (int)(Math.Cos(a1) * r), y1 = cy + (int)(Math.Sin(a1) * r);
+        byte cr = (byte)(120 + i * 45), cg = (byte)(80 + i * 30), cb = (byte)(200 - i * 50);
+        canvas.FillTriangle(cx, cy, x0, y0, x1, y1, cr, cg, cb);
+    }
+
+    // Triangle outline
+    for (int i = 0; i < 3; i++) {
+        double a0 = t + i * Math.PI * 2 / 3;
+        double a1 = t + (i + 1) * Math.PI * 2 / 3;
+        canvas.DrawLine(cx + (int)(Math.Cos(a0) * r), cy + (int)(Math.Sin(a0) * r),
+                        cx + (int)(Math.Cos(a1) * r), cy + (int)(Math.Sin(a1) * r), 255, 255, 255);
+    }
+
+    // HUD text overlay
+    double fps = (frame + 1) / (sw.Elapsed.TotalSeconds + 0.001);
+    canvas.DrawText(4, 4, $"FPS: {fps:F0}", 180, 220, 180);
+    canvas.DrawText(4, 14, $"Frame: {frame}", 140, 140, 160);
+    canvas.DrawText(4, H - 12, "DrawText + FillTriangle", 100, 100, 120);
+
+    canvas.Flush();
+    await Task.Delay(20);
+}`),
+
+    md(`## 11 — Sprite Animation
+A procedurally generated sprite moving across a starfield background.`),
+
+    cs(`var W = 280; var H = 160;
+var canvas = Display.Canvas(W, H);
+var rng = new Random();
+
+// Generate a small 9x9 spaceship sprite (RGB)
+int sw = 9, sh = 9;
+var sprite = new byte[sw * sh * 3];
+int[] shape = { 0,0,0,0,1,0,0,0,0, 0,0,0,1,1,1,0,0,0, 0,0,1,1,1,1,1,0,0, 0,1,1,1,1,1,1,1,0, 1,1,0,1,1,1,0,1,1, 1,0,0,1,1,1,0,0,1, 0,0,0,0,1,0,0,0,0, 0,0,1,0,0,0,1,0,0, 0,1,0,0,0,0,0,1,0 };
+for (int i = 0; i < sw * sh; i++) {
+    if (shape[i] == 1) { sprite[i * 3] = 100; sprite[i * 3 + 1] = 200; sprite[i * 3 + 2] = 255; }
+}
+
+// Stars
+var starX = new int[80]; var starY = new int[80]; var starB = new byte[80];
+for (int i = 0; i < 80; i++) { starX[i] = rng.Next(W); starY[i] = rng.Next(H); starB[i] = (byte)(60 + rng.Next(195)); }
+
+double shipX = -20, shipY = H / 2 - 4;
+for (int frame = 0; frame < 400; frame++) {
+    if (__ct__.IsCancellationRequested) break;
+    canvas.Fill(4, 4, 10);
+
+    // Draw stars (scrolling)
+    for (int i = 0; i < 80; i++) {
+        starX[i] -= 1 + i % 3;
+        if (starX[i] < 0) { starX[i] = W; starY[i] = rng.Next(H); }
+        canvas.SetPixel(starX[i], starY[i], starB[i], starB[i], starB[i]);
+    }
+
+    // Move ship in a sine wave path
+    shipX = (frame * 1.2) % (W + 40) - 20;
+    shipY = H / 2 + Math.Sin(frame * 0.05) * 30 - 4;
+    canvas.DrawSprite((int)shipX, (int)shipY, sprite, sw, sh);
+
+    // Engine glow
+    canvas.SetPixelAlpha((int)shipX + 4, (int)shipY + sh, 255, 150, 50, (byte)(150 + rng.Next(105)));
+    canvas.SetPixelAlpha((int)shipX + 3, (int)shipY + sh, 255, 100, 30, (byte)(80 + rng.Next(80)));
+    canvas.SetPixelAlpha((int)shipX + 5, (int)shipY + sh, 255, 100, 30, (byte)(80 + rng.Next(80)));
+
+    canvas.Flush();
+    await Task.Delay(20);
+}`),
+
+    md(`## 12 — RunLoop Helper
+The same starfield from example 4, rewritten with \`RunLoopAsync\` — no manual Flush or Delay needed.`),
+
+    cs(`var W = 320; var H = 200;
+var canvas = Display.Canvas(W, H);
+var rng = new Random();
+int N = 300;
+var sx = new double[N]; var sy = new double[N]; var sz = new double[N];
+for (int i = 0; i < N; i++) { sx[i] = rng.NextDouble() * 2 - 1; sy[i] = rng.NextDouble() * 2 - 1; sz[i] = rng.NextDouble(); }
+
+await canvas.RunLoopAsync(50, (c, frame) => {
+    c.Fill(0, 0, 0);
+    for (int i = 0; i < N; i++) {
+        sz[i] -= 0.01;
+        if (sz[i] <= 0.001) { sx[i] = rng.NextDouble() * 2 - 1; sy[i] = rng.NextDouble() * 2 - 1; sz[i] = 1; }
+        int px = (int)(sx[i] / sz[i] * 160 + W / 2);
+        int py = (int)(sy[i] / sz[i] * 100 + H / 2);
+        if (px < 0 || px >= W || py < 0 || py >= H) continue;
+        byte bright = (byte)(255 * (1 - sz[i]));
+        c.SetPixel(px, py, bright, bright, bright);
+    }
+    c.DrawText(4, 4, $"Frame {frame}  Stars {N}  50fps", 80, 180, 80);
+}, __ct__);`),
+
+    md(`## 13 — Interactive Canvas
+Click to place circles. Move the mouse to see a crosshair. Uses \`OnClick\` and \`OnMove\` callbacks.`),
+
+    cs(`var W = 320; var H = 200;
+var canvas = Display.Canvas(W, H);
+canvas.Fill(12, 12, 20);
+canvas.DrawText(W / 2 - 60, H / 2 - 4, "Click anywhere!", 150, 150, 180, 2);
+canvas.Flush();
+
+var rng = new Random();
+int mx = -1, my = -1;
+
+canvas.OnMove = (x, y) => { mx = x; my = y; };
+
+canvas.OnClick = (x, y, btn) => {
+    byte r = (byte)(80 + rng.Next(175)), g = (byte)(80 + rng.Next(175)), b = (byte)(80 + rng.Next(175));
+    int radius = 5 + rng.Next(15);
+    canvas.FillCircle(x, y, radius, r, g, b);
+    canvas.DrawCircle(x, y, radius, 255, 255, 255);
+    canvas.DrawText(x - 12, y - radius - 10, $"({x},{y})", 200, 200, 200);
+    canvas.Flush();
+};
+
+// Keep cell alive to receive events
+while (!__ct__.IsCancellationRequested) await Task.Delay(100);`),
+
     md(`---
 
 ### Animation API Reference
@@ -3531,16 +3701,24 @@ for (int frame = 0; frame < 400; frame++) {
 |--------|---------|
 | \`Display.Canvas(w, h)\` | Create a pixel canvas; returns \`CanvasHandle\` |
 | \`canvas.SetPixel(x, y, r, g, b)\` | Set one pixel (0-255) |
+| \`canvas.SetPixelAlpha(x, y, r, g, b, a)\` | Alpha-blended pixel (a=0 transparent, 255 opaque) |
 | \`canvas.Fill(r, g, b)\` | Clear canvas to a solid color |
 | \`canvas.DrawLine(x0, y0, x1, y1, r, g, b)\` | Bresenham line |
 | \`canvas.DrawRect / FillRect\` | Rectangle outline / fill |
+| \`canvas.FillRectAlpha(x, y, w, h, r, g, b, a)\` | Alpha-blended rectangle fill |
 | \`canvas.DrawCircle / FillCircle\` | Circle outline / fill |
-| \`canvas.Flush()\` | Push current pixels to display (call once per frame) |
+| \`canvas.DrawTriangle / FillTriangle\` | Triangle outline / scanline fill |
+| \`canvas.DrawText(x, y, text, r, g, b, scale)\` | 5\u00d77 bitmap font text (scale multiplies size) |
+| \`canvas.DrawSprite(x, y, rgb, w, h)\` | Blit RGB sprite (3 bytes/pixel) |
+| \`canvas.DrawSpriteAlpha(x, y, rgba, w, h)\` | Blit RGBA sprite with alpha (4 bytes/pixel) |
+| \`canvas.Flush()\` | Push current pixels to display |
+| \`canvas.RunLoopAsync(fps, frame, ct)\` | Frame loop with auto Flush + timing |
+| \`canvas.OnClick = (x, y, btn) => {}\` | Mouse click callback |
+| \`canvas.OnMove = (x, y) => {}\` | Mouse move callback |
+| \`canvas.WaitForClickAsync(ct)\` | Await next click; returns (x, y, button) |
 | \`canvas.Pixels\` | Direct byte[] access (3 bytes/pixel, RGB) |
 | \`canvas.ParallelRender(fn)\` | Render all pixels using all CPU cores |
-| \`canvas.RenderRows(fn, flushEvery)\` | Progressive render with live preview |
-| \`await Task.Delay(ms)\` | Frame timing (16ms ≈ 60fps, 33ms ≈ 30fps) |
-| \`__ct__.IsCancellationRequested\` | Check if user clicked Stop |`),
+| \`canvas.RenderRows(fn, flushEvery)\` | Progressive render with live preview |`),
   ];
 }
 

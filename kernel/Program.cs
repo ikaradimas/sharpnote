@@ -232,6 +232,15 @@ partial class Program
                                     : null;
                                 util.ReceivePromptResponse(requestId, value);
                             }
+                            else if (msgType is "canvas_click" or "canvas_move"
+                                && root.TryGetProperty("handleId", out var chIdProp))
+                            {
+                                var hid = chIdProp.GetString()!;
+                                var cx = root.TryGetProperty("x", out var cxp) && cxp.TryGetInt32(out var cxi) ? cxi : 0;
+                                var cy = root.TryGetProperty("y", out var cyp) && cyp.TryGetInt32(out var cyi) ? cyi : 0;
+                                var cb = root.TryGetProperty("button", out var cbp) && cbp.TryGetInt32(out var cbi) ? cbi : 0;
+                                CanvasHandle.DispatchEvent(hid, msgType!, cx, cy, cb);
+                            }
                             else
                             {
                                 await msgChannel.Writer.WriteAsync(root);
