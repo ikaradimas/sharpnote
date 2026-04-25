@@ -6900,6 +6900,21 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 }
 .output-map-btn:active { background: rgba(86, 156, 214, 0.25); }
 
+/* ── Snapshot badge & toggle ─────────────────────────────────────────────── */
+.cell-ctrl-snapshot-active { color: #e0a040; }
+.cell-snapshot-badge {
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  margin-left: 4px;
+  font-family: var(--font-mono);
+  user-select: none;
+}
+.cell-snapshot-match    { color: #4ec9b0; }
+.cell-snapshot-mismatch { color: #e06070; cursor: pointer; }
+.cell-snapshot-mismatch:hover { background: rgba(224, 96, 112, 0.12); }
+.cell-snapshot-captured { color: #888; }
+
 /* ── Notebook parameters ─────────────────────────────────────────────────── */
 .nb-params-bar {
   display: flex;

@@ -65,6 +65,9 @@ export function CodeCell({
   onMoveUp, onMoveDown,
   columns = 0, onColumnsChange,
   onToggleBookmark,
+  onToggleSnapshot,
+  snapshotStatus,
+  onUpdateSnapshot,
   onOutputModeChange,
   onToggleLock,
   onToggleFold,
@@ -246,7 +249,21 @@ export function CodeCell({
               <option value="graph">graph</option>
             </select>
           </div>
-          <CellControls onCopy={onCopy} onMoveUp={onMoveUp} onMoveDown={onMoveDown} onDelete={onDelete} columns={columns} onColumnsChange={onColumnsChange} bookmarked={cell.bookmarked} onToggleBookmark={onToggleBookmark} />
+          {cell.snapshot && snapshotStatus && (
+            <span
+              className={`cell-snapshot-badge cell-snapshot-${snapshotStatus}`}
+              title={
+                snapshotStatus === 'match'    ? 'Snapshot matches saved output' :
+                snapshotStatus === 'mismatch' ? 'Snapshot differs from saved output — click to update' :
+                snapshotStatus === 'captured' ? 'Snapshot captured' : ''
+              }
+              onClick={() => snapshotStatus === 'mismatch' && onUpdateSnapshot?.()}
+              role={snapshotStatus === 'mismatch' ? 'button' : undefined}
+            >
+              {snapshotStatus === 'match' ? '✓' : snapshotStatus === 'mismatch' ? '✗' : '📷'}
+            </span>
+          )}
+          <CellControls onCopy={onCopy} onMoveUp={onMoveUp} onMoveDown={onMoveDown} onDelete={onDelete} columns={columns} onColumnsChange={onColumnsChange} bookmarked={cell.bookmarked} onToggleBookmark={onToggleBookmark} snapshot={cell.snapshot} onToggleSnapshot={onToggleSnapshot} />
         </div>
       </div>
       {codeFolded ? (

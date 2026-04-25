@@ -724,6 +724,19 @@ export const DOCS_SECTIONS = [
     ],
   },
   {
+    id: 'snapshots', title: 'Output Snapshots',
+    content: [
+      { type: 'p', text: 'Tag a cell with the camera button (in the cell controls bar) to capture its output as a golden snapshot. The first run after enabling saves the outputs to a sidecar file; subsequent runs compare and badge the cell ✓ (match) or ✗ (drift). Click ✗ to update the saved snapshot to the new output.' },
+      { type: 'h3', text: 'Where snapshots live' },
+      { type: 'p', text: 'Next to the .cnb file at <notebook-dir>/.snapshots/<cell-id>.snap.json. One file per snapshot-tagged cell — git-friendly, individually deletable. Notebooks not yet saved to disk can\'t capture (the toggle is a no-op until first save).' },
+      { type: 'h3', text: 'Comparison' },
+      { type: 'p', text: 'Compares stdout, display, and error outputs. Transient fields (cell id, handle id, timestamps) are stripped before comparison. Property-order doesn\'t affect the result. Image data URIs are compared verbatim — works for the typical canvas / chart sizes.' },
+      { type: 'h3', text: 'CI / scheduled runs' },
+      { type: 'p', text: 'Pass --check-snapshots to the headless runner to verify all tagged cells against their saved outputs and exit with code 3 (distinct from runtime-error code 1) if any fail.' },
+      { type: 'code', lang: 'bash', text: 'sharpnote run report.cnb --check-snapshots\n# exit 0 — all snapshots match\n# exit 1 — a cell errored at runtime\n# exit 3 — a snapshot drifted' },
+    ],
+  },
+  {
     id: 'fileformat', title: 'File Format',
     content: [
       { type: 'p', text: 'Notebooks are saved as .cnb files — plain JSON that is human-readable and version-control friendly.' },

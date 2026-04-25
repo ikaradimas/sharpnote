@@ -7,6 +7,7 @@ const readline = require('readline');
 const { decryptConfigSecrets } = require('./notebook-io');
 const { getKernelSpawnArgs } = require('./kernel-manager');
 const logOps = require('./log-ops');
+const snapshots = require('./snapshots');
 
 /**
  * Parse CLI arguments after the `run` subcommand.
@@ -14,7 +15,7 @@ const logOps = require('./log-ops');
  *   electron . run <notebook> [--config Key=Value]... [--output path] [--format text|json]
  */
 function parseArgs(args) {
-  const result = { notebook: null, config: {}, params: {}, output: null, format: 'text' };
+  const result = { notebook: null, config: {}, params: {}, output: null, format: 'text', checkSnapshots: false };
   let i = 0;
   while (i < args.length) {
     if (args[i] === '--config' && i + 1 < args.length) {
@@ -31,6 +32,9 @@ function parseArgs(args) {
     } else if (args[i] === '--format' && i + 1 < args.length) {
       result.format = args[i + 1];
       i += 2;
+    } else if (args[i] === '--check-snapshots') {
+      result.checkSnapshots = true;
+      i++;
     } else if (!args[i].startsWith('--') && !result.notebook) {
       result.notebook = args[i];
       i++;
@@ -309,6 +313,8 @@ async function run(app, args) {
   const cells = (notebook.cells || []).filter((c) => EXECUTABLE_TYPES.has(c.cellType || c.type));
   const allOutputs = [];
   let allPassed = true;
+  let snapshotFailures = 0;
+  let snapshotChecked  = 0;
 
   for (let i = 0; i < cells.length; i++) {
     const cell = cells[i];
@@ -323,6 +329,19 @@ async function run(app, args) {
     const formatted = formatOutputs(i, cell, outputs, opts.format);
     allOutputs.push(...(Array.isArray(formatted) ? formatted : [formatted]));
     if (!success) allPassed = false;
+
+    if (opts.checkSnapshots && cell.snapshot) {
+      snapshotChecked++;
+      const visible = outputs.filter((o) => o.type === 'stdout' || o.type === 'display' || o.type === 'error');
+      const res = snapshots.captureOrCompare(opts.notebook, cell.id, visible);
+      if (!res.match) {
+        snapshotFailures++;
+        log('HEADLESS', `Snapshot FAIL: ${label} (${cell.id})`);
+        console.error(`Snapshot mismatch in cell "${label}" (${cell.id})`);
+      } else if (res.captured) {
+        log('HEADLESS', `Snapshot captured: ${label}`);
+      }
+    }
   }
 
   // 7. Shut down kernel
@@ -346,8 +365,15 @@ async function run(app, args) {
     process.stdout.write(output + '\n');
   }
 
+  if (opts.checkSnapshots) {
+    log('HEADLESS', `Snapshots: ${snapshotChecked - snapshotFailures}/${snapshotChecked} matched`);
+    console.error(`Snapshots: ${snapshotChecked - snapshotFailures}/${snapshotChecked} matched`);
+  }
+
   log('HEADLESS', `Run complete: ${allPassed ? 'ALL PASSED' : 'SOME FAILED'} — ${cells.length} cells, ${allOutputs.length} output lines`);
-  return allPassed ? 0 : 1;
+  if (!allPassed) return 1;
+  if (snapshotFailures > 0) return 3;
+  return 0;
 }
 
 module.exports = { parseArgs, loadNotebook, applyConfigOverrides, applyParamOverrides, run };

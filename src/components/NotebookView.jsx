@@ -472,6 +472,14 @@ export function NotebookView({
         onPrevCellsChange={(ids) => updateCellProp(cell.id, 'prevCells', ids === null ? undefined : ids)}
         cellElapsed={nb.cellElapsed?.[cell.id] ?? null}
         onToggleBookmark={() => toggleBookmark(cell.id)}
+        onToggleSnapshot={() => updateCellProp(cell.id, 'snapshot', !(cell.snapshot || false))}
+        snapshotStatus={nb.snapshotStatus?.[cell.id] ?? null}
+        onUpdateSnapshot={() => {
+          if (!nb.path || !window.electronAPI?.snapshotSave) return;
+          const visible = (outputs[cell.id] || []).filter((o) => o.type === 'stdout' || o.type === 'display' || o.type === 'error');
+          window.electronAPI.snapshotSave(nb.path, cell.id, visible)
+            .then(() => onSetNb((n) => ({ snapshotStatus: { ...(n.snapshotStatus || {}), [cell.id]: 'match' } })));
+        }}
         vars={nb.vars || []} />
     );
   };

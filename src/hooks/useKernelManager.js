@@ -270,6 +270,22 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
 
             return { running: next, cellResults: { ...(n.cellResults || {}), [msg.id]: result }, cellElapsed: { ...(n.cellElapsed || {}), [msg.id]: msg.durationMs ?? null }, staleCellIds, debugState: null, ...extra };
           });
+
+          // Snapshot capture/compare for cells that opted in.
+          {
+            const nb = notebooksRef.current.find((n) => n.id === notebookId);
+            const cell = nb?.cells.find((c) => c.id === msg.id);
+            if (cell?.snapshot && nb?.path && window.electronAPI?.snapshotCaptureOrCompare && !msg.cancelled) {
+              const outputs = (nb.outputs[msg.id] || []).filter((o) => o.type === 'stdout' || o.type === 'display' || o.type === 'error');
+              window.electronAPI.snapshotCaptureOrCompare(nb.path, msg.id, outputs).then((res) => {
+                if (!res) return;
+                const status = res.captured ? 'captured' : (res.match ? 'match' : 'mismatch');
+                setNb(notebookId, (n) => ({
+                  snapshotStatus: { ...(n.snapshotStatus || {}), [msg.id]: status },
+                }));
+              });
+            }
+          }
           break;
         }
 

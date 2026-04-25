@@ -38,6 +38,7 @@ const settings      = require('./src/main/settings');
 const apiSaved      = require('./src/main/api-saved');
 const kafka           = require('./dist/kafka');
 const notebookHistory = require('./src/main/notebook-history');
+const snapshots       = require('./src/main/snapshots');
 const menuBuilder     = require('./src/main/menu');
 
 // ── Process-level state ───────────────────────────────────────────────────────
@@ -149,6 +150,8 @@ function registerAllHandlers() {
   kafka.register(ipcMain, { app });
 
   notebookHistory.register(ipcMain);
+
+  snapshots.register(ipcMain);
 
   // Settings export / import
   ipcMain.handle('settings-export', async (_event, data) => {

@@ -131,4 +131,14 @@ describe('headless --param', () => {
     const result = applyParamOverrides([{ name: 'A', type: 'string', default: '' }], { B: 'x' });
     expect(result.error).toMatch(/Unknown --param "B"/);
   });
+
+  it('parseArgs picks up --check-snapshots flag', () => {
+    const result = parseArgs(['nb.cnb', '--check-snapshots']);
+    expect(result.checkSnapshots).toBe(true);
+  });
+
+  it('checkSnapshots defaults to false', () => {
+    const result = parseArgs(['nb.cnb']);
+    expect(result.checkSnapshots).toBe(false);
+  });
 });
