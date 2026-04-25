@@ -4,6 +4,8 @@ import { DataTable } from './DataTable.jsx';
 import { GraphOutput } from './GraphOutput.jsx';
 import { ImageOutput } from './ImageOutput.jsx';
 import { MapOutput } from './MapOutput.jsx';
+import { SankeyOutput } from './SankeyOutput.jsx';
+import { TreeMapOutput } from './TreeMapOutput.jsx';
 import { MarkdownOutput } from './MarkdownOutput.jsx';
 import { ObjectTree } from './ObjectTree.jsx';
 
@@ -14,6 +16,8 @@ export function FormatContent({ format, content }) {
   if (format === 'graph')    return <GraphOutput config={content} />;
   if (format === 'image')    return <ImageOutput spec={content} />;
   if (format === 'map')      return <MapOutput spec={content} />;
+  if (format === 'sankey')   return <SankeyOutput spec={content} />;
+  if (format === 'treemap')  return <TreeMapOutput spec={content} />;
   if (format === 'markdown') return <MarkdownOutput content={content} />;
   if (format === 'tree')     return <ObjectTree json={content} />;
   return null;

@@ -305,6 +305,18 @@ export const DOCS_SECTIONS = [
     ],
   },
   {
+    id: 'flow-hierarchy', title: 'Flow & Hierarchy Charts',
+    content: [
+      { type: 'p', text: 'Two output types for visualisations that don\'t fit a Chart.js bar/line/pie: Sankey diagrams for flow data (where does revenue come from? where do users churn?) and tree-maps for hierarchical sizing (which directory dominates disk usage? which product line drives most sales?).' },
+      { type: 'h3', text: 'Sankey' },
+      { type: 'p', text: 'Display.Sankey(spec, title?) — spec is { nodes: [{ name }], links: [{ source, target, value }] } where source / target are integer indices into nodes.' },
+      { type: 'code', lang: 'csharp', text: 'Display.Sankey(new {\n    nodes = new[] {\n        new { name = "Search"  },  // 0\n        new { name = "Direct"  },  // 1\n        new { name = "Social"  },  // 2\n        new { name = "Sign-up" },  // 3\n        new { name = "Churn"   },  // 4\n        new { name = "Active"  },  // 5\n    },\n    links = new[] {\n        new { source = 0, target = 3, value = 540 },\n        new { source = 1, target = 3, value = 320 },\n        new { source = 2, target = 3, value = 140 },\n        new { source = 3, target = 4, value = 280 },\n        new { source = 3, target = 5, value = 720 },\n    }\n}, title: "Funnel — Q1");' },
+      { type: 'h3', text: 'TreeMap' },
+      { type: 'p', text: 'Display.TreeMap(spec, title?) — spec is recursive { name, value?, children? }. Leaves carry value; internal nodes are sized by the sum of their leaves. Sibling colours come from a tableau-style palette.' },
+      { type: 'code', lang: 'csharp', text: 'Display.TreeMap(new {\n    name = "Sales",\n    children = new object[] {\n        new { name = "Hardware", children = new object[] {\n            new { name = "Laptops",  value = 420 },\n            new { name = "Phones",   value = 280 },\n            new { name = "Monitors", value = 110 },\n        }},\n        new { name = "Software", children = new object[] {\n            new { name = "SaaS",     value = 540 },\n            new { name = "Licenses", value = 90  },\n        }},\n        new { name = "Services", value = 230 },\n    }\n});' },
+    ],
+  },
+  {
     id: 'stats', title: 'Stats & Time-Series',
     content: [
       { type: 'p', text: 'Two pure helper namespaces — Stats and TimeSeries — for the kind of summary statistics and rolling/EMA/resampling work that comes up in almost every analysis notebook. No deps, no UI; just static methods you can call directly.' },

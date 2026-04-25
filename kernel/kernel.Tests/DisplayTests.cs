@@ -89,6 +89,61 @@ public class DisplayTests : IClassFixture<KernelFixture>, IAsyncLifetime
         last.GetProperty("content").GetProperty("interactive").GetBoolean().Should().BeTrue();
     }
 
+    // ── Display.Sankey / Display.TreeMap ─────────────────────────────────────
+
+    [Fact]
+    public async Task Sankey_EmitsDisplayMessageWithSankeyFormat()
+    {
+        var id = KernelFixture.NewId();
+        _k.ClearMessages();
+        await _k.SendAsync(new { type = "execute", id, code = @"
+            Display.Sankey(new {
+                nodes = new[] { new { name = ""A"" }, new { name = ""B"" } },
+                links = new[] { new { source = 0, target = 1, value = 10 } }
+            }, title: ""Flow"");" });
+
+        await _k.WaitForMessageAsync(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "complete" &&
+            el.TryGetProperty("id", out var i) && i.GetString() == id);
+
+        var msg = _k.GetMessages().FirstOrDefault(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "display" &&
+            el.TryGetProperty("format", out var f) && f.GetString() == "sankey");
+
+        msg.ValueKind.Should().NotBe(JsonValueKind.Undefined);
+        msg.GetProperty("title").GetString().Should().Be("Flow");
+        msg.GetProperty("content").GetProperty("nodes").GetArrayLength().Should().Be(2);
+        msg.GetProperty("content").GetProperty("links")[0].GetProperty("value").GetInt32().Should().Be(10);
+    }
+
+    [Fact]
+    public async Task TreeMap_EmitsDisplayMessageWithTreemapFormat()
+    {
+        var id = KernelFixture.NewId();
+        _k.ClearMessages();
+        await _k.SendAsync(new { type = "execute", id, code = @"
+            Display.TreeMap(new {
+                name = ""Root"",
+                children = new object[] {
+                    new { name = ""A"", value = 5 },
+                    new { name = ""B"", value = 15 }
+                }
+            });" });
+
+        await _k.WaitForMessageAsync(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "complete" &&
+            el.TryGetProperty("id", out var i) && i.GetString() == id);
+
+        var msg = _k.GetMessages().FirstOrDefault(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "display" &&
+            el.TryGetProperty("format", out var f) && f.GetString() == "treemap");
+
+        msg.ValueKind.Should().NotBe(JsonValueKind.Undefined);
+        var children = msg.GetProperty("content").GetProperty("children");
+        children.GetArrayLength().Should().Be(2);
+        children[1].GetProperty("value").GetInt32().Should().Be(15);
+    }
+
     // ── Display.Plot ──────────────────────────────────────────────────────────
 
     [Fact]

@@ -2367,6 +2367,37 @@ Drives a real route from HQ to a branch via **OpenRouteService**. Requires a fre
     Display.Html($"<div style='color:#e0a040;padding:12px;border:1px solid #5a4a20;border-radius:4px;background:#2a1f0a'>⚠ {System.Net.WebUtility.HtmlEncode(ex.Message)}</div>");
 }`, 'map'),
 
+    md('## Flow & Hierarchy'),
+    { ...cs(`Display.Sankey(new {
+    nodes = new[] {
+        new { name = "Search"  }, new { name = "Direct"  }, new { name = "Social"  },
+        new { name = "Sign-up" }, new { name = "Churn"   }, new { name = "Active"  },
+    },
+    links = new[] {
+        new { source = 0, target = 3, value = 540 },
+        new { source = 1, target = 3, value = 320 },
+        new { source = 2, target = 3, value = 140 },
+        new { source = 3, target = 4, value = 280 },
+        new { source = 3, target = 5, value = 720 },
+    }
+}, title: "Funnel — Q1");`, 'sankey'), columns: 2 },
+
+    { ...cs(`Display.TreeMap(new {
+    name = "Sales",
+    children = new object[] {
+        new { name = "Hardware", children = new object[] {
+            new { name = "Laptops",  value = 420 },
+            new { name = "Phones",   value = 280 },
+            new { name = "Monitors", value = 110 },
+        }},
+        new { name = "Software", children = new object[] {
+            new { name = "SaaS",     value = 540 },
+            new { name = "Licenses", value = 90  },
+        }},
+        new { name = "Services", value = 230 },
+    }
+}, title: "Revenue by line of business");`, 'treemap'), columns: 2 },
+
     md(`## Column Layout Reference
 
 Set the \`columns\` property on any cell to group consecutive cells with the same value into a CSS grid:

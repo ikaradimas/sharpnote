@@ -589,6 +589,22 @@ public class DisplayHelper
     public void Graph(object chartConfig, string? title = null) =>
         Send(new { type = "display", id = _currentId, format = "graph", content = chartConfig, title });
 
+    /// <summary>
+    /// Sankey flow diagram. <paramref name="spec"/> shape:
+    /// <c>{ nodes: [{ name }], links: [{ source, target, value }] }</c>
+    /// where <c>source</c> / <c>target</c> are integer indices into <c>nodes</c>.
+    /// </summary>
+    public void Sankey(object spec, string? title = null) =>
+        Send(new { type = "display", id = _currentId, format = "sankey", content = spec, title });
+
+    /// <summary>
+    /// Hierarchical tree-map. <paramref name="spec"/> shape:
+    /// <c>{ name, value?, children?: [...] }</c> recursive — leaves carry
+    /// <c>value</c>; internal nodes are sized by the sum of their leaves.
+    /// </summary>
+    public void TreeMap(object spec, string? title = null) =>
+        Send(new { type = "display", id = _currentId, format = "treemap", content = spec, title });
+
     /// <summary>Display a scrolling marquee ticker.</summary>
     public void Marquee(string text, int speed = 40, string? color = null, string? background = null, string? title = null)
     {

@@ -6900,6 +6900,22 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 }
 .output-map-btn:active { background: rgba(86, 156, 214, 0.25); }
 
+/* ── Display.Sankey / Display.TreeMap output ─────────────────────────────── */
+.output-sankey, .output-treemap {
+  display: block;
+  border-radius: 4px;
+  border: 1px solid var(--border-subtle);
+  margin: 4px 0;
+  background: #1a1a22;
+  max-width: 100%;
+}
+.output-sankey-empty, .output-treemap-empty {
+  padding: 12px;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
 /* ── SQL status message ──────────────────────────────────────────────────── */
 .sql-status {
   font-family: var(--font-mono); font-size: 12px;
