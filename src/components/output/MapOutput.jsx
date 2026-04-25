@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { escHtml } from '../../utils.js';
 
-// Leaflet (and the leaflet.heat plugin) is loaded lazily on first render so
-// that importing this component — or anything that transitively imports it
+// Leaflet + plugins (heat, markercluster) are loaded lazily on first render
+// so that importing this component — or anything that transitively imports it
 // like OutputBlock — does not pull ~3 MB of Leaflet sources into every test
 // or notebook view that never shows a map.
 let leafletLoader = null;
@@ -11,6 +11,7 @@ function loadLeaflet() {
     leafletLoader = (async () => {
       const L = (await import('leaflet')).default;
       await import('leaflet.heat');
+      await import('leaflet.markercluster');
       return L;
     })();
   }
@@ -87,18 +88,26 @@ export function MapOutput({ spec }) {
 
       const bounds = [];
 
-      (spec.markers || []).forEach((m) => {
-        const marker = L.circleMarker([m.lat, m.lon], {
-          radius: 7,
-          color: m.color || '#569cd6',
-          fillColor: m.color || '#569cd6',
-          fillOpacity: 0.85,
-          weight: 2,
-        }).addTo(mapRef.current);
-        if (m.label) marker.bindPopup(escHtml(m.label));
-        layersRef.current.push(marker);
-        bounds.push([m.lat, m.lon]);
-      });
+      const markers = spec.markers || [];
+      if (markers.length) {
+        const group = spec.cluster
+          ? L.markerClusterGroup({ chunkedLoading: true })
+          : L.featureGroup();
+        markers.forEach((m) => {
+          const marker = L.circleMarker([m.lat, m.lon], {
+            radius: 7,
+            color: m.color || '#569cd6',
+            fillColor: m.color || '#569cd6',
+            fillOpacity: 0.85,
+            weight: 2,
+          });
+          if (m.label) marker.bindPopup(escHtml(m.label));
+          group.addLayer(marker);
+          bounds.push([m.lat, m.lon]);
+        });
+        group.addTo(mapRef.current);
+        layersRef.current.push(group);
+      }
 
       if (spec.route?.polyline?.length) {
         const line = L.polyline(spec.route.polyline, {
@@ -174,6 +183,16 @@ export function MapOutput({ spec }) {
     }
   }, []);
 
+  const onExportPng = useCallback(async () => {
+    if (!containerRef.current) return;
+    const { default: domToImage } = await import('dom-to-image-more');
+    const dataUrl = await domToImage.toPng(containerRef.current, { cacheBust: true });
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = 'map.png';
+    a.click();
+  }, []);
+
   const width  = spec?.width  ? `${spec.width}px`  : '100%';
   const height = spec?.height ? `${spec.height}px` : '320px';
 
@@ -184,6 +203,7 @@ export function MapOutput({ spec }) {
         <button className="output-map-btn" onClick={onFit}              title="Fit all points">⊕</button>
         <button className="output-map-btn" onClick={onReset}            title="Reset to original view">↺</button>
         <button className="output-map-btn" onClick={onToggleTheme}      title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}>{theme === 'dark' ? '☼' : '☾'}</button>
+        <button className="output-map-btn" onClick={onExportPng}        title="Download as PNG">⬇</button>
         <button className="output-map-btn" onClick={onToggleFullscreen} title={fullscreen ? 'Exit fullscreen' : 'Fullscreen'}>{fullscreen ? '⤡' : '⛶'}</button>
       </div>
     </div>

@@ -2329,14 +2329,30 @@ Display.Html(@"<div style='border-left:2px solid #333;margin-left:12px;padding-l
 Geo.HeatMap(sales, zoom: 2, height: 360, title: "Q1 sales density");`, 'map'),
 
     md('## Visitor Origins'),
-    cs(`var visitors = new[] {
-    new MapMarker(40.71, -74.00, "NYC — 3,421 visits", "#569cd6"),
-    new MapMarker(51.51,  -0.13, "London — 2,180",     "#4ec9b0"),
-    new MapMarker(35.68, 139.65, "Tokyo — 1,604",      "#e0a040"),
-    new MapMarker(48.86,   2.35, "Paris — 982",        "#b48ead"),
-    new MapMarker(-33.87,151.21, "Sydney — 421",       "#e06070"),
+    cs(`// Synthetic IP-derived visitor map. cluster:true collapses dense
+// regions (look at Europe at zoom 2) and expands as you zoom in.
+var visitors = new[] {
+    new MapMarker(40.71, -74.00, "NYC — 3,421"),
+    new MapMarker(34.05,-118.24, "LA — 2,910"),
+    new MapMarker(41.88, -87.63, "Chicago — 1,604"),
+    new MapMarker(29.76, -95.37, "Houston — 980"),
+    new MapMarker(45.50, -73.57, "Montreal — 612"),
+    new MapMarker(51.51,  -0.13, "London — 2,180"),
+    new MapMarker(48.86,   2.35, "Paris — 1,420"),
+    new MapMarker(52.52,  13.41, "Berlin — 1,205"),
+    new MapMarker(41.90,  12.50, "Rome — 870"),
+    new MapMarker(40.42,  -3.70, "Madrid — 760"),
+    new MapMarker(52.37,   4.90, "Amsterdam — 540"),
+    new MapMarker(50.85,   4.35, "Brussels — 480"),
+    new MapMarker(35.68, 139.65, "Tokyo — 1,604"),
+    new MapMarker(22.32, 114.17, "Hong Kong — 1,180"),
+    new MapMarker(1.35,  103.82, "Singapore — 940"),
+    new MapMarker(28.61,  77.21, "Delhi — 720"),
+    new MapMarker(-33.87,151.21, "Sydney — 421"),
+    new MapMarker(-23.55,-46.63, "São Paulo — 380"),
 };
-Geo.Map(20, 0, zoom: 2, markers: visitors, height: 360, title: "Last 24h unique visitors");`, 'map'),
+Geo.Map(20, 0, zoom: 2, markers: visitors, cluster: true,
+        height: 360, title: "Last 24h unique visitors");`, 'map'),
 
     md(`## Logistics Route
 

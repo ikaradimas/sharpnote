@@ -10,51 +10,32 @@ workflow per `CLAUDE.md`.
 
 ---
 
-## Milestone 1 — Geography follow-up (target: 2.10.0)
+## Milestone 1 — Geography follow-up (shipped 2.10.0)
 
-**Why first.** We just shipped Geo. The "Sales by Region" cell in the
-Infographic template renders heat blobs but not actual regions, and the
-"Visitor Origins" cell will fall apart at high marker counts. Closing
-these gaps now (while the code is fresh in our heads) is cheaper than
-revisiting the file later, and turns the recently-shipped feature into
-something genuinely complete.
+Four of five planned items shipped: pure helpers (`Distance`, `Cluster`),
+geocoding cache, marker clustering, and PNG export from the toolbar.
 
-**Scope** (all in one release; tightly coupled visually & in code):
-1. **`Geo.Choropleth(values, level = "country")`** — fills GeoJSON
-   country/region polygons by numeric value, with a configurable colour
-   scale.
-2. **Geocoding cache** — SQLite (or just a JSON file) in the user data
-   dir keyed on `query` + `lang`; transparently used by `GeocodeAsync` /
-   `ReverseGeocodeAsync`. Side-benefit: notebook reruns work offline
-   after first run, and we automatically respect Nominatim's 1 req/s
-   policy without rate-limiting code.
-3. **`Geo.Distance(a, b)` / `Geo.Cluster(points, kmRadius)`** — pure
-   helpers (Haversine, single-link distance clustering). No UI; small
-   surface area; useful in their own right.
-4. **Marker clustering on the map** — opt-in `markers: { cluster: true }`
-   via `leaflet.markercluster`. Rewrite the Visitor Origins cell to
-   demonstrate.
-5. **Map → PNG export** in the toolbar — a download button that captures
-   the current map state via `leaflet-image`. Pairs naturally with the
-   existing per-output Export button.
+**Choropleth was carved out into its own milestone** (M1.5 below) — the
+GeoJSON sourcing question (no good public ISO-2-keyed simplified-world
+file exists; either bundle ~250KB Natural Earth + an ISO map, or convert
+TopoJSON at build time) deserves a focused effort instead of being
+rushed in alongside the rest.
 
-**Implementation outline:**
-- [ ] `kernel/GeoHelper.cs` — `Distance`, `ClusterByDistance`,
-      `ChoroplethAsync(values, level)` (the last loads a bundled
-      GeoJSON; ship `world-countries.geojson` in `assets/geo/`)
-- [ ] `kernel/GeoCache.cs` (new) — file-backed cache shared by Geocode &
-      ReverseGeocode; integration test that two consecutive lookups
-      hit the network only once
-- [ ] `src/components/output/MapOutput.jsx` — read `spec.choropleth`,
-      `spec.cluster`; add Export-PNG toolbar button using `leaflet-image`
-- [ ] `npm i leaflet.markercluster leaflet-image`; wire CSS in
-      `build:renderer`
-- [ ] Update Infographic cells: Sales by Region uses `Geo.Choropleth`;
-      Visitor Origins uses `cluster: true`
-- [ ] Tests: cache hit/miss; Distance correctness against known pairs;
-      Choropleth spec emission; cluster + export buttons in MapOutput
-- [ ] Docs: extend "Geography & Maps" section
-- [ ] Bump 2.10.0; auto-push (minor)
+## Milestone 1.5 — Choropleth (target: 2.10.x or fold into M3)
+
+**Scope:**
+- `Geo.Choropleth(values, level = "country", colorScale = null)` —
+  values keyed by ISO-2 country code.
+- Bundle a small simplified world-countries dataset (likely TopoJSON
+  countries-110m, ~110KB) with a build-step conversion to GeoJSON +
+  numeric-id ↔ ISO-2 mapping.
+- Renderer: `L.geoJSON` layer with per-feature `style` callback.
+- Replace the Sales-by-Region infographic cell with a real choropleth.
+
+**Open questions to resolve before starting:**
+- Source the dataset (Natural Earth via `world-atlas` package?).
+- Where to store the ISO-2 mapping table (small enough to inline).
+- Whether to ship a second admin-1 (states/provinces) dataset later.
 
 ---
 

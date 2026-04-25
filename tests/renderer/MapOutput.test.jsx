@@ -5,7 +5,8 @@ import '@testing-library/jest-dom';
 
 // Track the live Leaflet map instance so each test can inspect what was added.
 const mapState = vi.hoisted(() => ({
-  added: [],
+  added: [],          // top-level layers added to the map
+  groupAdds: [],      // child layers added to feature/cluster groups
   current: null,
   setView: vi.fn(),
   fitBounds: vi.fn(),
@@ -20,6 +21,7 @@ const layerStub = (kind, opts) => ({
   addTo: vi.fn(function () { mapState.added.push(this); return this; }),
   bindPopup: vi.fn(function () { return this; }),
   bindTooltip: vi.fn(function () { return this; }),
+  addLayer: vi.fn(function (l) { mapState.groupAdds.push({ kind, child: l }); return this; }),
 });
 
 vi.mock('leaflet', () => {
@@ -27,6 +29,8 @@ vi.mock('leaflet', () => {
   const circleMarker = vi.fn((latlng, opts) => layerStub('marker', { latlng, ...opts }));
   const polyline = vi.fn((pts, opts) => layerStub('polyline', { points: pts, ...opts }));
   const heatLayer = vi.fn((pts, opts) => layerStub('heat', { points: pts, ...opts }));
+  const featureGroup = vi.fn(() => layerStub('featureGroup'));
+  const markerClusterGroup = vi.fn((opts) => layerStub('clusterGroup', opts));
   const map = vi.fn((_el, opts) => {
     mapState.current = {
       __opts: opts,
@@ -39,10 +43,17 @@ vi.mock('leaflet', () => {
     };
     return mapState.current;
   });
-  return { default: { map, tileLayer, circleMarker, polyline, heatLayer }, map, tileLayer, circleMarker, polyline, heatLayer };
+  return {
+    default: { map, tileLayer, circleMarker, polyline, heatLayer, featureGroup, markerClusterGroup },
+    map, tileLayer, circleMarker, polyline, heatLayer, featureGroup, markerClusterGroup,
+  };
 });
 
 vi.mock('leaflet.heat', () => ({}));
+vi.mock('leaflet.markercluster', () => ({}));
+
+const domToImageMock = vi.hoisted(() => ({ toPng: vi.fn(() => Promise.resolve('data:image/png;base64,xxx')) }));
+vi.mock('dom-to-image-more', () => ({ default: domToImageMock }));
 
 import { MapOutput } from '../../src/components/output/MapOutput.jsx';
 import L from 'leaflet';
@@ -50,12 +61,16 @@ import L from 'leaflet';
 describe('MapOutput', () => {
   beforeEach(() => {
     mapState.added = [];
+    mapState.groupAdds = [];
     mapState.current = null;
     L.map.mockClear();
     L.tileLayer.mockClear();
     L.circleMarker.mockClear();
     L.polyline.mockClear();
     L.heatLayer.mockClear();
+    L.featureGroup.mockClear();
+    L.markerClusterGroup.mockClear();
+    domToImageMock.toPng.mockClear();
     cleanup();
   });
 
@@ -70,7 +85,7 @@ describe('MapOutput', () => {
     );
   });
 
-  it('plots one circleMarker per spec.markers entry with label and color', async () => {
+  it('plots one circleMarker per spec.markers entry inside a featureGroup', async () => {
     render(<MapOutput spec={{
       center: [0, 0], zoom: 2,
       markers: [
@@ -80,10 +95,28 @@ describe('MapOutput', () => {
     }} />);
 
     await waitFor(() => expect(L.circleMarker).toHaveBeenCalledTimes(2));
-    const markers = mapState.added.filter((l) => l.__kind === 'marker');
-    expect(markers).toHaveLength(2);
-    expect(markers[0].bindPopup).toHaveBeenCalledWith('London');
-    expect(markers[1].bindPopup).toHaveBeenCalledWith('NYC');
+    expect(L.featureGroup).toHaveBeenCalledTimes(1);
+    expect(L.markerClusterGroup).not.toHaveBeenCalled();
+    const childMarkers = mapState.groupAdds.filter((g) => g.kind === 'featureGroup');
+    expect(childMarkers).toHaveLength(2);
+    expect(childMarkers[0].child.bindPopup).toHaveBeenCalledWith('London');
+    expect(childMarkers[1].child.bindPopup).toHaveBeenCalledWith('NYC');
+  });
+
+  it('uses markerClusterGroup when spec.cluster is true', async () => {
+    render(<MapOutput spec={{
+      center: [0, 0], zoom: 2,
+      cluster: true,
+      markers: [
+        { lat: 1, lon: 1 }, { lat: 2, lon: 2 }, { lat: 3, lon: 3 },
+      ],
+    }} />);
+
+    await waitFor(() => expect(L.markerClusterGroup).toHaveBeenCalledTimes(1));
+    expect(L.featureGroup).not.toHaveBeenCalled();
+    expect(L.circleMarker).toHaveBeenCalledTimes(3);
+    const clusterChildren = mapState.groupAdds.filter((g) => g.kind === 'clusterGroup');
+    expect(clusterChildren).toHaveLength(3);
   });
 
   it('plots a polyline + tooltip for spec.route', async () => {
@@ -154,8 +187,21 @@ describe('MapOutput', () => {
     }} />);
 
     await waitFor(() => expect(L.circleMarker).toHaveBeenCalledTimes(1));
-    const marker = mapState.added.find((l) => l.__kind === 'marker');
-    expect(marker.bindPopup).toHaveBeenCalledWith(expect.stringMatching(/&lt;script&gt;/));
-    expect(marker.bindPopup).not.toHaveBeenCalledWith(expect.stringMatching(/<script>/));
+    const child = mapState.groupAdds.find((g) => g.kind === 'featureGroup');
+    expect(child.child.bindPopup).toHaveBeenCalledWith(expect.stringMatching(/&lt;script&gt;/));
+    expect(child.child.bindPopup).not.toHaveBeenCalledWith(expect.stringMatching(/<script>/));
+  });
+
+  it('export-PNG button calls dom-to-image and triggers a download', async () => {
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    try {
+      render(<MapOutput spec={{ center: [0, 0], zoom: 2 }} />);
+      await waitFor(() => expect(L.map).toHaveBeenCalled());
+      fireEvent.click(screen.getByTitle('Download as PNG'));
+      await waitFor(() => expect(domToImageMock.toPng).toHaveBeenCalledTimes(1));
+      expect(clickSpy).toHaveBeenCalled();
+    } finally {
+      clickSpy.mockRestore();
+    }
   });
 });

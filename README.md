@@ -129,7 +129,7 @@
 - **API Editor** — visual REST API design tool with controllers, endpoints, typed models, OpenAPI 3.0 export, and built-in mock HTTP server with custom JavaScript handlers for dynamic responses; shares saved APIs with API Browser
 - **Debugger** — click the gutter to set breakpoints (red dots); execution pauses at breakpoints with a gold line highlight, debug controls for Resume/Step, and variable inspection at each pause point
 - **Canvas & pixel rendering** — `Display.Canvas(w, h)` creates a pixel buffer with `SetPixel` and live progressive `Flush()`; `Display.ImageBytes(rgb, w, h)` renders raw pixels; `Display.NewImage()` enables live-updating images
-- **Geography & maps** — the `Geo` kernel global wraps Nominatim (`Geo.GeocodeAsync` / `ReverseGeocodeAsync`), OpenRouteService (`Geo.RouteAsync`, free key via `Config.Set("OpenRouteServiceKey", …)` or `OPENROUTESERVICE_KEY`), ip-api.com (`Geo.IpLookupAsync`), and REST Countries (`Geo.CountryAsync`); `Geo.Map(...)` and `Geo.HeatMap(...)` emit an interactive Leaflet map output with markers, route polylines, and heat layers
+- **Geography & maps** — the `Geo` kernel global wraps Nominatim (`Geo.GeocodeAsync` / `ReverseGeocodeAsync`, with a transparent on-disk cache), OpenRouteService (`Geo.RouteAsync`, free key via `Config.Set("OpenRouteServiceKey", …)` or `OPENROUTESERVICE_KEY`), ip-api.com (`Geo.IpLookupAsync`), and REST Countries (`Geo.CountryAsync`); pure helpers `Geo.Distance`/`Geo.Cluster`; `Geo.Map(...)` / `Geo.HeatMap(...)` emit an interactive Leaflet map with markers (with optional `cluster:true`), route polylines, heat layers, day/night basemap, and PNG export
 - **Memory sparkline** — kernel reports heap usage every 3 s; rendered as an SVG bar chart in the status bar
 
 ### Panels
