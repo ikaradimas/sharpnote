@@ -2329,8 +2329,7 @@ Display.Html(@"<div style='border-left:2px solid #333;margin-left:12px;padding-l
 Geo.HeatMap(sales, zoom: 2, height: 360, title: "Q1 sales density");`, 'map'),
 
     md('## Visitor Origins'),
-    cs(`// In production these come from Geo.IpLookupAsync over real visitor IPs.
-var visitors = new[] {
+    cs(`var visitors = new[] {
     new MapMarker(40.71, -74.00, "NYC — 3,421 visits", "#569cd6"),
     new MapMarker(51.51,  -0.13, "London — 2,180",     "#4ec9b0"),
     new MapMarker(35.68, 139.65, "Tokyo — 1,604",      "#e0a040"),

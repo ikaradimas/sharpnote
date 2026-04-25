@@ -210,9 +210,10 @@ public class GeoHelper
 
         // Try ISO code first if input looks like one (2 or 3 letters).
         bool looksLikeCode = codeOrName.Length <= 3 && codeOrName.All(char.IsLetter);
+        const string fields = "name,cca2,cca3,population,capital,region,subregion,languages,latlng";
         var url = looksLikeCode
-            ? $"https://restcountries.com/v3.1/alpha/{Uri.EscapeDataString(codeOrName)}"
-            : $"https://restcountries.com/v3.1/name/{Uri.EscapeDataString(codeOrName)}?fullText=false";
+            ? $"https://restcountries.com/v3.1/alpha/{Uri.EscapeDataString(codeOrName)}?fields={fields}"
+            : $"https://restcountries.com/v3.1/name/{Uri.EscapeDataString(codeOrName)}?fullText=false&fields={fields}";
 
         using var resp = await _http.GetAsync(url, ct);
         if (!resp.IsSuccessStatusCode)

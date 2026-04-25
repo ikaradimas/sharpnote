@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { escHtml } from '../../utils.js';
 
 // Leaflet (and the leaflet.heat plugin) is loaded lazily on first render so
 // that importing this component — or anything that transitively imports it
@@ -20,6 +21,16 @@ const TILE_URLS = {
   dark:  'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
   light: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
 };
+
+const TILE_OPTS = {
+  attribution: '© OpenStreetMap contributors © CARTO',
+  subdomains:  'abcd',
+  maxZoom:     20,
+};
+
+function makeTileLayer(L, theme) {
+  return L.tileLayer(TILE_URLS[theme], TILE_OPTS);
+}
 
 export function MapOutput({ spec }) {
   const wrapperRef    = useRef(null);
@@ -66,11 +77,7 @@ export function MapOutput({ spec }) {
           zoomControl: true,
         });
         initialViewRef.current = { center: initialCenter, zoom: initialZoom };
-        tileLayerRef.current = L.tileLayer(TILE_URLS[theme], {
-          attribution: '© OpenStreetMap contributors © CARTO',
-          subdomains: 'abcd',
-          maxZoom: 20,
-        }).addTo(mapRef.current);
+        tileLayerRef.current = makeTileLayer(L, theme).addTo(mapRef.current);
       } else {
         mapRef.current.setView(spec.center || [0, 0], spec.zoom ?? 2);
       }
@@ -88,7 +95,7 @@ export function MapOutput({ spec }) {
           fillOpacity: 0.85,
           weight: 2,
         }).addTo(mapRef.current);
-        if (m.label) marker.bindPopup(escapeHtml(m.label));
+        if (m.label) marker.bindPopup(escHtml(m.label));
         layersRef.current.push(marker);
         bounds.push([m.lat, m.lon]);
       });
@@ -137,11 +144,7 @@ export function MapOutput({ spec }) {
     loadLeaflet().then((L) => {
       if (!mapRef.current) return;
       mapRef.current.removeLayer(tileLayerRef.current);
-      tileLayerRef.current = L.tileLayer(TILE_URLS[theme], {
-        attribution: '© OpenStreetMap contributors © CARTO',
-        subdomains: 'abcd',
-        maxZoom: 20,
-      }).addTo(mapRef.current);
+      tileLayerRef.current = makeTileLayer(L, theme).addTo(mapRef.current);
     });
   }, [theme]);
 
@@ -187,8 +190,3 @@ export function MapOutput({ spec }) {
   );
 }
 
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, (c) => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
-  }[c]));
-}
