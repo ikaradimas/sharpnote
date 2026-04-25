@@ -80,7 +80,7 @@ export function OutputBlock({ msg, index, notebookId, allCells, onRunCellByName 
     } else if (msg.format === 'confirm') {
       inner = <ConfirmWidget spec={msg.content} notebookId={notebookId} />;
     } else if (msg.format === 'image') {
-      inner = <ImageOutput spec={msg.content} />;
+      inner = <ImageOutput spec={msg.content} notebookId={notebookId} handleId={msg.handleId} />;
     } else if (msg.format === 'prompt') {
       inner = <PromptWidget spec={msg.content} notebookId={notebookId} />;
     } else if (msg.format === 'progress') {

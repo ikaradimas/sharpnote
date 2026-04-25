@@ -46,7 +46,7 @@ partial class Program
                 return;
             }
 
-            var opts = options.AddReferences(dbMetaRefs);
+            var opts = options;
 
             if (mode == "switch")
             {

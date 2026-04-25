@@ -627,6 +627,7 @@ export const DOCS_SECTIONS = [
         { keys: '⌘ –', desc: 'Decrease font size' },
         { keys: '⌘ 0', desc: 'Reset font size to default' },
         { keys: 'F1', desc: 'Open this documentation' },
+        { keys: '⌘ ⌥ I', desc: 'Toggle Developer Tools (View menu)' },
         { keys: 'Ctrl+↩', desc: 'Run current cell (code editor focused)' },
         { keys: 'Ctrl+F', desc: 'Find in notebook — search across all cell contents' },
         { keys: 'Tab', desc: 'Indent selection / accept autocomplete suggestion' },

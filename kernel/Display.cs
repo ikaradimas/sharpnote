@@ -1,8 +1,11 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace SharpNoteKernel;
 
@@ -169,7 +172,7 @@ public class DisplayHandle
 
     /// <summary>Updates a live image with raw RGB bytes.</summary>
     public void UpdateImageBytes(byte[] rgb, int width, int height) =>
-        UpdateImage(BmpEncoder.EncodeBase64DataUri(rgb, width, height), width: width, height: height);
+        UpdateImage(PngEncoder.EncodeBase64DataUri(rgb, width, height), width: width, height: height);
 
     public void Clear() =>
         _display.SendUpdate("html", (object)"", HandleId);
@@ -296,6 +299,126 @@ public class CanvasHandle
         }
     }
 
+    // ── Alpha blending ────────────────────────────────────────────────────────
+
+    /// <summary>Sets a pixel with alpha compositing (a=0 transparent, a=255 opaque).</summary>
+    public void SetPixelAlpha(int x, int y, byte r, byte g, byte b, byte a)
+    {
+        if (a == 0 || (uint)x >= (uint)_width || (uint)y >= (uint)_height) return;
+        if (a == 255) { SetPixel(x, y, r, g, b); return; }
+        int i = (y * _width + x) * 3;
+        int ia = a, oa = 255 - a;
+        _pixels[i]     = (byte)((_pixels[i]     * oa + r * ia) / 255);
+        _pixels[i + 1] = (byte)((_pixels[i + 1] * oa + g * ia) / 255);
+        _pixels[i + 2] = (byte)((_pixels[i + 2] * oa + b * ia) / 255);
+    }
+
+    /// <summary>Fills an axis-aligned rectangle with alpha compositing.</summary>
+    public void FillRectAlpha(int x, int y, int w, int h, byte r, byte g, byte b, byte a)
+    {
+        if (a == 255) { FillRect(x, y, w, h, r, g, b); return; }
+        for (int py = y; py < y + h; py++)
+            for (int px = x; px < x + w; px++)
+                SetPixelAlpha(px, py, r, g, b, a);
+    }
+
+    // ── Triangles ────────────────────────────────────────────────────────────
+
+    /// <summary>Draws a triangle outline.</summary>
+    public void DrawTriangle(int x0, int y0, int x1, int y1, int x2, int y2, byte r, byte g, byte b)
+    {
+        DrawLine(x0, y0, x1, y1, r, g, b);
+        DrawLine(x1, y1, x2, y2, r, g, b);
+        DrawLine(x2, y2, x0, y0, r, g, b);
+    }
+
+    /// <summary>Fills a triangle using scanline rasterization.</summary>
+    public void FillTriangle(int x0, int y0, int x1, int y1, int x2, int y2, byte r, byte g, byte b)
+    {
+        // Sort vertices by Y
+        if (y0 > y1) { (x0, y0, x1, y1) = (x1, y1, x0, y0); }
+        if (y0 > y2) { (x0, y0, x2, y2) = (x2, y2, x0, y0); }
+        if (y1 > y2) { (x1, y1, x2, y2) = (x2, y2, x1, y1); }
+
+        int totalHeight = y2 - y0;
+        if (totalHeight == 0) return;
+
+        for (int y = y0; y <= y2; y++)
+        {
+            bool secondHalf = y > y1 || y1 == y0;
+            int segmentHeight = secondHalf ? y2 - y1 : y1 - y0;
+            if (segmentHeight == 0) continue;
+
+            double alpha = (double)(y - y0) / totalHeight;
+            double beta  = secondHalf
+                ? (double)(y - y1) / segmentHeight
+                : (double)(y - y0) / segmentHeight;
+
+            int ax = x0 + (int)((x2 - x0) * alpha);
+            int bx = secondHalf
+                ? x1 + (int)((x2 - x1) * beta)
+                : x0 + (int)((x1 - x0) * beta);
+
+            if (ax > bx) (ax, bx) = (bx, ax);
+            for (int px = ax; px <= bx; px++) SetPixel(px, y, r, g, b);
+        }
+    }
+
+    // ── Text rendering ───────────────────────────────────────────────────────
+
+    /// <summary>Draws text using a built-in 5×7 bitmap font. Scale multiplies pixel size.</summary>
+    public void DrawText(int x, int y, string text, byte r, byte g, byte b, int scale = 1)
+    {
+        if (string.IsNullOrEmpty(text) || scale < 1) return;
+        int charW = BitmapFont.CharWidth;
+        int charH = BitmapFont.CharHeight;
+        int stride = (charW + 1) * scale; // 1-pixel gap between characters
+
+        for (int ci = 0; ci < text.Length; ci++)
+        {
+            int ch = text[ci] - BitmapFont.FirstChar;
+            if (ch < 0 || ch > BitmapFont.LastChar - BitmapFont.FirstChar) continue;
+            int fontOffset = ch * charH;
+
+            for (int row = 0; row < charH; row++)
+            {
+                byte bits = BitmapFont.Data[fontOffset + row];
+                for (int col = 0; col < charW; col++)
+                {
+                    if (((bits >> (charW - 1 - col)) & 1) == 0) continue;
+                    int px = x + ci * stride + col * scale;
+                    int py = y + row * scale;
+                    if (scale == 1) SetPixel(px, py, r, g, b);
+                    else FillRect(px, py, scale, scale, r, g, b);
+                }
+            }
+        }
+    }
+
+    // ── Sprite blitting ──────────────────────────────────────────────────────
+
+    /// <summary>Blits an RGB sprite (3 bytes/pixel) onto the canvas.</summary>
+    public void DrawSprite(int x, int y, byte[] rgb, int spriteW, int spriteH)
+    {
+        for (int sy = 0; sy < spriteH; sy++)
+            for (int sx = 0; sx < spriteW; sx++)
+            {
+                int si = (sy * spriteW + sx) * 3;
+                SetPixel(x + sx, y + sy, rgb[si], rgb[si + 1], rgb[si + 2]);
+            }
+    }
+
+    /// <summary>Blits an RGBA sprite (4 bytes/pixel) with alpha compositing.</summary>
+    public void DrawSpriteAlpha(int x, int y, byte[] rgba, int spriteW, int spriteH)
+    {
+        for (int sy = 0; sy < spriteH; sy++)
+            for (int sx = 0; sx < spriteW; sx++)
+            {
+                int si = (sy * spriteW + sx) * 4;
+                SetPixelAlpha(x + sx, y + sy, rgba[si], rgba[si + 1], rgba[si + 2], rgba[si + 3]);
+            }
+    }
+
     // ── Parallel rendering ───────────────────────────────────────────────────
 
     /// <summary>
@@ -320,8 +443,9 @@ public class CanvasHandle
     /// <summary>Encodes the current pixel buffer as BMP and pushes the update to the display.</summary>
     public void Flush()
     {
-        var uri = BmpEncoder.EncodeBase64DataUri(_pixels, _width, _height);
-        _display.SendUpdate("image", new { src = uri, width = _width, height = _height }, _handleId);
+        var uri = PngEncoder.EncodeBase64DataUri(_pixels, _width, _height);
+        bool isInteractive = _onClick != null || _onMove != null || _clickTcs != null;
+        _display.SendUpdate("image", new { src = uri, width = _width, height = _height, interactive = isInteractive }, _handleId);
     }
 
     /// <summary>
@@ -344,6 +468,73 @@ public class CanvasHandle
         }
         Flush();
     }
+
+    // ── Animation loop helper ────────────────────────────────────────────────
+
+    /// <summary>
+    /// Runs a frame loop at the target FPS. Calls frame(canvas, frameNumber),
+    /// flushes, and handles timing. Stops on cancellation.
+    /// </summary>
+    public async Task RunLoopAsync(int fps, Action<CanvasHandle, int> frame, CancellationToken ct)
+    {
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        for (int n = 0; !ct.IsCancellationRequested; n++)
+        {
+            frame(this, n);
+            Flush();
+            long target = (long)(n + 1) * 1000 / Math.Max(1, fps);
+            int sleepMs = (int)(target - sw.ElapsedMilliseconds);
+            if (sleepMs > 0) await Task.Delay(sleepMs, ct).ConfigureAwait(false);
+        }
+    }
+
+    // ── Mouse interaction ────────────────────────────────────────────────────
+
+    private static readonly ConcurrentDictionary<string, CanvasHandle> _registry = new();
+
+    private Action<int, int, int>? _onClick;
+    private Action<int, int>? _onMove;
+    private TaskCompletionSource<(int x, int y, int button)>? _clickTcs;
+
+    /// <summary>Registers this canvas for mouse events and re-emits the current frame so
+    /// the renderer attaches click/move handlers. Safe to call repeatedly.</summary>
+    public void EnableMouse()
+    {
+        _registry[_handleId] = this;
+        Flush();
+    }
+
+    /// <summary>Called when the user clicks on the canvas image.</summary>
+    public Action<int, int, int>? OnClick { get => _onClick; set { _onClick = value; if (value != null) EnableMouse(); } }
+
+    /// <summary>Called when the user moves the mouse over the canvas image.</summary>
+    public Action<int, int>? OnMove { get => _onMove; set { _onMove = value; if (value != null) EnableMouse(); } }
+
+    /// <summary>Waits for the next mouse click on the canvas.</summary>
+    public async Task<(int x, int y, int button)> WaitForClickAsync(CancellationToken ct = default)
+    {
+        EnableMouse();
+        var tcs = new TaskCompletionSource<(int, int, int)>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _clickTcs = tcs;
+        try { return await tcs.Task.WaitAsync(ct); }
+        finally { _clickTcs = null; }
+    }
+
+    internal static void DispatchEvent(string handleId, string eventType, int x, int y, int button)
+    {
+        if (!_registry.TryGetValue(handleId, out var canvas)) return;
+        if (eventType == "canvas_click")
+        {
+            canvas._onClick?.Invoke(x, y, button);
+            canvas._clickTcs?.TrySetResult((x, y, button));
+        }
+        else if (eventType == "canvas_move")
+        {
+            canvas._onMove?.Invoke(x, y);
+        }
+    }
+
+    internal static void ClearRegistry() => _registry.Clear();
 }
 
 // ── DisplayHelper ─────────────────────────────────────────────────────────────
@@ -603,7 +794,7 @@ public class DisplayHelper
     /// </summary>
     public void ImageBytes(byte[] rgb, int width, int height, string? title = null)
     {
-        var uri = BmpEncoder.EncodeBase64DataUri(rgb, width, height);
+        var uri = PngEncoder.EncodeBase64DataUri(rgb, width, height);
         Send(new { type = "display", id = _currentId, format = "image",
                    content = new { src = uri, width, height }, title });
     }
@@ -630,7 +821,7 @@ public class DisplayHelper
     {
         var handleId = NewHandle().HandleId;
         // Send initial blank image
-        var uri = BmpEncoder.EncodeBase64DataUri(new byte[width * height * 3], width, height);
+        var uri = PngEncoder.EncodeBase64DataUri(new byte[width * height * 3], width, height);
         Send(new { type = "display", id = _currentId, format = "image",
                    content = new { src = uri, width, height },
                    handleId, title });

@@ -129,8 +129,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   loadNotebookFromPath: (filePath) => ipcRenderer.invoke('load-notebook-from-path', filePath),
   decryptViewerSettings: (data) => ipcRenderer.invoke('decrypt-viewer-settings', data),
 
-  // API Editor — OpenAPI export + mock server
+  // API Editor — OpenAPI export + C# export + mock server
   exportOpenApi: (data) => ipcRenderer.invoke('export-openapi', data),
+  exportCSharpApi: (data) => ipcRenderer.invoke('export-csharp-api', data),
   startMockServer: (data) => ipcRenderer.invoke('mock-server-start', data),
   stopMockServer: (idOrData) => ipcRenderer.invoke('mock-server-stop', idOrData),
   listMockServers: () => ipcRenderer.invoke('mock-server-list'),

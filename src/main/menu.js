@@ -223,6 +223,12 @@ function buildMenu(customShortcuts = {}, viewerMode = false) {
     label: 'View',
     submenu: [
       { label: 'Dashboard Mode', accelerator: accel('dashboard', 'Ctrl+Shift+B'), click: () => send('dashboard') },
+      { type: 'separator' },
+      {
+        label: 'Toggle Developer Tools',
+        accelerator: process.platform === 'darwin' ? 'Alt+Cmd+I' : 'Ctrl+Shift+I',
+        click: () => { if (_mainWindow) _mainWindow.webContents.toggleDevTools(); },
+      },
     ],
   });
 

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { CodeEditor } from './CodeEditor.jsx';
 import { CellOutput } from '../output/OutputBlock.jsx';
 import { CellControls } from './CellControls.jsx';
@@ -33,6 +33,18 @@ export function SqlCell({
   // Schema sidebar state
   const [schemaOpen, setSchemaOpen] = useState(false);
   const [expandedTables, setExpandedTables] = useState({});
+  const [schemaFilter, setSchemaFilter] = useState('');
+
+  const filteredTables = useMemo(() => {
+    const tables = selectedSchema?.tables || [];
+    if (!schemaFilter.trim()) return tables;
+    const q = schemaFilter.toLowerCase();
+    return tables.filter((table) => {
+      const tableKey = table.schema ? `${table.schema}.${table.name}` : table.name;
+      if (tableKey.toLowerCase().includes(q)) return true;
+      return table.columns?.some((col) => col.name.toLowerCase().includes(q));
+    });
+  }, [selectedSchema, schemaFilter]);
 
   const toggleTable = useCallback((key) => {
     setExpandedTables((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -111,29 +123,56 @@ export function SqlCell({
       </div>
       {schemaOpen && selectedSchema && (
         <div className="sql-schema-sidebar">
-          {(selectedSchema.tables || []).map((table) => {
+          <input
+            className="sql-schema-search"
+            type="text"
+            placeholder="Filter tables/columns…"
+            value={schemaFilter}
+            onChange={(e) => setSchemaFilter(e.target.value)}
+            spellCheck={false}
+          />
+          {filteredTables.map((table) => {
             const tableKey = table.schema ? `${table.schema}.${table.name}` : table.name;
-            const isOpen = expandedTables[tableKey];
+            const q = schemaFilter.toLowerCase();
+            const matchingCols = q && table.columns
+              ? table.columns.filter((col) => col.name.toLowerCase().includes(q))
+              : null;
+            const isOpen = expandedTables[tableKey] || (matchingCols && matchingCols.length > 0);
+            const cols = matchingCols || table.columns || [];
             return (
               <div key={tableKey}>
                 <div className="sql-schema-table" onClick={() => toggleTable(tableKey)}>
                   <span>{isOpen ? '▾' : '▸'}</span>{' '}
                   <span className="sql-schema-table-name">{tableKey}</span>
                 </div>
-                {isOpen && table.columns.map((col) => (
-                  <div
-                    key={col.name}
-                    className="sql-schema-col"
-                    onClick={() => copyColumnName(col.name)}
-                    title={`Click to copy "${col.name}"`}
-                  >
-                    {col.name}
-                    {col.type && <span className="sql-schema-col-type">{col.type}</span>}
-                  </div>
-                ))}
+                {isOpen && cols.length > 0 && (
+                  <table className="sql-schema-col-table">
+                    <thead>
+                      <tr>
+                        <th>Column</th>
+                        <th>Type</th>
+                        <th>Null</th>
+                        <th>Key</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {cols.map((col) => (
+                        <tr key={col.name} onClick={() => copyColumnName(col.name)} title={`Click to copy "${col.name}"`}>
+                          <td className="sql-schema-col-name">{col.name}</td>
+                          <td className="sql-schema-col-type">{col.dbType || col.type || ''}</td>
+                          <td className="sql-schema-col-null">{col.isNullable ? '✓' : ''}</td>
+                          <td className="sql-schema-col-key">{col.isPrimaryKey ? 'PK' : col.isIdentity ? 'ID' : ''}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
               </div>
             );
           })}
+          {filteredTables.length === 0 && schemaFilter && (
+            <div className="sql-schema-no-match">No matches</div>
+          )}
         </div>
       )}
       <CodeEditor

@@ -22,6 +22,73 @@ public class DisplayTests : IClassFixture<KernelFixture>, IAsyncLifetime
     public Task InitializeAsync() => _k.ResetAsync();
     public Task DisposeAsync() => Task.CompletedTask;
 
+    // ── Display.Canvas ────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Canvas_FlushEmitsValidPngDataUri()
+    {
+        var id = KernelFixture.NewId();
+        _k.ClearMessages();
+        await _k.SendAsync(new { type = "execute", id, code = @"
+            var c = Display.Canvas(40, 30);
+            for (int y = 0; y < 30; y++)
+                for (int x = 0; x < 40; x++)
+                    c.SetPixel(x, y, 255, 0, 0);
+            c.Flush();" });
+
+        await _k.WaitForMessageAsync(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "complete" &&
+            el.TryGetProperty("id", out var i) && i.GetString() == id);
+
+        // Find the Flush update message (has handleId + update=true + format=image)
+        var flushMsg = _k.GetMessages().FirstOrDefault(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "display" &&
+            el.TryGetProperty("update", out var u) && u.GetBoolean() &&
+            el.TryGetProperty("format", out var f) && f.GetString() == "image");
+
+        flushMsg.ValueKind.Should().NotBe(JsonValueKind.Undefined);
+        var src = flushMsg.GetProperty("content").GetProperty("src").GetString();
+        src.Should().StartWith("data:image/png;base64,");
+
+        var b64 = src!.Substring("data:image/png;base64,".Length);
+        var png = Convert.FromBase64String(b64);
+        // PNG signature
+        png[0].Should().Be(0x89);
+        png[1].Should().Be(0x50);
+        // IHDR length must be 13
+        var ihdrLen = (png[8] << 24) | (png[9] << 16) | (png[10] << 8) | png[11];
+        ihdrLen.Should().Be(13);
+        // Color type at offset 25 must be 2 (RGB)
+        png[25].Should().Be(2);
+    }
+
+    [Fact]
+    public async Task Canvas_OnClickAfterFlush_ReEmitsAsInteractive()
+    {
+        var id = KernelFixture.NewId();
+        _k.ClearMessages();
+        await _k.SendAsync(new { type = "execute", id, code = @"
+            var c = Display.Canvas(20, 20);
+            c.Fill(10, 20, 30);
+            c.Flush();
+            c.OnClick = (x, y, b) => { };" });
+
+        await _k.WaitForMessageAsync(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "complete" &&
+            el.TryGetProperty("id", out var i) && i.GetString() == id);
+
+        var imageUpdates = _k.GetMessages().Where(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "display" &&
+            el.TryGetProperty("update", out var u) && u.GetBoolean() &&
+            el.TryGetProperty("format", out var f) && f.GetString() == "image").ToList();
+
+        // We expect at least two image updates: the explicit Flush(), then the auto-flush
+        // from EnableMouse() triggered by the OnClick setter — and the latest must be interactive.
+        imageUpdates.Should().HaveCountGreaterThanOrEqualTo(2);
+        var last = imageUpdates[^1];
+        last.GetProperty("content").GetProperty("interactive").GetBoolean().Should().BeTrue();
+    }
+
     // ── Display.Plot ──────────────────────────────────────────────────────────
 
     [Fact]
