@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 
 // Leaflet (and the leaflet.heat plugin) is loaded lazily on first render so
 // that importing this component — or anything that transitively imports it
@@ -16,15 +16,37 @@ function loadLeaflet() {
   return leafletLoader;
 }
 
+const TILE_URLS = {
+  dark:  'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+  light: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+};
+
 export function MapOutput({ spec }) {
-  const containerRef = useRef(null);
-  const mapRef = useRef(null);
-  const layersRef = useRef([]);
+  const wrapperRef    = useRef(null);
+  const containerRef  = useRef(null);
+  const mapRef        = useRef(null);
+  const tileLayerRef  = useRef(null);
+  const layersRef     = useRef([]);
+  const boundsRef     = useRef([]);
+  const initialViewRef = useRef(null);
+
+  const [theme,      setTheme]      = useState('dark');
+  const [fullscreen, setFullscreen] = useState(false);
 
   useEffect(() => () => {
     mapRef.current?.remove();
     mapRef.current = null;
+    tileLayerRef.current = null;
     layersRef.current = [];
+    boundsRef.current = [];
+  }, []);
+
+  // Track native fullscreen state so the icon stays in sync if the user hits
+  // Escape to exit instead of clicking the button.
+  useEffect(() => {
+    const onChange = () => setFullscreen(document.fullscreenElement === wrapperRef.current);
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
   }, []);
 
   useEffect(() => {
@@ -35,14 +57,16 @@ export function MapOutput({ spec }) {
       if (cancelled || !containerRef.current) return;
 
       if (!mapRef.current) {
+        const initialCenter = spec.center || [0, 0];
+        const initialZoom   = spec.zoom ?? 2;
         mapRef.current = L.map(containerRef.current, {
-          center: spec.center || [0, 0],
-          zoom: spec.zoom ?? 2,
+          center: initialCenter,
+          zoom: initialZoom,
           scrollWheelZoom: true,
+          zoomControl: true,
         });
-        // Carto dark basemap — free, no key, no Referer requirement (OSM's
-        // tile.openstreetmap.org rejects file:// origin requests with a 403).
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        initialViewRef.current = { center: initialCenter, zoom: initialZoom };
+        tileLayerRef.current = L.tileLayer(TILE_URLS[theme], {
           attribution: '© OpenStreetMap contributors © CARTO',
           subdomains: 'abcd',
           maxZoom: 20,
@@ -91,6 +115,8 @@ export function MapOutput({ spec }) {
         spec.heat.forEach((p) => bounds.push([p[0], p[1]]));
       }
 
+      boundsRef.current = bounds;
+
       if (bounds.length > 1 && !spec.zoom) {
         mapRef.current.fitBounds(bounds, { padding: [20, 20] });
       }
@@ -101,15 +127,59 @@ export function MapOutput({ spec }) {
     return () => { cancelled = true; };
   }, [spec]);
 
-  const width = spec?.width ? `${spec.width}px` : '100%';
+  // Theme switch — swap the tile layer in place without rebuilding the map.
+  useEffect(() => {
+    if (!mapRef.current || !tileLayerRef.current) return;
+    loadLeaflet().then((L) => {
+      if (!mapRef.current) return;
+      mapRef.current.removeLayer(tileLayerRef.current);
+      tileLayerRef.current = L.tileLayer(TILE_URLS[theme], {
+        attribution: '© OpenStreetMap contributors © CARTO',
+        subdomains: 'abcd',
+        maxZoom: 20,
+      }).addTo(mapRef.current);
+    });
+  }, [theme]);
+
+  const onFit = useCallback(() => {
+    if (!mapRef.current) return;
+    const b = boundsRef.current;
+    if (b.length >= 2) mapRef.current.fitBounds(b, { padding: [20, 20] });
+    else if (b.length === 1) mapRef.current.setView(b[0], 12);
+  }, []);
+
+  const onReset = useCallback(() => {
+    const v = initialViewRef.current;
+    if (mapRef.current && v) mapRef.current.setView(v.center, v.zoom);
+  }, []);
+
+  const onToggleTheme = useCallback(() => {
+    setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
+  }, []);
+
+  const onToggleFullscreen = useCallback(() => {
+    if (!wrapperRef.current) return;
+    if (document.fullscreenElement) {
+      document.exitFullscreen?.();
+    } else {
+      wrapperRef.current.requestFullscreen?.();
+      setTimeout(() => mapRef.current?.invalidateSize(), 100);
+    }
+  }, []);
+
+  const width  = spec?.width  ? `${spec.width}px`  : '100%';
   const height = spec?.height ? `${spec.height}px` : '320px';
 
   return (
-    <div
-      ref={containerRef}
-      className="output-map"
-      style={{ width, height }}
-    />
+    <div ref={wrapperRef} className="output-map-wrapper" style={{ width, height }}>
+      <div ref={containerRef} className="output-map" />
+      <div className="output-map-toolbar">
+        <button className="output-map-btn" onClick={onFit}              title="Fit all points">⊕</button>
+        <button className="output-map-btn" onClick={onReset}            title="Reset to original view">↺</button>
+        <button className="output-map-btn" onClick={onToggleTheme}      title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}>{theme === 'dark' ? '☼' : '☾'}</button>
+        <button className="output-map-btn" onClick={onToggleFullscreen} title={fullscreen ? 'Exit fullscreen' : 'Fullscreen'}>{fullscreen ? '⤡' : '⛶'}</button>
+      </div>
+    </div>
   );
 }
 

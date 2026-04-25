@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, cleanup, waitFor } from '@testing-library/react';
+import { render, cleanup, waitFor, fireEvent, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
 // Track the live Leaflet map instance so each test can inspect what was added.
@@ -109,6 +109,42 @@ describe('MapOutput', () => {
 
     await waitFor(() => expect(L.heatLayer).toHaveBeenCalledTimes(1));
     expect(L.heatLayer.mock.calls[0][0]).toEqual([[10, 20, 1], [11, 21, 0.5]]);
+  });
+
+  it('fit button refits to all marker bounds', async () => {
+    render(<MapOutput spec={{
+      center: [0, 0], zoom: 2,
+      markers: [
+        { lat: 51.5, lon: -0.1 },
+        { lat: 40.7, lon: -74.0 },
+      ],
+    }} />);
+
+    await waitFor(() => expect(L.circleMarker).toHaveBeenCalledTimes(2));
+    mapState.fitBounds.mockClear();
+    fireEvent.click(screen.getByTitle('Fit all points'));
+    expect(mapState.fitBounds).toHaveBeenCalledWith(
+      expect.arrayContaining([[51.5, -0.1], [40.7, -74.0]]),
+      expect.any(Object),
+    );
+  });
+
+  it('reset button restores the spec\'s original center and zoom', async () => {
+    render(<MapOutput spec={{ center: [10, 20], zoom: 6 }} />);
+    await waitFor(() => expect(L.map).toHaveBeenCalledTimes(1));
+    mapState.setView.mockClear();
+    fireEvent.click(screen.getByTitle('Reset to original view'));
+    expect(mapState.setView).toHaveBeenCalledWith([10, 20], 6);
+  });
+
+  it('theme toggle swaps the tile layer URL between dark and light', async () => {
+    render(<MapOutput spec={{ center: [0, 0], zoom: 2 }} />);
+    await waitFor(() => expect(L.tileLayer).toHaveBeenCalledTimes(1));
+    expect(L.tileLayer.mock.calls[0][0]).toContain('dark_all');
+
+    fireEvent.click(screen.getByTitle('Switch to light theme'));
+    await waitFor(() => expect(L.tileLayer).toHaveBeenCalledTimes(2));
+    expect(L.tileLayer.mock.calls[1][0]).toContain('light_all');
   });
 
   it('escapes HTML in marker labels', async () => {
