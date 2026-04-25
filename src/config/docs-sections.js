@@ -305,6 +305,30 @@ export const DOCS_SECTIONS = [
     ],
   },
   {
+    id: 'geography', title: 'Geography & Maps',
+    content: [
+      { type: 'p', text: 'The Geo global provides geocoding, routing, IP geolocation, country lookup, and an interactive Leaflet map output — all using free public APIs.' },
+      { type: 'h3', text: 'API Reference' },
+      { type: 'ul', items: [
+        'Geo.GeocodeAsync(query) → GeoResult { Lat, Lon, DisplayName, Country, CountryCode } — Nominatim (OpenStreetMap)',
+        'Geo.ReverseGeocodeAsync(lat, lon) → GeoResult — Nominatim reverse lookup',
+        'Geo.RouteAsync(from, to, profile = "driving-car") → RouteResult { DistanceKm, DurationMin, Polyline } — OpenRouteService (free key required)',
+        'Geo.IpLookupAsync(ip = null) → IpLocation { Lat, Lon, Country, City, Isp } — ip-api.com (no key)',
+        'Geo.CountryAsync(codeOrName) → CountryInfo { Population, Capital, Languages, Lat, Lon } — REST Countries (no key)',
+        'Geo.Map(lat, lon, zoom?, markers?, route?, heat?, width?, height?, title?) — render an interactive Leaflet map',
+        'Geo.HeatMap(points, centerLat?, centerLon?, zoom?, …) — convenience wrapper, auto-centers on the points',
+      ]},
+      { type: 'h3', text: 'Examples' },
+      { type: 'code', lang: 'csharp', text: '// Geocode + show on a map\nvar athens = await Geo.GeocodeAsync("Athens, Greece");\nGeo.Map(athens.Lat, athens.Lon, zoom: 11,\n        markers: new[] { new MapMarker(athens.Lat, athens.Lon, "Athens", "#e0a040") },\n        title: "Capital");\n\n// Heat map of synthetic sales by city\nvar points = new[] {\n    new HeatPoint(40.71, -74.00, 1.0),  // NYC\n    new HeatPoint(34.05,-118.24, 0.7),  // LA\n    new HeatPoint(51.51, -0.13,  0.9),  // London\n};\nGeo.HeatMap(points, zoom: 2, title: "Global sales density");\n\n// Route between two cities (requires a free OpenRouteService key)\nConfig.Set("OpenRouteServiceKey", "<your-key>");\nvar a = await Geo.GeocodeAsync("Berlin");\nvar b = await Geo.GeocodeAsync("Munich");\nvar route = await Geo.RouteAsync(a, b);\nGeo.Map(a.Lat, a.Lon, route: route, title: $"{route.DistanceKm:F0} km");' },
+      { type: 'h3', text: 'Map toolbar' },
+      { type: 'p', text: 'Every rendered map has a small toolbar in the top-right corner with four buttons: ⊕ fit-to-all-points (re-zooms so every marker, route vertex, and heat point is visible); ↺ reset to the spec\'s original center/zoom; ☼/☾ toggle the basemap between dark and light Carto tiles; ⛶ enter or exit native fullscreen.' },
+      { type: 'h3', text: 'OpenRouteService key' },
+      { type: 'p', text: 'Sign up for a free key at https://openrouteservice.org/sign-up (2000 requests/day, no credit card). Set it via Config.Set("OpenRouteServiceKey", "...") in the Config panel, or via the OPENROUTESERVICE_KEY environment variable. Geocoding, IP lookup, country lookup, and the map renderer require no key.' },
+      { type: 'h3', text: 'Rate limits' },
+      { type: 'p', text: 'Nominatim asks for ≤1 request/second and a descriptive User-Agent (already set). ip-api.com allows ~45 req/min per IP for non-commercial use. For batch IP geolocation with no rate limit, download the free MaxMind GeoLite2 MMDB and look up locally.' },
+    ],
+  },
+  {
     id: 'data-import', title: 'Data Import',
     content: [
       { type: 'p', text: 'Load CSV, Excel, and Parquet files into variables without boilerplate. CSV is built-in; Excel and Parquet use code-generated cells with NuGet packages.' },

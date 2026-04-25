@@ -2314,6 +2314,43 @@ Display.Html(@"<div style='border-left:2px solid #333;margin-left:12px;padding-l
 
     cs(`Display.Marquee("  📊  THROUGHPUT: 2,341 req/s  ●  P50: 12ms  ●  P95: 34ms  ●  P99: 45ms  ●  ERROR RATE: 0.02%  ●  CACHE HIT: 94.7%  ●  DB CONNECTIONS: 48/100  ●  ", speed: 35, color: "#569cd6", background: "#0a0a12");`),
 
+    md('## Sales by Region'),
+    cs(`var sales = new[] {
+    new HeatPoint(40.7128,  -74.0060, 1.00),  // New York
+    new HeatPoint(34.0522, -118.2437, 0.85),  // Los Angeles
+    new HeatPoint(41.8781,  -87.6298, 0.72),  // Chicago
+    new HeatPoint(51.5074,   -0.1278, 0.95),  // London
+    new HeatPoint(48.8566,    2.3522, 0.78),  // Paris
+    new HeatPoint(52.5200,   13.4050, 0.65),  // Berlin
+    new HeatPoint(35.6762,  139.6503, 0.88),  // Tokyo
+    new HeatPoint(22.3193,  114.1694, 0.71),  // Hong Kong
+    new HeatPoint(-33.8688, 151.2093, 0.55),  // Sydney
+};
+Geo.HeatMap(sales, zoom: 2, height: 360, title: "Q1 sales density");`, 'map'),
+
+    md('## Visitor Origins'),
+    cs(`var visitors = new[] {
+    new MapMarker(40.71, -74.00, "NYC — 3,421 visits", "#569cd6"),
+    new MapMarker(51.51,  -0.13, "London — 2,180",     "#4ec9b0"),
+    new MapMarker(35.68, 139.65, "Tokyo — 1,604",      "#e0a040"),
+    new MapMarker(48.86,   2.35, "Paris — 982",        "#b48ead"),
+    new MapMarker(-33.87,151.21, "Sydney — 421",       "#e06070"),
+};
+Geo.Map(20, 0, zoom: 2, markers: visitors, height: 360, title: "Last 24h unique visitors");`, 'map'),
+
+    md(`## Logistics Route
+
+Drives a real route from HQ to a branch via **OpenRouteService**. Requires a free key — sign up at <https://openrouteservice.org/sign-up> and run \`Config.Set("OpenRouteServiceKey", "<your key>")\` once.`),
+    cs(`try {
+    var hq     = await Geo.GeocodeAsync("Berlin, Germany");
+    var munich = await Geo.GeocodeAsync("Munich, Germany");
+    var route  = await Geo.RouteAsync(hq, munich);
+    Geo.Map(hq.Lat, hq.Lon, route: route, height: 360,
+            title: $"Berlin → Munich · {route.DistanceKm:F0} km · {route.DurationMin:F0} min");
+} catch (Exception ex) {
+    Display.Html($"<div style='color:#e0a040;padding:12px;border:1px solid #5a4a20;border-radius:4px;background:#2a1f0a'>⚠ {System.Net.WebUtility.HtmlEncode(ex.Message)}</div>");
+}`, 'map'),
+
     md(`## Column Layout Reference
 
 Set the \`columns\` property on any cell to group consecutive cells with the same value into a CSS grid:
@@ -2332,6 +2369,16 @@ Set the \`columns\` property on any cell to group consecutive cells with the sam
 | \`Display.ProgressBar(percent, label?, color?)\` | Horizontal progress bar |
 | \`Display.Marquee(text, speed?, color?, background?)\` | Scrolling text ticker |
 | \`Display.Html(html)\` | Arbitrary HTML for custom layouts |
+
+### Geography Helpers
+
+| Method | Description |
+|--------|-------------|
+| \`await Geo.GeocodeAsync("…")\` | Resolve free-form text to lat/lon (Nominatim) |
+| \`await Geo.IpLookupAsync(ip?)\` | IP → \`{ Lat, Lon, Country, City }\` (ip-api.com) |
+| \`await Geo.RouteAsync(from, to, profile?)\` | Driving / walking / cycling route (OpenRouteService — needs free key) |
+| \`Geo.Map(lat, lon, zoom?, markers?, route?, heat?)\` | Interactive Leaflet map |
+| \`Geo.HeatMap(points, zoom?)\` | Auto-centered heat map |
 
 Combine these with column layouts to create rich dashboards and infographics.`),
   ];

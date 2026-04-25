@@ -1,12 +1,12 @@
 {
   "name": "sharpnote",
-  "version": "2.6.0",
+  "version": "2.9.0",
   "description": "SharpNote — interactive C# notebook with multi-tab MDI, NuGet, and Chart.js output",
   "main": "main.js",
   "scripts": {
     "start": "npm run build:renderer && electron .",
     "dev": "npm run build:renderer && electron .",
-    "build:renderer": "esbuild src/renderer.jsx --bundle --outfile=dist/renderer.js --loader:.jsx=jsx && esbuild src/main/kafka.js --bundle --platform=node --outfile=dist/kafka.js && cp src/styles.css dist/styles.css && cp node_modules/katex/dist/katex.min.css dist/katex.min.css && cp -r node_modules/katex/dist/fonts dist/fonts",
+    "build:renderer": "esbuild src/renderer.jsx --bundle --outfile=dist/renderer.js --loader:.jsx=jsx && esbuild src/main/kafka.js --bundle --platform=node --outfile=dist/kafka.js && cp src/styles.css dist/styles.css && cp node_modules/katex/dist/katex.min.css dist/katex.min.css && cp -r node_modules/katex/dist/fonts dist/fonts && cp node_modules/leaflet/dist/leaflet.css dist/leaflet.css && cp -r node_modules/leaflet/dist/images dist/images",
     "build:kernel:mac": "dotnet publish kernel/kernel.csproj -r osx-x64 -c Release --self-contained true -o kernel/bin/osx-x64 && dotnet publish kernel/kernel.csproj -r osx-arm64 -c Release --self-contained true -o kernel/bin/osx-arm64",
     "build:kernel:win": "dotnet publish kernel/kernel.csproj -r win-x64 -c Release --self-contained true -o kernel/bin/win-x64",
     "build:kernel:all": "npm run build:kernel:mac && npm run build:kernel:win",
@@ -132,6 +132,8 @@
     "js-yaml": "^4.1.1",
     "kafkajs": "^2.2.4",
     "katex": "^0.16.39",
+    "leaflet": "^1.9.4",
+    "leaflet.heat": "^0.2.0",
     "lucide-react": "^1.7.0",
     "marked": "^15.0.7",
     "mermaid": "^11.13.0",

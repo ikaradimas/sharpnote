@@ -75,7 +75,8 @@ partial class Program
         var files   = new FilesHelper(realStdout);
         var util    = new UtilHelper(realStdout);
         UtilContext.Current = util;
-        var globals = new ScriptGlobals { Display = display, Panels = panels, Db = db, Data = data, Docker = docker, Mock = mock, Files = files };
+        var geo     = new GeoHelper(realStdout);
+        var globals = new ScriptGlobals { Display = display, Panels = panels, Db = db, Data = data, Docker = docker, Mock = mock, Files = files, Geo = geo };
 
         var options = ScriptOptions.Default
             .AddImports(

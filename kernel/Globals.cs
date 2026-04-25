@@ -125,6 +125,7 @@ public class ScriptGlobals
     public DockerHelper  Docker  { get; set; } = null!;
     public MockHelper    Mock    { get; set; } = null!;
     public FilesHelper   Files   { get; set; } = null!;
+    public GeoHelper     Geo     { get; set; } = null!;
     public ConfigHelper  Config  => ConfigContext.Current;
     public UtilHelper    Util    => UtilContext.Current;
     // Injected per-execution so loop-injection checks can cancel tight loops.
