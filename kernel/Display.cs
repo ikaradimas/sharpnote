@@ -605,6 +605,30 @@ public class DisplayHelper
     public void TreeMap(object spec, string? title = null) =>
         Send(new { type = "display", id = _currentId, format = "treemap", content = spec, title });
 
+    /// <summary>
+    /// GitHub-style calendar heat map. Each entry is a (date, value) pair;
+    /// the renderer paints a 7-row grid spanning min..max date with cell
+    /// intensity proportional to <c>value</c>.
+    /// </summary>
+    public void CalendarHeat(IEnumerable<(DateTime Date, double Value)> series,
+                              string? title = null)
+    {
+        var values = series
+            .Select(p => new { date = p.Date.ToString("yyyy-MM-dd"), value = p.Value })
+            .ToArray();
+        Send(new { type = "display", id = _currentId, format = "calendar",
+                   content = new { values }, title });
+    }
+
+    /// <summary>
+    /// Network / graph diagram (cytoscape.js). <paramref name="spec"/> shape:
+    /// <c>{ nodes: [{ id, label?, color? }], edges: [{ source, target, label? }], layout? }</c>.
+    /// Default layout is <c>cose</c> (force-directed); also accepts
+    /// <c>circle</c>, <c>grid</c>, <c>breadthfirst</c>, <c>concentric</c>.
+    /// </summary>
+    public void Network(object spec, string? title = null) =>
+        Send(new { type = "display", id = _currentId, format = "network", content = spec, title });
+
     /// <summary>Display a scrolling marquee ticker.</summary>
     public void Marquee(string text, int speed = 40, string? color = null, string? background = null, string? title = null)
     {

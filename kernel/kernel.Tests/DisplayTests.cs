@@ -144,6 +144,61 @@ public class DisplayTests : IClassFixture<KernelFixture>, IAsyncLifetime
         children[1].GetProperty("value").GetInt32().Should().Be(15);
     }
 
+    // ── Display.CalendarHeat / Display.Network ───────────────────────────────
+
+    [Fact]
+    public async Task CalendarHeat_EmitsValuesWithIso8601Dates()
+    {
+        var id = KernelFixture.NewId();
+        _k.ClearMessages();
+        await _k.SendAsync(new { type = "execute", id, code = @"
+            Display.CalendarHeat(new (DateTime, double)[] {
+                (new DateTime(2026, 1, 1), 5.0),
+                (new DateTime(2026, 1, 2), 3.0),
+            }, title: ""Daily activity"");" });
+
+        await _k.WaitForMessageAsync(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "complete" &&
+            el.TryGetProperty("id", out var i) && i.GetString() == id);
+
+        var msg = _k.GetMessages().FirstOrDefault(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "display" &&
+            el.TryGetProperty("format", out var f) && f.GetString() == "calendar");
+
+        msg.ValueKind.Should().NotBe(JsonValueKind.Undefined);
+        var values = msg.GetProperty("content").GetProperty("values");
+        values.GetArrayLength().Should().Be(2);
+        values[0].GetProperty("date").GetString().Should().Be("2026-01-01");
+        values[0].GetProperty("value").GetDouble().Should().Be(5.0);
+    }
+
+    [Fact]
+    public async Task Network_EmitsDisplayMessageWithNetworkFormat()
+    {
+        var id = KernelFixture.NewId();
+        _k.ClearMessages();
+        await _k.SendAsync(new { type = "execute", id, code = @"
+            Display.Network(new {
+                nodes  = new[] { new { id = ""A"" }, new { id = ""B"" } },
+                edges  = new[] { new { source = ""A"", target = ""B"", label = ""flow"" } },
+                layout = ""circle""
+            });" });
+
+        await _k.WaitForMessageAsync(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "complete" &&
+            el.TryGetProperty("id", out var i) && i.GetString() == id);
+
+        var msg = _k.GetMessages().FirstOrDefault(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "display" &&
+            el.TryGetProperty("format", out var f) && f.GetString() == "network");
+
+        msg.ValueKind.Should().NotBe(JsonValueKind.Undefined);
+        var content = msg.GetProperty("content");
+        content.GetProperty("nodes").GetArrayLength().Should().Be(2);
+        content.GetProperty("edges")[0].GetProperty("label").GetString().Should().Be("flow");
+        content.GetProperty("layout").GetString().Should().Be("circle");
+    }
+
     // ── Display.Plot ──────────────────────────────────────────────────────────
 
     [Fact]

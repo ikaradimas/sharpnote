@@ -6,6 +6,8 @@ import { ImageOutput } from './ImageOutput.jsx';
 import { MapOutput } from './MapOutput.jsx';
 import { SankeyOutput } from './SankeyOutput.jsx';
 import { TreeMapOutput } from './TreeMapOutput.jsx';
+import { CalendarHeatOutput } from './CalendarHeatOutput.jsx';
+import { NetworkOutput } from './NetworkOutput.jsx';
 import { MarkdownOutput } from './MarkdownOutput.jsx';
 import { ObjectTree } from './ObjectTree.jsx';
 
@@ -18,6 +20,8 @@ export function FormatContent({ format, content }) {
   if (format === 'map')      return <MapOutput spec={content} />;
   if (format === 'sankey')   return <SankeyOutput spec={content} />;
   if (format === 'treemap')  return <TreeMapOutput spec={content} />;
+  if (format === 'calendar') return <CalendarHeatOutput spec={content} />;
+  if (format === 'network')  return <NetworkOutput spec={content} />;
   if (format === 'markdown') return <MarkdownOutput content={content} />;
   if (format === 'tree')     return <ObjectTree json={content} />;
   return null;

@@ -10,6 +10,8 @@ import { ImageOutput } from './ImageOutput.jsx';
 import { MapOutput } from './MapOutput.jsx';
 import { SankeyOutput } from './SankeyOutput.jsx';
 import { TreeMapOutput } from './TreeMapOutput.jsx';
+import { CalendarHeatOutput } from './CalendarHeatOutput.jsx';
+import { NetworkOutput } from './NetworkOutput.jsx';
 import { PromptWidget } from './PromptWidget.jsx';
 import { ProgressOutput } from './ProgressOutput.jsx';
 import { ObjectTree } from './ObjectTree.jsx';
@@ -90,6 +92,10 @@ export function OutputBlock({ msg, index, notebookId, allCells, onRunCellByName 
       inner = <SankeyOutput spec={msg.content} />;
     } else if (msg.format === 'treemap') {
       inner = <TreeMapOutput spec={msg.content} />;
+    } else if (msg.format === 'calendar') {
+      inner = <CalendarHeatOutput spec={msg.content} />;
+    } else if (msg.format === 'network') {
+      inner = <NetworkOutput spec={msg.content} />;
     } else if (msg.format === 'prompt') {
       inner = <PromptWidget spec={msg.content} notebookId={notebookId} />;
     } else if (msg.format === 'progress') {

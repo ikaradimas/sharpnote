@@ -2367,6 +2367,38 @@ Drives a real route from HQ to a branch via **OpenRouteService**. Requires a fre
     Display.Html($"<div style='color:#e0a040;padding:12px;border:1px solid #5a4a20;border-radius:4px;background:#2a1f0a'>⚠ {System.Net.WebUtility.HtmlEncode(ex.Message)}</div>");
 }`, 'map'),
 
+    md('## Daily Activity'),
+    cs(`var rng = new Random(42);
+var series = Enumerable.Range(0, 365)
+    .Select(d => (Date: new DateTime(2026, 1, 1).AddDays(d),
+                  Value: (double)Math.Max(0, rng.Next(-3, 12))))
+    .ToArray();
+Display.CalendarHeat(series, title: "2026 commits — synthetic");`, 'calendar'),
+
+    md('## Service Dependencies'),
+    cs(`Display.Network(new {
+    nodes = new[] {
+        new { id = "gw",     label = "API Gateway", color = "#569cd6" },
+        new { id = "auth",   label = "Auth",        color = "#4ec9b0" },
+        new { id = "users",  label = "Users",       color = "#4ec9b0" },
+        new { id = "orders", label = "Orders",      color = "#4ec9b0" },
+        new { id = "pg",     label = "Postgres",    color = "#e0a040" },
+        new { id = "redis",  label = "Redis",       color = "#b48ead" },
+        new { id = "kafka",  label = "Kafka",       color = "#e06070" },
+    },
+    edges = new[] {
+        new { source = "gw",     target = "auth"   },
+        new { source = "gw",     target = "users"  },
+        new { source = "gw",     target = "orders" },
+        new { source = "auth",   target = "pg"     },
+        new { source = "users",  target = "pg"     },
+        new { source = "users",  target = "redis"  },
+        new { source = "orders", target = "pg"     },
+        new { source = "orders", target = "kafka"  },
+    },
+    layout = "cose"
+}, title: "Service mesh");`, 'network'),
+
     md('## Flow & Hierarchy'),
     { ...cs(`Display.Sankey(new {
     nodes = new[] {

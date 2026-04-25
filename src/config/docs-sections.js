@@ -314,6 +314,12 @@ export const DOCS_SECTIONS = [
       { type: 'h3', text: 'TreeMap' },
       { type: 'p', text: 'Display.TreeMap(spec, title?) — spec is recursive { name, value?, children? }. Leaves carry value; internal nodes are sized by the sum of their leaves. Sibling colours come from a tableau-style palette.' },
       { type: 'code', lang: 'csharp', text: 'Display.TreeMap(new {\n    name = "Sales",\n    children = new object[] {\n        new { name = "Hardware", children = new object[] {\n            new { name = "Laptops",  value = 420 },\n            new { name = "Phones",   value = 280 },\n            new { name = "Monitors", value = 110 },\n        }},\n        new { name = "Software", children = new object[] {\n            new { name = "SaaS",     value = 540 },\n            new { name = "Licenses", value = 90  },\n        }},\n        new { name = "Services", value = 230 },\n    }\n});' },
+      { type: 'h3', text: 'CalendarHeat' },
+      { type: 'p', text: 'Display.CalendarHeat(series, title?) — GitHub-style daily heat grid. Pass an IEnumerable<(DateTime Date, double Value)>. The renderer paints a 7-row grid spanning min..max date with cell intensity proportional to value. Hovering a cell shows date + value.' },
+      { type: 'code', lang: 'csharp', text: 'var rng = new Random(42);\nvar series = Enumerable.Range(0, 365)\n    .Select(d => (Date: new DateTime(2026,1,1).AddDays(d), Value: (double)rng.Next(0, 12)))\n    .ToArray();\nDisplay.CalendarHeat(series, title: "2026 commits");' },
+      { type: 'h3', text: 'Network' },
+      { type: 'p', text: 'Display.Network(spec, title?) — interactive network graph (cytoscape.js). spec is { nodes:[{id, label?, color?}], edges:[{source, target, label?}], layout? }. Layouts: cose (default, force-directed), circle, grid, breadthfirst, concentric.' },
+      { type: 'code', lang: 'csharp', text: 'Display.Network(new {\n    nodes = new[] {\n        new { id = "auth",  label = "Auth API",  color = "#569cd6" },\n        new { id = "users", label = "Users API", color = "#4ec9b0" },\n        new { id = "db",    label = "Postgres",  color = "#e0a040" },\n        new { id = "cache", label = "Redis",     color = "#b48ead" },\n    },\n    edges = new[] {\n        new { source = "auth",  target = "users", label = "validates" },\n        new { source = "users", target = "db",    label = "reads"     },\n        new { source = "users", target = "cache", label = "caches"    },\n    },\n    layout = "cose"\n}, title: "Service dependencies");' },
     ],
   },
   {

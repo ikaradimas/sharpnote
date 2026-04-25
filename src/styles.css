@@ -6900,8 +6900,8 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 }
 .output-map-btn:active { background: rgba(86, 156, 214, 0.25); }
 
-/* ── Display.Sankey / Display.TreeMap output ─────────────────────────────── */
-.output-sankey, .output-treemap {
+/* ── Display.Sankey / TreeMap / CalendarHeat / Network output ────────────── */
+.output-sankey, .output-treemap, .output-calendar, .output-network {
   display: block;
   border-radius: 4px;
   border: 1px solid var(--border-subtle);
@@ -6909,7 +6909,8 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
   background: #1a1a22;
   max-width: 100%;
 }
-.output-sankey-empty, .output-treemap-empty {
+.output-network { overflow: hidden; }
+.output-sankey-empty, .output-treemap-empty, .output-calendar-empty {
   padding: 12px;
   font-size: 12px;
   color: var(--text-muted);
