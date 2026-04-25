@@ -61,6 +61,7 @@ export const NOTEBOOK_TEMPLATES = [
   { key: 'service-mesh',    label: 'Service Mesh',            description: 'Docker containers, mock APIs, health checks, traffic routing' },
   { key: 'infographic',     label: 'Infographic Dashboard',   description: 'Column layouts, stat cards, marquees, progress bars, CSS animations' },
   { key: 'cloud-patterns',  label: 'Cloud Architecture Patterns', description: 'Event fan-out, CQRS, saga, circuit breaker, cache-aside, API gateway — all local via Floci' },
+  { key: 'animations',      label: '2D Animations',              description: 'Pixel canvas, particles, fire, plasma, starfield, game of life, waveform — all via Display.Canvas' },
 ];
 
 function cellsForTemplate(key) {
@@ -77,6 +78,7 @@ function cellsForTemplate(key) {
     case 'service-mesh':    return makeServiceMeshCells();
     case 'infographic':     return makeInfographicCells();
     case 'cloud-patterns':  return makeCloudPatternsCells();
+    case 'animations':      return makeAnimationsCells();
     default:                 return [];
   }
 }
@@ -3200,6 +3202,345 @@ Six essential cloud patterns demonstrated locally using **Floci** (AWS emulator)
 | 6 | **Gateway Aggregation** | DynamoDB, Mock APIs | BFF: parallel fetch + aggregate |
 
 > **All patterns run locally** via Floci (AWS emulator) and Docker. No AWS account, no credentials, no cost.`),
+  ];
+}
+
+// Template 13 — 2D Animations
+
+function makeAnimationsCells() {
+  return [
+    md(`# 2D Animation Effects
+
+Demonstrations of real-time pixel animation using \`Display.Canvas\`. Each effect runs a frame loop with \`canvas.Flush()\` to push live updates. **Run each cell individually** — they animate in place.`),
+
+    cs('Display.Marquee("  ANIMATIONS  ●  Particles · Fire · Plasma · Starfield · Game of Life · Waveform · Metaballs · Matrix  ●  ", speed: 25, color: "#ff6040", background: "#0a0a12");'),
+
+    md(`## 1 — Particle Fountain
+Gravity-affected particles spawning from a center point with random velocity and color.`),
+
+    cs(`var W = 320; var H = 200;
+var canvas = Display.Canvas(W, H);
+var rng = new Random();
+
+var px = new double[500]; var py = new double[500];
+var vx = new double[500]; var vy = new double[500];
+var cr = new byte[500]; var cg = new byte[500]; var cb = new byte[500];
+var alive = new bool[500];
+
+for (int frame = 0; frame < 200; frame++) {
+    if (__ct__.IsCancellationRequested) break;
+    canvas.Fill(8, 8, 16);
+
+    // Spawn new particles
+    for (int s = 0; s < 5; s++) {
+        int slot = -1;
+        for (int i = 0; i < 500; i++) { if (!alive[i]) { slot = i; break; } }
+        if (slot < 0) break;
+        alive[slot] = true;
+        px[slot] = W / 2; py[slot] = H - 10;
+        vx[slot] = (rng.NextDouble() - 0.5) * 6;
+        vy[slot] = -rng.NextDouble() * 5 - 3;
+        cr[slot] = (byte)(180 + rng.Next(75)); cg[slot] = (byte)(60 + rng.Next(120)); cb[slot] = (byte)(20 + rng.Next(60));
+    }
+
+    // Update and draw
+    for (int i = 0; i < 500; i++) {
+        if (!alive[i]) continue;
+        vx[i] *= 0.99; vy[i] += 0.12; // gravity + drag
+        px[i] += vx[i]; py[i] += vy[i];
+        if (py[i] > H || px[i] < 0 || px[i] >= W) { alive[i] = false; continue; }
+        int x = (int)px[i], y = (int)py[i];
+        if (x >= 0 && x < W && y >= 0 && y < H) {
+            canvas.SetPixel(x, y, cr[i], cg[i], cb[i]);
+            if (x > 0) canvas.SetPixel(x - 1, y, (byte)(cr[i] / 2), (byte)(cg[i] / 2), (byte)(cb[i] / 2));
+        }
+    }
+    canvas.Flush();
+    await Task.Delay(20);
+}`),
+
+    md(`## 2 — Fire Effect
+Classic demoscene fire using a heat buffer with cooling, spreading, and a palette lookup.`),
+
+    cs(`var W = 200; var H = 120;
+var canvas = Display.Canvas(W, H);
+var rng = new Random();
+var heat = new double[W * H];
+
+// Fire palette: black → red → orange → yellow → white
+(byte r, byte g, byte b) Palette(double t) {
+    t = Math.Clamp(t, 0, 1);
+    if (t < 0.33) return ((byte)(t / 0.33 * 255), 0, 0);
+    if (t < 0.66) return (255, (byte)((t - 0.33) / 0.33 * 255), 0);
+    return (255, 255, (byte)((t - 0.66) / 0.34 * 255));
+}
+
+for (int frame = 0; frame < 300; frame++) {
+    if (__ct__.IsCancellationRequested) break;
+
+    // Seed bottom row with random heat
+    for (int x = 0; x < W; x++)
+        heat[(H - 1) * W + x] = rng.NextDouble() > 0.4 ? 0.8 + rng.NextDouble() * 0.2 : 0;
+
+    // Propagate heat upward with cooling
+    for (int y = 0; y < H - 1; y++)
+        for (int x = 0; x < W; x++) {
+            int x0 = Math.Max(0, x - 1), x1 = Math.Min(W - 1, x + 1);
+            double avg = (heat[(y + 1) * W + x0] + heat[(y + 1) * W + x] + heat[(y + 1) * W + x1] + heat[(y + 1) * W + x]) / 4.0;
+            heat[y * W + x] = Math.Max(0, avg - 0.008 - rng.NextDouble() * 0.006);
+        }
+
+    // Render
+    for (int y = 0; y < H; y++)
+        for (int x = 0; x < W; x++) {
+            var (r, g, b) = Palette(heat[y * W + x]);
+            canvas.SetPixel(x, y, r, g, b);
+        }
+    canvas.Flush();
+    await Task.Delay(30);
+}`),
+
+    md(`## 3 — Plasma
+Real-time plasma effect using overlapping sine waves with shifting phase.`),
+
+    cs(`var W = 200; var H = 140;
+var canvas = Display.Canvas(W, H);
+
+for (int frame = 0; frame < 200; frame++) {
+    if (__ct__.IsCancellationRequested) break;
+    double t = frame * 0.05;
+
+    for (int y = 0; y < H; y++)
+        for (int x = 0; x < W; x++) {
+            double v = Math.Sin(x * 0.03 + t);
+            v += Math.Sin(y * 0.04 - t * 0.7);
+            v += Math.Sin((x + y) * 0.02 + t * 0.5);
+            v += Math.Sin(Math.Sqrt(x * x + y * y) * 0.04 - t);
+            v = (v + 4) / 8; // normalize to 0-1
+            byte r = (byte)(Math.Sin(v * Math.PI * 2) * 127 + 128);
+            byte g = (byte)(Math.Sin(v * Math.PI * 2 + 2.094) * 127 + 128);
+            byte b = (byte)(Math.Sin(v * Math.PI * 2 + 4.189) * 127 + 128);
+            canvas.SetPixel(x, y, r, g, b);
+        }
+    canvas.Flush();
+    await Task.Delay(30);
+}`),
+
+    md(`## 4 — Starfield
+3D starfield flying through space with depth-based brightness and streak trails.`),
+
+    cs(`var W = 320; var H = 200;
+var canvas = Display.Canvas(W, H);
+var rng = new Random();
+int N = 300;
+var sx = new double[N]; var sy = new double[N]; var sz = new double[N];
+for (int i = 0; i < N; i++) { sx[i] = rng.NextDouble() * 2 - 1; sy[i] = rng.NextDouble() * 2 - 1; sz[i] = rng.NextDouble(); }
+
+for (int frame = 0; frame < 400; frame++) {
+    if (__ct__.IsCancellationRequested) break;
+    canvas.Fill(0, 0, 0);
+
+    for (int i = 0; i < N; i++) {
+        sz[i] -= 0.01;
+        if (sz[i] <= 0.001) { sx[i] = rng.NextDouble() * 2 - 1; sy[i] = rng.NextDouble() * 2 - 1; sz[i] = 1; }
+
+        int px = (int)(sx[i] / sz[i] * 160 + W / 2);
+        int py = (int)(sy[i] / sz[i] * 100 + H / 2);
+        if (px < 0 || px >= W || py < 0 || py >= H) continue;
+
+        byte bright = (byte)(255 * (1 - sz[i]));
+        canvas.SetPixel(px, py, bright, bright, bright);
+
+        // Streak trail
+        int px2 = (int)(sx[i] / (sz[i] + 0.02) * 160 + W / 2);
+        int py2 = (int)(sy[i] / (sz[i] + 0.02) * 100 + H / 2);
+        if (px2 >= 0 && px2 < W && py2 >= 0 && py2 < H) {
+            byte dim = (byte)(bright / 3);
+            canvas.SetPixel(px2, py2, dim, dim, dim);
+        }
+    }
+    canvas.Flush();
+    await Task.Delay(20);
+}`),
+
+    md(`## 5 — Conway's Game of Life
+Cellular automaton with random initial state, running at full speed with periodic flush.`),
+
+    cs(`var W = 160; var H = 100;
+var canvas = Display.Canvas(W, H);
+var rng = new Random();
+var grid = new bool[W, H];
+var next = new bool[W, H];
+
+// Random seed
+for (int x = 0; x < W; x++) for (int y = 0; y < H; y++) grid[x, y] = rng.NextDouble() > 0.65;
+
+for (int gen = 0; gen < 300; gen++) {
+    if (__ct__.IsCancellationRequested) break;
+
+    // Draw
+    for (int x = 0; x < W; x++)
+        for (int y = 0; y < H; y++)
+            if (grid[x, y]) canvas.SetPixel(x, y, (byte)(100 + gen % 155), 220, (byte)(160 + (x * 3 + y * 7) % 95));
+            else canvas.SetPixel(x, y, 8, 8, 12);
+
+    canvas.Flush();
+
+    // Compute next generation
+    for (int x = 0; x < W; x++)
+        for (int y = 0; y < H; y++) {
+            int n = 0;
+            for (int dx = -1; dx <= 1; dx++)
+                for (int dy = -1; dy <= 1; dy++) {
+                    if (dx == 0 && dy == 0) continue;
+                    int nx = (x + dx + W) % W, ny = (y + dy + H) % H;
+                    if (grid[nx, ny]) n++;
+                }
+            next[x, y] = grid[x, y] ? (n == 2 || n == 3) : (n == 3);
+        }
+    var tmp = grid; grid = next; next = tmp;
+    await Task.Delay(50);
+}`),
+
+    md(`## 6 — Waveform Oscilloscope
+Multiple sine waves with phase animation, drawn as connected line segments.`),
+
+    cs(`var W = 320; var H = 160;
+var canvas = Display.Canvas(W, H);
+
+for (int frame = 0; frame < 300; frame++) {
+    if (__ct__.IsCancellationRequested) break;
+    canvas.Fill(10, 10, 18);
+    double t = frame * 0.04;
+
+    // Draw grid lines
+    for (int y = 0; y < H; y += 20)
+        for (int x = 0; x < W; x++) canvas.SetPixel(x, y, 20, 20, 30);
+    for (int x = 0; x < W; x += 20)
+        for (int y = 0; y < H; y++) canvas.SetPixel(x, y, 20, 20, 30);
+
+    // Wave 1: cyan sine
+    for (int x = 1; x < W; x++) {
+        int y0 = (int)(H / 2 + Math.Sin((x - 1) * 0.04 + t) * 40 + Math.Sin((x - 1) * 0.02 - t * 1.3) * 20);
+        int y1 = (int)(H / 2 + Math.Sin(x * 0.04 + t) * 40 + Math.Sin(x * 0.02 - t * 1.3) * 20);
+        canvas.DrawLine(x - 1, Math.Clamp(y0, 0, H - 1), x, Math.Clamp(y1, 0, H - 1), 60, 200, 220);
+    }
+
+    // Wave 2: orange harmonic
+    for (int x = 1; x < W; x++) {
+        int y0 = (int)(H / 2 + Math.Sin((x - 1) * 0.06 + t * 1.5) * 25 + Math.Cos((x - 1) * 0.03 + t * 0.8) * 15);
+        int y1 = (int)(H / 2 + Math.Sin(x * 0.06 + t * 1.5) * 25 + Math.Cos(x * 0.03 + t * 0.8) * 15);
+        canvas.DrawLine(x - 1, Math.Clamp(y0, 0, H - 1), x, Math.Clamp(y1, 0, H - 1), 220, 140, 50);
+    }
+
+    canvas.Flush();
+    await Task.Delay(25);
+}`),
+
+    md(`## 7 — Metaballs
+Organic blobs that merge when close, using an implicit surface field evaluation.`),
+
+    cs(`var W = 160; var H = 120;
+var canvas = Display.Canvas(W, H);
+var rng = new Random();
+int N = 5;
+var bx = new double[N]; var by = new double[N]; var bvx = new double[N]; var bvy = new double[N]; var br = new double[N];
+for (int i = 0; i < N; i++) {
+    bx[i] = rng.Next(20, W - 20); by[i] = rng.Next(20, H - 20);
+    bvx[i] = (rng.NextDouble() - 0.5) * 2; bvy[i] = (rng.NextDouble() - 0.5) * 2;
+    br[i] = 15 + rng.NextDouble() * 15;
+}
+
+for (int frame = 0; frame < 200; frame++) {
+    if (__ct__.IsCancellationRequested) break;
+
+    // Move blobs
+    for (int i = 0; i < N; i++) {
+        bx[i] += bvx[i]; by[i] += bvy[i];
+        if (bx[i] < 0 || bx[i] >= W) bvx[i] = -bvx[i];
+        if (by[i] < 0 || by[i] >= H) bvy[i] = -bvy[i];
+    }
+
+    // Render field
+    for (int y = 0; y < H; y++)
+        for (int x = 0; x < W; x++) {
+            double field = 0;
+            for (int i = 0; i < N; i++) {
+                double dx = x - bx[i], dy = y - by[i];
+                field += br[i] * br[i] / (dx * dx + dy * dy + 1);
+            }
+            byte v = (byte)Math.Clamp(field * 30, 0, 255);
+            if (field > 1.0) canvas.SetPixel(x, y, (byte)(v * 0.3), (byte)(v * 0.8), v);
+            else canvas.SetPixel(x, y, (byte)(v / 6), (byte)(v / 4), (byte)(v / 3));
+        }
+    canvas.Flush();
+    await Task.Delay(30);
+}`),
+
+    md(`## 8 — Matrix Rain
+Digital rain columns with varying speeds, brightness decay, and random character simulation.`),
+
+    cs(`var W = 200; var H = 160;
+var canvas = Display.Canvas(W, H);
+var rng = new Random();
+int cols = W / 6;
+var dropY = new double[cols];
+var speed = new double[cols];
+var len = new int[cols];
+for (int i = 0; i < cols; i++) {
+    dropY[i] = rng.Next(-H, 0); speed[i] = 1 + rng.NextDouble() * 3; len[i] = 8 + rng.Next(20);
+}
+
+for (int frame = 0; frame < 400; frame++) {
+    if (__ct__.IsCancellationRequested) break;
+
+    // Fade entire canvas
+    for (int i = 0; i < canvas.Pixels.Length; i += 3) {
+        canvas.Pixels[i] = (byte)(canvas.Pixels[i] * 0.88);
+        canvas.Pixels[i + 1] = (byte)(canvas.Pixels[i + 1] * 0.88);
+        canvas.Pixels[i + 2] = (byte)(canvas.Pixels[i + 2] * 0.88);
+    }
+
+    for (int c = 0; c < cols; c++) {
+        dropY[c] += speed[c];
+        if (dropY[c] > H + len[c]) {
+            dropY[c] = rng.Next(-40, 0); speed[c] = 1 + rng.NextDouble() * 3; len[c] = 8 + rng.Next(20);
+        }
+
+        int x = c * 6 + 2;
+        for (int j = 0; j < len[c]; j++) {
+            int y = (int)dropY[c] - j;
+            if (y < 0 || y >= H || x >= W) continue;
+            double fade = 1.0 - (double)j / len[c];
+            if (j == 0) canvas.SetPixel(x, y, 200, 255, 200); // bright head
+            else canvas.SetPixel(x, y, 0, (byte)(180 * fade), 0);
+            // Random character dots on either side
+            if (rng.NextDouble() > 0.7 && x + 1 < W)
+                canvas.SetPixel(x + 1, y, 0, (byte)(60 * fade), 0);
+        }
+    }
+    canvas.Flush();
+    await Task.Delay(25);
+}`),
+
+    md(`---
+
+### Animation API Reference
+
+| Method | Purpose |
+|--------|---------|
+| \`Display.Canvas(w, h)\` | Create a pixel canvas; returns \`CanvasHandle\` |
+| \`canvas.SetPixel(x, y, r, g, b)\` | Set one pixel (0-255) |
+| \`canvas.Fill(r, g, b)\` | Clear canvas to a solid color |
+| \`canvas.DrawLine(x0, y0, x1, y1, r, g, b)\` | Bresenham line |
+| \`canvas.DrawRect / FillRect\` | Rectangle outline / fill |
+| \`canvas.DrawCircle / FillCircle\` | Circle outline / fill |
+| \`canvas.Flush()\` | Push current pixels to display (call once per frame) |
+| \`canvas.Pixels\` | Direct byte[] access (3 bytes/pixel, RGB) |
+| \`canvas.ParallelRender(fn)\` | Render all pixels using all CPU cores |
+| \`canvas.RenderRows(fn, flushEvery)\` | Progressive render with live preview |
+| \`await Task.Delay(ms)\` | Frame timing (16ms ≈ 60fps, 33ms ≈ 30fps) |
+| \`__ct__.IsCancellationRequested\` | Check if user clicked Stop |`),
   ];
 }
 
