@@ -323,6 +323,28 @@ function registerAllHandlers() {
     }
   });
 
+  ipcMain.handle('export-csharp-api', async (_ev, { apiDef }) => {
+    const { generateCSharpProject } = require('./src/main/api-csharp-export.js');
+    const name = (apiDef.title || 'Api').replace(/[^a-zA-Z0-9_-]/g, '-');
+    const { filePath, canceled } = await dialog.showOpenDialog(mainWindow, {
+      title: 'Choose Output Folder for C# Project',
+      properties: ['openDirectory', 'createDirectory'],
+    });
+    if (canceled || !filePath?.[0]) return { success: false };
+    try {
+      const files = generateCSharpProject(apiDef);
+      const outDir = path.join(filePath[0], name);
+      for (const [relPath, content] of Object.entries(files)) {
+        const fullPath = path.join(outDir, relPath);
+        fs.mkdirSync(path.dirname(fullPath), { recursive: true });
+        fs.writeFileSync(fullPath, content, 'utf-8');
+      }
+      return { success: true, filePath: outDir, fileCount: Object.keys(files).length };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
   // Mock server
   require('./src/main/mock-server.js').register(ipcMain);
   require('./src/main/git-ops.js').register(ipcMain);

@@ -7793,6 +7793,7 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
   background: none; border: none; cursor: pointer;
 }
 .api-ed-export-menu button:hover { background: var(--bg-hover); color: var(--text-primary); }
+.api-ed-menu-divider { height: 1px; background: var(--border-secondary); margin: 2px 4px; }
 
 /* ── Git Panel ───────────────────────────────────────────────────────────── */
 .git-panel { display: flex; flex-direction: column; height: 100%; }

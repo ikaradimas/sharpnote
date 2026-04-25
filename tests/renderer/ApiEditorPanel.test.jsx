@@ -108,8 +108,8 @@ describe('ApiEditorPanel', () => {
     fireEvent.click(screen.getByText(/Export ▾/));
 
     await waitFor(() => {
-      expect(screen.getByText('JSON')).toBeInTheDocument();
-      expect(screen.getByText('YAML')).toBeInTheDocument();
+      expect(screen.getByText('OpenAPI JSON')).toBeInTheDocument();
+      expect(screen.getByText('OpenAPI YAML')).toBeInTheDocument();
     });
   });
 });

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { FilePlus, Save, Trash2, Database, FolderTree, Download, Play, Square, Plus, Server, X } from 'lucide-react';
+import { FilePlus, Save, Trash2, Database, FolderTree, Download, Code, Play, Square, Plus, Server, X } from 'lucide-react';
 import { ModelEditor } from './api-editor/ModelEditor.jsx';
 import { ControllerSection } from './api-editor/ControllerSection.jsx';
 import { ModelDiagram } from './api-editor/ModelDiagram.jsx';
@@ -129,6 +129,11 @@ export function ApiEditorPanel({ onToggle, requestedApiId, onRequestedApiHandled
     window.electronAPI?.exportOpenApi?.({ apiDef, format });
   };
 
+  const exportCSharp = async () => {
+    setExportMenuOpen(false);
+    window.electronAPI?.exportCSharpApi?.({ apiDef });
+  };
+
   // ── Mock Server ───────────────────────────────────────────────────────
 
   const currentApiRunning = runningServers.find(s => s.id === apiDef.id);
@@ -241,8 +246,10 @@ export function ApiEditorPanel({ onToggle, requestedApiId, onRequestedApiHandled
           <button className="api-ed-action-btn api-ed-export-btn" onClick={() => setExportMenuOpen(v => !v)}><Download size={14} /> Export ▾</button>
           {exportMenuOpen && (
             <div className="api-ed-export-menu">
-              <button onClick={() => exportSpec('json')}>JSON</button>
-              <button onClick={() => exportSpec('yaml')}>YAML</button>
+              <button onClick={() => exportSpec('json')}>OpenAPI JSON</button>
+              <button onClick={() => exportSpec('yaml')}>OpenAPI YAML</button>
+              <div className="api-ed-menu-divider" />
+              <button onClick={exportCSharp}><Code size={12} /> C# Project</button>
             </div>
           )}
         </div>
