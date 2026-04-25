@@ -66,7 +66,8 @@ export const DOCS_SECTIONS = [
       { type: 'h3', text: 'Renaming' },
       { type: 'p', text: 'Double-click the tab title or the notebook title in the toolbar to rename inline. Press Enter or click away to confirm; Escape to cancel. If the notebook has been saved, the file on disk is also renamed. Characters illegal in filenames ( / \\ : * ? " < > | ) are stripped from the saved filename.' },
       { type: 'h3', text: 'Export as PDF' },
-      { type: 'p', text: 'File → Export as PDF… renders the active notebook\'s content to a paginated A4 PDF and prompts you to choose a save location. The export uses Electron\'s built-in printToPDF engine so it faithfully captures all rendered output — tables, graphs, images, object trees, and markdown.' },
+      { type: 'p', text: 'File → Export as PDF… renders the active notebook\'s content to a paginated A4 PDF and prompts you to choose a save location. The export uses Electron\'s built-in printToPDF engine, with a dedicated @media print stylesheet that hides the chrome (tab bar, toolbar, panels, run buttons), neutralises the dark theme to ink-friendly black-on-white, and applies break-inside: avoid so cells stay together where possible.' },
+      { type: 'p', text: 'Tip: toggle the day/night button on any maps to "light" before exporting — Carto\'s tile images are raster, so CSS can\'t recolour them, but the light basemap prints much better than the dark one.' },
       { type: 'ul', items: [
         'All rendered cell output is included: text, HTML, tables, charts, images',
         'Cell source code editors and toolbar controls are hidden in the PDF',

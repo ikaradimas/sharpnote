@@ -1,12 +1,20 @@
 # SharpNote — Expansions roadmap (post-2.9.0)
 
-Branch: `feature/expansions`. Each milestone below ships as its own minor
-release on its own short-lived branch off `master`. Order is by leverage
-(maximum value per LOC) and dependency.
+Branch: `feature/expansions`. All eight planned milestones are shipped
+on this branch (2.10.0 → 2.17.0); the only deferred item is M1.5
+(Choropleth) which is captured as a follow-up below.
 
-Before starting any milestone, lift its **Implementation outline** into a
-fresh `tasks/todo.md` and follow the standard plan/verify/build/test
-workflow per `CLAUDE.md`.
+| # | Version | Milestone                                              | Status   |
+|---|---------|--------------------------------------------------------|----------|
+| 1 | 2.10.0  | Geo follow-up (cache, cluster, PNG, distance/cluster)  | shipped  |
+| 1.5 | —     | Choropleth + world-countries GeoJSON                   | deferred |
+| 2 | 2.11.0  | `Stats.*` + `TimeSeries.*`                             | shipped  |
+| 3 | 2.12.0  | `Display.Sankey` + `Display.TreeMap`                   | shipped  |
+| 4 | 2.13.0  | `Display.CalendarHeat` + `Display.Network`             | shipped  |
+| 5 | 2.14.0  | Parameterised notebooks                                | shipped  |
+| 6 | 2.15.0  | Output snapshots / golden tests                        | shipped  |
+| 7 | 2.16.0  | Profile panel                                          | shipped  |
+| 8 | 2.17.0  | Notebook → PDF export (print stylesheet)               | shipped  |
 
 ---
 

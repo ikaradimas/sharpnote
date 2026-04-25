@@ -9786,3 +9786,38 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
   font-size: 10px; color: var(--text-dim); font-family: var(--font-code);
   word-break: break-all; margin-bottom: 12px;
 }
+
+/* ── Print / PDF export ──────────────────────────────────────────────────── */
+@media print {
+  /* Hide chrome, panels, controls — keep notebook content only. */
+  .tab-bar, .toolbar, .status-bar, .find-bar,
+  .dock-zone, .float-panel, .panel-header,
+  .cell-controls, .cell-ctrl-btn, .delete-confirm-label,
+  .cell-run-group, .cell-stop-btn, .cell-debug-controls,
+  .cell-fold-btn, .output-toggle-row, .add-bar,
+  .schedule-control, .cell-stale-banner,
+  .nb-params-bar, .cell-snapshot-badge,
+  .output-map-toolbar,
+  .codemirror-gutter-execution,
+  .marquee-host { display: none !important; }
+
+  /* Background + foreground neutralised for ink-friendly output. */
+  body, .notebook-view, .cell, .cell-output, .output-html, .output-block {
+    background: white !important;
+    color: black !important;
+  }
+  .code-editor-wrap, .cm-editor, .cm-content, .cm-line {
+    background: white !important;
+    color: black !important;
+  }
+
+  /* Page-break behaviour: try to keep a cell + its output on one page. */
+  .cell { break-inside: avoid; page-break-inside: avoid; margin: 6px 0; }
+  .cell-output { page-break-inside: avoid; }
+
+  /* Code cells get a discreet border so they're distinguishable when ink-coloured. */
+  .cell, .cell-output { border: 1px solid #bbb !important; }
+
+  /* Marquee / animation sources rendered as static text. */
+  [style*="animation"] { animation: none !important; transform: none !important; }
+}
