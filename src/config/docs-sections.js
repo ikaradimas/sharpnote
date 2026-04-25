@@ -305,6 +305,30 @@ export const DOCS_SECTIONS = [
     ],
   },
   {
+    id: 'stats', title: 'Stats & Time-Series',
+    content: [
+      { type: 'p', text: 'Two pure helper namespaces — Stats and TimeSeries — for the kind of summary statistics and rolling/EMA/resampling work that comes up in almost every analysis notebook. No deps, no UI; just static methods you can call directly.' },
+      { type: 'h3', text: 'Stats' },
+      { type: 'ul', items: [
+        'Stats.Mean / Median / Variance(sample?) / StdDev(sample?) / Range',
+        'Stats.Quantile(values, p) — p ∈ [0,1]; linear interpolation between order statistics',
+        'Stats.Histogram(values, bins) → List<HistogramBin> { LowerBound, UpperBound, Count }',
+        'Stats.Correlation(xs, ys) — Pearson coefficient',
+        'Stats.LinearFit(xs, ys) → (slope, intercept, r2) — ordinary least squares',
+      ]},
+      { type: 'p', text: 'Empty input throws InvalidOperationException (matches LINQ Average). NaN values are silently filtered. Sample variance/stddev divides by n−1; population by n.' },
+      { type: 'h3', text: 'TimeSeries' },
+      { type: 'ul', items: [
+        'TimeSeries.Rolling(values, window, fn = Stats.Mean) — same-length output; first window−1 entries are NaN',
+        'TimeSeries.EMA(values, alpha) — exponential moving average; α ∈ (0,1]',
+        'TimeSeries.FillGaps(series, interval, method = ForwardFill) — inserts missing timestamps',
+        'TimeSeries.Resample(series, interval, agg = Stats.Mean) — buckets into fixed windows aligned to the first sample',
+      ]},
+      { type: 'h3', text: 'Examples' },
+      { type: 'code', lang: 'csharp', text: '// Summary stats\nvar prices = new[] { 12.5, 14.2, 13.1, 15.0, 14.8, 13.9 };\nDisplay.Markdown($"mean = **{Stats.Mean(prices):F2}**, σ = **{Stats.StdDev(prices):F2}**, p95 = **{Stats.Quantile(prices, 0.95):F2}**");\n\n// Histogram → Display.Graph\nvar hist = Stats.Histogram(prices, 5);\nDisplay.Graph(new {\n    type = "bar",\n    data = new {\n        labels = hist.Select(b => $"{b.LowerBound:F1}–{b.UpperBound:F1}").ToArray(),\n        datasets = new[] { new { label = "Count", data = hist.Select(b => b.Count).ToArray() } }\n    }\n});\n\n// Rolling 7-day mean over a streaming series\nvar smoothed = TimeSeries.Rolling(daily, 7);\n\n// Bucket second-resolution data into 1-minute means\nvar minutes = TimeSeries.Resample(samples, TimeSpan.FromMinutes(1));' },
+    ],
+  },
+  {
     id: 'geography', title: 'Geography & Maps',
     content: [
       { type: 'p', text: 'The Geo global provides geocoding, routing, IP geolocation, country lookup, and an interactive Leaflet map output — all using free public APIs.' },
