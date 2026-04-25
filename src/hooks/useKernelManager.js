@@ -268,7 +268,12 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
               }
             }
 
-            return { running: next, cellResults: { ...(n.cellResults || {}), [msg.id]: result }, cellElapsed: { ...(n.cellElapsed || {}), [msg.id]: msg.durationMs ?? null }, staleCellIds, debugState: null, ...extra };
+            // Append to the per-cell run history (cap 20 entries).
+            const histEntry = { ts: Date.now(), durationMs: msg.durationMs ?? null, success: !!msg.success && !msg.cancelled };
+            const prevHist = (n.cellRunHistory && n.cellRunHistory[msg.id]) || [];
+            const nextHist = [...prevHist, histEntry].slice(-20);
+
+            return { running: next, cellResults: { ...(n.cellResults || {}), [msg.id]: result }, cellElapsed: { ...(n.cellElapsed || {}), [msg.id]: msg.durationMs ?? null }, cellRunHistory: { ...(n.cellRunHistory || {}), [msg.id]: nextHist }, staleCellIds, debugState: null, ...extra };
           });
 
           // Snapshot capture/compare for cells that opted in.

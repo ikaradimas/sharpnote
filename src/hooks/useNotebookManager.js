@@ -11,7 +11,7 @@ const PANEL_FLAG_MAP = {
   toc: 'tocPanelOpen', files: 'filesPanelOpen', api: 'apiPanelOpen',
   'api-editor': 'apiEditorPanelOpen', git: 'gitPanelOpen', graph: 'graphPanelOpen',
   todo: 'todoPanelOpen', regex: 'regexPanelOpen', history: 'historyPanelOpen',
-  deps: 'depsPanelOpen', embed: 'embedPanelOpen',
+  deps: 'depsPanelOpen', embed: 'embedPanelOpen', profile: 'profilePanelOpen',
 };
 
 function applyPanelLayout(data) {

@@ -3,8 +3,8 @@ import React from 'react';
 // ── Dock Layout System ────────────────────────────────────────────────────────
 
 export const DEFAULT_DOCK_LAYOUT = {
-  assignments: { log: 'right', nuget: 'bottom', config: 'bottom', db: 'bottom', library: 'left', vars: 'right', toc: 'left', files: 'left', git: 'left', api: 'right', 'api-editor': 'right', graph: 'right', todo: 'bottom', regex: 'bottom', history: 'right', deps: 'right', embed: 'left' },
-  order:       { log: 0, nuget: 0, config: 1, db: 2, library: 0, vars: 1, toc: 1, files: 2, git: 3, api: 2, 'api-editor': 3, graph: 4, todo: 3, regex: 4, history: 5, deps: 6 },
+  assignments: { log: 'right', nuget: 'bottom', config: 'bottom', db: 'bottom', library: 'left', vars: 'right', toc: 'left', files: 'left', git: 'left', api: 'right', 'api-editor': 'right', graph: 'right', todo: 'bottom', regex: 'bottom', history: 'right', deps: 'right', embed: 'left', profile: 'bottom' },
+  order:       { log: 0, nuget: 0, config: 1, db: 2, library: 0, vars: 1, toc: 1, files: 2, git: 3, api: 2, 'api-editor': 3, graph: 4, todo: 3, regex: 4, history: 5, deps: 6, profile: 5 },
   sizes:       { left: 300, right: 320, bottom: 280 },
   floatPos:    {},
   zoneTab:     { left: 'library', right: 'log', bottom: 'nuget' },
@@ -166,6 +166,14 @@ function IconEmbed() {
     <path d="M8.5,2.5 A2.5,2.5 0 0 1 8.5,7.5 L5,11 A2,2 0 0 1 2,8.5 L5.5,5 A1.5,1.5 0 0 1 8,6.5 L5,9.5" />
   </svg>;
 }
+function IconProfile() {
+  return <svg {..._ic} stroke="currentColor" strokeWidth="1.1" fill="none" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="2" y1="11" x2="11" y2="11" />
+    <rect x="3"  y="6"  width="1.6" height="5" fill="currentColor" stroke="none" />
+    <rect x="5.7" y="3" width="1.6" height="8" fill="currentColor" stroke="none" />
+    <rect x="8.4" y="7" width="1.6" height="4" fill="currentColor" stroke="none" />
+  </svg>;
+}
 export const PANEL_META = {
   log:          { label: 'Logs',              icon: <IconLogs /> },
   nuget:        { label: 'Packages',          icon: <IconPackages /> },
@@ -185,6 +193,7 @@ export const PANEL_META = {
   deps:         { label: 'Orchestration',     icon: <IconDeps /> },
   history:      { label: 'History',           icon: <IconHistory /> },
   embed:        { label: 'Embedded Files',    icon: <IconEmbed /> },
+  profile:      { label: 'Profile',            icon: <IconProfile /> },
 };
 
 // ── Dock drop zones ───────────────────────────────────────────────────────────

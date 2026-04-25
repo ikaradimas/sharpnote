@@ -16,6 +16,7 @@ import { DependencyPanel } from '../panels/DependencyPanel.jsx';
 import { ApiEditorPanel } from '../panels/ApiEditorPanel.jsx';
 import { GitPanel } from '../panels/GitPanel.jsx';
 import { EmbedPanel } from '../panels/EmbedPanel.jsx';
+import { ProfilePanel } from '../panels/ProfilePanel.jsx';
 
 export function renderPanelContent(panelId, p) {
   if (!p) return null;
@@ -37,6 +38,7 @@ export function renderPanelContent(panelId, p) {
     case 'history': return <HistoryPanel {...p} />;
     case 'deps':    return <DependencyPanel {...p} />;
     case 'embed':   return <EmbedPanel {...p} />;
+    case 'profile': return <ProfilePanel {...p} />;
     default:        return null;
   }
 }

@@ -3880,6 +3880,8 @@ export function createNotebook(templateKey = null) {
     historyPanelOpen: false,
     depsPanelOpen: false,
     embedPanelOpen: false,
+    profilePanelOpen: false,
+    cellRunHistory: {},
     outputHistory: {},
     staleCellIds: [],
     autoRun: false,

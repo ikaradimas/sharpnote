@@ -6900,6 +6900,34 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 }
 .output-map-btn:active { background: rgba(86, 156, 214, 0.25); }
 
+/* ── Profile panel ───────────────────────────────────────────────────────── */
+.profile-panel { padding: 8px; font-size: 12px; height: 100%; overflow: auto; }
+.profile-panel-empty {
+  padding: 18px;
+  color: var(--text-muted);
+  font-style: italic;
+  text-align: center;
+}
+.profile-table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); }
+.profile-table th {
+  text-align: left;
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--border-subtle);
+  cursor: pointer;
+  user-select: none;
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 11px;
+}
+.profile-table th:hover { color: var(--text-primary); }
+.profile-table th.num { text-align: right; }
+.profile-table td { padding: 3px 6px; border-bottom: 1px solid #1f1f29; }
+.profile-table td.num { text-align: right; color: var(--text-secondary); }
+.profile-row { cursor: pointer; }
+.profile-row:hover { background: rgba(86, 156, 214, 0.08); }
+.profile-cell-name { color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
+.profile-sparkline { vertical-align: middle; }
+
 /* ── Snapshot badge & toggle ─────────────────────────────────────────────── */
 .cell-ctrl-snapshot-active { color: #e0a040; }
 .cell-snapshot-badge {

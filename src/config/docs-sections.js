@@ -724,6 +724,12 @@ export const DOCS_SECTIONS = [
     ],
   },
   {
+    id: 'profile-panel', title: 'Profile Panel',
+    content: [
+      { type: 'p', text: 'Open the Profile panel to see a sortable list of every cell that has run, with last/average duration, run count, and a sparkline of the last 20 executions per cell. Click a row to jump to the cell. The runtime data is accumulated as you work — there is no extra setup. Run history is in-memory only and resets when the app closes.' },
+    ],
+  },
+  {
     id: 'snapshots', title: 'Output Snapshots',
     content: [
       { type: 'p', text: 'Tag a cell with the camera button (in the cell controls bar) to capture its output as a golden snapshot. The first run after enabling saves the outputs to a sidecar file; subsequent runs compare and badge the cell ✓ (match) or ✗ (drift). Click ✗ to update the saved snapshot to the new output.' },
