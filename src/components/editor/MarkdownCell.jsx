@@ -1,9 +1,10 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { marked } from 'marked';
 import mermaid from 'mermaid';
-import { applyMath } from '../../utils.js';
+import { applyMath, isMarpMarkdown } from '../../utils.js';
 import { CodeEditor } from './CodeEditor.jsx';
 import { CellControls } from './CellControls.jsx';
+import { MarpRender } from '../output/MarpRender.jsx';
 
 mermaid.initialize({ startOnLoad: false, theme: 'dark', securityLevel: 'loose' });
 
@@ -96,6 +97,15 @@ export function MarkdownCell({
             <button className="md-action-btn md-ok-btn" onClick={handleOk} title="Commit (Ctrl+Enter)">OK</button>
             <button className="md-action-btn md-cancel-btn" onClick={handleCancel} title="Discard (Escape)">Cancel</button>
           </div>
+        </div>
+      ) : isMarpMarkdown(cell.content) ? (
+        <div className="markdown-render-wrap" onDoubleClick={enterEdit}>
+          <span className="md-edit-hint" title="Double-click to edit">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.2">
+              <path d="M7 2l3 3-7 7H0V9z" /><path d="M6 3l3 3" />
+            </svg>
+          </span>
+          <MarpRender content={cell.content} />
         </div>
       ) : (
         <div className="markdown-render-wrap" onDoubleClick={enterEdit}>

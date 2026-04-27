@@ -129,7 +129,15 @@
 - **API Editor** — visual REST API design tool with controllers, endpoints, typed models, OpenAPI 3.0 export, and built-in mock HTTP server with custom JavaScript handlers for dynamic responses; shares saved APIs with API Browser
 - **Debugger** — click the gutter to set breakpoints (red dots); execution pauses at breakpoints with a gold line highlight, debug controls for Resume/Step, and variable inspection at each pause point
 - **Canvas & pixel rendering** — `Display.Canvas(w, h)` creates a pixel buffer with `SetPixel` and live progressive `Flush()`; `Display.ImageBytes(rgb, w, h)` renders raw pixels; `Display.NewImage()` enables live-updating images
-- **Geography & maps** — the `Geo` kernel global wraps Nominatim (`Geo.GeocodeAsync` / `ReverseGeocodeAsync`), OpenRouteService (`Geo.RouteAsync`, free key via `Config.Set("OpenRouteServiceKey", …)` or `OPENROUTESERVICE_KEY`), ip-api.com (`Geo.IpLookupAsync`), and REST Countries (`Geo.CountryAsync`); `Geo.Map(...)` and `Geo.HeatMap(...)` emit an interactive Leaflet map output with markers, route polylines, and heat layers
+- **Stats & time-series** — `Stats.{Mean, Median, Variance, StdDev, Quantile, Range, Histogram, Correlation, LinearFit}` and `TimeSeries.{Rolling, EMA, FillGaps, Resample}` are pure static helpers in the `SharpNoteKernel` namespace; NaN values are silently filtered, empty inputs throw, sample variance is the default
+- **Flow & hierarchy charts** — `Display.Sankey({ nodes, links })` renders a Sankey flow diagram (d3-sankey) and `Display.TreeMap({ name, value, children })` renders a hierarchical tree-map (d3-hierarchy); both output as inline SVG with hover tooltips
+- **Calendar heat & network graphs** — `Display.CalendarHeat(series)` renders a GitHub-style daily activity grid (zero deps, pure SVG), and `Display.Network({ nodes, edges, layout })` renders an interactive force-directed graph via cytoscape.js (lazy-loaded); supports `cose`, `circle`, `grid`, `breadthfirst`, `concentric` layouts
+- **Parameterised notebooks** — declare top-of-notebook typed inputs in the `.cnb` `params` array (`double`/`int`/`string`/`bool`/`choice`); they render as a compact form above the cells and are injected as typed locals into every code cell so user code writes `if (Threshold > 0.5)` directly; CLI override via `sharpnote run report.cnb --param Threshold=0.9` for cron / CI
+- **Output snapshots** — toggle the camera button on any cell to capture its outputs to `<notebook-dir>/.snapshots/<cell-id>.snap.json`; subsequent runs compare and badge the cell ✓ / ✗; `sharpnote run --check-snapshots` exits 3 if any snapshot drifted, distinct from runtime-error exit 1
+- **Profile panel** — sortable per-cell timing table with last / average / total / run count and a sparkline of the last 20 executions; click a row to jump to that cell
+- **PDF export** — File → Export as PDF… renders the current notebook to A4 via Electron's `printToPDF`, with a dedicated `@media print` stylesheet that hides chrome (tabs, toolbar, panels, cell controls) and neutralises the dark theme for ink-friendly output; cells get `break-inside: avoid` so they stay together where possible
+- **Marp slide decks in markdown cells** — when a markdown cell (or `Display.Markdown` output) opens with `---\nmarp: true\n---` frontmatter, the renderer switches to a paginated slide view via `@marp-team/marp-core` with prev / next / fullscreen controls and arrow-key navigation
+- **Geography & maps** — the `Geo` kernel global wraps Nominatim (`Geo.GeocodeAsync` / `ReverseGeocodeAsync`, with a transparent on-disk cache), OpenRouteService (`Geo.RouteAsync`, free key via `Config.Set("OpenRouteServiceKey", …)` or `OPENROUTESERVICE_KEY`), ip-api.com (`Geo.IpLookupAsync`), and REST Countries (`Geo.CountryAsync`); pure helpers `Geo.Distance`/`Geo.Cluster`; `Geo.Map(...)` / `Geo.HeatMap(...)` emit an interactive Leaflet map with markers (with optional `cluster:true`), route polylines, heat layers, day/night basemap, and PNG export
 - **Memory sparkline** — kernel reports heap usage every 3 s; rendered as an SVG bar chart in the status bar
 
 ### Panels
@@ -225,7 +233,7 @@ The UI is organized across `src/app/`, `src/components/`, `src/hooks/`, and `src
 | `App` | Root state owner — notebooks array, dock layout, DB connections, saved layouts, drag state |
 | `NotebookView` | Toolbar + scrollable cells list for one notebook |
 | `CodeCell` | CodeMirror 6 editor + run/stop/chevron controls; LSP client via named pipe |
-| `OutputBlock` | Renders every kernel output type: stdout, error, html, markdown, table (DataTable), csv, graph (Chart.js), image, map (Leaflet), interrupted |
+| `OutputBlock` | Renders every kernel output type: stdout, error, html, markdown, table (DataTable), csv, graph (Chart.js), image, map (Leaflet), sankey + treemap (d3), calendar heat, network (cytoscape), interrupted |
 | `TabBar` / `Tab` | Multi-notebook tabs; color picker rendered via `createPortal` to avoid z-index clipping |
 | `FilesPanel` | File explorer with breadcrumb navigation, inline rename, drag-free delete |
 | `LibraryPanel` | Code snippet library with subfolder nav and CodeMirror preview |

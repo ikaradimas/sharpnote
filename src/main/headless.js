@@ -7,6 +7,7 @@ const readline = require('readline');
 const { decryptConfigSecrets } = require('./notebook-io');
 const { getKernelSpawnArgs } = require('./kernel-manager');
 const logOps = require('./log-ops');
+const snapshots = require('./snapshots');
 
 /**
  * Parse CLI arguments after the `run` subcommand.
@@ -14,12 +15,16 @@ const logOps = require('./log-ops');
  *   electron . run <notebook> [--config Key=Value]... [--output path] [--format text|json]
  */
 function parseArgs(args) {
-  const result = { notebook: null, config: {}, output: null, format: 'text' };
+  const result = { notebook: null, config: {}, params: {}, output: null, format: 'text', checkSnapshots: false };
   let i = 0;
   while (i < args.length) {
     if (args[i] === '--config' && i + 1 < args.length) {
       const [key, ...rest] = args[i + 1].split('=');
       result.config[key] = rest.join('=');
+      i += 2;
+    } else if (args[i] === '--param' && i + 1 < args.length) {
+      const [key, ...rest] = args[i + 1].split('=');
+      result.params[key] = rest.join('=');
       i += 2;
     } else if (args[i] === '--output' && i + 1 < args.length) {
       result.output = args[i + 1];
@@ -27,6 +32,9 @@ function parseArgs(args) {
     } else if (args[i] === '--format' && i + 1 < args.length) {
       result.format = args[i + 1];
       i += 2;
+    } else if (args[i] === '--check-snapshots') {
+      result.checkSnapshots = true;
+      i++;
     } else if (!args[i].startsWith('--') && !result.notebook) {
       result.notebook = args[i];
       i++;
@@ -35,6 +43,30 @@ function parseArgs(args) {
     }
   }
   return result;
+}
+
+/**
+ * Apply --param overrides to the notebook params array. Names not declared
+ * by the notebook are an error (return null). Values are coerced according
+ * to the param's declared type.
+ */
+function applyParamOverrides(params, overrides) {
+  const entries = Array.isArray(params) ? params.map((p) => ({ ...p })) : [];
+  for (const [name, raw] of Object.entries(overrides)) {
+    const p = entries.find((e) => e.name === name);
+    if (!p) return { error: `Unknown --param "${name}". Notebook declares: ${entries.map((e) => e.name).join(', ') || '(none)'}` };
+    p.value = coerceParam(raw, p.type);
+  }
+  return { entries };
+}
+
+function coerceParam(raw, type) {
+  switch (type) {
+    case 'int':    { const n = parseInt(raw, 10); return Number.isFinite(n) ? n : 0; }
+    case 'double': { const n = parseFloat(raw);    return Number.isFinite(n) ? n : 0; }
+    case 'bool':   return /^(true|1|yes)$/i.test(raw);
+    default:       return raw;
+  }
 }
 
 /**
@@ -135,6 +167,7 @@ function executeCell(kernelProcess, rl, cell, cellLabel) {
       id,
       code: cell.content || cell.code || '',
       cellType: cell.cellType || cell.type || 'code',
+      ...(cell._params ? { params: cell._params } : {}),
     };
     kernelProcess.stdin.write(JSON.stringify(message) + '\n');
 
@@ -210,6 +243,18 @@ async function run(app, args) {
   // 2. Apply config overrides
   notebook.config = applyConfigOverrides(notebook.config, opts.config);
 
+  // 2b. Apply param overrides — error out if --param names an unknown param.
+  const paramResult = applyParamOverrides(notebook.params, opts.params);
+  if (paramResult.error) {
+    log('HEADLESS', `Param override failed: ${paramResult.error}`);
+    console.error(paramResult.error);
+    return 2;
+  }
+  notebook.params = paramResult.entries;
+  const resolvedParams = (notebook.params || [])
+    .filter((p) => p.name?.trim())
+    .map((p) => ({ name: p.name, type: p.type || 'string', value: p.value !== undefined ? p.value : p.default }));
+
   // 3. Spawn kernel
   const { cmd, args: spawnArgs, cwd } = getKernelSpawnArgs();
   let kernelProcess;
@@ -268,6 +313,8 @@ async function run(app, args) {
   const cells = (notebook.cells || []).filter((c) => EXECUTABLE_TYPES.has(c.cellType || c.type));
   const allOutputs = [];
   let allPassed = true;
+  let snapshotFailures = 0;
+  let snapshotChecked  = 0;
 
   for (let i = 0; i < cells.length; i++) {
     const cell = cells[i];
@@ -275,12 +322,26 @@ async function run(app, args) {
     const cellType = cell.cellType || cell.type || 'code';
     log('HEADLESS', `Executing cell ${i + 1}/${cells.length}: ${label} (${cellType})`);
     const start = Date.now();
-    const { outputs, success } = await executeCell(kernelProcess, rl, cell, label);
+    const cellWithParams = resolvedParams.length > 0 ? { ...cell, _params: resolvedParams } : cell;
+    const { outputs, success } = await executeCell(kernelProcess, rl, cellWithParams, label);
     const elapsed = Date.now() - start;
     log('HEADLESS', `Cell ${label} ${success ? 'succeeded' : 'FAILED'} in ${elapsed}ms — ${outputs.length} output(s)`);
     const formatted = formatOutputs(i, cell, outputs, opts.format);
     allOutputs.push(...(Array.isArray(formatted) ? formatted : [formatted]));
     if (!success) allPassed = false;
+
+    if (opts.checkSnapshots && cell.snapshot) {
+      snapshotChecked++;
+      const visible = outputs.filter((o) => o.type === 'stdout' || o.type === 'display' || o.type === 'error');
+      const res = snapshots.captureOrCompare(opts.notebook, cell.id, visible);
+      if (!res.match) {
+        snapshotFailures++;
+        log('HEADLESS', `Snapshot FAIL: ${label} (${cell.id})`);
+        console.error(`Snapshot mismatch in cell "${label}" (${cell.id})`);
+      } else if (res.captured) {
+        log('HEADLESS', `Snapshot captured: ${label}`);
+      }
+    }
   }
 
   // 7. Shut down kernel
@@ -304,8 +365,15 @@ async function run(app, args) {
     process.stdout.write(output + '\n');
   }
 
+  if (opts.checkSnapshots) {
+    log('HEADLESS', `Snapshots: ${snapshotChecked - snapshotFailures}/${snapshotChecked} matched`);
+    console.error(`Snapshots: ${snapshotChecked - snapshotFailures}/${snapshotChecked} matched`);
+  }
+
   log('HEADLESS', `Run complete: ${allPassed ? 'ALL PASSED' : 'SOME FAILED'} — ${cells.length} cells, ${allOutputs.length} output lines`);
-  return allPassed ? 0 : 1;
+  if (!allPassed) return 1;
+  if (snapshotFailures > 0) return 3;
+  return 0;
 }
 
-module.exports = { parseArgs, loadNotebook, applyConfigOverrides, run };
+module.exports = { parseArgs, loadNotebook, applyConfigOverrides, applyParamOverrides, run };

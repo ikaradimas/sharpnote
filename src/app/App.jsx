@@ -184,7 +184,7 @@ export function App() {
       log: 'logPanelOpen', nuget: 'nugetPanelOpen', config: 'configPanelOpen',
       db: 'dbPanelOpen', vars: 'varsPanelOpen', toc: 'tocPanelOpen',
       graph: 'graphPanelOpen', todo: 'todoPanelOpen', regex: 'regexPanelOpen',
-      history: 'historyPanelOpen', deps: 'depsPanelOpen', embed: 'embedPanelOpen',
+      history: 'historyPanelOpen', deps: 'depsPanelOpen', embed: 'embedPanelOpen', profile: 'profilePanelOpen',
       library: 'libraryPanelOpen', files: 'filesPanelOpen', api: 'apiPanelOpen',
       'api-editor': 'apiEditorPanelOpen', git: 'gitPanelOpen',
     };
@@ -228,7 +228,7 @@ export function App() {
         logPanelOpen: false, nugetPanelOpen: false, configPanelOpen: false,
         dbPanelOpen: false, varsPanelOpen: false, tocPanelOpen: false,
         graphPanelOpen: false, todoPanelOpen: false, regexPanelOpen: false,
-        historyPanelOpen: false, depsPanelOpen: false, embedPanelOpen: false,
+        historyPanelOpen: false, depsPanelOpen: false, embedPanelOpen: false, profilePanelOpen: false,
         libraryPanelOpen: false, filesPanelOpen: false, apiPanelOpen: false,
         apiEditorPanelOpen: false, gitPanelOpen: false,
       }));
@@ -1150,6 +1150,7 @@ export function App() {
     history:      nb_?.historyPanelOpen  ?? false,
     deps:         nb_?.depsPanelOpen     ?? false,
     embed:        nb_?.embedPanelOpen    ?? false,
+    profile:      nb_?.profilePanelOpen  ?? false,
   }), [activeId, activeNb]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Suppress dock rendering for panels open as tabs
@@ -1300,6 +1301,12 @@ export function App() {
       todo: {
         onToggle: nbId ? () => setNb(nbId, (n) => ({ todoPanelOpen: !n.todoPanelOpen })) : () => {},
         cells: activeNb?.cells ?? [],
+        onNavigateToCell: nbId ? (cellId) => handleNavigateToCell(nbId, cellId) : () => {},
+      },
+      profile: {
+        onToggle: nbId ? () => setNb(nbId, (n) => ({ profilePanelOpen: !n.profilePanelOpen })) : () => {},
+        cells: activeNb?.cells ?? [],
+        cellRunHistory: activeNb?.cellRunHistory ?? {},
         onNavigateToCell: nbId ? (cellId) => handleNavigateToCell(nbId, cellId) : () => {},
       },
       regex: {},

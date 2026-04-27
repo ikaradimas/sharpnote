@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowUp, ArrowDown, Trash2, Check, X, Copy, Columns2, Bookmark, BookmarkCheck } from 'lucide-react';
+import { ArrowUp, ArrowDown, Trash2, Check, X, Copy, Columns2, Bookmark, BookmarkCheck, Camera } from 'lucide-react';
 import { useOutsideClick } from '../../hooks/useOutsideClick.js';
 
 const COLUMN_OPTIONS = [
@@ -46,7 +46,7 @@ function ColumnPicker({ columns, onChange }) {
   );
 }
 
-export function CellControls({ onMoveUp, onMoveDown, onCopy, onDelete, columns = 0, onColumnsChange, bookmarked, onToggleBookmark }) {
+export function CellControls({ onMoveUp, onMoveDown, onCopy, onDelete, columns = 0, onColumnsChange, bookmarked, onToggleBookmark, snapshot, onToggleSnapshot }) {
   const [confirming, setConfirming] = useState(false);
 
   useEffect(() => {
@@ -71,6 +71,11 @@ export function CellControls({ onMoveUp, onMoveDown, onCopy, onDelete, columns =
       {onToggleBookmark && (
         <button className={`cell-ctrl-btn${bookmarked ? ' cell-ctrl-bookmark-active' : ''}`} title={bookmarked ? 'Remove bookmark' : 'Bookmark cell'} onClick={onToggleBookmark}>
           {bookmarked ? <BookmarkCheck size={12} /> : <Bookmark size={12} />}
+        </button>
+      )}
+      {onToggleSnapshot && (
+        <button className={`cell-ctrl-btn${snapshot ? ' cell-ctrl-snapshot-active' : ''}`} title={snapshot ? 'Disable output snapshot' : 'Enable output snapshot'} onClick={onToggleSnapshot}>
+          <Camera size={12} />
         </button>
       )}
       {onCopy && <button className="cell-ctrl-btn" title="Copy cell" onClick={onCopy}><Copy size={12} /></button>}

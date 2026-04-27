@@ -49,17 +49,29 @@ public record HeatPoint(double Lat, double Lon, double Intensity = 1.0);
 public class GeoHelper
 {
     private readonly TextWriter _out;
-    private static readonly HttpClient _http = CreateHttpClient();
+    private readonly HttpClient _http;
+    private readonly GeoCache  _cache;
+
+    private static readonly HttpClient _defaultHttp  = CreateHttpClient();
+    private static readonly GeoCache   _defaultCache = new();
 
     private static HttpClient CreateHttpClient()
     {
         var http = new HttpClient { Timeout = TimeSpan.FromSeconds(20) };
-        http.DefaultRequestHeaders.UserAgent.ParseAdd("SharpNote/2.7 (https://github.com/ikaradimas/sharpnote)");
+        http.DefaultRequestHeaders.UserAgent.ParseAdd("SharpNote/2.10 (https://github.com/ikaradimas/sharpnote)");
         http.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         return http;
     }
 
-    public GeoHelper(TextWriter output) => _out = output;
+    public GeoHelper(TextWriter output, HttpClient? http = null, GeoCache? cache = null)
+    {
+        _out   = output;
+        _http  = http  ?? _defaultHttp;
+        _cache = cache ?? _defaultCache;
+    }
+
+    /// <summary>Clears the on-disk geocoding cache.</summary>
+    public void ClearCache() => _cache.Clear();
 
     // ── Geocoding ────────────────────────────────────────────────────────────
 
@@ -70,6 +82,9 @@ public class GeoHelper
         if (string.IsNullOrWhiteSpace(query))
             throw new ArgumentException("Query is required.", nameof(query));
 
+        var key = GeoCache.ForwardKey(query);
+        if (_cache.TryGet(key, out var cached)) return cached;
+
         var url = $"https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&addressdetails=1&q={HttpUtility.UrlEncode(query)}";
         using var resp = await _http.GetAsync(url, ct);
         resp.EnsureSuccessStatusCode();
@@ -79,20 +94,26 @@ public class GeoHelper
         if (doc.RootElement.GetArrayLength() == 0)
             throw new InvalidOperationException($"No geocoding result for '{query}'.");
 
-        var first = doc.RootElement[0];
-        return ParseGeoResult(first);
+        var result = ParseGeoResult(doc.RootElement[0]);
+        _cache.Set(key, result);
+        return result;
     }
 
     /// <summary>Resolves a lat/lon to an address via OpenStreetMap Nominatim.</summary>
     public async Task<GeoResult> ReverseGeocodeAsync(double lat, double lon,
                                                      CancellationToken ct = default)
     {
+        var key = GeoCache.ReverseKey(lat, lon);
+        if (_cache.TryGet(key, out var cached)) return cached;
+
         var url = $"https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat={F(lat)}&lon={F(lon)}&addressdetails=1";
         using var resp = await _http.GetAsync(url, ct);
         resp.EnsureSuccessStatusCode();
         var stream = await resp.Content.ReadAsStreamAsync(ct);
         using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
-        return ParseGeoResult(doc.RootElement);
+        var result = ParseGeoResult(doc.RootElement);
+        _cache.Set(key, result);
+        return result;
     }
 
     internal static GeoResult ParseGeoResult(JsonElement el)
@@ -255,10 +276,11 @@ public class GeoHelper
                     IEnumerable<MapMarker>? markers = null,
                     RouteResult? route = null,
                     IEnumerable<HeatPoint>? heat = null,
+                    bool cluster = false,
                     int? width = null, int? height = null,
                     string? title = null)
     {
-        SendMap(BuildSpec(lat, lon, zoom, markers, route, heat, width, height), title);
+        SendMap(BuildSpec(lat, lon, zoom, markers, route, heat, cluster, width, height), title);
     }
 
     /// <summary>Renders a heat map. Center is auto-computed from points if not given.</summary>
@@ -277,11 +299,13 @@ public class GeoHelper
                              IEnumerable<MapMarker>? markers,
                              RouteResult? route,
                              IEnumerable<HeatPoint>? heat,
+                             bool cluster,
                              int? width, int? height)
     {
         return new
         {
             center = new[] { lat, lon },
+            cluster,
             zoom,
             width,
             height,
@@ -309,7 +333,58 @@ public class GeoHelper
         }));
     }
 
-    // ── Helpers ──────────────────────────────────────────────────────────────
+    // ── Pure helpers ─────────────────────────────────────────────────────────
+
+    /// <summary>Great-circle distance between two lat/lon points in kilometres (Haversine).</summary>
+    public static double Distance(double latA, double lonA, double latB, double lonB)
+    {
+        const double R = 6371.0088; // mean Earth radius (km)
+        double dLat = (latB - latA) * Math.PI / 180.0;
+        double dLon = (lonB - lonA) * Math.PI / 180.0;
+        double a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2)
+                 + Math.Cos(latA * Math.PI / 180.0) * Math.Cos(latB * Math.PI / 180.0)
+                 * Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
+        return R * 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+    }
+
+    /// <summary>Distance between two GeoResult / IpLocation-style points in kilometres.</summary>
+    public static double Distance(GeoResult a, GeoResult b) => Distance(a.Lat, a.Lon, b.Lat, b.Lon);
+
+    /// <summary>
+    /// Single-link distance clustering — groups points where any member is within
+    /// <paramref name="kmRadius"/> of any other member of the same cluster.
+    /// </summary>
+    public static IReadOnlyList<IReadOnlyList<T>> Cluster<T>(
+        IEnumerable<T> points, double kmRadius, Func<T, (double lat, double lon)> key)
+    {
+        var arr = points.ToArray();
+        var clusterIdx = new int[arr.Length];
+        for (int i = 0; i < arr.Length; i++) clusterIdx[i] = i;
+
+        int Find(int i) { while (clusterIdx[i] != i) { clusterIdx[i] = clusterIdx[clusterIdx[i]]; i = clusterIdx[i]; } return i; }
+        void Union(int a, int b) { var ra = Find(a); var rb = Find(b); if (ra != rb) clusterIdx[ra] = rb; }
+
+        for (int i = 0; i < arr.Length; i++)
+        {
+            var (la, lo) = key(arr[i]);
+            for (int j = i + 1; j < arr.Length; j++)
+            {
+                var (lb, mb) = key(arr[j]);
+                if (Distance(la, lo, lb, mb) <= kmRadius) Union(i, j);
+            }
+        }
+
+        var groups = new Dictionary<int, List<T>>();
+        for (int i = 0; i < arr.Length; i++)
+        {
+            var root = Find(i);
+            if (!groups.TryGetValue(root, out var list)) groups[root] = list = new();
+            list.Add(arr[i]);
+        }
+        return groups.Values.Cast<IReadOnlyList<T>>().ToArray();
+    }
+
+    // ── Internal helpers ─────────────────────────────────────────────────────
 
     private static string F(double d) => d.ToString("R", CultureInfo.InvariantCulture);
 

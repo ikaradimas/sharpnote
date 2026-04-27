@@ -2329,14 +2329,30 @@ Display.Html(@"<div style='border-left:2px solid #333;margin-left:12px;padding-l
 Geo.HeatMap(sales, zoom: 2, height: 360, title: "Q1 sales density");`, 'map'),
 
     md('## Visitor Origins'),
-    cs(`var visitors = new[] {
-    new MapMarker(40.71, -74.00, "NYC — 3,421 visits", "#569cd6"),
-    new MapMarker(51.51,  -0.13, "London — 2,180",     "#4ec9b0"),
-    new MapMarker(35.68, 139.65, "Tokyo — 1,604",      "#e0a040"),
-    new MapMarker(48.86,   2.35, "Paris — 982",        "#b48ead"),
-    new MapMarker(-33.87,151.21, "Sydney — 421",       "#e06070"),
+    cs(`// Synthetic IP-derived visitor map. cluster:true collapses dense
+// regions (look at Europe at zoom 2) and expands as you zoom in.
+var visitors = new[] {
+    new MapMarker(40.71, -74.00, "NYC — 3,421"),
+    new MapMarker(34.05,-118.24, "LA — 2,910"),
+    new MapMarker(41.88, -87.63, "Chicago — 1,604"),
+    new MapMarker(29.76, -95.37, "Houston — 980"),
+    new MapMarker(45.50, -73.57, "Montreal — 612"),
+    new MapMarker(51.51,  -0.13, "London — 2,180"),
+    new MapMarker(48.86,   2.35, "Paris — 1,420"),
+    new MapMarker(52.52,  13.41, "Berlin — 1,205"),
+    new MapMarker(41.90,  12.50, "Rome — 870"),
+    new MapMarker(40.42,  -3.70, "Madrid — 760"),
+    new MapMarker(52.37,   4.90, "Amsterdam — 540"),
+    new MapMarker(50.85,   4.35, "Brussels — 480"),
+    new MapMarker(35.68, 139.65, "Tokyo — 1,604"),
+    new MapMarker(22.32, 114.17, "Hong Kong — 1,180"),
+    new MapMarker(1.35,  103.82, "Singapore — 940"),
+    new MapMarker(28.61,  77.21, "Delhi — 720"),
+    new MapMarker(-33.87,151.21, "Sydney — 421"),
+    new MapMarker(-23.55,-46.63, "São Paulo — 380"),
 };
-Geo.Map(20, 0, zoom: 2, markers: visitors, height: 360, title: "Last 24h unique visitors");`, 'map'),
+Geo.Map(20, 0, zoom: 2, markers: visitors, cluster: true,
+        height: 360, title: "Last 24h unique visitors");`, 'map'),
 
     md(`## Logistics Route
 
@@ -2350,6 +2366,69 @@ Drives a real route from HQ to a branch via **OpenRouteService**. Requires a fre
 } catch (Exception ex) {
     Display.Html($"<div style='color:#e0a040;padding:12px;border:1px solid #5a4a20;border-radius:4px;background:#2a1f0a'>⚠ {System.Net.WebUtility.HtmlEncode(ex.Message)}</div>");
 }`, 'map'),
+
+    md('## Daily Activity'),
+    cs(`var rng = new Random(42);
+var series = Enumerable.Range(0, 365)
+    .Select(d => (Date: new DateTime(2026, 1, 1).AddDays(d),
+                  Value: (double)Math.Max(0, rng.Next(-3, 12))))
+    .ToArray();
+Display.CalendarHeat(series, title: "2026 commits — synthetic");`, 'calendar'),
+
+    md('## Service Dependencies'),
+    cs(`Display.Network(new {
+    nodes = new[] {
+        new { id = "gw",     label = "API Gateway", color = "#569cd6" },
+        new { id = "auth",   label = "Auth",        color = "#4ec9b0" },
+        new { id = "users",  label = "Users",       color = "#4ec9b0" },
+        new { id = "orders", label = "Orders",      color = "#4ec9b0" },
+        new { id = "pg",     label = "Postgres",    color = "#e0a040" },
+        new { id = "redis",  label = "Redis",       color = "#b48ead" },
+        new { id = "kafka",  label = "Kafka",       color = "#e06070" },
+    },
+    edges = new[] {
+        new { source = "gw",     target = "auth"   },
+        new { source = "gw",     target = "users"  },
+        new { source = "gw",     target = "orders" },
+        new { source = "auth",   target = "pg"     },
+        new { source = "users",  target = "pg"     },
+        new { source = "users",  target = "redis"  },
+        new { source = "orders", target = "pg"     },
+        new { source = "orders", target = "kafka"  },
+    },
+    layout = "cose"
+}, title: "Service mesh");`, 'network'),
+
+    md('## Flow & Hierarchy'),
+    { ...cs(`Display.Sankey(new {
+    nodes = new[] {
+        new { name = "Search"  }, new { name = "Direct"  }, new { name = "Social"  },
+        new { name = "Sign-up" }, new { name = "Churn"   }, new { name = "Active"  },
+    },
+    links = new[] {
+        new { source = 0, target = 3, value = 540 },
+        new { source = 1, target = 3, value = 320 },
+        new { source = 2, target = 3, value = 140 },
+        new { source = 3, target = 4, value = 280 },
+        new { source = 3, target = 5, value = 720 },
+    }
+}, title: "Funnel — Q1");`, 'sankey'), columns: 2 },
+
+    { ...cs(`Display.TreeMap(new {
+    name = "Sales",
+    children = new object[] {
+        new { name = "Hardware", children = new object[] {
+            new { name = "Laptops",  value = 420 },
+            new { name = "Phones",   value = 280 },
+            new { name = "Monitors", value = 110 },
+        }},
+        new { name = "Software", children = new object[] {
+            new { name = "SaaS",     value = 540 },
+            new { name = "Licenses", value = 90  },
+        }},
+        new { name = "Services", value = 230 },
+    }
+}, title: "Revenue by line of business");`, 'treemap'), columns: 2 },
 
     md(`## Column Layout Reference
 
@@ -3785,6 +3864,7 @@ export function createNotebook(templateKey = null) {
     nugetPackages: [],
     nugetSources: [...DEFAULT_NUGET_SOURCES],
     config: templateKey ? configForTemplate(templateKey) : [],
+    params: [],
     logPanelOpen: false,
     nugetPanelOpen: false,
     configPanelOpen: false,
@@ -3800,6 +3880,8 @@ export function createNotebook(templateKey = null) {
     historyPanelOpen: false,
     depsPanelOpen: false,
     embedPanelOpen: false,
+    profilePanelOpen: false,
+    cellRunHistory: {},
     outputHistory: {},
     staleCellIds: [],
     autoRun: false,

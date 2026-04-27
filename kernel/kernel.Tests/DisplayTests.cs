@@ -89,6 +89,158 @@ public class DisplayTests : IClassFixture<KernelFixture>, IAsyncLifetime
         last.GetProperty("content").GetProperty("interactive").GetBoolean().Should().BeTrue();
     }
 
+    // ── Display.Sankey / Display.TreeMap ─────────────────────────────────────
+
+    [Fact]
+    public async Task Sankey_EmitsDisplayMessageWithSankeyFormat()
+    {
+        var id = KernelFixture.NewId();
+        _k.ClearMessages();
+        await _k.SendAsync(new { type = "execute", id, code = @"
+            Display.Sankey(new {
+                nodes = new[] { new { name = ""A"" }, new { name = ""B"" } },
+                links = new[] { new { source = 0, target = 1, value = 10 } }
+            }, title: ""Flow"");" });
+
+        await _k.WaitForMessageAsync(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "complete" &&
+            el.TryGetProperty("id", out var i) && i.GetString() == id);
+
+        var msg = _k.GetMessages().FirstOrDefault(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "display" &&
+            el.TryGetProperty("format", out var f) && f.GetString() == "sankey");
+
+        msg.ValueKind.Should().NotBe(JsonValueKind.Undefined);
+        msg.GetProperty("title").GetString().Should().Be("Flow");
+        msg.GetProperty("content").GetProperty("nodes").GetArrayLength().Should().Be(2);
+        msg.GetProperty("content").GetProperty("links")[0].GetProperty("value").GetInt32().Should().Be(10);
+    }
+
+    [Fact]
+    public async Task TreeMap_EmitsDisplayMessageWithTreemapFormat()
+    {
+        var id = KernelFixture.NewId();
+        _k.ClearMessages();
+        await _k.SendAsync(new { type = "execute", id, code = @"
+            Display.TreeMap(new {
+                name = ""Root"",
+                children = new object[] {
+                    new { name = ""A"", value = 5 },
+                    new { name = ""B"", value = 15 }
+                }
+            });" });
+
+        await _k.WaitForMessageAsync(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "complete" &&
+            el.TryGetProperty("id", out var i) && i.GetString() == id);
+
+        var msg = _k.GetMessages().FirstOrDefault(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "display" &&
+            el.TryGetProperty("format", out var f) && f.GetString() == "treemap");
+
+        msg.ValueKind.Should().NotBe(JsonValueKind.Undefined);
+        var children = msg.GetProperty("content").GetProperty("children");
+        children.GetArrayLength().Should().Be(2);
+        children[1].GetProperty("value").GetInt32().Should().Be(15);
+    }
+
+    // ── Display.CalendarHeat / Display.Network ───────────────────────────────
+
+    [Fact]
+    public async Task CalendarHeat_EmitsValuesWithIso8601Dates()
+    {
+        var id = KernelFixture.NewId();
+        _k.ClearMessages();
+        await _k.SendAsync(new { type = "execute", id, code = @"
+            Display.CalendarHeat(new (DateTime, double)[] {
+                (new DateTime(2026, 1, 1), 5.0),
+                (new DateTime(2026, 1, 2), 3.0),
+            }, title: ""Daily activity"");" });
+
+        await _k.WaitForMessageAsync(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "complete" &&
+            el.TryGetProperty("id", out var i) && i.GetString() == id);
+
+        var msg = _k.GetMessages().FirstOrDefault(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "display" &&
+            el.TryGetProperty("format", out var f) && f.GetString() == "calendar");
+
+        msg.ValueKind.Should().NotBe(JsonValueKind.Undefined);
+        var values = msg.GetProperty("content").GetProperty("values");
+        values.GetArrayLength().Should().Be(2);
+        values[0].GetProperty("date").GetString().Should().Be("2026-01-01");
+        values[0].GetProperty("value").GetDouble().Should().Be(5.0);
+    }
+
+    [Fact]
+    public async Task Network_EmitsDisplayMessageWithNetworkFormat()
+    {
+        var id = KernelFixture.NewId();
+        _k.ClearMessages();
+        await _k.SendAsync(new { type = "execute", id, code = @"
+            Display.Network(new {
+                nodes  = new[] { new { id = ""A"" }, new { id = ""B"" } },
+                edges  = new[] { new { source = ""A"", target = ""B"", label = ""flow"" } },
+                layout = ""circle""
+            });" });
+
+        await _k.WaitForMessageAsync(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "complete" &&
+            el.TryGetProperty("id", out var i) && i.GetString() == id);
+
+        var msg = _k.GetMessages().FirstOrDefault(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "display" &&
+            el.TryGetProperty("format", out var f) && f.GetString() == "network");
+
+        msg.ValueKind.Should().NotBe(JsonValueKind.Undefined);
+        var content = msg.GetProperty("content");
+        content.GetProperty("nodes").GetArrayLength().Should().Be(2);
+        content.GetProperty("edges")[0].GetProperty("label").GetString().Should().Be("flow");
+        content.GetProperty("layout").GetString().Should().Be("circle");
+    }
+
+    // ── Notebook params preamble injection ───────────────────────────────────
+
+    [Fact]
+    public async Task Execute_InjectsTypedLocalsForNotebookParams()
+    {
+        var id = KernelFixture.NewId();
+        _k.ClearMessages();
+        var msg = new
+        {
+            type = "execute",
+            id,
+            code = "Display.Html($\"th={(int)(Threshold*100)} region={Region} dry={Dry}\");",
+            paramsArr = new object[]
+            {
+                new { name = "Threshold", type = "double", value = 0.7 },
+                new { name = "Region",    type = "string", value = "EU" },
+                new { name = "Dry",       type = "bool",   value = true },
+            },
+        };
+        // The "params" key is a C# reserved word in anonymous objects — reach
+        // through JsonSerializer with a workaround via Dictionary<string, object>.
+        var payload = new System.Collections.Generic.Dictionary<string, object>
+        {
+            ["type"]   = msg.type,
+            ["id"]     = msg.id,
+            ["code"]   = msg.code,
+            ["params"] = msg.paramsArr,
+        };
+        await _k.SendAsync(payload);
+
+        await _k.WaitForMessageAsync(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "complete" &&
+            el.TryGetProperty("id", out var i) && i.GetString() == id);
+
+        var output = _k.GetMessages().FirstOrDefault(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "display" &&
+            el.TryGetProperty("format", out var f) && f.GetString() == "html");
+
+        output.ValueKind.Should().NotBe(JsonValueKind.Undefined);
+        output.GetProperty("content").GetString().Should().Be("th=70 region=EU dry=True");
+    }
+
     // ── Display.Plot ──────────────────────────────────────────────────────────
 
     [Fact]

@@ -15,6 +15,16 @@ async function resolveConfig(nb) {
   return resolved;
 }
 
+function resolveParams(nb) {
+  return (nb?.params || [])
+    .filter((p) => p.name?.trim())
+    .map((p) => ({
+      name:  p.name,
+      type:  p.type || 'string',
+      value: p.value !== undefined ? p.value : p.default,
+    }));
+}
+
 function prepareCellRun(setNb, pendingResolversRef, notebookId, cellId, resolve) {
   setNb(notebookId, (n) => {
     const prevOutputs = n.outputs[cellId];
@@ -258,8 +268,29 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
               }
             }
 
-            return { running: next, cellResults: { ...(n.cellResults || {}), [msg.id]: result }, cellElapsed: { ...(n.cellElapsed || {}), [msg.id]: msg.durationMs ?? null }, staleCellIds, debugState: null, ...extra };
+            // Append to the per-cell run history (cap 20 entries).
+            const histEntry = { ts: Date.now(), durationMs: msg.durationMs ?? null, success: !!msg.success && !msg.cancelled };
+            const prevHist = (n.cellRunHistory && n.cellRunHistory[msg.id]) || [];
+            const nextHist = [...prevHist, histEntry].slice(-20);
+
+            return { running: next, cellResults: { ...(n.cellResults || {}), [msg.id]: result }, cellElapsed: { ...(n.cellElapsed || {}), [msg.id]: msg.durationMs ?? null }, cellRunHistory: { ...(n.cellRunHistory || {}), [msg.id]: nextHist }, staleCellIds, debugState: null, ...extra };
           });
+
+          // Snapshot capture/compare for cells that opted in.
+          {
+            const nb = notebooksRef.current.find((n) => n.id === notebookId);
+            const cell = nb?.cells.find((c) => c.id === msg.id);
+            if (cell?.snapshot && nb?.path && window.electronAPI?.snapshotCaptureOrCompare && !msg.cancelled) {
+              const outputs = (nb.outputs[msg.id] || []).filter((o) => o.type === 'stdout' || o.type === 'display' || o.type === 'error');
+              window.electronAPI.snapshotCaptureOrCompare(nb.path, msg.id, outputs).then((res) => {
+                if (!res) return;
+                const status = res.captured ? 'captured' : (res.match ? 'match' : 'mismatch');
+                setNb(notebookId, (n) => ({
+                  snapshotStatus: { ...(n.snapshotStatus || {}), [msg.id]: status },
+                }));
+              });
+            }
+          }
           break;
         }
 
@@ -636,6 +667,7 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
         staleCellIds: (n.staleCellIds || []).filter((id) => id !== cell.id),
       }));
       const breakpoints = nb?.breakpoints?.[cell.id] || [];
+      const params = resolveParams(nb);
       window.electronAPI.sendToKernel(notebookId, {
         type: 'execute',
         id: cell.id,
@@ -643,6 +675,7 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
         outputMode: cell.outputMode || 'auto',
         sources: nb ? nb.nugetSources.filter((s) => s.enabled).map((s) => s.url) : [],
         config: resolvedConfig,
+        ...(params.length > 0 ? { params } : {}),
         ...(breakpoints.length > 0 ? { breakpoints } : {}),
       });
     });
@@ -655,6 +688,7 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
 
     return new Promise((resolve) => {
       prepareCellRun(setNb, pendingResolversRef, notebookId, cell.id, resolve);
+      const params = resolveParams(nb);
       window.electronAPI.sendToKernel(notebookId, {
         type: 'execute',
         id: cell.id,
@@ -662,6 +696,7 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
         outputMode: cell.outputMode || 'auto',
         sources: nb ? nb.nugetSources.filter((s) => s.enabled).map((s) => s.url) : [],
         config: resolvedConfig,
+        ...(params.length > 0 ? { params } : {}),
         formData,
       });
     });

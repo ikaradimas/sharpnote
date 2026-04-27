@@ -4,6 +4,7 @@ import { makeCell } from '../notebook-factory.js';
 import { getSectionHeadingLevel, getCollapsedSections } from '../utils.js';
 import { NOTEBOOK_BACKGROUNDS } from '../config/notebook-backgrounds.js';
 import { Toolbar } from './toolbar/Toolbar.jsx';
+import { NotebookParams } from './NotebookParams.jsx';
 import { CodeCell } from './editor/CodeCell.jsx';
 import { MarkdownCell } from './editor/MarkdownCell.jsx';
 import { SqlCell } from './editor/SqlCell.jsx';
@@ -471,6 +472,14 @@ export function NotebookView({
         onPrevCellsChange={(ids) => updateCellProp(cell.id, 'prevCells', ids === null ? undefined : ids)}
         cellElapsed={nb.cellElapsed?.[cell.id] ?? null}
         onToggleBookmark={() => toggleBookmark(cell.id)}
+        onToggleSnapshot={() => updateCellProp(cell.id, 'snapshot', !(cell.snapshot || false))}
+        snapshotStatus={nb.snapshotStatus?.[cell.id] ?? null}
+        onUpdateSnapshot={() => {
+          if (!nb.path || !window.electronAPI?.snapshotSave) return;
+          const visible = (outputs[cell.id] || []).filter((o) => o.type === 'stdout' || o.type === 'display' || o.type === 'error');
+          window.electronAPI.snapshotSave(nb.path, cell.id, visible)
+            .then(() => onSetNb((n) => ({ snapshotStatus: { ...(n.snapshotStatus || {}), [cell.id]: 'match' } })));
+        }}
         vars={nb.vars || []} />
     );
   };
@@ -519,6 +528,12 @@ export function NotebookView({
             Exit Dashboard
           </button>
         )}
+
+        <NotebookParams
+          params={nb.params}
+          onChange={(next) => onSetNbDirty((n) => ({ params: next }))}
+        />
+
 
         {cells.map((cell, index) => {
           const isHidden = collapsedCellIds.has(cell.id);

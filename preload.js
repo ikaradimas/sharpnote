@@ -46,6 +46,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   importDataFile: () => ipcRenderer.invoke('import-data-dialog'),
   saveFile: (opts) => ipcRenderer.invoke('save-file', opts),
 
+  // Snapshots
+  snapshotCaptureOrCompare: (notebookPath, cellId, outputs) =>
+    ipcRenderer.invoke('snapshot:capture-or-compare', { notebookPath, cellId, outputs }),
+  snapshotSave: (notebookPath, cellId, outputs) =>
+    ipcRenderer.invoke('snapshot:save', { notebookPath, cellId, outputs }),
+  snapshotDelete: (notebookPath, cellId) =>
+    ipcRenderer.invoke('snapshot:delete', { notebookPath, cellId }),
+
   // Font size
   onFontSizeChange: (callback) => {
     ipcRenderer.on('font-size-change', (_event, size) => callback(size));
