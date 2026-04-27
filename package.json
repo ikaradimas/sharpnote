@@ -1,6 +1,6 @@
 {
   "name": "sharpnote",
-  "version": "2.17.0",
+  "version": "2.18.0",
   "description": "SharpNote — interactive C# notebook with multi-tab MDI, NuGet, and Chart.js output",
   "main": "main.js",
   "scripts": {
@@ -125,6 +125,7 @@
     "@codemirror/state": "^6.5.2",
     "@codemirror/theme-one-dark": "^6.1.2",
     "@codemirror/view": "^6.36.3",
+    "@marp-team/marp-core": "^4.3.0",
     "chart.js": "^4.4.8",
     "codemirror": "^6.0.1",
     "codemirror-languageserver": "^1.18.1",

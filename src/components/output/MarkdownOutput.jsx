@@ -1,6 +1,7 @@
 import React, { useMemo, useEffect, useRef } from 'react';
 import { marked } from 'marked';
-import { applyMath } from '../../utils.js';
+import { applyMath, isMarpMarkdown } from '../../utils.js';
+import { MarpRender } from './MarpRender.jsx';
 
 let mermaidPromise = null;
 function getMermaid() {
@@ -9,6 +10,8 @@ function getMermaid() {
 }
 
 export function MarkdownOutput({ content }) {
+  if (isMarpMarkdown(content)) return <MarpRender content={content} />;
+
   const renderRef = useRef(null);
   const renderedHtml = useMemo(
     () => (content ? marked.parse(applyMath(content)) : ''),

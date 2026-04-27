@@ -251,3 +251,18 @@ export function formatCSharpLiteral(value, typeName) {
   // Default: treat as string
   return `"${(value || '').replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r').replace(/\t/g, '\\t')}"`;
 }
+
+/**
+ * Returns true when `content` opens with a YAML frontmatter block whose
+ * keys include `marp: true`. Used to route markdown to the Marp slide
+ * renderer instead of the default flowing-markdown view.
+ */
+export function isMarpMarkdown(content) {
+  if (typeof content !== 'string') return false;
+  const trimmed = content.replace(/^﻿/, ''); // strip BOM
+  if (!trimmed.startsWith('---')) return false;
+  const end = trimmed.indexOf('\n---', 3);
+  if (end < 0) return false;
+  const fm = trimmed.slice(3, end);
+  return /^\s*marp\s*:\s*true\s*$/m.test(fm);
+}
