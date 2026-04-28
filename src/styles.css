@@ -9871,14 +9871,25 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 }
 .marp-btn:disabled { opacity: 0.35; cursor: default; }
 .marp-stage { display: flex; justify-content: center; padding: 12px; }
-.marp-stage svg, .marp-stage section {
-  max-width: 100%;
+/* The .marpit wrapper holds all the slide SVGs; let it grow up to a sensible
+ * max so the SVGs (which have viewBox but no intrinsic px size) can fill it. */
+.marp-stage > .marpit {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 1280px;
+}
+.marp-stage svg[data-marpit-svg],
+.marp-stage > .marpit > section {
+  display: block;
+  width: 100%;
   height: auto;
+  max-width: 100%;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
 }
 .marp-render:fullscreen .marp-stage { padding: 4vh 4vw; height: 100%; align-items: center; }
-.marp-render:fullscreen .marp-stage svg,
-.marp-render:fullscreen .marp-stage section { max-height: 92vh; }
+.marp-render:fullscreen .marp-stage > .marpit { max-width: none; }
+.marp-render:fullscreen .marp-stage svg[data-marpit-svg],
+.marp-render:fullscreen .marp-stage > .marpit > section { max-height: 92vh; }
 .marp-error {
   background: #2a1f0a;
   color: #e0a040;
