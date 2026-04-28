@@ -807,6 +807,94 @@ $$f(x) = \\frac{1}{\\sigma\\sqrt{2\\pi}}\\, e^{-\\frac{(x-\\mu)^2}{2\\sigma^2}}$
 
 $$(AB)_{ij} = \\sum_{k=1}^{p} A_{ik}\\, B_{kj}$$`),
 
+    // ── Marp slide decks ──────────────────────────────────────────────────
+
+    md(`## Slide Decks (Marp)
+
+Open any markdown cell with a YAML frontmatter block containing \`marp: true\` and the renderer
+switches to **slide mode** with prev / next / fullscreen controls. Slides are separated by \`---\`,
+and arrow keys / PageUp / PageDown navigate while the deck is focused or in fullscreen.
+
+Themes, directives, and Marp-style HTML from the full \`@marp-team/marp-core\` engine are honoured.
+\`Display.Markdown\` from a code cell triggers the same renderer, so decks can be generated dynamically.
+
+The next markdown cell is itself a Marp deck — try the toolbar arrows or **⛶** to present it.`),
+
+    md(`---
+marp: true
+theme: default
+paginate: true
+---
+
+# SharpNote Slides
+
+A markdown cell whose frontmatter sets \`marp: true\` becomes a slide deck.
+
+Use the toolbar arrows, **PageDown**, or **→** to advance.
+
+---
+
+## Why Marp?
+
+- **Markdown-first** — author slides like notes
+- **Diff-friendly** — slides live in the \`.cnb\` file
+- **Themable** — built-in themes plus directives
+- **Inline math** — KaTeX out of the box: $E = mc^2$
+- **Code** — fenced blocks render with syntax highlighting
+
+---
+
+## Code on a slide
+
+\`\`\`csharp
+record Slide(string Title, int Index);
+
+var deck = Enumerable.Range(1, 5)
+    .Select(i => new Slide("Slide " + i, i))
+    .ToList();
+\`\`\`
+
+---
+
+## Math on a slide
+
+The Gaussian PDF:
+
+$$f(x) = \\frac{1}{\\sigma\\sqrt{2\\pi}}\\, e^{-\\frac{(x-\\mu)^2}{2\\sigma^2}}$$
+
+---
+
+# Thanks!
+
+Use **←** / **→** or the toolbar to navigate, **⛶** to present fullscreen.`),
+
+    md('### Generating Slides from C#'),
+
+    cs(`// Display.Markdown with marp: true frontmatter renders a deck dynamically.
+var topics = new[] {
+    ("Throughput", "12.4k req/s",  "#4ec9b0"),
+    ("Latency",    "47ms p95",     "#569cd6"),
+    ("Errors",     "0.02%",        "#c4964a"),
+};
+
+var slides = string.Join("\\n\\n---\\n\\n", topics.Select((t, i) =>
+    $"## {t.Item1}\\n\\n<span style='color:{t.Item3};font-size:2em'>**{t.Item2}**</span>\\n\\n_Slide {i + 2} of {topics.Length + 1}_"));
+
+Display.Markdown($@"---
+marp: true
+theme: default
+paginate: true
+---
+
+# Live Service Report
+
+Generated {DateTime.Now:yyyy-MM-dd HH:mm} from C#.
+
+---
+
+{slides}
+");`),
+
     // ── Widgets ────────────────────────────────────────────────────────────
 
     md(`## Interactive Widgets
