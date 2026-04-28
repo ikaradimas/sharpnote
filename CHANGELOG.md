@@ -2,6 +2,25 @@
 
 All notable changes to SharpNote, consolidated by minor version. Complexity: ⚙ fix, ⚙⚙ feature, ⚙⚙⚙ major.
 
+## 2.19 ⚙
+- Slide deck toolbar repositioned to bottom-center (was top-right)
+- Marp slides now fill the stage — sized the `<svg data-marpit-svg>` wrapper at `width: 100%` against the viewBox aspect ratio
+- Slide visibility fixed: toggle the SVG wrapper instead of the inner `<section>` so hidden slides don't leave empty boxes
+- Marp markdown cells excluded from the Table of Contents (slide titles are not document structure)
+- Display & Rich Output template ships a working Marp sample deck plus a `Display.Markdown` deck-from-C# example
+
+## 2.18 ⚙⚙⚙
+- **Marp slide decks** in markdown cells via `@marp-team/marp-core` (lazy-loaded ~200 KB), triggered by `marp: true` YAML frontmatter; paginated viewer with prev / next / fullscreen and arrow-key navigation
+- **M8 — PDF export** via Electron `printToPDF`; `@media print` stylesheet hides chrome and neutralises the dark theme
+- **M7 — Profile panel** with sortable per-cell timing (last / avg / total / runs) and a 20-run sparkline
+- **M6 — Output snapshots** (`<notebook-dir>/.snapshots/<cell-id>.snap.json`); CLI `--check-snapshots` exits 3 on drift
+- **M5 — Parameterised notebooks**: typed `params` array in `.cnb` injected as locals; CLI `--param Name=Value`
+- **M4 — `Display.CalendarHeat`** (GitHub-style daily grid, pure SVG) and **`Display.Network`** (cytoscape, lazy)
+- **M3 — `Display.Sankey`** (d3-sankey) and **`Display.TreeMap`** (d3-hierarchy)
+- **M2 — `Stats`** (Mean, Median, Variance, StdDev, Quantile, Histogram, Correlation, LinearFit) and **`TimeSeries`** (Rolling, EMA, FillGaps, Resample) pure helpers
+- **M1 — Geo expansions**: on-disk geocoding cache, marker clustering (`cluster: true`), PNG export, `Geo.Distance`/`Geo.Cluster` helpers; map toolbar (fit / reset / day-night / fullscreen); Carto basemap tiles
+- Canvas pipeline fixes: PNG IHDR encoding, CSP `img-src 'self' data: https:`, interactive `EnableMouse`
+
 ## 1.89 ⚙⚙⚙
 - Notebook v2 format: embedded files and retained results
 - Files API: Files["name"].ContentAsText, .Embed(), .SetVariable() from C#

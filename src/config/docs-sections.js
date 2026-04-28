@@ -1060,7 +1060,7 @@ export const DOCS_SECTIONS = [
       { type: 'h3', text: 'KaTeX Math' },
       { type: 'code', text: 'Display.Markdown("Inline: $x^2 + y^2 = r^2$\\n\\nBlock:\\n$$E = mc^2$$");' },
       { type: 'h3', text: 'Marp Slide Decks' },
-      { type: 'p', text: 'When a markdown cell (or Display.Markdown call) opens with a YAML frontmatter block containing marp: true, the renderer switches to Marp slide mode. Slides are separated by --- and rendered one at a time with prev / next / fullscreen controls in the corner. Arrow keys navigate while focused or in fullscreen. The full @marp-team/marp-core engine is used, so themes, directives, and Marp-style HTML are honoured.' },
+      { type: 'p', text: 'When a markdown cell (or Display.Markdown call) opens with a YAML frontmatter block containing marp: true, the renderer switches to Marp slide mode. Slides are separated by --- and rendered one at a time with a bottom-center toolbar (prev / next / fullscreen). Arrow keys / PageUp / PageDown navigate while the deck is focused or in fullscreen. The full @marp-team/marp-core engine is used, so themes, directives, and Marp-style HTML are honoured. Slide titles inside a Marp deck are not added to the Table of Contents.' },
       { type: 'code', text: 'Display.Markdown(@"---\nmarp: true\ntheme: default\npaginate: true\n---\n\n# Welcome\n\nGenerated from a notebook cell.\n\n---\n\n## Bullets\n\n- One\n- Two\n- Three\n\n---\n\n## Math\n\n$$E = mc^2$$\n");' },
     ],
   },

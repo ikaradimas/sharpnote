@@ -4,6 +4,25 @@
 // gears: 1 = minor fix/tweak, 2 = notable feature, 3 = major feature/architecture
 
 export const CHANGELOG = [
+  { version: '2.19.0', date: '2026-04-28', title: 'Marp slide deck polish', gears: 1, items: [
+    'Slide deck toolbar repositioned to bottom-center (was top-right)',
+    'Marp slides now fill the stage — sized the <svg data-marpit-svg> wrapper at width:100% against the viewBox aspect ratio',
+    'Slide visibility fixed: toggle the SVG wrapper instead of the inner <section> so hidden slides do not leave empty boxes',
+    'Marp markdown cells excluded from the Table of Contents (slide titles are not document structure)',
+    'Display & Rich Output template ships with a working Marp sample deck plus a Display.Markdown deck-from-C# example',
+  ]},
+  { version: '2.18.0', date: '2026-04-27', title: 'Marp slide decks + 8-milestone expansion (M1–M8)', gears: 3, items: [
+    'Marp slide decks in markdown cells via @marp-team/marp-core (lazy-loaded ~200 KB), triggered by marp: true YAML frontmatter; paginated viewer with prev / next / fullscreen and arrow-key navigation',
+    'M8 — PDF export via Electron printToPDF; @media print stylesheet hides chrome and neutralises the dark theme',
+    'M7 — Profile panel with sortable per-cell timing (last / avg / total / runs) and a 20-run sparkline',
+    'M6 — Output snapshots (<notebook-dir>/.snapshots/<cell-id>.snap.json); CLI --check-snapshots exits 3 on drift',
+    'M5 — Parameterised notebooks: typed params array in .cnb injected as locals; CLI --param Name=Value',
+    'M4 — Display.CalendarHeat (GitHub-style daily grid, pure SVG) and Display.Network (cytoscape, lazy)',
+    'M3 — Display.Sankey (d3-sankey) and Display.TreeMap (d3-hierarchy)',
+    'M2 — Stats (Mean, Median, Variance, StdDev, Quantile, Histogram, Correlation, LinearFit) and TimeSeries (Rolling, EMA, FillGaps, Resample) pure helpers',
+    'M1 — Geo expansions: on-disk geocoding cache, marker clustering (cluster: true), PNG export, Geo.Distance/Geo.Cluster helpers; map toolbar (fit / reset / day-night / fullscreen); Carto basemap tiles',
+    'Canvas pipeline fixes: PNG IHDR encoding, CSP img-src self data: https:, interactive EnableMouse',
+  ]},
   { version: '2.5.0', date: '2026-04-24', title: 'Floci Cell, Cloud Architecture Patterns, Docker Lifecycle', gears: 3, items: [
     'Floci cell type: visual form-based cell for running floci (local AWS emulator) containers with per-service toggles for 24 AWS services, region/storage configuration, init scripts, and lifecycle management',
     'SDK Snippet generator: one-click C# code generation with NuGet references and pre-configured AWS SDK clients for all enabled services, with Insert as Code Cell option',
