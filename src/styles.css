@@ -9836,7 +9836,8 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 .marp-render:fullscreen { width: 100vw !important; height: 100vh !important; border-radius: 0; }
 .marp-toolbar {
   position: absolute;
-  top: 6px; right: 6px;
+  bottom: 8px; left: 50%;
+  transform: translateX(-50%);
   z-index: 10;
   display: flex; gap: 3px;
   padding: 3px;
