@@ -78,8 +78,10 @@ export function getCollapsedSections(cells) {
 export function extractHeadings(cells) {
   const headings = [];
   cells.forEach((cell) => {
-    // Markdown headings
+    // Markdown headings — but Marp slide decks use `#`/`##` for slide titles,
+    // not document structure, so they should not pollute the TOC.
     if (cell.type === 'markdown') {
+      if (isMarpMarkdown(cell.content)) return;
       (cell.content || '').split('\n').forEach((line) => {
         const m = line.match(/^(#{1,3})\s+(.+)$/);
         if (m) headings.push({ level: m[1].length, text: m[2].trim(), cellId: cell.id });

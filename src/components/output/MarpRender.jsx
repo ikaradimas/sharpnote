@@ -39,10 +39,16 @@ export function MarpRender({ content }) {
   }, [content]);
 
   // After the html lands in the DOM, count slides + show the active one.
+  // With inlineSVG: true (the default we use), each slide is wrapped in a
+  // <svg data-marpit-svg> — those are the elements we must toggle, otherwise
+  // the SVG keeps its viewBox-derived box even when its inner section is
+  // display:none. Fall back to <section> for the rare inlineSVG: false case
+  // and for tests that mock the renderer with bare sections.
   useEffect(() => {
-    const el = wrapperRef.current;
-    if (!el) return;
-    const slides = Array.from(el.querySelectorAll('section, svg[data-marp-fitting]'));
+    const stage = wrapperRef.current?.querySelector('.marp-stage');
+    if (!stage) return;
+    let slides = stage.querySelectorAll('svg[data-marpit-svg]');
+    if (slides.length === 0) slides = stage.querySelectorAll('section');
     setSlideCount(slides.length);
     slides.forEach((s, i) => {
       s.style.display = i === slideIdx ? '' : 'none';

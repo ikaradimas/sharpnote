@@ -153,6 +153,17 @@ describe('extractHeadings', () => {
     const cells = [mkCell('markdown', '#  Spaced  ')];
     expect(extractHeadings(cells)[0].text).toBe('Spaced');
   });
+
+  it('skips Marp slide-deck markdown cells (slide titles are not document structure)', () => {
+    const cells = [
+      mkCell('markdown', '## Real Heading', 'a'),
+      mkCell('markdown', '---\nmarp: true\n---\n\n# Slide One\n\n---\n\n## Slide Two', 'b'),
+      mkCell('markdown', '## Another Real Heading', 'c'),
+    ];
+    const result = extractHeadings(cells);
+    expect(result).toHaveLength(2);
+    expect(result.map(h => h.text)).toEqual(['Real Heading', 'Another Real Heading']);
+  });
 });
 
 // ── parseCsv / tableToCSV ────────────────────────────────────────────────────
