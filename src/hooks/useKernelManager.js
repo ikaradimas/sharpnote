@@ -25,7 +25,7 @@ function resolveParams(nb) {
     }));
 }
 
-function prepareCellRun(setNb, pendingResolversRef, notebookId, cellId, resolve) {
+export function prepareCellRun(setNb, pendingResolversRef, notebookId, cellId, resolve) {
   setNb(notebookId, (n) => {
     const prevOutputs = n.outputs[cellId];
     const newOutputHistory = { ...(n.outputHistory || {}) };
@@ -34,12 +34,17 @@ function prepareCellRun(setNb, pendingResolversRef, notebookId, cellId, resolve)
     }
     const cell = n.cells.find(c => c.id === cellId);
     const updatedCells = cell ? n.cells.map(c => c.id === cellId ? { ...c, _lastRunCode: c.content } : c) : n.cells;
+    // Clear inline diagnostics — the kernel only emits inline_diagnostics on
+    // compile error, so without this the squiggles from a previous failed
+    // run would linger after a successful one.
+    const hadDiags = n.inlineDiagnostics?.[cellId]?.length > 0;
     return {
       cells: updatedCells,
       outputs: { ...n.outputs, [cellId]: [] },
       outputHistory: newOutputHistory,
       cellResults: { ...(n.cellResults || {}), [cellId]: null },
       running: new Set([...n.running, cellId]),
+      ...(hadDiags ? { inlineDiagnostics: { ...(n.inlineDiagnostics || {}), [cellId]: [] } } : {}),
     };
   });
   pendingResolversRef.current[cellId] = resolve;
