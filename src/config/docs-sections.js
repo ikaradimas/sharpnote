@@ -1277,7 +1277,7 @@ export const DOCS_SECTIONS = [
         'Files["name"].SetVariable(key, value) — store metadata',
         'Files["name"].GetVariable(key) — read metadata',
         'Files.List() — all embedded files',
-        'Files.Contains(name) — check existence',
+        'Files.Exists(name) — check existence (alias: Files.Contains)',
       ]},
       { type: 'code', text: '// Embed a CSV\nFiles.EmbedText("data", "Name,Score\\nAlice,95\\nBob,82", "data.csv", "text/csv");\n\n// Parse as CSV (same format as Data.LoadCsv)\nvar rows = Files["data"].ContentCsv;\nrows.Display(); // List<Dictionary<string, object>>\n\n// Or read raw text\nvar csv = Files["data"].ContentAsText;\ncsv.Display();\n\n// Set metadata\nFiles["data"].SetVariable("source", "manual");\nFiles["data"].GetVariable("source").Display();' },
     ],

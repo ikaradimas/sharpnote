@@ -113,7 +113,10 @@ public class FilesHelper
         throw new KeyNotFoundException($"No embedded file named '{name}'. Available: {string.Join(", ", _files.Keys)}");
     }
 
-    /// <summary>Check if a file exists.</summary>
+    /// <summary>Check if an embedded file exists.</summary>
+    public bool Exists(string name) => _files.ContainsKey(name);
+
+    /// <summary>Alias of <see cref="Exists"/>.</summary>
     public bool Contains(string name) => _files.ContainsKey(name);
 
     /// <summary>List all embedded files.</summary>

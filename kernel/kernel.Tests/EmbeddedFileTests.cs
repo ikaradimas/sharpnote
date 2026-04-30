@@ -80,4 +80,36 @@ public class EmbeddedFileTests
         var file = MakeFile("");
         file.ContentCsv.Should().BeEmpty();
     }
+
+    [Fact]
+    public void Exists_And_Contains_ReturnSameResult()
+    {
+        var helper = new FilesHelper(TextWriter.Null);
+        helper.Exists("nope").Should().BeFalse();
+        helper.Contains("nope").Should().BeFalse();
+
+        helper.EmbedText("greeting", "hello", "greeting.txt");
+        helper.Exists("greeting").Should().BeTrue();
+        helper.Contains("greeting").Should().BeTrue();
+    }
+
+    [Fact]
+    public void LoadAll_WithoutDeletedFile_RemovesItFromKernel()
+    {
+        // Reproduces the deletion-sync bug: when the renderer drops a file from
+        // its embedded list and re-sends `set_embedded_files`, FilesHelper must
+        // forget the dropped entry so Files.Exists/Contains return false.
+        var helper = new FilesHelper(TextWriter.Null);
+        helper.EmbedText("a", "alpha", "a.txt");
+        helper.EmbedText("b", "beta",  "b.txt");
+        helper.Exists("a").Should().BeTrue();
+        helper.Exists("b").Should().BeTrue();
+
+        // Simulate the renderer re-syncing with "a" removed (the fixed path).
+        var json = "[{\"name\":\"b\",\"filename\":\"b.txt\",\"mimeType\":\"text/plain\",\"content\":\"beta\",\"encoding\":\"text\"}]";
+        helper.LoadAll(System.Text.Json.JsonDocument.Parse(json).RootElement);
+
+        helper.Exists("a").Should().BeFalse();
+        helper.Exists("b").Should().BeTrue();
+    }
 }

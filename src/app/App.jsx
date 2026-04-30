@@ -1368,9 +1368,11 @@ export function App() {
         },
         onDelete: (name) => {
           if (!nbId) return;
-          setNbDirty(nbId, (n) => ({
-            embeddedFiles: (n.embeddedFiles || []).filter(f => f.name !== name),
-          }));
+          const newFiles = (activeNb?.embeddedFiles || []).filter(f => f.name !== name);
+          setNbDirty(nbId, () => ({ embeddedFiles: newFiles }));
+          if (activeNb?.kernelStatus === 'ready') {
+            window.electronAPI?.sendToKernel(nbId, { type: 'set_embedded_files', files: newFiles });
+          }
         },
         onUpdateVars: (name, key, value) => {
           if (!nbId) return;
