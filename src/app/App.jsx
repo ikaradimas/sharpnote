@@ -7,7 +7,7 @@ import React, {
 } from 'react';
 import { DOCS_TAB_ID, CHANGELOG_TAB_ID, KAFKA_TAB_ID, PANEL_TAB_PREFIX } from '../constants.js';
 import {
-  makeLibEditorId, isLibEditorId, isNotebookId, getNotebookDisplayName, generateDockerCompose, makePanelTabId,
+  makeLibEditorId, isLibEditorId, isNotebookId, isPanelTabId, getNotebookDisplayName, generateDockerCompose, makePanelTabId,
 } from '../utils.js';
 import { DEFAULT_DOCK_LAYOUT, DEFAULT_FLOAT_W, DEFAULT_FLOAT_H } from '../config/dock-layout.jsx';
 import { TablePageSizeContext } from '../config/table-page-size-context.js';
@@ -43,6 +43,34 @@ import { KeyboardShortcutsOverlay } from '../components/dialogs/KeyboardShortcut
 import { StatusBar } from './StatusBar.jsx';
 import { renderPanelContent } from '../components/dock/renderPanelContent.jsx';
 import { makeCell } from '../notebook-factory.js';
+import { panelTabsAfterDetach, panelTabsAfterReturn, panelTabsAfterNotebookClosed } from './panel-tabs.js';
+
+// Maps a panel id to its corresponding boolean flag on the notebook state.
+// The mapping is mostly trivial (`${panelId}PanelOpen`) but `api-editor`
+// uses camelCase (`apiEditorPanelOpen`), so a centralised lookup avoids
+// drift between setPanelVisible and the panel-tab return path.
+const PANEL_NB_FLAG = {
+  log: 'logPanelOpen', nuget: 'nugetPanelOpen', config: 'configPanelOpen',
+  db: 'dbPanelOpen', vars: 'varsPanelOpen', toc: 'tocPanelOpen',
+  graph: 'graphPanelOpen', todo: 'todoPanelOpen', regex: 'regexPanelOpen',
+  history: 'historyPanelOpen', deps: 'depsPanelOpen', embed: 'embedPanelOpen', profile: 'profilePanelOpen',
+  library: 'libraryPanelOpen', files: 'filesPanelOpen', api: 'apiPanelOpen',
+  'api-editor': 'apiEditorPanelOpen', git: 'gitPanelOpen',
+};
+
+// One pane per detached panel-tab. The pane derives its props from the
+// notebook the panel was popped out of, not the currently active one — so
+// switching between notebook tabs no longer swaps the panel's data.
+function PanelTabPane({ panelId, notebook, buildPanelProps, isActive }) {
+  const props = useMemo(() => buildPanelProps(notebook), [buildPanelProps, notebook]);
+  if (!notebook) return null;  // owner notebook was closed — see closeNotebookPanelTabs cleanup
+  const p = props[panelId];
+  return (
+    <div className="notebook-pane" style={isActive ? undefined : { display: 'none' }}>
+      {p && renderPanelContent(panelId, { ...p, isOpen: true })}
+    </div>
+  );
+}
 
 export function App() {
   // ── UI settings ────────────────────────────────────────────────────────────
@@ -168,7 +196,13 @@ export function App() {
     handleSaveLayout, handleLoadLayout, handleDeleteLayout,
   } = useDockLayout({ saveSettingsRef });
 
-  const [panelTabs, setPanelTabs] = useState(new Set());
+  // Map<panelId, notebookId> — each detached panel-tab remembers the
+  // notebook it was popped out of, so it keeps showing that notebook's data
+  // even when the user switches between notebook tabs, and it pops back
+  // into the same notebook's dock zone.
+  const [panelTabs, setPanelTabs] = useState(new Map());
+  const panelTabsRef = useRef(panelTabs);
+  useEffect(() => { panelTabsRef.current = panelTabs; }, [panelTabs]);
 
   // ── Panel visibility and layout (shared by close button, menu, and kernel messages) ──
 
@@ -180,15 +214,7 @@ export function App() {
       if (shouldOpen) handleOpenKafkaTab(); else handleCloseKafkaTab();
       return;
     }
-    const nbFlagMap = {
-      log: 'logPanelOpen', nuget: 'nugetPanelOpen', config: 'configPanelOpen',
-      db: 'dbPanelOpen', vars: 'varsPanelOpen', toc: 'tocPanelOpen',
-      graph: 'graphPanelOpen', todo: 'todoPanelOpen', regex: 'regexPanelOpen',
-      history: 'historyPanelOpen', deps: 'depsPanelOpen', embed: 'embedPanelOpen', profile: 'profilePanelOpen',
-      library: 'libraryPanelOpen', files: 'filesPanelOpen', api: 'apiPanelOpen',
-      'api-editor': 'apiEditorPanelOpen', git: 'gitPanelOpen',
-    };
-    const flag = nbFlagMap[panelId];
+    const flag = PANEL_NB_FLAG[panelId];
     const nbId = activeIdRef.current;
     if (flag && isNotebookId(nbId))
       setNbDirty(nbId, open === null ? (n) => ({ [flag]: !n[flag] }) : { [flag]: open });
@@ -236,24 +262,30 @@ export function App() {
 
   // ── Panel-as-tab ──────────────────────────────────────────────────────────
   const detachPanelToTab = useCallback((panelId) => {
+    const ownerNbId = activeIdRef.current && !isPanelTabId(activeIdRef.current)
+      ? activeIdRef.current
+      : notebooksRef.current[0]?.id;
+    if (!ownerNbId) return;
     setPanelVisible(panelId, false);
-    setPanelTabs((prev) => new Set([...prev, panelId]));
+    setPanelTabs((prev) => panelTabsAfterDetach(prev, panelId, ownerNbId));
     setActiveId(makePanelTabId(panelId));
   }, [setPanelVisible, setActiveId]);
 
   const returnPanelFromTab = useCallback((panelId) => {
-    setPanelTabs((prev) => { const next = new Set(prev); next.delete(panelId); return next; });
-    // Switch to a notebook first so setPanelVisible targets the right notebook
-    if (activeIdRef.current === makePanelTabId(panelId)) {
-      const first = notebooksRef.current[0];
-      if (first) setActiveId(first.id);
-    }
-    // Open the panel after a tick so activeIdRef has updated
-    setTimeout(() => setPanelVisible(panelId, true), 0);
-  }, [setPanelVisible, setActiveId]);
+    const ids = notebooksRef.current.map((n) => n.id);
+    const { next, target } = panelTabsAfterReturn(panelTabsRef.current, panelId, ids);
+    setPanelTabs(next);
+    if (activeIdRef.current === makePanelTabId(panelId) && target) setActiveId(target);
+    // Re-open the panel directly on its bound notebook — no setTimeout/race
+    // needed because we know the target nbId without going through activeId.
+    const flag = PANEL_NB_FLAG[panelId];
+    if (target && flag) setNbDirty(target, () => ({ [flag]: true }));
+  }, [setActiveId, setNbDirty]);
 
   const closePanelTab = useCallback((panelId) => {
-    setPanelTabs((prev) => { const next = new Set(prev); next.delete(panelId); return next; });
+    const ids = notebooksRef.current.map((n) => n.id);
+    const { next } = panelTabsAfterReturn(panelTabsRef.current, panelId, ids);
+    setPanelTabs(next);
     if (activeIdRef.current === makePanelTabId(panelId)) {
       const first = notebooksRef.current[0];
       if (first) setActiveId(first.id);
@@ -299,8 +331,18 @@ export function App() {
     // args[0] is the tab id (notebookId) for notebook tabs
     const tabId = args[0];
     if (tabId) stopAllSchedules(tabId);
+    // Drop any popped-out panel-tabs that were bound to this notebook —
+    // their file is gone, they can't keep showing it.
+    setPanelTabs((prev) => {
+      const { next, droppedTabIds } = panelTabsAfterNotebookClosed(prev, tabId);
+      if (droppedTabIds.includes(activeIdRef.current)) {
+        const remaining = notebooksRef.current.filter((n) => n.id !== tabId);
+        if (remaining.length > 0) setActiveId(remaining[0].id);
+      }
+      return next;
+    });
     handleCloseTab(...args);
-  }, [handleCloseTab, stopAllSchedules]);
+  }, [handleCloseTab, stopAllSchedules, setActiveId]);
 
   // Wire up the settings-persist function. Called by hooks and effects whenever
   // settings need persisting. Reads all state from stable refs in one place.
@@ -1153,31 +1195,40 @@ export function App() {
     profile:      nb_?.profilePanelOpen  ?? false,
   }), [activeId, activeNb]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Suppress dock rendering for panels open as tabs
+  // Suppress dock rendering for a panel only when it is popped out as a tab
+  // for the *currently active* notebook. If A's logs are popped out and the
+  // user switches to B, B's dock-attached logs panel is still allowed to
+  // render — the popped-out tab is bound to A.
   const effectiveOpenFlags = useMemo(() => {
     if (panelTabs.size === 0) return openFlags;
     const flags = { ...openFlags };
-    for (const pid of panelTabs) flags[pid] = false;
+    for (const [pid, ownerNbId] of panelTabs) {
+      if (ownerNbId === activeId) flags[pid] = false;
+    }
     return flags;
-  }, [openFlags, panelTabs]);
+  }, [openFlags, panelTabs, activeId]);
 
-  const panelPropsMap = useMemo(() => {
-    const nbId = activeNb?.id ?? null;
+  // buildPanelProps(nb) — derive the per-panel prop bag for ANY notebook,
+  // not just the active one. Detached panel-tabs call this with their bound
+  // notebook so they keep showing that notebook's data even when the user
+  // switches between notebook tabs.
+  const buildPanelProps = useCallback((nb) => {
+    const nbId = nb?.id ?? null;
     return {
       log: {
         onToggle: nbId ? () => setNb(nbId, (n) => ({ logPanelOpen: !n.logPanelOpen })) : () => {},
-        currentMemoryMb: activeNb?.memoryHistory?.length
-          ? (typeof activeNb.memoryHistory[activeNb.memoryHistory.length - 1] === 'number'
-            ? activeNb.memoryHistory[activeNb.memoryHistory.length - 1]
-            : activeNb.memoryHistory[activeNb.memoryHistory.length - 1]?.mb) : null,
-        cells: activeNb?.cells ?? [],
+        currentMemoryMb: nb?.memoryHistory?.length
+          ? (typeof nb.memoryHistory[nb.memoryHistory.length - 1] === 'number'
+            ? nb.memoryHistory[nb.memoryHistory.length - 1]
+            : nb.memoryHistory[nb.memoryHistory.length - 1]?.mb) : null,
+        cells: nb?.cells ?? [],
         onNavigateToCell: nbId ? (cellId) => handleNavigateToCell(nbId, cellId) : () => {},
       },
       nuget: {
         onToggle: nbId ? () => setNb(nbId, (n) => ({ nugetPanelOpen: !n.nugetPanelOpen })) : () => {},
-        packages: activeNb?.nugetPackages ?? [],
-        kernelStatus: activeNb?.kernelStatus ?? 'starting',
-        sources: activeNb?.nugetSources ?? [],
+        packages: nb?.nugetPackages ?? [],
+        kernelStatus: nb?.kernelStatus ?? 'starting',
+        sources: nb?.nugetSources ?? [],
         onAdd:           nbId ? (id, ver) => addNugetPackage(nbId, id, ver)    : () => {},
         onRemove:        nbId ? (id)       => removeNugetPackage(nbId, id)     : () => {},
         onRetry:         nbId ? (id, ver)  => retryNugetPackage(nbId, id, ver) : () => {},
@@ -1195,7 +1246,7 @@ export function App() {
       },
       config: {
         onToggle: nbId ? () => setNb(nbId, (n) => ({ configPanelOpen: !n.configPanelOpen })) : () => {},
-        config: activeNb?.config ?? [],
+        config: nb?.config ?? [],
         onAdd:    nbId ? (k, v, type, envVar) => setNbDirty(nbId, (n) => ({ config: [...n.config, { key: k, value: v, type: type || 'string', envVar }] })) : () => {},
         onRemove: nbId ? (i)    => setNbDirty(nbId, (n) => ({ config: n.config.filter((_, idx) => idx !== i) })) : () => {},
         onUpdate: nbId ? (i, updates) => setNbDirty(nbId, (n) => ({
@@ -1205,7 +1256,7 @@ export function App() {
       db: {
         onToggle: nbId ? () => setNb(nbId, (n) => ({ dbPanelOpen: !n.dbPanelOpen })) : () => {},
         connections: dbConnections,
-        attachedDbs: activeNb?.attachedDbs ?? [],
+        attachedDbs: nb?.attachedDbs ?? [],
         notebookId: nbId,
         onAttach:  nbId ? (connId) => handleAttachDb(nbId, connId)  : () => {},
         onDetach:  nbId ? (connId) => handleDetachDb(nbId, connId)  : () => {},
@@ -1224,14 +1275,14 @@ export function App() {
       },
       vars: {
         onToggle: nbId ? () => setNb(nbId, (n) => ({ varsPanelOpen: !n.varsPanelOpen })) : () => {},
-        vars: activeNb?.vars ?? [],
-        varHistory: activeNb?.varHistory ?? {},
-        varDiff: activeNb?.varDiff ?? null,
+        vars: nb?.vars ?? [],
+        varHistory: nb?.varHistory ?? {},
+        varDiff: nb?.varDiff ?? null,
         onInspect: nbId ? (name) => {
-          const v = (activeNb?.vars ?? []).find((vv) => vv.name === name);
+          const v = (nb?.vars ?? []).find((vv) => vv.name === name);
           setVarInspectDialog({ name, typeName: v?.typeName ?? '', value: v?.value ?? '', notebookId: nbId, fullValue: null });
         } : null,
-        watchExpressions: activeNb?.watchExpressions ?? [],
+        watchExpressions: nb?.watchExpressions ?? [],
         onAddWatch: nbId ? (name) => setNbDirty(nbId, (n) => {
           const existing = n.watchExpressions || [];
           if (existing.some(w => w.name === name)) return {};
@@ -1243,7 +1294,7 @@ export function App() {
       },
       toc: {
         onToggle: nbId ? () => setNb(nbId, (n) => ({ tocPanelOpen: !n.tocPanelOpen })) : () => {},
-        cells: activeNb?.cells ?? [],
+        cells: nb?.cells ?? [],
         onAddCell: nbId ? (type, afterCellId) => {
           const newCell = makeCell(type, '');
           setNbDirty(nbId, (n) => {
@@ -1256,8 +1307,8 @@ export function App() {
       },
       files: {
         onToggle: () => {
-          if (!(activeNb?.filesPanelOpen) && !filesCurrentDir && activeNb?.path) {
-            const p = activeNb.path.replace(/\\/g, '/');
+          if (!(nb?.filesPanelOpen) && !filesCurrentDir && nb?.path) {
+            const p = nb.path.replace(/\\/g, '/');
             setFilesCurrentDir(p.slice(0, p.lastIndexOf('/')));
           }
           setPanelVisible('files', null);
@@ -1265,8 +1316,8 @@ export function App() {
         currentDir: filesCurrentDir,
         onNavigate: setFilesCurrentDir,
         onOpenNotebook: handleOpenRecent,
-        notebookDir: activeNb?.path
-          ? (() => { const p = activeNb.path.replace(/\\/g, '/'); return p.slice(0, p.lastIndexOf('/')); })()
+        notebookDir: nb?.path
+          ? (() => { const p = nb.path.replace(/\\/g, '/'); return p.slice(0, p.lastIndexOf('/')); })()
           : null,
         favoriteFolders,
         onToggleFavorite: (path) => {
@@ -1285,34 +1336,34 @@ export function App() {
         onToggle: () => setPanelVisible('api-editor', null),
         requestedApiId: apiEditorRequestedId,
         onRequestedApiHandled: () => setApiEditorRequestedId(null),
-        lastApiId: activeNb?.apiEditorSelectedId ?? null,
+        lastApiId: nb?.apiEditorSelectedId ?? null,
         onApiSelectionChange: nbId ? (id) => setNb(nbId, { apiEditorSelectedId: id }) : null,
       },
       git: {
         onToggle: () => setPanelVisible('git', null),
-        notebookDir: activeNb?.path ? activeNb.path.replace(/\\/g, '/').replace(/\/[^/]+$/, '') : null,
+        notebookDir: nb?.path ? nb.path.replace(/\\/g, '/').replace(/\/[^/]+$/, '') : null,
         refreshKey: gitRefreshKey,
       },
       graph: {
         onToggle: nbId ? () => setNb(nbId, (n) => ({ graphPanelOpen: !n.graphPanelOpen })) : () => {},
-        varHistory: activeNb?.varHistory ?? {},
+        varHistory: nb?.varHistory ?? {},
         onClearGraph: nbId ? () => setNb(nbId, { varHistory: {} }) : null,
       },
       todo: {
         onToggle: nbId ? () => setNb(nbId, (n) => ({ todoPanelOpen: !n.todoPanelOpen })) : () => {},
-        cells: activeNb?.cells ?? [],
+        cells: nb?.cells ?? [],
         onNavigateToCell: nbId ? (cellId) => handleNavigateToCell(nbId, cellId) : () => {},
       },
       profile: {
         onToggle: nbId ? () => setNb(nbId, (n) => ({ profilePanelOpen: !n.profilePanelOpen })) : () => {},
-        cells: activeNb?.cells ?? [],
-        cellRunHistory: activeNb?.cellRunHistory ?? {},
+        cells: nb?.cells ?? [],
+        cellRunHistory: nb?.cellRunHistory ?? {},
         onNavigateToCell: nbId ? (cellId) => handleNavigateToCell(nbId, cellId) : () => {},
       },
       regex: {},
       history: {
         onToggle: nbId ? () => setNb(nbId, (n) => ({ historyPanelOpen: !n.historyPanelOpen })) : () => {},
-        notebookPath: activeNb?.path ?? null,
+        notebookPath: nb?.path ?? null,
         onRestore: nbId ? (data) => {
           setNbDirty(nbId, () => ({
             cells: data.cells ?? [],
@@ -1323,7 +1374,7 @@ export function App() {
       },
       deps: {
         onToggle: nbId ? () => setNb(nbId, (n) => ({ depsPanelOpen: !n.depsPanelOpen })) : () => {},
-        notebook: activeNb,
+        notebook: nb,
         notebookId: nbId,
         onNavigateToCell: nbId ? (cellId) => handleNavigateToCell(nbId, cellId) : () => {},
         onRunWithDeps: orchestrator.runWithDeps,
@@ -1332,7 +1383,7 @@ export function App() {
         executionProgress: orchestrator.executionProgress,
         onCancelOrchestration: orchestrator.cancelOrchestration,
         dispatchRun: orchestrator.dispatchRun,
-        pipelines: activeNb?.pipelines || [],
+        pipelines: nb?.pipelines || [],
         onCreatePipeline: pipelineManager.createPipeline,
         onRenamePipeline: pipelineManager.renamePipeline,
         onDeletePipeline: pipelineManager.deletePipeline,
@@ -1350,7 +1401,7 @@ export function App() {
       },
       embed: {
         onToggle: nbId ? () => setNb(nbId, (n) => ({ embedPanelOpen: !n.embedPanelOpen })) : () => {},
-        files: activeNb?.embeddedFiles || [],
+        files: nb?.embeddedFiles || [],
         onAdd: async () => {
           if (!nbId) return;
           const result = await window.electronAPI?.pickEmbedFile?.();
@@ -1359,18 +1410,18 @@ export function App() {
           setNbDirty(nbId, (n) => ({
             embeddedFiles: [...(n.embeddedFiles || []), { name, ...result, variables: {} }],
           }));
-          if (activeNb?.kernelStatus === 'ready') {
+          if (nb?.kernelStatus === 'ready') {
             window.electronAPI?.sendToKernel(nbId, {
               type: 'set_embedded_files',
-              files: [...(activeNb.embeddedFiles || []), { name, ...result, variables: {} }],
+              files: [...(nb.embeddedFiles || []), { name, ...result, variables: {} }],
             });
           }
         },
         onDelete: (name) => {
           if (!nbId) return;
-          const newFiles = (activeNb?.embeddedFiles || []).filter(f => f.name !== name);
+          const newFiles = (nb?.embeddedFiles || []).filter(f => f.name !== name);
           setNbDirty(nbId, () => ({ embeddedFiles: newFiles }));
-          if (activeNb?.kernelStatus === 'ready') {
+          if (nb?.kernelStatus === 'ready') {
             window.electronAPI?.sendToKernel(nbId, { type: 'set_embedded_files', files: newFiles });
           }
         },
@@ -1384,16 +1435,18 @@ export function App() {
         },
         onUpdate: (oldName, updated) => {
           if (!nbId) return;
-          const newFiles = (activeNb?.embeddedFiles || []).map(f => f.name === oldName ? updated : f);
+          const newFiles = (nb?.embeddedFiles || []).map(f => f.name === oldName ? updated : f);
           setNbDirty(nbId, () => ({ embeddedFiles: newFiles }));
-          if (activeNb?.kernelStatus === 'ready') {
+          if (nb?.kernelStatus === 'ready') {
             window.electronAPI?.sendToKernel(nbId, { type: 'set_embedded_files', files: newFiles });
           }
         },
       },
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeNb, dbConnections, filesCurrentDir, favoriteFolders]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [dbConnections, filesCurrentDir, favoriteFolders]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const panelPropsMap = useMemo(() => buildPanelProps(activeNb), [buildPanelProps, activeNb]);
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -1584,15 +1637,15 @@ export function App() {
                   />
                 </div>
               )}
-              {[...panelTabs].map((panelId) => {
-                const tabId = makePanelTabId(panelId);
-                const p = panelPropsMap[panelId];
-                return (
-                  <div key={tabId} className="notebook-pane" style={activeId === tabId ? undefined : { display: 'none' }}>
-                    {p && renderPanelContent(panelId, { ...p, isOpen: true })}
-                  </div>
-                );
-              })}
+              {[...panelTabs].map(([panelId, ownerNbId]) => (
+                <PanelTabPane
+                  key={makePanelTabId(panelId)}
+                  panelId={panelId}
+                  notebook={notebooks.find((n) => n.id === ownerNbId)}
+                  buildPanelProps={buildPanelProps}
+                  isActive={activeId === makePanelTabId(panelId)}
+                />
+              ))}
             </div>
             {!viewerMode && <DockZone zone="right" {...dockZoneProps} />}
           </div>

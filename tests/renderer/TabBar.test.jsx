@@ -91,3 +91,48 @@ describe('TabBar – pin button', () => {
     expect(onTogglePin).toHaveBeenCalledWith('/some/path.cnb');
   });
 });
+
+describe('TabBar – panel tabs', () => {
+  it('renders one panel tab per entry in the panelTabs Map', () => {
+    const notebooks = [makeNb({ id: 'nb-1', title: 'Report' })];
+    render(<TabBar {...defaultProps({
+      notebooks,
+      panelTabs: new Map([['log', 'nb-1'], ['vars', 'nb-1']]),
+      onActivatePanelTab: vi.fn(),
+      onClosePanelTab: vi.fn(),
+      onReturnPanelToPanel: vi.fn(),
+    })} />);
+    expect(document.querySelectorAll('.tab-panel-tab').length).toBe(2);
+  });
+
+  it('appends the bound notebook display name to the panel tab title', () => {
+    const notebooks = [
+      makeNb({ id: 'nb-1', title: 'Report' }),
+      makeNb({ id: 'nb-2', title: 'Other' }),
+    ];
+    render(<TabBar {...defaultProps({
+      notebooks,
+      panelTabs: new Map([['log', 'nb-2']]),
+      onActivatePanelTab: vi.fn(),
+      onClosePanelTab: vi.fn(),
+      onReturnPanelToPanel: vi.fn(),
+    })} />);
+    const owner = document.querySelector('.tab-panel-tab .tab-panel-owner');
+    expect(owner).not.toBeNull();
+    expect(owner.textContent).toContain('Other');
+  });
+
+  it('return button fires onReturnPanelToPanel with the panel id', () => {
+    const onReturn = vi.fn();
+    const notebooks = [makeNb({ id: 'nb-1' })];
+    render(<TabBar {...defaultProps({
+      notebooks,
+      panelTabs: new Map([['vars', 'nb-1']]),
+      onActivatePanelTab: vi.fn(),
+      onClosePanelTab: vi.fn(),
+      onReturnPanelToPanel: onReturn,
+    })} />);
+    fireEvent.click(document.querySelector('.tab-panel-return'));
+    expect(onReturn).toHaveBeenCalledWith('vars');
+  });
+});
