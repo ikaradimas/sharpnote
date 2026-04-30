@@ -35,10 +35,15 @@ export function TabBar({ notebooks, activeId, onActivate, onClose, onNew, onRena
       const tabId = `${PANEL_TAB_PREFIX}${panelId}`;
       const meta = PANEL_META[panelId];
       const seed = [...panelId].reduce((a, c) => a + c.charCodeAt(0), 0);
+      const baseLabel = meta?.label || panelId;
+      const ownerName = item._ownerName;
       return (
-        <div className={`tab tab-panel-tab${activeId === tabId ? ' tab-active' : ''}`} onClick={() => onActivatePanelTab?.(panelId)}>
+        <div className={`tab tab-panel-tab${activeId === tabId ? ' tab-active' : ''}`} onClick={() => onActivatePanelTab?.(panelId)} title={ownerName ? `${baseLabel} · ${ownerName}` : baseLabel}>
           <PixelSpaceshipIcon seed={seed} />
-          <span className="tab-title">{meta?.label || panelId}</span>
+          <span className="tab-title">
+            {baseLabel}
+            {ownerName && <span className="tab-panel-owner"> · {ownerName}</span>}
+          </span>
           <button className="tab-panel-return" onClick={(e) => { e.stopPropagation(); onReturnPanelToPanel?.(panelId); }} title="Return to panel">⊟</button>
           <button className="tab-close" onClick={(e) => { e.stopPropagation(); onClosePanelTab?.(panelId); }} title="Close">×</button>
         </div>
@@ -151,13 +156,20 @@ export function TabBar({ notebooks, activeId, onActivate, onClose, onNew, onRena
         <>
           <div className="tab-bar-panel-spacer" />
           <TabSection
-            items={[...panelTabs].map((panelId) => ({
-              id: `${PANEL_TAB_PREFIX}${panelId}`,
-              isDirty: false,
-              _panelId: panelId,
-              _label: PANEL_META[panelId]?.label || panelId,
-              _onActivate: () => onActivatePanelTab?.(panelId),
-            }))}
+            items={[...panelTabs].map(([panelId, ownerNbId]) => {
+              const owner = notebooks.find((n) => n.id === ownerNbId);
+              const ownerName = owner ? getNotebookDisplayName(owner.path, owner.title) : null;
+              return {
+                id: `${PANEL_TAB_PREFIX}${panelId}`,
+                isDirty: false,
+                _panelId: panelId,
+                _ownerName: ownerName,
+                _label: ownerName
+                  ? `${PANEL_META[panelId]?.label || panelId} · ${ownerName}`
+                  : (PANEL_META[panelId]?.label || panelId),
+                _onActivate: () => onActivatePanelTab?.(panelId),
+              };
+            })}
             className="tab-section-panels"
             activeId={activeId}
             renderItem={renderItem}

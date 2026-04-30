@@ -183,6 +183,14 @@ export function CodeCell({
   }, [rawDisplayedOutputs]);
   const errorCount = errorMessages.length;
 
+  // When a previously-erroring cell runs successfully, the local showErrors
+  // toggle would otherwise stay `true` — the error badge button hides itself
+  // (no errors), but the render branches keep showing the empty error pane
+  // and skipping the normal output. Reset it so normal output reappears.
+  useEffect(() => {
+    if (errorCount === 0 && showErrors) setShowErrors(false);
+  }, [errorCount, showErrors]);
+
   return (
     <div className={`cell code-cell${isRunning ? ' running' : ''}${locked ? ' cell-locked' : ''}${isStale ? ' cell-stale' : ''}${codeFolded ? ' cell-folded' : ''}${isScheduled ? ' cell-scheduled' : ''}${presenting ? ' cell-presenting' : ''}${debugState?.cellId === cell.id && debugState.paused ? ' debug-paused' : ''}`}>
       {cellIndex != null && <span className="cell-index-badge">{cellIndex + 1}</span>}

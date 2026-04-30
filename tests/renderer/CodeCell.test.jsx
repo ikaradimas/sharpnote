@@ -290,3 +290,28 @@ describe('CodeCell – schedule controls', () => {
   });
 });
 
+describe('CodeCell – error tab persistence after re-run', () => {
+  const errOutput = { type: 'error', message: 'CS0103: undefined' };
+  const okOutput  = { type: 'stdout', content: 'hello world' };
+
+  it('shows the error pane when outputs contain errors and the user toggles it on', () => {
+    render(<CodeCell {...defaultProps({ outputs: [errOutput] })} />);
+    fireEvent.click(screen.getByTitle(/Show 1 error/));
+    expect(screen.getByText(/CS0103: undefined/)).toBeInTheDocument();
+    expect(screen.queryByText('hello world')).toBeNull();
+  });
+
+  it('reveals normal output again when a re-run replaces the error with success', () => {
+    // First render: cell errored, user clicked the error badge to view errors.
+    const { rerender } = render(<CodeCell {...defaultProps({ outputs: [errOutput] })} />);
+    fireEvent.click(screen.getByTitle(/Show 1 error/));
+    expect(screen.queryByText('hello world')).toBeNull();
+
+    // Re-run completes successfully — outputs replaced with non-error messages.
+    rerender(<CodeCell {...defaultProps({ outputs: [okOutput] })} />);
+    expect(screen.getByText('hello world')).toBeInTheDocument();
+    // Error badge gone, no lingering "Errors" UI.
+    expect(document.querySelector('.output-error-badge')).toBeNull();
+  });
+});
+

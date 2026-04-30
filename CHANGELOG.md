@@ -2,6 +2,16 @@
 
 All notable changes to SharpNote, consolidated by minor version. Complexity: ⚙ fix, ⚙⚙ feature, ⚙⚙⚙ major.
 
+## 2.20 ⚙
+- **Embedded file deletion** now syncs to the kernel — previously `Files.Contains/Exists/[name]` kept reporting deleted files as still present
+- New `Files.Exists(name)` method on the kernel `Files` global (`Files.Contains` kept as alias) — matches `File.Exists` / `Directory.Exists` naming
+- **Error UI clears on successful re-run** — the inline diagnostic squiggles and the toggled-on error pane no longer linger after a previously-erroring cell runs cleanly; `prepareCellRun` now clears `inlineDiagnostics[cellId]` and `CodeCell` resets its local `showErrors` toggle when `errorCount` drops to 0
+- **Detached panel-tabs remember their notebook** — `panelTabs` is now `Map<panelId, notebookId>` instead of `Set<panelId>`; popped-out panels stay pinned to the notebook they came from when you switch tabs and pop back into the same notebook's dock zone
+- Panel-tab labels show the bound notebook (e.g. `Logs · report.cnb`) so multiple popped-out panels for different files are distinguishable
+- Closing a notebook also drops every panel-tab bound to it
+- `effectiveOpenFlags` correction: a panel popped out for notebook A no longer hides the dock-attached version when notebook B is active
+- Pop-back path no longer races on `setActiveId` — writes the open flag directly to the bound notebook via a centralised `PANEL_NB_FLAG` lookup
+
 ## 2.19 ⚙
 - Slide deck toolbar repositioned to bottom-center (was top-right)
 - Marp slides now fill the stage — sized the `<svg data-marpit-svg>` wrapper at `width: 100%` against the viewBox aspect ratio

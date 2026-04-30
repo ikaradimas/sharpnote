@@ -4,6 +4,16 @@
 // gears: 1 = minor fix/tweak, 2 = notable feature, 3 = major feature/architecture
 
 export const CHANGELOG = [
+  { version: '2.20.0', date: '2026-04-30', title: 'Bugfix sweep: embedded files, error UI, detached panel-tabs', gears: 1, items: [
+    'Embedded file deletion now syncs to the kernel — previously Files.Contains/Exists/[name] kept reporting deleted files as still present',
+    'New Files.Exists(name) method on the kernel Files global (Files.Contains kept as alias) — matches File.Exists / Directory.Exists naming',
+    'Error UI clears on successful re-run — inline diagnostic squiggles and the error pane no longer linger after a previously-erroring cell runs cleanly',
+    'Detached panel-tabs remember the notebook they were popped out of (panelTabs is now Map<panelId, notebookId>); popped-out panels stay pinned to the right notebook when you switch tabs',
+    'Pop-back path returns the panel to its origin notebook, not the first available one',
+    'Panel-tab labels show the bound notebook (e.g. "Logs · report.cnb") to disambiguate when multiple notebooks have detached panels',
+    'Closing a notebook drops every panel-tab bound to it',
+    'A panel popped out for notebook A no longer hides the dock-attached version when notebook B is active',
+  ]},
   { version: '2.19.0', date: '2026-04-28', title: 'Marp slide deck polish', gears: 1, items: [
     'Slide deck toolbar repositioned to bottom-center (was top-right)',
     'Marp slides now fill the stage — sized the <svg data-marpit-svg> wrapper at width:100% against the viewBox aspect ratio',

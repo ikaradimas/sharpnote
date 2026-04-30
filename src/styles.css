@@ -3026,6 +3026,7 @@ body {
 }
 .tab-section-panels { max-width: 40%; }
 .tab-panel-tab { gap: 5px; }
+.tab-panel-owner { color: var(--text-dim); font-weight: 400; margin-left: 2px; }
 .tab-panel-return {
   background: none; border: none; cursor: pointer; color: var(--text-dim);
   font-size: 11px; padding: 0 1px; line-height: 1; transition: color 0.15s;
