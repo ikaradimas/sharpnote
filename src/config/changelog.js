@@ -4,6 +4,10 @@
 // gears: 1 = minor fix/tweak, 2 = notable feature, 3 = major feature/architecture
 
 export const CHANGELOG = [
+  { version: '2.20.1', date: '2026-05-03', title: 'Windows build: skip code-signing without a certificate', gears: 1, items: [
+    'build.win.signtoolOptions: null — disables the signtool pass that was pulling in winCodeSign-2.6.0.7z and failing on Windows symlink-extraction without admin / Developer Mode',
+    'Effect on packaged binaries: same as before (we never had a code-signing cert configured), but the Windows build no longer aborts mid-package',
+  ]},
   { version: '2.20.0', date: '2026-04-30', title: 'Bugfix sweep: embedded files, error UI, detached panel-tabs', gears: 1, items: [
     'Embedded file deletion now syncs to the kernel — previously Files.Contains/Exists/[name] kept reporting deleted files as still present',
     'New Files.Exists(name) method on the kernel Files global (Files.Contains kept as alias) — matches File.Exists / Directory.Exists naming',

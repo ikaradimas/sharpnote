@@ -3,6 +3,7 @@
 All notable changes to SharpNote, consolidated by minor version. Complexity: ⚙ fix, ⚙⚙ feature, ⚙⚙⚙ major.
 
 ## 2.20 ⚙
+- Windows build no longer attempts to code-sign without a certificate — `build.win.signtoolOptions: null` skips the signtool pass that was pulling in `winCodeSign-2.6.0.7z` and failing on Windows symlink-extraction without admin / Developer Mode
 - **Embedded file deletion** now syncs to the kernel — previously `Files.Contains/Exists/[name]` kept reporting deleted files as still present
 - New `Files.Exists(name)` method on the kernel `Files` global (`Files.Contains` kept as alias) — matches `File.Exists` / `Directory.Exists` naming
 - **Error UI clears on successful re-run** — the inline diagnostic squiggles and the toggled-on error pane no longer linger after a previously-erroring cell runs cleanly; `prepareCellRun` now clears `inlineDiagnostics[cellId]` and `CodeCell` resets its local `showErrors` toggle when `errorCount` drops to 0
