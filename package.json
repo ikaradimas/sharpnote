@@ -1,6 +1,6 @@
 {
   "name": "sharpnote",
-  "version": "2.20.3",
+  "version": "2.20.4",
   "description": "SharpNote — interactive C# notebook with multi-tab MDI, NuGet, and Chart.js output",
   "main": "main.js",
   "scripts": {
@@ -91,9 +91,7 @@
           ]
         }
       ],
-      "signtoolOptions": {
-        "sign": "./scripts/sign-noop.js"
-      },
+      "signAndEditExecutable": false,
       "extraResources": [
         {
           "from": "kernel/bin/win-x64",

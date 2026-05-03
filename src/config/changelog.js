@@ -4,9 +4,14 @@
 // gears: 1 = minor fix/tweak, 2 = notable feature, 3 = major feature/architecture
 
 export const CHANGELOG = [
-  { version: '2.20.3', date: '2026-05-03', title: 'Windows build: no-op signer (correct nesting)', gears: 1, items: [
-    'build.win.signtoolOptions.sign now points at scripts/sign-noop.js — electron-builder 26.x moved the sign callback inside signtoolOptions, so the previous attempt (top-level build.win.sign in 2.20.2) was rejected as an unknown property',
-    'This is the version that actually skips signtool — verified by the schema validator reporting signtoolOptions as the only accepted location',
+  { version: '2.20.4', date: '2026-05-03', title: 'Windows build: disable signing AND exe editing', gears: 1, items: [
+    'build.win.signAndEditExecutable: false — turns off both the signtool pass and the rcedit pass that runs after it',
+    'Root cause of the earlier 2.20.x attempts: a no-op sign hook only short-circuits signing; electron-builder still downloads winCodeSign-2.6.0.7z upfront for rcedit (which it uses to embed the icon and version metadata into the .exe), and that download\'s macOS dylib symlinks fail to extract on Windows without admin / Developer Mode',
+    'Trade-off: the SharpNote.exe file itself loses its embedded icon and version metadata. The NSIS installer icon and the Start Menu / Desktop shortcuts still use assets/icon.png, so end-user-visible UI is unaffected',
+    'sign-noop.js script removed — no longer referenced',
+  ]},
+  { version: '2.20.3', date: '2026-05-03', title: 'Windows build: no-op signer (correct nesting, but insufficient)', gears: 1, items: [
+    'Tried build.win.signtoolOptions.sign — schema validates, no-op hook is called, but the winCodeSign download still runs because rcedit needs it; superseded by 2.20.4',
   ]},
   { version: '2.20.2', date: '2026-05-03', title: 'Windows build: no-op signer (wrong location, superseded)', gears: 1, items: [
     'Tried top-level build.win.sign — rejected by electron-builder 26.x as an unknown property; superseded by 2.20.3',
