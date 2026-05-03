@@ -4,9 +4,12 @@
 // gears: 1 = minor fix/tweak, 2 = notable feature, 3 = major feature/architecture
 
 export const CHANGELOG = [
-  { version: '2.20.1', date: '2026-05-03', title: 'Windows build: skip code-signing without a certificate', gears: 1, items: [
-    'build.win.signtoolOptions: null — disables the signtool pass that was pulling in winCodeSign-2.6.0.7z and failing on Windows symlink-extraction without admin / Developer Mode',
-    'Effect on packaged binaries: same as before (we never had a code-signing cert configured), but the Windows build no longer aborts mid-package',
+  { version: '2.20.2', date: '2026-05-03', title: 'Windows build: no-op signer to skip signtool', gears: 1, items: [
+    'build.win.sign now points at scripts/sign-noop.js — a no-op async function that short-circuits the signtool pass and avoids the winCodeSign-2.6.0.7z download/extraction',
+    'Replaces the 2.20.1 attempt that set signtoolOptions: null — electron-builder treated null as "use defaults" rather than "skip"; the explicit no-op script is the version that actually disables signing',
+  ]},
+  { version: '2.20.1', date: '2026-05-03', title: 'Windows build: skip code-signing without a certificate (initial attempt)', gears: 1, items: [
+    'Tried build.win.signtoolOptions: null — did not actually skip the signtool pass; superseded by 2.20.2',
   ]},
   { version: '2.20.0', date: '2026-04-30', title: 'Bugfix sweep: embedded files, error UI, detached panel-tabs', gears: 1, items: [
     'Embedded file deletion now syncs to the kernel — previously Files.Contains/Exists/[name] kept reporting deleted files as still present',
