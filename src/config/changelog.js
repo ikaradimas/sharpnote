@@ -4,9 +4,12 @@
 // gears: 1 = minor fix/tweak, 2 = notable feature, 3 = major feature/architecture
 
 export const CHANGELOG = [
-  { version: '2.20.2', date: '2026-05-03', title: 'Windows build: no-op signer to skip signtool', gears: 1, items: [
-    'build.win.sign now points at scripts/sign-noop.js — a no-op async function that short-circuits the signtool pass and avoids the winCodeSign-2.6.0.7z download/extraction',
-    'Replaces the 2.20.1 attempt that set signtoolOptions: null — electron-builder treated null as "use defaults" rather than "skip"; the explicit no-op script is the version that actually disables signing',
+  { version: '2.20.3', date: '2026-05-03', title: 'Windows build: no-op signer (correct nesting)', gears: 1, items: [
+    'build.win.signtoolOptions.sign now points at scripts/sign-noop.js — electron-builder 26.x moved the sign callback inside signtoolOptions, so the previous attempt (top-level build.win.sign in 2.20.2) was rejected as an unknown property',
+    'This is the version that actually skips signtool — verified by the schema validator reporting signtoolOptions as the only accepted location',
+  ]},
+  { version: '2.20.2', date: '2026-05-03', title: 'Windows build: no-op signer (wrong location, superseded)', gears: 1, items: [
+    'Tried top-level build.win.sign — rejected by electron-builder 26.x as an unknown property; superseded by 2.20.3',
   ]},
   { version: '2.20.1', date: '2026-05-03', title: 'Windows build: skip code-signing without a certificate (initial attempt)', gears: 1, items: [
     'Tried build.win.signtoolOptions: null — did not actually skip the signtool pass; superseded by 2.20.2',
