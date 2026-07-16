@@ -878,21 +878,6 @@ export const DOCS_SECTIONS = [
     ],
   },
   {
-    id: 'output-history', title: 'Cell Output History',
-    content: [
-      { type: 'p', text: 'SharpNote remembers the outputs from the last 5 executions of each code cell, so you can compare results across runs without re-running.' },
-      { type: 'h3', text: 'Navigating History' },
-      { type: 'p', text: 'After a cell has been run at least twice, a navigator appears in its footer: ‹ run −N / total ›. Click ‹ or › to step through historical outputs. The label shows which run is displayed relative to the current one.' },
-      { type: 'h3', text: 'Notes' },
-      { type: 'ul', items: [
-        'History is in-memory only — it is not persisted when the notebook is saved or the kernel resets',
-        'Only the last 5 outputs are retained per cell; older entries are discarded automatically',
-        'Navigating history does not affect the current cell state or re-run anything',
-      'Pin a historical output for side-by-side comparison with the current output using the 📌 button',
-      ]},
-    ],
-  },
-  {
     id: 'cell-diff-view', title: 'Cell Diff View',
     content: [
       { type: 'p', text: 'When a code cell is marked stale (upstream variables changed), a "Show changes since last run" button appears below the stale banner. Click it to reveal an inline diff showing lines added and removed since the cell was last executed.' },
@@ -902,19 +887,6 @@ export const DOCS_SECTIONS = [
         'The diff uses an LCS-based algorithm to compare the last-run code with the current content',
         'Added lines are shown in green with a + marker; removed lines in red with a − marker',
         'The diff view resets when the cell starts running',
-      ]},
-    ],
-  },
-  {
-    id: 'output-pinning', title: 'Output Pinning & Comparison',
-    content: [
-      { type: 'p', text: 'Pin a historical output to compare it side-by-side with the current output. This is useful for tracking how results change across executions.' },
-      { type: 'h3', text: 'Using Pinned Outputs' },
-      { type: 'ul', items: [
-        'Navigate to a historical output using the ‹ › history controls in the cell footer',
-        'Click the 📌 button to pin that output for comparison',
-        'A side-by-side comparison view appears showing the pinned output on the left and the current output on the right',
-        'Click "✕ pinned" to remove the pin and return to the normal view',
       ]},
     ],
   },
@@ -939,24 +911,6 @@ export const DOCS_SECTIONS = [
       { type: 'p', text: 'A "↺ upstream variables changed" banner appears at the top of a flagged cell. This is a hint, not a guarantee — the detection uses simple identifier matching and may produce false positives or miss some cases.' },
       { type: 'h3', text: 'Clearing the Hint' },
       { type: 'p', text: 'The banner disappears as soon as the cell is run, or when the kernel is reset. Running the flagged cell clears it regardless of whether the output changed.' },
-    ],
-  },
-  {
-    id: 'variable-sparklines', title: 'Variable Sparklines',
-    content: [
-      { type: 'p', text: 'The Variables panel tracks the history of numeric variables across executions and displays a sparkline (mini trend chart) for each one.' },
-      { type: 'h3', text: 'How It Works' },
-      { type: 'ul', items: [
-        'Each time a cell runs successfully, all numeric variables in scope are recorded',
-        'Up to 50 data points are retained per variable',
-        'A sparkline appears in the rightmost column of the Variables panel when at least 2 data points exist',
-      ]},
-      { type: 'h3', text: 'Notes' },
-      { type: 'ul', items: [
-        'Only variables whose value parses as a finite number (int, double, float, decimal, etc.) show sparklines',
-        'History is reset when the kernel resets',
-        'String and complex type variables still appear in the table but without a sparkline',
-      ]},
     ],
   },
   {

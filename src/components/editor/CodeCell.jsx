@@ -48,7 +48,6 @@ export function CodeCell({
   cell,
   cellIndex,
   outputs,
-  outputHistory,
   notebookId,
   isStale,
   lastResult = null,
@@ -108,17 +107,8 @@ export function CodeCell({
   const [lastDuration, setLastDuration] = useState(null);
   const [lastRanAt, setLastRanAt] = useState(null);
   const elapsedRef = useRef(0);
-  // Output history browsing: -1 = current, 0 = oldest historical, histLen-1 = newest historical
-  const [histIdx, setHistIdx] = useState(-1);
   // Feature: cell diff view when stale
   const [showDiff, setShowDiff] = useState(false);
-  // Feature: output pinning with comparison
-  const [pinnedHistIdx, setPinnedHistIdx] = useState(null);
-
-  // Reset to current when a new run starts or outputs change
-  useEffect(() => {
-    setHistIdx(-1);
-  }, [isRunning, outputs]);
 
   // Reset diff view when cell starts running
   useEffect(() => { if (isRunning) setShowDiff(false); }, [isRunning]);
@@ -169,12 +159,9 @@ export function CodeCell({
     return () => document.removeEventListener('mousedown', handler);
   }, [presentRefreshOpen]);
 
-  const histLen = outputHistory ? outputHistory.length : 0;
   const [showErrors, setShowErrors] = useState(false);
 
-  const rawDisplayedOutputs = histIdx >= 0 && histLen > 0
-    ? outputHistory[histIdx]
-    : outputs;
+  const rawDisplayedOutputs = outputs;
   const { errorMessages, normalMessages } = useMemo(() => {
     const errors = [], normal = [];
     for (const o of rawDisplayedOutputs || [])
@@ -350,22 +337,6 @@ export function CodeCell({
       )}
       {showErrors && <CellOutput messages={errorMessages} notebookId={notebookId} allCells={allCells} onRunCellByName={onRunCellByName} />}
       {!showErrors && !outputCollapsed && <CellOutput messages={normalMessages} notebookId={notebookId} allCells={allCells} onRunCellByName={onRunCellByName} />}
-      {pinnedHistIdx !== null && histLen > pinnedHistIdx && !showErrors && !outputCollapsed && (
-        <div className="output-compare">
-          <div className="output-compare-header">
-            <span className="output-compare-label">Pinned (run −{histLen - pinnedHistIdx})</span>
-            <span className="output-compare-label">Current</span>
-          </div>
-          <div className="output-compare-panes">
-            <div className="output-compare-pane">
-              <CellOutput messages={outputHistory[pinnedHistIdx]} notebookId={notebookId} />
-            </div>
-            <div className="output-compare-pane">
-              <CellOutput messages={normalMessages} notebookId={notebookId} />
-            </div>
-          </div>
-        </div>
-      )}
       {!showErrors && !outputCollapsed && !normalMessages.length && retainedResult && (
         <div className="retained-result">
           <div className="retained-header">
@@ -403,36 +374,6 @@ export function CodeCell({
               <span className="cell-ran-at" title={lastRanAt.toLocaleString()}>
                 {lastRanAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
               </span>
-            )}
-          </span>
-        )}
-        {histLen > 0 && !isRunning && (
-          <span className="output-history-nav">
-            <button
-              className="hist-nav-btn"
-              onClick={() => setHistIdx((i) => Math.max(i === -1 ? histLen - 1 : i - 1, 0))}
-              disabled={histIdx === 0}
-              title="Previous run output"
-            >‹</button>
-            <span className="hist-nav-label">
-              {histIdx === -1 ? `current` : `run −${histLen - histIdx}`}
-              {` / ${histLen + 1}`}
-            </span>
-            <button
-              className="hist-nav-btn"
-              onClick={() => setHistIdx((i) => i >= histLen - 1 ? -1 : i + 1)}
-              disabled={histIdx === -1}
-              title="Next run output"
-            >›</button>
-            {histIdx >= 0 && (
-              <button className="hist-pin-btn" onClick={() => setPinnedHistIdx(histIdx)} title="Pin this output for comparison">
-                📌
-              </button>
-            )}
-            {pinnedHistIdx !== null && (
-              <button className="hist-unpin-btn" onClick={() => setPinnedHistIdx(null)} title="Unpin comparison">
-                ✕ pinned
-              </button>
             )}
           </span>
         )}

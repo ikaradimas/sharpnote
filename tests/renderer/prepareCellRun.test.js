@@ -29,16 +29,17 @@ describe('prepareCellRun', () => {
     expect(patch.running.has('c1')).toBe(true);
   });
 
-  it('snapshots previous outputs into outputHistory', () => {
+  it('discards previous outputs — a cell keeps only its latest run', () => {
     const prev = [{ type: 'stdout', text: 'old' }];
     const { patch } = runPrepare({
       cells:    [{ id: 'c1', content: 'var x = 1;' }],
       outputs:  { c1: prev },
       cellResults: {},
       running:  new Set(),
-      outputHistory: { c1: [] },
     });
-    expect(patch.outputHistory.c1).toEqual([prev]);
+    // No output-history accumulation: the previous run is dropped, not archived.
+    expect(patch.outputHistory).toBeUndefined();
+    expect(patch.outputs.c1).toEqual([]);
   });
 
   // ── Bug fix coverage: re-running a cell that previously had compile errors

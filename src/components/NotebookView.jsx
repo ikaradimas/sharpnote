@@ -98,7 +98,7 @@ export function NotebookView({
   onHighlightCells,
   viewerMode = false,
 }) {
-  const { cells, outputs, outputHistory, cellResults, running, kernelStatus,
+  const { cells, outputs, cellResults, running, kernelStatus,
           config, logPanelOpen, nugetPanelOpen, configPanelOpen, inlineDiagnostics,
           dbPanelOpen, varsPanelOpen, tocPanelOpen, graphPanelOpen, todoPanelOpen, regexPanelOpen, historyPanelOpen, depsPanelOpen, embedPanelOpen,
           path: notebookPath, staleCellIds, attachedDbs, autoRun, breakpoints, debugState, runningAll } = nb;
@@ -439,7 +439,7 @@ export function NotebookView({
     );
     return (
       <CodeCell cell={cell} cellIndex={index} outputs={outputs[cell.id]}
-        outputHistory={outputHistory?.[cell.id] ?? []} notebookId={nb.id}
+        notebookId={nb.id}
         isStale={(staleCellIds || []).includes(cell.id)} lastResult={cellResults?.[cell.id] ?? null}
         isRunning={running.has(cell.id)} anyRunning={running.size > 0}
         kernelReady={kernelStatus === 'ready'} onUpdate={(val) => updateCell(cell.id, val)}

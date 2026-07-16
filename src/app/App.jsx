@@ -1276,7 +1276,6 @@ export function App() {
       vars: {
         onToggle: nbId ? () => setNb(nbId, (n) => ({ varsPanelOpen: !n.varsPanelOpen })) : () => {},
         vars: nb?.vars ?? [],
-        varHistory: nb?.varHistory ?? {},
         varDiff: nb?.varDiff ?? null,
         onInspect: nbId ? (name) => {
           const v = (nb?.vars ?? []).find((vv) => vv.name === name);

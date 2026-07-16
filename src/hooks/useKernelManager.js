@@ -27,11 +27,6 @@ function resolveParams(nb) {
 
 export function prepareCellRun(setNb, pendingResolversRef, notebookId, cellId, resolve) {
   setNb(notebookId, (n) => {
-    const prevOutputs = n.outputs[cellId];
-    const newOutputHistory = { ...(n.outputHistory || {}) };
-    if (prevOutputs?.length > 0) {
-      newOutputHistory[cellId] = [...(newOutputHistory[cellId] || []).slice(-4), prevOutputs];
-    }
     const cell = n.cells.find(c => c.id === cellId);
     const updatedCells = cell ? n.cells.map(c => c.id === cellId ? { ...c, _lastRunCode: c.content } : c) : n.cells;
     // Clear inline diagnostics — the kernel only emits inline_diagnostics on
@@ -41,7 +36,6 @@ export function prepareCellRun(setNb, pendingResolversRef, notebookId, cellId, r
     return {
       cells: updatedCells,
       outputs: { ...n.outputs, [cellId]: [] },
-      outputHistory: newOutputHistory,
       cellResults: { ...(n.cellResults || {}), [cellId]: null },
       running: new Set([...n.running, cellId]),
       ...(hadDiags ? { inlineDiagnostics: { ...(n.inlineDiagnostics || {}), [cellId]: [] } } : {}),
@@ -573,7 +567,7 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
           break;
 
         case 'reset_complete':
-          setNb(notebookId, { kernelStatus: 'ready', vars: [], varHistory: {}, outputHistory: {}, staleCellIds: [] });
+          setNb(notebookId, { kernelStatus: 'ready', vars: [], varHistory: {}, staleCellIds: [] });
           break;
 
         case 'kernel_status':

@@ -1,27 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { formatCSharpLiteral } from '../../utils.js';
 
-function Sparkline({ values }) {
-  if (!values || values.length < 2) return null;
-  const w = 64, h = 22;
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const range = max - min || 1;
-  const pts = values
-    .map((v, i) => {
-      const x = (i / (values.length - 1)) * w;
-      const y = h - 2 - ((v - min) / range) * (h - 4);
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    })
-    .join(' ');
-  return (
-    <svg width={w} height={h} className="var-sparkline" aria-hidden="true">
-      <polyline points={pts} />
-    </svg>
-  );
-}
-
-export function VarsPanel({ vars, varHistory, varDiff, onInspect, watchExpressions, onAddWatch, onRemoveWatch }) {
+export function VarsPanel({ vars, varDiff, onInspect, watchExpressions, onAddWatch, onRemoveWatch }) {
   const [search, setSearch] = useState('');
   const [watchInput, setWatchInput] = useState('');
 
@@ -100,22 +80,17 @@ export function VarsPanel({ vars, varHistory, varDiff, onInspect, watchExpressio
                 <th>Name</th>
                 <th>Type</th>
                 <th>Value</th>
-                <th className="vars-sparkline-col"></th>
                 <th className="vars-inspect-col"></th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((v) => {
-                const hist = varHistory?.[v.name];
                 return (
                   <tr key={v.name} className={`vars-row${varDiff?.[v.name] ? ` var-row-${varDiff[v.name]}` : ''}`}>
                     <td className="vars-name">{v.name}</td>
                     <td><span className="vars-type-badge">{v.typeName}</span></td>
                     <td className="vars-value" title={v.value}>
                       {v.isNull ? <span className="vars-null">null</span> : v.value}
-                    </td>
-                    <td className="vars-sparkline-cell">
-                      {hist && hist.length >= 2 && <Sparkline values={hist.map((p) => typeof p === 'number' ? p : p.v)} />}
                     </td>
                     <td className="vars-inspect-cell">
                       <button
