@@ -2,7 +2,7 @@
 
 ## Workflow Orchestration
 
-### 1. Plan Node Default
+### 1. Plan Mode Default
 - Enter plan mode for ANY non-trivial task (3+ steps or architectural decisions)
 - If something goes sideways, STOP and re-plan immediately – don't keep pushing
 - Use plan mode for verification steps, not just building
@@ -58,14 +58,16 @@
 After completing any task that modifies files, commit all changed files before finishing.
 Do not leave work uncommitted at the end of a session.
 
-**Authorship:** Every commit must be authored and committed by Claude. Always set both
-the author and committer identity by prefixing the `git commit` call with the environment
-variables below. Never rely on the ambient git config for identity.
+**Authorship:** Every commit must be authored and committed by Claude, never the ambient
+git config. Set both the author and committer identity by prefixing the `git commit` call
+with the environment variables below. Use the stable name `Claude` — do **not** hardcode a
+model version here (it goes stale); record the specific model in the commit-message trailer
+instead (e.g. `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`).
 
 ```bash
-GIT_AUTHOR_NAME="Claude Sonnet 4.6" \
+GIT_AUTHOR_NAME="Claude" \
 GIT_AUTHOR_EMAIL="noreply@anthropic.com" \
-GIT_COMMITTER_NAME="Claude Sonnet 4.6" \
+GIT_COMMITTER_NAME="Claude" \
 GIT_COMMITTER_EMAIL="noreply@anthropic.com" \
 git commit -m "..."
 ```
@@ -108,19 +110,32 @@ and that `README.md` reflects the change in its Features list and/or Architectur
 
 ## Key file locations
 
-### Electron main process (`src/main/`)
+### Electron main process
+
+`main.js`, `preload.js`, and `index.html` live at the repo root; the rest of the
+main-process code lives in `src/main/`. Curated, not exhaustive:
 
 | File | Purpose |
 |---|---|
-| `main.js` | Entry point — wires IPC handlers, creates BrowserWindow |
+| `main.js` (repo root) | Entry point — creates the BrowserWindow, wires the IPC handlers |
+| `preload.js` (repo root) | contextBridge — exposes `window.electronAPI` to the renderer |
 | `src/main/kernel-manager.js` | Kernel lifecycle: spawn, kill, queue, ready state |
-| `src/main/notebook-io.js` | Notebook save / load / recent-files persistence |
+| `src/main/notebook-io.js` | Notebook save / load persistence |
+| `src/main/notebook-history.js` | Sidecar `.cnb.history` snapshot store |
+| `src/main/recent-files.js` | Recent-files persistence |
 | `src/main/file-ops.js` | Generic file read/write, path-traversal guard |
 | `src/main/db-connections.js` | DB connection list persistence |
 | `src/main/library.js` | Code library directory operations |
 | `src/main/log-ops.js` | Log file read/write |
 | `src/main/settings.js` | App settings persistence (dock layout, theme, …) |
 | `src/main/menu.js` | `buildMenu()` — application menu and accelerators |
+| `src/main/headless.js` | CLI / headless notebook execution |
+| `src/main/git-ops.js` | Git panel operations |
+| `src/main/kafka.js` | Kafka broker connections + consumers |
+| `src/main/export-exe.js`, `export-app.js` | Export as Executable / as App |
+| `src/main/api-editor-export.js`, `api-csharp-export.js`, `api-saved.js`, `mock-server.js` | API Editor / Browser support + mock server |
+| `src/main/snapshots.js` | Output-snapshot capture / compare |
+| `src/main/polyglot-import.js` | Excel / Parquet data-file import |
 
 ### React renderer (`src/`)
 
@@ -129,17 +144,20 @@ and that `README.md` reflects the change in its Features list and/or Architectur
 | `src/renderer.jsx` | Bundle entry + re-exports for tests; no component code |
 | `src/app/App.jsx` | Root component — all global state, IPC listeners |
 | `src/app/StatusBar.jsx` | Bottom status bar (memory sparkline, cursor position) |
+| `src/app/panel-tabs.js` | Panel tab metadata (ids, labels, ordering) |
 | `src/components/NotebookView.jsx` | Toolbar + cell list for one notebook |
+| `src/components/` (top level) | Misc renderer widgets: NotebookParams, FindBar, ErrorBoundary, and decorative art (CircuitBoard, Ghost, IdleSkyline) |
 | `src/components/toolbar/` | TabBar, Tab, Toolbar, ThemePicker, ToolsMenu, Icons, … |
-| `src/components/editor/` | CodeEditor (CodeMirror), CodeCell, MarkdownCell, AddBar |
-| `src/components/output/` | OutputBlock, CellOutput, DataTable, GraphOutput |
-| `src/components/panels/` | LogPanel, NugetPanel, DbPanel, DocsPanel, ConfigPanel, VarsPanel, TocPanel, FilesPanel, LibraryPanel, LibraryEditorPane |
+| `src/components/editor/` | CodeEditor (CodeMirror), CodeCell, MarkdownCell, AddBar, and specialised cells: SqlCell, HttpCell, ShellCell, DockerCell, FlociCell, DecisionCell, CheckCell |
+| `src/components/output/` | OutputBlock (defines CellOutput), DataTable, GraphOutput, plus per-type renderers: Map, Sankey, TreeMap, Network, CalendarHeat, ObjectTree, Form, Layout, Image, Markdown, Marp, Progress, Widget |
+| `src/components/panels/` | Feature panels: ConfigPanel, VarsPanel, TocPanel, TodoPanel, GraphPanel, HistoryPanel, ProfilePanel, RegexPanel, DependencyPanel, EmbedPanel, FilesPanel, GitPanel, ApiPanel, ApiEditorPanel, ChangelogPanel; grouped subfolders `log/`, `nuget/`, `db/`, `docs/`, `library/`, `kafka/`, `git/`, `api-editor/`, `dep/` |
 | `src/components/dock/` | DockZone, FloatPanel, DockDropOverlay, LayoutManager, renderPanelContent |
-| `src/components/dialogs/` | QuitDialog |
-| `src/config/` | DOCS_SECTIONS, THEMES, TAB_COLORS, dock-layout defaults, DB providers, C# keywords |
+| `src/components/dialogs/` | AboutDialog, SettingsDialog, CommandPalette, QuitDialog, NewNotebookDialog, DbConnectionDialog, VarInspectDialog, ExportAppDialog, PassphraseDialog, CredentialsDialog, KeyboardShortcutsOverlay |
+| `src/config/` | docs-sections, themes, tab-colors, dock-layout, db-providers, notebook-backgrounds, changelog, table-page-size-context |
 | `src/constants.js` | Shared string constants (DOCS_TAB_ID, LIB_EDITOR_ID_PREFIX, …) |
 | `src/utils.js` | Pure helper functions (formatters, parsers, ID helpers) |
-| `src/hooks/` | Custom React hooks (useResize, …) |
+| `src/notebook-factory.js` | Default per-notebook state shape (`createNotebook`) |
+| `src/hooks/` | Custom React hooks: useKernelManager, useNotebookManager, useDockLayout, useCellDependencies, useCellOrchestrator, useCellScheduler, usePipelineManager, useClipboard, useResize, useOutsideClick |
 | `src/styles.css` | Urban dark theme |
 
 ### Kernel (`kernel/`)
@@ -151,8 +169,12 @@ and that `README.md` reflects the change in its Features list and/or Architectur
 | `kernel/Display.cs` | DisplayHandle + DisplayHelper |
 | `kernel/Extensions.cs` | `.Display()`, `.Log()`, `.AutoDisplay()` extension methods |
 | `kernel/SyntaxRewriter.cs` | Roslyn CancellationCheckInjector |
-| `kernel/Handlers/` | `partial class Program` handlers: Execute, Nuget, Lint, Autocomplete, Db, Reset |
-| `kernel/Db/` | IDbProvider, DbProviders registry, DbCodeGen, per-provider classes (SQLite, SQL Server, PostgreSQL, Redis), Models |
+| `kernel/DebugContext.cs`, `DebugCheckInjector.cs` | Breakpoint/debugger support |
+| `kernel/LspServer.cs`, `WorkspaceManager.cs` | LSP server (completions, hover, diagnostics) over the named pipe |
+| `kernel/*.cs` scripting helpers | Stats, TimeSeries, GeoHelper (+GeoCache), DockerHelper, Panels, UtilHelper, DataHelper, FilesHelper, MockHelper, DbApi |
+| `kernel/BitmapFont.cs`, `BmpEncoder.cs`, `PngEncoder.cs` | Canvas / image-output encoding |
+| `kernel/Handlers/` | `partial class Program` handlers: Execute, Nuget, Lint, Autocomplete, Signature, Check, Format, Db, Sql, Http, Shell, Docker, Decision, VarInspect, Reset |
+| `kernel/Db/` | IDbProvider, DbProviders registry, DbCodeGen, Models, AssemblyLoader, per-provider classes (SQLite, SQLite-InMemory, SQL Server, PostgreSQL, Redis) |
 
 ### Tests & docs
 
@@ -206,6 +228,6 @@ already exports a different primary component or hook.
 - `src/main/*.js` modules must not import from `src/components/**` (renderer-only code)
 
 **Small helper components** that are only ever used by a single parent component (e.g.
-`CellControls` inside `CodeCell.jsx`) may be defined in the same file as that parent,
-but must **not** be exported. If a helper is needed by two or more components, extract it
-to its own file.
+the local `Sparkline` inside `ProfilePanel.jsx`) may be defined in the same file as that
+parent, but must **not** be exported. If a helper is needed by two or more components,
+extract it to its own file.
