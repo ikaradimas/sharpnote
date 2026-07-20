@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -29,6 +30,10 @@ partial class Program
         // but the old variable was declared with the previous namespace's type).
         var decl = isReconnect ? "" : "var ";
         var cast = isReconnect ? "(dynamic)" : "";
+        // Singular aliases are only emitted on first attach: a repeated `using Alias = …;`
+        // in a later submission is a compile error (CS1537). The LSP preamble is rebuilt
+        // wholesale each attach, so completions/diagnostics stay correct after a reconnect.
+        var aliases = isReconnect ? "" : string.Concat(TableAliasUsings(info).Select(a => a + "\n"));
         string code;
 
         if (!provider.IsRelational)
@@ -45,7 +50,7 @@ partial class Program
             var ctx       = info.ContextTypeName ?? DbCodeGen.ContextTypeName(info.Name);
             var ns        = ctx[..ctx.LastIndexOf('.')];
             var keeperVar = $"__{info.VarName}_conn";
-            code = $"using {ns};\n" +
+            code = $"using {ns};\n" + aliases +
                    $"{decl}{keeperVar} = {cast}new Microsoft.Data.Sqlite.SqliteConnection({S(info.ConnectionString)});\n" +
                    $"{keeperVar}.Open();\n" +
                    $"{decl}{info.VarName} = {cast}new {ctx}({keeperVar});";
@@ -55,7 +60,7 @@ partial class Program
             // Regular relational: string-based DbContext
             var ctx = info.ContextTypeName ?? DbCodeGen.ContextTypeName(info.Name);
             var ns  = ctx[..ctx.LastIndexOf('.')];
-            code = $"using {ns};\n" +
+            code = $"using {ns};\n" + aliases +
                    $"{decl}{info.VarName} = {cast}new {ctx}({S(info.ConnectionString)}, {S(info.Provider)});";
         }
 
@@ -67,11 +72,26 @@ partial class Program
     // Safe C# string literal
     private static string S(string value) => JsonSerializer.Serialize(value);
 
+    // Singular-alias using directives for a relational connection, e.g.
+    //   using Purchase = DynDb_Shop_ab12cd34.Purchases;
+    // so the conventional EF-style singular name resolves to the same POCO type.
+    private static IEnumerable<string> TableAliasUsings(DbConnectionInfo info)
+    {
+        var provider = DbProviders.Get(info.Provider);
+        if (!provider.IsRelational) yield break;
+        var ctx = info.ContextTypeName ?? DbCodeGen.ContextTypeName(info.Name);
+        var ns  = ctx[..ctx.LastIndexOf('.')];
+        foreach (var (_, typeName, alias) in DbCodeGen.TableTypeInfo(info.Schema))
+            if (alias != null)
+                yield return $"using {alias} = {ns}.{typeName};";
+    }
+
     private static string BuildDbPreamble()
     {
         var sb = new StringBuilder();
         // Add using directives for each relational DB's namespace so POCO types
-        // (e.g. Contacts, Users) are accessible without full qualification.
+        // (e.g. Contacts, Users) are accessible without full qualification, plus a
+        // singular alias per table (Purchase → Purchases) for EF-style ergonomics.
         foreach (var info in attachedDbs.Values)
         {
             var provider = DbProviders.Get(info.Provider);
@@ -80,6 +100,8 @@ partial class Program
                 var ctx = info.ContextTypeName ?? DbCodeGen.ContextTypeName(info.Name);
                 var ns  = ctx[..ctx.LastIndexOf('.')];
                 sb.AppendLine($"using {ns};");
+                foreach (var aliasUsing in TableAliasUsings(info))
+                    sb.AppendLine(aliasUsing);
             }
         }
         foreach (var info in attachedDbs.Values)
@@ -120,17 +142,21 @@ partial class Program
             // 1. Introspect schema
             var schema = await provider.IntrospectAsync(connectionId, effectiveCs);
 
-            // 2. Send schema to renderer for tree display
+            // 2. Send schema to renderer for tree display. For relational providers include
+            //    the generated POCO type name and its singular alias per table (null for Redis).
+            var typeInfo = provider.IsRelational ? DbCodeGen.TableTypeInfo(schema) : null;
             var schemaPayload = new
             {
                 type         = "db_schema",
                 connectionId,
                 databaseName = schema.DatabaseName,
                 redisCursor  = schema.RedisCursor,
-                tables       = schema.Tables.Select(t => new
+                tables       = schema.Tables.Select((t, i) => new
                 {
                     schema   = t.Schema,
                     name     = t.Name,
+                    typeName = typeInfo != null ? typeInfo[i].TypeName : null,
+                    singular = typeInfo != null ? typeInfo[i].Alias    : null,
                     columns  = t.Columns.Select(c => new
                     {
                         name        = c.Name,
@@ -218,15 +244,18 @@ partial class Program
             var provider = DbProviders.Get(info.Provider);
             var schema   = await provider.IntrospectAsync(connectionId, info.ConnectionString);
 
+            var typeInfo = provider.IsRelational ? DbCodeGen.TableTypeInfo(schema) : null;
             var schemaPayload = new
             {
                 type         = "db_schema",
                 connectionId,
                 databaseName = schema.DatabaseName,
-                tables       = schema.Tables.Select(t => new
+                tables       = schema.Tables.Select((t, i) => new
                 {
                     schema   = t.Schema,
                     name     = t.Name,
+                    typeName = typeInfo != null ? typeInfo[i].TypeName : null,
+                    singular = typeInfo != null ? typeInfo[i].Alias    : null,
                     columns  = t.Columns.Select(c => new
                     {
                         name        = c.Name,

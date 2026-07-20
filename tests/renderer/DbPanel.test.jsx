@@ -25,6 +25,8 @@ const SCHEMA = {
     {
       schema: 'main',
       name: 'Users',
+      typeName: 'Users',
+      singular: 'User',
       columns: [
         { name: 'Id', csharpType: 'int', isPrimaryKey: true },
         { name: 'Name', csharpType: 'string', isPrimaryKey: false },
@@ -34,6 +36,8 @@ const SCHEMA = {
     {
       schema: 'main',
       name: 'Orders',
+      typeName: 'Orders',
+      singular: 'Order',
       columns: [
         { name: 'OrderId', csharpType: 'int', isPrimaryKey: true },
         { name: 'UserId', csharpType: 'int', isPrimaryKey: false },
@@ -372,6 +376,35 @@ describe('DbPanel', () => {
     render(<DbPanel {...defaultProps({ attachedDbs: [ATTACHED_READY] })} />);
     expect(document.querySelector('.db-var-badge')).not.toBeNull();
     expect(document.querySelector('.db-var-badge').textContent).toContain('db');
+  });
+
+  // ── Type-name badge ──────────────────────────────────────────────────────
+
+  it('shows the generated C# type name (singular alias) badge per table', () => {
+    render(<DbPanel {...defaultProps({ attachedDbs: [ATTACHED_READY] })} />);
+    const badges = [...document.querySelectorAll('.db-type-badge')].map((b) => b.textContent);
+    expect(badges).toContain('User');   // singular of Users
+    expect(badges).toContain('Order');  // singular of Orders
+  });
+
+  it('copies the type name to the clipboard on click without toggling the row', () => {
+    const writeText = vi.fn().mockResolvedValue();
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    render(<DbPanel {...defaultProps({ attachedDbs: [ATTACHED_READY] })} />);
+    // Row starts collapsed; clicking the badge must not expand it.
+    expect(document.querySelector('.db-columns-list')).toBeNull();
+    fireEvent.click(screen.getByTitle('Copy C# type name: User'));
+    expect(writeText).toHaveBeenCalledWith('User');
+    expect(document.querySelector('.db-columns-list')).toBeNull();
+  });
+
+  it('omits the type badge for tables without a generated type name (e.g. Redis)', () => {
+    const redisAttached = {
+      connectionId: 'conn-1', status: 'ready', varName: 'redis',
+      schema: { tables: [{ schema: '', name: '(keys)', columns: [{ name: 'k', dbType: 'string' }] }] },
+    };
+    render(<DbPanel {...defaultProps({ attachedDbs: [redisAttached], connections: [{ ...CONN_SQLITE, provider: 'redis' }] })} />);
+    expect(document.querySelector('.db-type-badge')).toBeNull();
   });
 
   // ── Schema filter ───────────────────────────────────────────────────────

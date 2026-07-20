@@ -48,6 +48,54 @@ public static class DbCodeGen
         return $"{ns}.{typeName}DbContext";
     }
 
+    private static readonly Dictionary<string, string> Irregulars = new()
+    {
+        ["People"] = "Person", ["Children"] = "Child",
+        ["Men"] = "Man", ["Women"] = "Woman",
+    };
+
+    /// <summary>
+    /// Best-effort English singularization of a PascalCase type name (e.g. "Purchases" →
+    /// "Purchase", "Categories" → "Category", "Boxes" → "Box"). Returns the input unchanged
+    /// when it does not look plural. This is a convenience only — the plural class name is
+    /// always the real type.
+    /// </summary>
+    public static string Singularize(string name)
+    {
+        if (string.IsNullOrEmpty(name)) return name;
+        if (Irregulars.TryGetValue(name, out var irregular)) return irregular;
+        // Words that end in these are typically already singular ("Address", "Status", "Analysis").
+        if (name.EndsWith("ss") || name.EndsWith("us") || name.EndsWith("is")) return name;
+        if (name.EndsWith("ies") && name.Length > 4) return name[..^3] + "y"; // Categories → Category
+        // Drop "es" only after a true sibilant, where "-es" is the plural marker.
+        if (name.EndsWith("sses") || name.EndsWith("ches") || name.EndsWith("shes") ||
+            name.EndsWith("xes")  || name.EndsWith("zes"))
+            return name[..^2];                                               // Addresses → Address, Batches → Batch, Boxes → Box
+        if (name.EndsWith("s") && name.Length > 1) return name[..^1];        // Purchases → Purchase, Orders → Order, Houses → House
+        return name;
+    }
+
+    /// <summary>
+    /// For each table, returns its generated POCO class name and an optional singular alias.
+    /// The alias is null when it would not differ from the class name or would collide with
+    /// another table's class name or an earlier alias. Single source of truth shared by the
+    /// db_schema payload, the LSP preamble, and the runtime injection.
+    /// </summary>
+    public static List<(TableSchema Table, string TypeName, string? Alias)> TableTypeInfo(DbSchema schema)
+    {
+        var classNames = new HashSet<string>(schema.Tables.Select(t => SanitizeTypeName(t.Name)));
+        var claimed    = new HashSet<string>(classNames);
+        var result     = new List<(TableSchema, string, string?)>(schema.Tables.Count);
+        foreach (var t in schema.Tables)
+        {
+            var typeName = SanitizeTypeName(t.Name);
+            var singular = Singularize(typeName);
+            string? alias = (singular != typeName && claimed.Add(singular)) ? singular : null;
+            result.Add((t, typeName, alias));
+        }
+        return result;
+    }
+
     // ── Code generation ───────────────────────────────────────────────────────
 
     public static string GenerateSource(string connectionName, IDbProvider provider, DbSchema schema, string? nsSuffix = null)

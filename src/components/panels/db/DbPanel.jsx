@@ -26,6 +26,22 @@ function CopyBtn({ text }) {
   );
 }
 
+// Shows a table's generated C# type name (the EF-style singular alias when available)
+// as a small clipboard badge; clicking copies it. Mirrors the DbContext VarBadge.
+function TypeBadge({ label }) {
+  const [copied, copy] = useClipboard();
+  return (
+    <button
+      className="db-type-badge"
+      onClick={(e) => { e.stopPropagation(); copy(label); }}
+      title={copied ? 'Copied!' : `Copy C# type name: ${label}`}
+    >
+      <span className="db-type-name">{label}</span>
+      {copied ? '✓' : <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>}
+    </button>
+  );
+}
+
 function DbSchemaTree({ schema, isRedis, onLoadMore }) {
   const [expanded, setExpanded] = useState({});
   const [searchInput, setSearchInput] = useState('');
@@ -84,6 +100,7 @@ function DbSchemaTree({ schema, isRedis, onLoadMore }) {
               <span className="db-table-name" style={isRedis && depth > 0 ? { color: NS_COLORS[depth % NS_COLORS.length] } : undefined}>
                 {table.schema ? `${table.schema}.${table.name}` : table.name}
               </span>
+              {table.typeName && <TypeBadge label={table.singular || table.typeName} />}
               <span className="db-col-count">{table.columns.length}</span>
             </div>
             {isOpen && (

@@ -4206,6 +4206,27 @@ body {
 }
 .db-var-copy:hover { opacity: 1; }
 
+/* Per-table C# type-name badge (schema tree) */
+.db-type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+  font-family: var(--font-code);
+  font-size: 9.5px;
+  background: #0d2030;
+  color: #6889a0;
+  border: 1px solid #1e3040;
+  border-radius: 3px;
+  padding: 0 3px 0 5px;
+  cursor: pointer;
+  line-height: 1.6;
+  opacity: 0.5;
+}
+.db-table-header:hover .db-type-badge { opacity: 1; }
+.db-type-badge:hover { color: var(--accent-primary); border-color: var(--accent-primary); }
+.db-type-name { line-height: 1; }
+
 /* Connection form */
 .db-connection-form {
   padding: 8px 10px;

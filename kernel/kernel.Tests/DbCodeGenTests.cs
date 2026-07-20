@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using FluentAssertions;
 using SharpNoteKernel;
 using SharpNoteKernel.Db;
@@ -148,5 +149,71 @@ public class DbCodeGenTests
         var source = DbCodeGen.GenerateSource("test", provider, schema);
 
         source.Should().Contain("HasNoKey");
+    }
+
+    // ── Singularize ───────────────────────────────────────────────────────────
+
+    [Theory]
+    [InlineData("Purchases", "Purchase")]
+    [InlineData("Orders", "Order")]
+    [InlineData("Categories", "Category")]
+    [InlineData("Boxes", "Box")]
+    [InlineData("Addresses", "Address")]
+    [InlineData("Batches", "Batch")]
+    [InlineData("Houses", "House")]
+    [InlineData("People", "Person")]
+    [InlineData("Children", "Child")]
+    public void Singularize_PluralNames_ReturnsSingular(string input, string expected)
+    {
+        DbCodeGen.Singularize(input).Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData("Address")]   // ends in ss — already singular
+    [InlineData("Status")]    // ends in us
+    [InlineData("Analysis")]  // ends in is
+    [InlineData("Product")]   // no plural marker
+    public void Singularize_AlreadySingularOrGuarded_ReturnsUnchanged(string input)
+    {
+        DbCodeGen.Singularize(input).Should().Be(input);
+    }
+
+    // ── TableTypeInfo ─────────────────────────────────────────────────────────
+
+    private static DbSchema SchemaWith(params string[] tableNames)
+    {
+        var tables = tableNames
+            .Select(n => new TableSchema("", n, new List<ColumnSchema>()))
+            .ToList();
+        return new DbSchema("c", "db", tables);
+    }
+
+    [Fact]
+    public void TableTypeInfo_ProducesSingularAlias()
+    {
+        var info = DbCodeGen.TableTypeInfo(SchemaWith("Purchases"));
+        info.Should().ContainSingle();
+        info[0].TypeName.Should().Be("Purchases");
+        info[0].Alias.Should().Be("Purchase");
+    }
+
+    [Fact]
+    public void TableTypeInfo_NoAliasWhenNameIsAlreadySingular()
+    {
+        var info = DbCodeGen.TableTypeInfo(SchemaWith("Product"));
+        info[0].TypeName.Should().Be("Product");
+        info[0].Alias.Should().BeNull();
+    }
+
+    [Fact]
+    public void TableTypeInfo_SuppressesAliasThatCollidesWithAnotherTable()
+    {
+        // Both a "Purchase" and a "Purchases" table exist — the singular alias for
+        // "Purchases" would collide with the real "Purchase" class, so it is dropped.
+        var info = DbCodeGen.TableTypeInfo(SchemaWith("Purchase", "Purchases"));
+        var purchases = info.Single(x => x.TypeName == "Purchases");
+        purchases.Alias.Should().BeNull();
+        var purchase = info.Single(x => x.TypeName == "Purchase");
+        purchase.Alias.Should().BeNull(); // already singular
     }
 }

@@ -4,6 +4,20 @@
 // gears: 1 = minor fix/tweak, 2 = notable feature, 3 = major feature/architecture
 
 export const CHANGELOG = [
+  { version: '2.22.0', date: '2026-07-20', title: 'DB entity types: singular aliases + copyable type names', gears: 2, items: [
+    'Attaching a relational database now also generates an EF-style singular alias for each table\'s POCO type — a "Purchases" table gives you both Purchases and Purchase, the same type, so List<Purchase> and List<Purchases> are interchangeable',
+    'The alias resolves both at runtime and in IntelliSense / the syntax check (added to the LSP preamble and the runtime injection)',
+    'Each table row in the DB panel schema tree now shows a small clipboard badge with the generated C# type name; click to copy — mirrors the DbContext variable badge',
+    'Aliases are collision-safe: suppressed when the singular would clash with another table\'s type name',
+    'Best-effort English singularization (Purchases→Purchase, Categories→Category, Boxes→Box, Addresses→Address, People→Person); the plural class name always works regardless',
+  ]},
+  { version: '2.21.0', date: '2026-07-20', title: 'New "Embedded Files" example template', gears: 1, items: [
+    'New starter template in File → New Notebook demonstrating the Files API: embed files from code (EmbedText/Embed), read them back (ContentAsText, OpenRead, ContentCsv), update in place, attach metadata, and list/guard them',
+  ]},
+  { version: '2.20.5', date: '2026-07-20', title: 'Cells & Variables: keep only the latest run', gears: 1, items: [
+    'Code cells now keep only their most recent execution\'s output — removed the automatic "last 5 runs" history navigator and the pin-and-compare view (the user-initiated persistent retain pin is unchanged)',
+    'The Variables panel shows only the latest snapshot — removed the per-variable sparkline column (Display.Plot / the Graph panel are unaffected)',
+  ]},
   { version: '2.20.4', date: '2026-05-03', title: 'Windows build: disable signing AND exe editing', gears: 1, items: [
     'build.win.signAndEditExecutable: false — turns off both the signtool pass and the rcedit pass that runs after it',
     'Root cause of the earlier 2.20.x attempts: a no-op sign hook only short-circuits signing; electron-builder still downloads winCodeSign-2.6.0.7z upfront for rcedit (which it uses to embed the icon and version metadata into the .exe), and that download\'s macOS dylib symlinks fail to extract on Windows without admin / Developer Mode',

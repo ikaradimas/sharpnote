@@ -1,84 +1,75 @@
-# Task: Cell outputs & Variables panel — latest-only
+# Task: DB entity types — singular aliases + copyable type name in schema tree
 
 **Branch:** `fix/bugfixes-cleanup`
-**Goal:** A code cell keeps only its latest execution's outputs (remove the automatic
-"last 5 runs" history navigator + compare-pin). The Variables panel shows only the latest
-snapshot (remove the per-variable sparkline column).
 
-**Out of scope (confirmed):** `retainedResults` (user-initiated persistent 📌 pin) stays.
-`Display.Plot()` / `varHistory` / Graph panel stay. The green/blue/red diff-flash stays.
+## Goal
+1. Generate an **EF-style singular alias** for each table's POCO type (`Purchase` alongside
+   `Purchases`), usable at runtime AND in IntelliSense/diagnostics. Same type identity, so
+   `List<Purchase>` accepts a `List<Purchases>`.
+2. In the DB panel schema tree, show the generated type name next to each table as a small
+   **clipboard badge** that copies it on click — mirroring the existing `VarBadge` (DbContext
+   var name).
 
----
+## Design
+- Alias = a `using <Singular> = <ns>.<Class>;` directive (NOT a subclass — must be the same
+  type). Real class stays plural (`Purchases`); alias adds `Purchase`. Non-breaking.
+- Single source of truth in `DbCodeGen`: `Singularize()` + `TableTypeInfo(schema)` →
+  `(table, typeName, alias?)` with collision suppression (no alias if it clashes with another
+  table's class name or an earlier alias).
 
-## A. Cell output history removal
+## Kernel
+- [ ] `kernel/Db/DbCodeGen.cs`: add `Singularize(string)` (best-effort English rules + guards
+      for ss/us/is + a few irregulars) and `TableTypeInfo(DbSchema)`.
+- [ ] `kernel/Handlers/DbHandler.cs`:
+  - [ ] `BuildDbPreamble()` (LSP) — after each relational `using {ns};`, emit alias usings.
+  - [ ] `InjectDbContextAsync()` (runtime) — emit alias usings in the relational branches,
+        **only when `!isReconnect`** (a repeated `using Alias =` is a compile error; the LSP
+        preamble is rebuilt wholesale so it's always correct).
+  - [ ] Both `db_schema` payloads (attach + refresh) — add `typeName` + `singular` per table
+        (relational only; null for Redis).
+- [ ] Tests: `kernel/kernel.Tests/DbCodeGenTests.cs` — Singularize cases + TableTypeInfo
+      collision suppression.
 
-- [ ] `src/hooks/useKernelManager.js` — `prepareCellRun`: drop the `outputHistory` snapshot
-      push + cap (`.slice(-4)`); stop returning `outputHistory` in the patch. Keep the
-      `outputs[cellId] = []` clear.
-- [ ] `src/hooks/useKernelManager.js` — remove `outputHistory: {}` from the kernel-reset patch.
-- [ ] `src/notebook-factory.js` — remove `outputHistory: {}` from the factory.
-- [ ] `src/components/editor/CodeCell.jsx` — remove `outputHistory` prop, `histIdx` +
-      `pinnedHistIdx` state, the reset effect, `histLen`, history-vs-current selection,
-      the `‹ ›` navigator JSX, and the `output-compare` comparison block. Displayed
-      outputs become simply `outputs`.
-- [ ] `src/components/NotebookView.jsx` — stop passing `outputHistory` to CodeCell.
-- [ ] `src/styles.css` — remove dead classes: `.output-history-nav`, `.hist-nav-btn`,
-      `.hist-nav-label`, `.hist-pin-btn`, `.hist-unpin-btn`, `.output-compare*`.
-- [ ] `tests/renderer/prepareCellRun.test.js` — remove the "snapshots previous outputs"
-      test; keep the others.
+## Renderer
+- [ ] `src/components/panels/db/DbPanel.jsx`: add a `TypeBadge` in the `db-table-header`
+      (render only when `table.typeName`), showing `singular ?? typeName`, copying that string,
+      using `useClipboard` + `e.stopPropagation()` + the same inline clipboard SVG as `VarBadge`.
+- [ ] `src/styles.css`: `.db-type-badge` / `.db-type-copy` modeled on `.db-var-badge`/`.db-var-copy`.
+- [ ] `useKernelManager.js` — no change (payload passes through verbatim).
+- [ ] Tests: `tests/renderer/DbPanel.test.jsx` — extend SCHEMA fixture with `typeName`/`singular`,
+      assert the badge renders and copies.
 
-## B. Variables panel sparkline removal
-
-- [ ] `src/components/panels/VarsPanel.jsx` — remove the `Sparkline` component, the
-      `varHistory` prop, the sparkline `<th>` header and `<td>` cell. Latest `vars`
-      snapshot + diff-flash + watches + inspect all remain.
-- [ ] `src/app/App.jsx` — stop passing `varHistory` to `VarsPanel` (keep it going to GraphPanel).
-- [ ] `src/styles.css` — remove `.var-sparkline`, `.vars-sparkline-col`, `.vars-sparkline-cell` if unused elsewhere.
-
-## C. Docs / version / tests (per CLAUDE.md)
-
-- [ ] `src/config/docs-sections.js` — remove the "last 5 runs" / compare-pin copy and the
-      "Variable Sparklines" copy.
-- [ ] `README.md` — remove the "Cell Output History", "Output Pinning", and
-      "Variable Sparklines" feature bullets.
-- [ ] `package.json` — version bump (patch: feature removal / cleanup, no new capability).
-- [ ] Run `npm test` (Vitest). Kernel unaffected → `npm run test:kernel` not required.
-- [ ] Verify in-app (build + drive) that a re-run replaces output and the nav/sparkline are gone.
-- [ ] Commit (Claude identity) on `fix/bugfixes-cleanup`.
-
-## Suggested extra improvements (raised for approval)
-
-1. **Docs accuracy bug:** README/docs claim variable sparklines update "after every
-   execution", but they were actually only fed by `Display.Plot()`. Removing the column
-   makes this moot; docs corrected in the same pass.
-2. **`clear-output`** already clears only `outputs` — becomes fully consistent once history
-   is gone (no orphaned history left behind). No code change needed beyond the removal.
+## Docs / version
+- [ ] `src/config/docs-sections.js` — DB section: note plural class + singular alias + the copy badge.
+- [ ] `README.md` — DB integration + Database panel bullet.
+- [ ] `src/config/changelog.js` — new entry.
+- [ ] `package.json` — minor bump 2.21.0 → 2.22.0 (new feature).
+- [ ] Build renderer, `npm test`, `npm run test:kernel`; drive the kernel to confirm the
+      singular alias compiles/resolves. Commit.
 
 ## Review
 
-**Done.** Both features removed; a cell now keeps only its latest run's outputs and the
-Variables panel shows only the latest snapshot.
+**Done.** Both features shipped.
 
-Files changed:
-- `src/hooks/useKernelManager.js` — `prepareCellRun` no longer archives previous outputs;
-  removed `outputHistory` from the reset patch.
-- `src/components/editor/CodeCell.jsx` — removed `histIdx`/`pinnedHistIdx` state, the reset
-  effect, the `‹ ›` navigator, and the side-by-side compare block. Displayed outputs = `outputs`.
-- `src/components/panels/VarsPanel.jsx` — removed `Sparkline` + the sparkline column.
-- `src/components/NotebookView.jsx`, `src/app/App.jsx`, `src/notebook-factory.js` — dropped
-  the now-unused `outputHistory` / `varHistory`-to-VarsPanel wiring.
-- `src/styles.css` — removed dead `.output-history-nav`, `.hist-*`, `.output-compare*`,
-  `.var-sparkline`, `.vars-sparkline-*` rules.
-- Docs: `src/config/docs-sections.js` (removed 3 sections), `README.md` (removed 3 bullets,
-  fixed the VarsPanel row + the "updated after every execution" false claim).
-- Test: `tests/renderer/prepareCellRun.test.js` — snapshot test replaced with a regression
-  guard that no history is accumulated.
-- `package.json` — 2.20.4 → 2.20.5.
+1. **Singular aliases** — `DbCodeGen.Singularize()` + `TableTypeInfo()` (collision-safe) are the
+   single source of truth. `DbHandler` emits `using <Singular> = <ns>.<Class>;` into the LSP
+   preamble (always) and the runtime injection (first attach only — a repeated using-alias is a
+   compile error; the LSP preamble is rebuilt wholesale so it stays correct after reconnect).
+2. **Copy badge** — `TypeBadge` in `DbSchemaTree` shows `singular ?? typeName` with a clipboard
+   icon (mirrors `VarBadge`, `stopPropagation` so it doesn't toggle the row). Fed by new
+   `typeName`/`singular` fields added to both `db_schema` payloads (relational only; null for Redis).
 
-Kept intact (confirmed): `retainedResults` persistent pin, `Display.Plot`/`varHistory`/Graph
-panel, the green/blue/red diff-flash, watches, inspect.
+Verified:
+- Kernel suite 262 passed; JS suite 1301 passed (82 files).
+- **End-to-end kernel drive** against a real SQLite `Purchases` table: `db_schema` carried
+  `typeName=Purchases singular=Purchase`; the user's exact `List<Purchase>` function compiled and
+  ran; `typeof(Purchase) == typeof(Purchases)` → `True` (passing `List<Purchases>` to a
+  `List<Purchase>` param works).
+- DbPanel tests assert the badge renders the singular, copies on click, doesn't expand the row,
+  and is omitted for Redis.
 
-Verification: `npm run build:renderer` compiles clean (no dangling refs); `npm test` →
-**1294 passed / 81 files**. Kernel untouched (no `test:kernel` needed). Full Electron
-drive not run — no built kernel binary in this env; behavior is covered by the unit test +
-clean bundle.
+Docs: docs-sections DB section (Schema Browser + new Generated Types), README (DB integration +
+query-builder bullet), changelog (2.22.0 + backfilled 2.21.0 / 2.20.5). Version → 2.22.0.
+
+Note: singularization is best-effort — ambiguous cases like `Statuses` are intentionally left
+alone (the plural class name always works).
