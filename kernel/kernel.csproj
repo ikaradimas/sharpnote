@@ -21,6 +21,10 @@
     <PackageReference Include="NuGet.Resolver" Version="6.*" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.*" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.*" />
+    <!-- Override the transitive SQLitePCLRaw (2.1.11) pulled by EF Core Sqlite: 2.1.11's
+         bundled SQLite has a known high-severity vuln (NU1903 / GHSA-2m69-gcr7-jv3q).
+         2.1.12 is an API-compatible patch that ships the fixed native library. -->
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.12" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.*" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.*" />
     <PackageReference Include="StackExchange.Redis" Version="2.8.*" />

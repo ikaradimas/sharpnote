@@ -4,6 +4,11 @@
 // gears: 1 = minor fix/tweak, 2 = notable feature, 3 = major feature/architecture
 
 export const CHANGELOG = [
+  { version: '2.22.1', date: '2026-07-20', title: 'Security: clear dependency vulnerabilities', gears: 1, items: [
+    'Kernel: pin SQLitePCLRaw.bundle_e_sqlite3 to 2.1.12 — the 2.1.11 pulled transitively by EF Core Sqlite bundled a SQLite build with a known high-severity vuln (NU1903 / GHSA-2m69-gcr7-jv3q)',
+    'JS: resolved all 16 npm-audit advisories (incl. shipped deps dompurify, mermaid, markdown-it, postcss, uuid, ws, js-yaml) via semver-compatible lockfile updates — the clean rebuild preserves package-lock.json so the fixes persist',
+    'Added the missing package.json "author" field (electron-builder warning)',
+  ]},
   { version: '2.22.0', date: '2026-07-20', title: 'DB entity types: singular aliases + copyable type names', gears: 2, items: [
     'Attaching a relational database now also generates an EF-style singular alias for each table\'s POCO type — a "Purchases" table gives you both Purchases and Purchase, the same type, so List<Purchase> and List<Purchases> are interchangeable',
     'The alias resolves both at runtime and in IntelliSense / the syntax check (added to the LSP preamble and the runtime injection)',
