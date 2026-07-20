@@ -14,7 +14,8 @@ export function useCellOrchestrator({
   const [executionProgress, setProgress] = useState(null);
   const cancelledRef = useRef(false);
 
-  const executeQueue = useCallback(async (notebookId, orderedCellIds) => {
+  const executeQueue = useCallback(async (notebookId, orderedCellIds, opts = {}) => {
+    const { expandDecisions = true } = opts;
     const nb = notebooksRef.current.find((n) => n.id === notebookId);
     if (!nb) return;
 
@@ -47,8 +48,10 @@ export function useCellOrchestrator({
 
       completed.push(cellId);
 
-      // Decision cell branching: dynamically enqueue the chosen path
-      if (cell.type === 'decision') {
+      // Decision cell branching: dynamically enqueue the chosen path.
+      // Skipped for upstream ("run with deps") runs — there we only want the
+      // cells that feed the target, not a decision's whole downstream branch.
+      if (expandDecisions && cell.type === 'decision') {
         const freshNb2 = notebooksRef.current.find((n) => n.id === notebookId);
         const decisionResult = freshNb2?.decisionResults?.[cellId];
         let pathCells;
@@ -78,7 +81,7 @@ export function useCellOrchestrator({
 
   const runWithDeps = useCallback(async (notebookId, cellId) => {
     const ordered = getUpstream(cellId, edges);
-    await executeQueue(notebookId, ordered);
+    await executeQueue(notebookId, ordered, { expandDecisions: false });
   }, [edges, executeQueue]);
 
   const runDownstream = useCallback(async (notebookId, cellId) => {

@@ -1,75 +1,71 @@
-# Task: DB entity types — singular aliases + copyable type name in schema tree
+# Task: Rework cell interdependencies — run dependencies first; default "none"
 
 **Branch:** `fix/bugfixes-cleanup`
 
-## Goal
-1. Generate an **EF-style singular alias** for each table's POCO type (`Purchase` alongside
-   `Purchases`), usable at runtime AND in IntelliSense/diagnostics. Same type identity, so
-   `List<Purchase>` accepts a `List<Purchases>`.
-2. In the DB panel schema tree, show the generated type name next to each table as a small
-   **clipboard badge** that copies it on click — mirroring the existing `VarBadge` (DbContext
-   var name).
+## Behavior
+- Running a **code cell** first navigates its dependency tree and runs its transitive
+  **upstream** dependencies (topological order), then the cell itself.
+- A dependency = a cell that **produces a variable this cell consumes** (data-flow,
+  auto-detected) **or** an **explicitly-wired** prev/next link. Decision-branch edges included.
+- **Default is "none":** a cell with no data-flow and no explicit links has NO dependencies
+  and runs alone. The old "implicit / next-in-notebook-order" sequential fallback is removed.
 
-## Design
-- Alias = a `using <Singular> = <ns>.<Class>;` directive (NOT a subclass — must be the same
-  type). Real class stays plural (`Purchases`); alias adds `Purchase`. Non-breaking.
-- Single source of truth in `DbCodeGen`: `Singularize()` + `TableTypeInfo(schema)` →
-  `(table, typeName, alias?)` with collision suppression (no alias if it clashes with another
-  table's class name or an earlier alias).
+## Changes
+- [ ] `src/hooks/useCellDependencies.js` — delete the "implicit sequential edges" loop
+      (adjacent-cell fallback). Edges now = variable-flow + decision paths + explicit next/prev.
+- [ ] `src/components/editor/CellLinkPicker.jsx` — remove the "Next in notebook order"
+      (implicit) option; `undefined`/`null`/`[]` all render as "None (default)"; normalize
+      cleared selection to `null`.
+- [ ] `src/hooks/useCellOrchestrator.js` — add `expandDecisions` option to `executeQueue`
+      (default true); `runWithDeps` passes `false` (upstream runs must NOT expand a decision's
+      downstream branch). `runDownstream`/`runSubgraph`/`runPipeline` keep expansion.
+- [ ] `src/app/App.jsx` — wire `onRunCell` (code-cell Run) to run dependencies-first via
+      `orchestrator.runWithDeps(nbId, cell.id)`. Leave `runCell` (scheduler) and `runAll`/
+      `runFrom`/`runTo` unchanged.
+- [ ] CSS: drop the now-unused `.cell-link-implicit` rule if present.
 
-## Kernel
-- [ ] `kernel/Db/DbCodeGen.cs`: add `Singularize(string)` (best-effort English rules + guards
-      for ss/us/is + a few irregulars) and `TableTypeInfo(DbSchema)`.
-- [ ] `kernel/Handlers/DbHandler.cs`:
-  - [ ] `BuildDbPreamble()` (LSP) — after each relational `using {ns};`, emit alias usings.
-  - [ ] `InjectDbContextAsync()` (runtime) — emit alias usings in the relational branches,
-        **only when `!isReconnect`** (a repeated `using Alias =` is a compile error; the LSP
-        preamble is rebuilt wholesale so it's always correct).
-  - [ ] Both `db_schema` payloads (attach + refresh) — add `typeName` + `singular` per table
-        (relational only; null for Redis).
-- [ ] Tests: `kernel/kernel.Tests/DbCodeGenTests.cs` — Singularize cases + TableTypeInfo
-      collision suppression.
+## Not touched (noted)
+- Positional stale-cell banner (`useKernelManager.js`) — separate feature; left as-is.
+- `runAll`/`runFrom`/`runTo` stay in document order.
 
-## Renderer
-- [ ] `src/components/panels/db/DbPanel.jsx`: add a `TypeBadge` in the `db-table-header`
-      (render only when `table.typeName`), showing `singular ?? typeName`, copying that string,
-      using `useClipboard` + `e.stopPropagation()` + the same inline clipboard SVG as `VarBadge`.
-- [ ] `src/styles.css`: `.db-type-badge` / `.db-type-copy` modeled on `.db-var-badge`/`.db-var-copy`.
-- [ ] `useKernelManager.js` — no change (payload passes through verbatim).
-- [ ] Tests: `tests/renderer/DbPanel.test.jsx` — extend SCHEMA fixture with `typeName`/`singular`,
-      assert the badge renders and copies.
+## Tests
+- [ ] `tests/renderer/useCellDependencies.test.js` (new) — no sequential edges; data-flow edge
+      built from produces/consumes; explicit link edge; isolated cell has no incoming edge.
+- [ ] `tests/renderer/CellLinkPicker.test.jsx` (new) — no "Next in notebook order"; default shows
+      "None"; selecting/clearing calls onChange correctly.
+- [ ] `tests/renderer/useCellOrchestrator.test.js` (new) — executeQueue runs in given order and
+      awaits each; `runWithDeps` runs upstream-then-target and does NOT expand decision branches.
 
 ## Docs / version
-- [ ] `src/config/docs-sections.js` — DB section: note plural class + singular alias + the copy badge.
-- [ ] `README.md` — DB integration + Database panel bullet.
-- [ ] `src/config/changelog.js` — new entry.
-- [ ] `package.json` — minor bump 2.21.0 → 2.22.0 (new feature).
-- [ ] Build renderer, `npm test`, `npm run test:kernel`; drive the kernel to confirm the
-      singular alias compiles/resolves. Commit.
+- [ ] `docs-sections.js` (Reactive Cell Dependencies / Orchestration), `README.md` (features),
+      `changelog.js`. Minor bump 2.22.1 → 2.23.0.
+- [ ] Build renderer, `npm test`; drive the kernel to confirm running a downstream cell first
+      runs its producer. Commit.
 
 ## Review
 
-**Done.** Both features shipped.
+**Done.** Running a code cell now runs its dependency tree first; default is "none".
 
-1. **Singular aliases** — `DbCodeGen.Singularize()` + `TableTypeInfo()` (collision-safe) are the
-   single source of truth. `DbHandler` emits `using <Singular> = <ns>.<Class>;` into the LSP
-   preamble (always) and the runtime injection (first attach only — a repeated using-alias is a
-   compile error; the LSP preamble is rebuilt wholesale so it stays correct after reconnect).
-2. **Copy badge** — `TypeBadge` in `DbSchemaTree` shows `singular ?? typeName` with a clipboard
-   icon (mirrors `VarBadge`, `stopPropagation` so it doesn't toggle the row). Fed by new
-   `typeName`/`singular` fields added to both `db_schema` payloads (relational only; null for Redis).
+- `useCellDependencies.js` — removed the implicit sequential adjacent-cell edges. Edges =
+  data-flow (produces→consumes) + decision paths + explicit next/prev.
+- `CellLinkPicker.jsx` — removed the "Next in notebook order" option; empty/undefined = "None
+  (default)"; cleared selection normalizes to null.
+- `useCellOrchestrator.js` — `executeQueue` gained `expandDecisions` (default true);
+  `runWithDeps` passes false so upstream runs don't drag in a decision's downstream branch.
+- `App.jsx` — `onRunCell` now routes code-cell Run through `orchestrator.runWithDeps`
+  (deps-first), falling back to a plain run for non-active notebooks.
+- **Latent bug fixed:** the orchestrator was receiving `dispatchCellRun` under the wrong key,
+  so `dispatchRun` was undefined — every dependency-ordered run (Run with Upstream/Downstream/
+  Pipeline, panel node Run) had been silently broken. Fixed the prop key.
+- Removed dead `.cell-link-implicit` CSS.
 
-Verified:
-- Kernel suite 262 passed; JS suite 1301 passed (82 files).
-- **End-to-end kernel drive** against a real SQLite `Purchases` table: `db_schema` carried
-  `typeName=Purchases singular=Purchase`; the user's exact `List<Purchase>` function compiled and
-  ran; `typeof(Purchase) == typeof(Purchases)` → `True` (passing `List<Purchases>` to a
-  `List<Purchase>` param works).
-- DbPanel tests assert the badge renders the singular, copies on click, doesn't expand the row,
-  and is omitted for Redis.
+Tests (new): `useCellDependencies.test.js`, `CellLinkPicker.test.jsx`, `useCellOrchestrator.test.js`
+(incl. a composition test: running a variable consumer runs its producer first, skips unrelated).
+Full JS suite **1313 passed / 85 files**. Renderer builds; app smoke-launched cleanly (renderer
+rendered, kernel reached ready, no runtime errors).
 
-Docs: docs-sections DB section (Schema Browser + new Generated Types), README (DB integration +
-query-builder bullet), changelog (2.22.0 + backfilled 2.21.0 / 2.20.5). Version → 2.22.0.
+Docs: docs-sections Reactive Cell Dependencies (new "Running dependencies first" + "Default: none"),
+README (new Dependency-first execution bullet), changelog 2.23.0. Version → 2.23.0.
 
-Note: singularization is best-effort — ambiguous cases like `Statuses` are intentionally left
-alone (the plural class name always works).
+Note (left for later): the stale-cell banner is still positional (cells below), not graph-based —
+now somewhat redundant with dependency-first execution; a follow-up could make it graph-driven.

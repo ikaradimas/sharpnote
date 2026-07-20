@@ -1144,8 +1144,17 @@ export function App() {
   const depGraph = useCellDependencies(activeNb);
   const orchestrator = useCellOrchestrator({
     notebooksRef, nodes: depGraph.nodes, edges: depGraph.edges,
-    dispatchCellRun,
+    dispatchRun: dispatchCellRun,
   });
+
+  // Running a code cell first runs its (transitive) upstream dependencies —
+  // the cells that produce the variables it consumes, plus any explicit links —
+  // then the cell itself. Only the active notebook has a loaded dependency graph;
+  // other cases fall back to a plain single-cell run.
+  const runCellWithDeps = useCallback((nbId, cell) => {
+    if (nbId === activeIdRef.current) return orchestrator.runWithDeps(nbId, cell.id);
+    return runCell(nbId, cell);
+  }, [orchestrator, runCell]);
 
   // ── Per-notebook dock layout sync ──────────────────────────────────────────
   // When switching notebooks, restore the saved layout; when layout changes, save to notebook
@@ -1511,7 +1520,7 @@ export function App() {
                     isActive={notebook.id === activeId}
                     onSetNb={(updater) => setNb(notebook.id, updater)}
                     onSetNbDirty={(updater) => setNbDirty(notebook.id, updater)}
-                    onRunCell={runCell}
+                    onRunCell={runCellWithDeps}
                     onRunSqlCell={runSqlCell}
                     onRunHttpCell={runHttpCell}
                     onRunShellCell={runShellCell}

@@ -908,11 +908,12 @@ export const DOCS_SECTIONS = [
   {
     id: 'reactive-deps', title: 'Reactive Cell Dependencies',
     content: [
-      { type: 'p', text: 'When a code cell runs successfully and changes one or more variables, SharpNote analyses the cells below it and flags any that appear to use those changed variables.' },
+      { type: 'h3', text: 'Running dependencies first' },
+      { type: 'p', text: 'When you run a code cell, SharpNote first walks its dependency tree and runs the cell\'s dependencies (in topological order), then the cell itself. A dependency is any cell that PRODUCES a variable this cell consumes, plus any cells you explicitly wire via the ← Prev / Next → link pickers (or the Orchestration panel). Running a cell therefore recomputes exactly the inputs it needs — no more, no less.' },
+      { type: 'h3', text: 'Default: none' },
+      { type: 'p', text: 'A code cell with no data-flow dependency and no explicit links has NO dependencies — running it runs only that cell. There is no implicit "notebook order" chaining: adjacent cells are not automatically treated as dependencies. Wire explicit links in the picker when you want an ordering that variable usage alone doesn\'t capture.' },
       { type: 'h3', text: 'Stale Cell Banner' },
-      { type: 'p', text: 'A "↺ upstream variables changed" banner appears at the top of a flagged cell. This is a hint, not a guarantee — the detection uses simple identifier matching and may produce false positives or miss some cases.' },
-      { type: 'h3', text: 'Clearing the Hint' },
-      { type: 'p', text: 'The banner disappears as soon as the cell is run, or when the kernel is reset. Running the flagged cell clears it regardless of whether the output changed.' },
+      { type: 'p', text: 'When a run changes a variable, later cells that reference it are flagged with a "↺ upstream variables changed" banner — a hint that they may be out of date. It uses simple identifier matching and may over- or under-report. The banner clears when the cell is run or the kernel resets.' },
     ],
   },
   {

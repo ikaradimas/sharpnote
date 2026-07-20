@@ -1054,7 +1054,6 @@ body {
 .cell-link-btn:hover { color: var(--text-secondary); border-color: var(--border-default); }
 .cell-link-label { font-weight: 600; }
 .cell-link-count { color: var(--accent-primary); font-weight: 600; }
-.cell-link-implicit { color: var(--text-dim); font-style: italic; font-weight: 400; }
 .cell-link-none { color: var(--text-faint); font-weight: 400; }
 .cell-link-dropdown {
   position: absolute; bottom: calc(100% + 4px); left: 0; z-index: 100;

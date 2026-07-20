@@ -1,18 +1,18 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { useOutsideClick } from '../../hooks/useOutsideClick.js';
 
-// selected: undefined/null = implicit (default notebook order)
-//           []             = explicitly none (break the chain)
-//           ['id1', ...]   = explicit cell links
+// selected: undefined/null or []  = none (no dependency — the default)
+//           ['id1', ...]           = explicit cell links
+// (There is no implicit "notebook order" mode: a cell only depends on what
+//  produces the variables it uses, plus any explicit links wired here.)
 
 export function CellLinkPicker({ label, selected, allCells, cellId, onChange }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   useOutsideClick(ref, () => setOpen(false), open);
 
-  const isImplicit = selected == null;
-  const isNone = Array.isArray(selected) && selected.length === 0;
   const explicitIds = Array.isArray(selected) ? selected : [];
+  const isNone = explicitIds.length === 0;
 
   const options = useMemo(() =>
     (allCells || [])
@@ -23,28 +23,24 @@ export function CellLinkPicker({ label, selected, allCells, cellId, onChange }) 
 
   const toggle = (id) => {
     const ids = explicitIds.includes(id) ? explicitIds.filter((x) => x !== id) : [...explicitIds, id];
-    onChange(ids.length > 0 ? ids : []);
+    onChange(ids.length > 0 ? ids : null);
   };
 
-  const summary = isImplicit ? 'implicit' : isNone ? 'none' : `${explicitIds.length}`;
+  const summary = isNone ? 'none' : `${explicitIds.length}`;
 
   return (
     <div className="cell-link-picker" ref={ref}>
       <button className="cell-link-btn" onClick={() => setOpen((v) => !v)} title={label}>
         <span className="cell-link-label">{label}</span>
-        <span className={`cell-link-count${isImplicit ? ' cell-link-implicit' : isNone ? ' cell-link-none' : ''}`}>
+        <span className={`cell-link-count${isNone ? ' cell-link-none' : ''}`}>
           {summary}
         </span>
       </button>
       {open && (
         <div className="cell-link-dropdown">
           <label className="cell-link-option cell-link-mode-option">
-            <input type="radio" name={`link-${cellId}-${label}`} checked={isImplicit} onChange={() => onChange(null)} />
-            <span className="cell-link-option-label">Next in notebook order</span>
-          </label>
-          <label className="cell-link-option cell-link-mode-option">
-            <input type="radio" name={`link-${cellId}-${label}`} checked={isNone} onChange={() => onChange([])} />
-            <span className="cell-link-option-label">None (break chain)</span>
+            <input type="radio" name={`link-${cellId}-${label}`} checked={isNone} onChange={() => onChange(null)} />
+            <span className="cell-link-option-label">None (default)</span>
           </label>
           <div className="cell-link-sep" />
           {options.map((opt) => (

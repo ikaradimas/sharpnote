@@ -4,6 +4,13 @@
 // gears: 1 = minor fix/tweak, 2 = notable feature, 3 = major feature/architecture
 
 export const CHANGELOG = [
+  { version: '2.23.0', date: '2026-07-20', title: 'Dependency-first cell execution', gears: 2, items: [
+    'Running a code cell now first runs its dependencies (transitive upstream, topological order), then the cell — so a cell recomputes exactly the inputs it needs',
+    'A dependency = a cell that produces a variable this cell consumes (data-flow, auto-detected) plus any explicitly-wired ← Prev / Next → links',
+    'Default is now "none": a cell with no data-flow and no explicit links has no dependencies and runs alone — removed the implicit "notebook order" sequential chaining (and the picker option for it)',
+    'Fixed a latent bug: the orchestrator\'s dependency-ordered runs (Run with Upstream / Downstream / Pipeline, and the panel\'s node Run) were wired to an undefined dispatcher and never actually ran',
+    'Upstream ("run with deps") runs no longer expand a decision cell\'s downstream branch',
+  ]},
   { version: '2.22.1', date: '2026-07-20', title: 'Security: clear dependency vulnerabilities', gears: 1, items: [
     'Kernel: pin SQLitePCLRaw.bundle_e_sqlite3 to 2.1.12 — the 2.1.11 pulled transitively by EF Core Sqlite bundled a SQLite build with a known high-severity vuln (NU1903 / GHSA-2m69-gcr7-jv3q)',
     'JS: resolved all 16 npm-audit advisories (incl. shipped deps dompurify, mermaid, markdown-it, postcss, uuid, ws, js-yaml) via semver-compatible lockfile updates — the clean rebuild preserves package-lock.json so the fixes persist',

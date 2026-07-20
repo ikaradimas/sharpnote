@@ -139,17 +139,13 @@ export function useCellDependencies(notebook) {
       }
     }
 
-    // Implicit sequential edges
-    for (let i = 0; i < cells.length - 1; i++) {
-      const fromId = cells[i].id;
-      const toId = cells[i + 1].id;
-      const key = `${fromId}->${toId}`;
-      if (!edgeSet.has(key)) { edgeSet.add(key); edges.push({ from: fromId, to: toId, vars: [], implicit: true }); }
-    }
+    // NOTE: cells no longer get an implicit sequential edge to the next cell.
+    // A cell's dependencies are only its data-flow producers, explicit next/prev
+    // links, and decision-branch targets. A cell with none of those runs alone.
 
     // ── Identify roots and terminals ─────────────────────────────────────────
-    const hasIncoming = new Set(edges.filter(e => !e.implicit).map(e => e.to));
-    const hasOutgoing = new Set(edges.filter(e => !e.implicit).map(e => e.from));
+    const hasIncoming = new Set(edges.map(e => e.to));
+    const hasOutgoing = new Set(edges.map(e => e.from));
     const rootIds = cellNodes.filter(n => !hasIncoming.has(n.id)).map(n => n.id);
     const terminalIds = cellNodes.filter(n => !hasOutgoing.has(n.id)).map(n => n.id);
 
