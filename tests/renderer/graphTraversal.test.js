@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getUpstream, getDownstream, topoSort } from '../../src/utils/graph-traversal.js';
+import { getUpstream, getDownstream, topoSort, computeStaleCells } from '../../src/utils/graph-traversal.js';
 
 describe('getUpstream', () => {
   it('linear chain A→B→C returns all in topo order', () => {
@@ -116,5 +116,54 @@ describe('topoSort', () => {
 
   it('empty cellIds returns empty array', () => {
     expect(topoSort([], [{ from: 'A', to: 'B' }])).toEqual([]);
+  });
+});
+
+describe('computeStaleCells', () => {
+  it('flags downstream data-flow dependents and cascades', () => {
+    const edges = [
+      { from: 'A', to: 'B', vars: ['x'] },
+      { from: 'B', to: 'C', vars: ['y'] },
+    ];
+    const stale = computeStaleCells('A', ['x'], edges).sort();
+    expect(stale).toEqual(['B', 'C']); // B directly, C via cascade
+  });
+
+  it('only flags dependents that consume a changed variable', () => {
+    const edges = [
+      { from: 'A', to: 'B', vars: ['x'] },
+      { from: 'A', to: 'D', vars: ['z'] },
+    ];
+    expect(computeStaleCells('A', ['x'], edges)).toEqual(['B']); // D reads z, unchanged
+  });
+
+  it('always flags a structural (explicit-link / decision) dependent', () => {
+    const edges = [{ from: 'A', to: 'B', vars: [] }];
+    expect(computeStaleCells('A', ['anything'], edges)).toEqual(['B']);
+  });
+
+  it('flags nothing when no dependent consumes a changed variable', () => {
+    const edges = [{ from: 'A', to: 'B', vars: ['x'] }];
+    expect(computeStaleCells('A', ['z'], edges)).toEqual([]);
+  });
+
+  it('ignores virtual Start/End edges and never includes the ran cell', () => {
+    const edges = [
+      { from: '__start__', to: 'A', vars: [] },
+      { from: 'A', to: 'B', vars: ['x'] },
+      { from: 'B', to: '__end__0', vars: [] },
+    ];
+    const stale = computeStaleCells('A', ['x'], edges);
+    expect(stale).toEqual(['B']);
+    expect(stale).not.toContain('A');
+    expect(stale.some((id) => id.startsWith('__'))).toBe(false);
+  });
+
+  it('is cycle-safe', () => {
+    const edges = [
+      { from: 'A', to: 'B', vars: ['x'] },
+      { from: 'B', to: 'A', vars: ['y'] },
+    ];
+    expect(computeStaleCells('A', ['x'], edges).sort()).toEqual(['B']);
   });
 });

@@ -4,6 +4,11 @@
 // gears: 1 = minor fix/tweak, 2 = notable feature, 3 = major feature/architecture
 
 export const CHANGELOG = [
+  { version: '2.24.0', date: '2026-07-20', title: 'Graph-based stale-cell banner', gears: 1, items: [
+    'The "↺ upstream variables changed" banner is now graph-based: after a run that changes a variable, the cells flagged stale are the ones DOWNSTREAM of it in the dependency graph (data-flow consumers of the changed variable, plus cascading dependents) — not simply every code cell positioned below it',
+    'A direct dependent is staled only if its edge carries a changed variable; explicit-link/decision dependents always propagate; staleness cascades transitively',
+    'Extracted the dependency-graph builder into a shared pure module (src/utils/dependency-graph.js) so the Orchestration panel and stale-cell tracking use one source of truth',
+  ]},
   { version: '2.23.0', date: '2026-07-20', title: 'Dependency-first cell execution', gears: 2, items: [
     'Running a code cell now first runs its dependencies (transitive upstream, topological order), then the cell — so a cell recomputes exactly the inputs it needs',
     'A dependency = a cell that produces a variable this cell consumes (data-flow, auto-detected) plus any explicitly-wired ← Prev / Next → links',

@@ -913,7 +913,7 @@ export const DOCS_SECTIONS = [
       { type: 'h3', text: 'Default: none' },
       { type: 'p', text: 'A code cell with no data-flow dependency and no explicit links has NO dependencies — running it runs only that cell. There is no implicit "notebook order" chaining: adjacent cells are not automatically treated as dependencies. Wire explicit links in the picker when you want an ordering that variable usage alone doesn\'t capture.' },
       { type: 'h3', text: 'Stale Cell Banner' },
-      { type: 'p', text: 'When a run changes a variable, later cells that reference it are flagged with a "↺ upstream variables changed" banner — a hint that they may be out of date. It uses simple identifier matching and may over- or under-report. The banner clears when the cell is run or the kernel resets.' },
+      { type: 'p', text: 'When a run changes a variable, the cells that are DOWNSTREAM of it in the dependency graph — those that consume the changed variable, plus anything cascading from them — are flagged with a "↺ upstream variables changed" banner. This is graph-based: a cell that merely sits below the run but does not depend on it is not flagged. The banner clears when the cell is run or the kernel resets.' },
     ],
   },
   {

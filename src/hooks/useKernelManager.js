@@ -1,5 +1,7 @@
 import { useRef, useCallback, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
+import { buildCellGraph } from '../utils/dependency-graph.js';
+import { computeStaleCells } from '../utils/graph-traversal.js';
 
 const RUNNABLE_TYPES = new Set(['code', 'sql', 'http', 'shell', 'check', 'decision', 'docker', 'floci']);
 
@@ -245,7 +247,9 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
               ? { outputs: { ...n.outputs, [msg.id]: [...(n.outputs[msg.id] || []), { type: 'interrupted' }] } }
               : {};
 
-            // Reactive cell dependency tracking
+            // Reactive cell dependency tracking (graph-based): after a successful
+            // run that changed variables, flag the code cells that are DOWNSTREAM
+            // of this one in the dependency graph — not merely the cells below it.
             let staleCellIds = [...(n.staleCellIds || [])].filter((id) => id !== msg.id);
             if (!msg.cancelled && msg.success) {
               const prevSnap  = prevVarsSnapRef.current[msg.id] || [];
@@ -255,14 +259,10 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
                 .filter((v) => v.name in prevMap && prevMap[v.name] !== v.value)
                 .map((v) => v.name);
               if (changed.length > 0) {
-                const runIdx = n.cells.findIndex((c) => c.id === msg.id);
-                for (const cell of n.cells.slice(runIdx + 1)) {
-                  if (cell.type !== 'code' || staleCellIds.includes(cell.id)) continue;
-                  const uses = changed.some((name) => {
-                    try { return new RegExp(`\\b${name}\\b`).test(cell.content || ''); }
-                    catch { return false; }
-                  });
-                  if (uses) staleCellIds.push(cell.id);
+                const { edges } = buildCellGraph(n.cells, n.vars);
+                const codeIds = new Set(n.cells.filter((c) => c.type === 'code').map((c) => c.id));
+                for (const id of computeStaleCells(msg.id, changed, edges)) {
+                  if (codeIds.has(id) && !staleCellIds.includes(id)) staleCellIds.push(id);
                 }
               }
             }

@@ -67,5 +67,14 @@ rendered, kernel reached ready, no runtime errors).
 Docs: docs-sections Reactive Cell Dependencies (new "Running dependencies first" + "Default: none"),
 README (new Dependency-first execution bullet), changelog 2.23.0. Version → 2.23.0.
 
-Note (left for later): the stale-cell banner is still positional (cells below), not graph-based —
-now somewhat redundant with dependency-first execution; a follow-up could make it graph-driven.
+### Follow-up (done, 2.24.0): graph-based stale-cell banner
+- Extracted the graph builder to the pure `src/utils/dependency-graph.js` (`buildCellGraph`);
+  `useCellDependencies` is now a thin memo wrapper — one source of truth for panel + staleness.
+- Added `computeStaleCells(ranCellId, changedVars, edges)` to `graph-traversal.js`: seeds direct
+  dependents affected by a changed var (structural links always), then cascades downstream.
+- `useKernelManager` complete handler now uses these instead of the positional "cells below +
+  textual match" scan. Code cells only (matches the banner UI).
+- Tests: 6 `computeStaleCells` cases. Full JS suite 1319 passed. Version → 2.24.0.
+- Verification: pure functions unit-tested + build clean. The complete-handler wiring mirrors the
+  prior block's structure (same changed-var computation); not driven in the live UI (renderer-
+  internal, needs cell-run interaction).

@@ -52,6 +52,58 @@ export function getDownstream(targetId, edges) {
 }
 
 /**
+ * Given the cell that just ran and the variable names whose values changed,
+ * return the IDs of the cells that are now stale — i.e. downstream of the ran
+ * cell in the dependency graph. Propagation rules:
+ *   - A direct data-flow dependent is stale only if the edge carries a changed
+ *     variable (so changing var `a` doesn't stale a cell that only reads `b`).
+ *   - A direct structural dependent (explicit link / decision branch, no vars on
+ *     the edge) is always considered stale.
+ *   - Once a cell is stale, every cell downstream of it is stale too (cascade).
+ * Virtual Start/End edges (ids beginning with "__") are ignored. The ran cell
+ * itself is never included.
+ *
+ * @param {string} ranCellId
+ * @param {string[]} changedVars
+ * @param {{ from: string, to: string, vars?: string[] }[]} edges
+ * @returns {string[]} stale cell IDs
+ */
+export function computeStaleCells(ranCellId, changedVars, edges) {
+  const changed = new Set(changedVars || []);
+  const out = {};
+  for (const e of edges) {
+    if (String(e.from).startsWith('__') || String(e.to).startsWith('__')) continue;
+    (out[e.from] ||= []).push(e);
+  }
+
+  const stale = new Set();
+  const queue = [];
+
+  // Seed: direct dependents of the ran cell affected by the change.
+  for (const e of out[ranCellId] || []) {
+    const isDataEdge = Array.isArray(e.vars) && e.vars.length > 0;
+    const relevant = isDataEdge ? e.vars.some((v) => changed.has(v)) : true;
+    if (relevant && e.to !== ranCellId && !stale.has(e.to)) {
+      stale.add(e.to);
+      queue.push(e.to);
+    }
+  }
+
+  // Cascade: anything downstream of a stale cell is stale too.
+  while (queue.length > 0) {
+    const cur = queue.shift();
+    for (const e of out[cur] || []) {
+      if (e.to !== ranCellId && !stale.has(e.to)) {
+        stale.add(e.to);
+        queue.push(e.to);
+      }
+    }
+  }
+
+  return [...stale];
+}
+
+/**
  * Topologically sort a subset of cell IDs using Kahn's algorithm.
  * Only considers edges between cells in the given subset.
  * @param {string[]} cellIds
