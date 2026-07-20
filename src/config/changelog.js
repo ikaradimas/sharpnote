@@ -4,6 +4,10 @@
 // gears: 1 = minor fix/tweak, 2 = notable feature, 3 = major feature/architecture
 
 export const CHANGELOG = [
+  { version: '2.24.2', date: '2026-07-20', title: 'Switch-decision edges render purple', gears: 1, items: [
+    'Switch-case edges in the Orchestration graph now render purple (line, arrowhead, and case label) — matching the purple decision node and the documentation; previously they fell back to the default blue-grey',
+    'Reconciled the docs wording (all switch-case edges are purple and labeled, not only a "matched" one)',
+  ]},
   { version: '2.24.1', date: '2026-07-20', title: 'Orchestration docs + dead-code cleanup', gears: 1, items: [
     'Documented dependency-first execution and the "no implicit notebook-order" default in the Cell Orchestration docs and example template, with a "what the edges mean" breakdown',
     'The Cell Orchestration template now shows dependency-first execution (running Compute Stats runs Load Orders + Data Check first) and graph-based staleness',

@@ -92,6 +92,7 @@ function getStatusInfo(cellId, notebook, executionProgress, scheduledCells) {
 function getEdgeColor(edge) {
   if (edge.branch === 'true' || edge.branch === true) return '#4ec9b0';
   if (edge.branch === 'false' || edge.branch === false) return '#e05050';
+  if (edge.branch != null) return '#c586c0'; // switch-case branch → purple
   if (edge.link) return '#569cd6';
   if (edge.virtual) return '#505060';
   return '#3a5068';
@@ -697,6 +698,10 @@ export function DependencyPanel({
                     markerWidth="5" markerHeight="5" orient="auto-start-reverse">
               <path d="M 0 0 L 10 5 L 0 10 z" fill="#505060" />
             </marker>
+            <marker id="orch-arrow-purple" viewBox="0 0 10 10" refX="9" refY="5"
+                    markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#c586c0" />
+            </marker>
           </defs>
 
           <g transform={`translate(${pan.x},${pan.y}) scale(${zoom})`}>
@@ -724,6 +729,7 @@ export function DependencyPanel({
 
               const marker = (e.branch === 'true' || e.branch === true) ? 'url(#orch-arrow-green)'
                 : (e.branch === 'false' || e.branch === false) ? 'url(#orch-arrow-red)'
+                : e.branch != null ? 'url(#orch-arrow-purple)'
                 : e.link ? 'url(#orch-arrow-blue)'
                 : e.virtual ? 'url(#orch-arrow-virtual)'
                 : 'url(#orch-arrow)';

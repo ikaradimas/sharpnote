@@ -1403,7 +1403,7 @@ export const DOCS_SECTIONS = [
         'Add named cases (e.g. "prod", "staging", "dev") with the + Case button',
         'Each case maps to a set of downstream cells to execute when the result matches',
         'Add a "default" case for unmatched values',
-        'The matched case is highlighted purple in the graph with labeled edges',
+        'Switch-case edges are drawn in purple and labeled with their case value',
       ]},
       { type: 'p', text: 'Decision cells appear as diamond-shaped nodes in the dependency graph.' },
       { type: 'h3', text: 'Dependency Graph (Orchestration Panel)' },
