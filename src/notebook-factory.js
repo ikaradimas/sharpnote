@@ -1950,9 +1950,11 @@ decision branching, dependency-first execution, and the interactive dependency g
 6. Create **pipelines** in the bottom section to group and re-run cells
 
 > **Dependency-first execution:** running a code cell (its ▶ Run button or Ctrl+Enter)
-> first runs the cell's dependencies — the cells that produce the variables it uses, plus
-> any explicitly-wired links — in order, then the cell itself. Try running *Compute Stats*
-> below: *Load Orders* and *Data Check* run first, automatically.`),
+> first runs its *stale previous* dependencies — earlier cells that produce the variables it
+> uses (plus any explicitly-wired links) and aren't already fresh — in order, then the cell
+> itself. Only cells *before* the target run; a variable reassigned lower down won't drag the
+> next cell in. Try running *Compute Stats* below on a fresh notebook: *Load Orders* and
+> *Data Check* run first, automatically. Run it again with nothing changed and it runs alone.`),
 
     md(`## 1. Cell Naming & Colors
 
@@ -1973,9 +1975,10 @@ They appear as nodes in the dependency graph.`),
     md(`## 3. Computed Dependencies
 
 This cell references \`orders\` from the Load cell — creating a **data-flow dependency** edge
-in the graph. Because of it, **running this cell first runs *Load Orders* (and the wired
-*Data Check*) automatically**, then *Compute Stats* — you never have to run upstream cells by
-hand. Open the Orchestration panel to see the edge from *Load Orders* → *Compute Stats*.`),
+in the graph. Because of it, **running this cell runs any stale earlier dependency first** —
+*Load Orders* (and the wired *Data Check*) if they haven't run or have gone stale — then
+*Compute Stats*; dependencies that are already fresh are skipped. Open the Orchestration
+panel to see the edge from *Load Orders* → *Compute Stats*.`),
 
     statsCell,
 
@@ -2030,7 +2033,7 @@ Open the Orchestration panel and use the **Pipelines** section at the bottom:
 | Mode | What it does |
 |------|-------------|
 | **Click node** | Runs that single cell |
-| **Run with upstream** | Runs all upstream cells first, then the target |
+| **Run with upstream** | Runs the target's stale *earlier* dependencies first, then the target (fresh deps and later cells are skipped) |
 | **Run downstream** | Runs the target, then everything that depends on it |
 | **Run pipeline** | Runs a named group of cells in topological order |
 
@@ -2044,7 +2047,7 @@ Decision cells dynamically choose which branch to follow during pipeline executi
 - **Cancel** (⏹) stops a running orchestration mid-flight
 - Nodes pulse when running, show ✓/✗ when done, and turn amber when stale
 - Variable names appear as edge labels to show data flow
-- Running a cell runs its **upstream dependencies first**; a cell with no data-flow and no explicit links runs alone (there is no implicit notebook-order chaining)
+- Running a cell runs its **stale earlier dependencies first** (fresh ones, and any cells positioned after it, are left alone); a cell with no data-flow and no explicit links runs alone (there is no implicit notebook-order chaining)
 - After a run changes a variable, only the cells **downstream in the graph** are marked stale (amber) — not every cell below it`),
   ];
 }

@@ -910,7 +910,8 @@ export const DOCS_SECTIONS = [
     id: 'reactive-deps', title: 'Reactive Cell Dependencies',
     content: [
       { type: 'h3', text: 'Running dependencies first' },
-      { type: 'p', text: 'When you run a code cell, SharpNote first walks its dependency tree and runs the cell\'s dependencies (in topological order), then the cell itself. A dependency is any cell that PRODUCES a variable this cell consumes, plus any cells you explicitly wire via the ← Prev / Next → link pickers (or the Orchestration panel). Running a cell therefore recomputes exactly the inputs it needs — no more, no less.' },
+      { type: 'p', text: 'When you run a code cell, SharpNote first walks its dependency tree and runs any stale dependencies (in topological order), then the cell itself. A dependency is any cell that PRODUCES a variable this cell consumes, plus any cells you explicitly wire via the ← Prev / Next → link pickers (or the Orchestration panel). Running a cell therefore recomputes exactly the inputs it needs — no more, no less.' },
+      { type: 'p', text: 'Two rules keep this predictable. Only PREVIOUS cells run — dependencies that sit earlier in the notebook than the cell you ran. A variable reassigned in a later cell will not drag that later ("next") cell into the run. And only STALE dependencies run: a previous dependency is skipped if it already ran successfully and is unchanged, so re-running a cell does not needlessly recompute inputs that are still fresh. A dependency counts as stale if it has been flagged by an upstream change, has never run successfully, or was edited since its last run.' },
       { type: 'h3', text: 'Default: none' },
       { type: 'p', text: 'A code cell with no data-flow dependency and no explicit links has NO dependencies — running it runs only that cell. There is no implicit "notebook order" chaining: adjacent cells are not automatically treated as dependencies. Wire explicit links in the picker when you want an ordering that variable usage alone doesn\'t capture.' },
       { type: 'h3', text: 'Stale Cell Banner' },
@@ -1423,7 +1424,7 @@ export const DOCS_SECTIONS = [
         'Explicit link (blue) — a Prev / Next link you set in the cell header pickers, or by dragging between node ports in the graph',
         'Decision branch — the path a decision cell takes (solid green true, dashed red false, or labeled switch cases)',
       ]},
-      { type: 'p', text: 'There are no implicit "notebook order" edges — two adjacent cells are NOT connected just because one sits below the other. A cell is linked only when it uses another cell\'s variables or you wire the two explicitly, so a cell with no edges is independent and runs on its own. Running a code cell first runs its upstream dependencies (see Reactive Cell Dependencies).' },
+      { type: 'p', text: 'There are no implicit "notebook order" edges — two adjacent cells are NOT connected just because one sits below the other. A cell is linked only when it uses another cell\'s variables or you wire the two explicitly, so a cell with no edges is independent and runs on its own. Running a code cell first runs its stale previous dependencies (see Reactive Cell Dependencies).' },
       { type: 'h3', text: 'Pipelines' },
       { type: 'p', text: 'A pipeline is a named group of cells that execute in dependency order. Create pipelines from the orchestration panel to bundle related cells into a reusable execution unit.' },
       { type: 'ul', items: [
@@ -1434,7 +1435,7 @@ export const DOCS_SECTIONS = [
       ]},
       { type: 'h3', text: 'Execution Modes' },
       { type: 'ul', items: [
-        'Run with Upstream — runs all upstream cells first (in topological order), then the selected cell',
+        'Run with Upstream — runs the selected cell\'s stale previous dependencies first (in topological order), then the selected cell; fresh and later cells are left untouched',
         'Run Downstream — runs the selected cell, then all cells that depend on it',
         'Run Pipeline — runs every cell in the named pipeline in dependency order',
       ]},

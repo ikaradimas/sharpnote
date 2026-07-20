@@ -3,8 +3,8 @@ import { renderHook, act } from '@testing-library/react';
 import { useCellOrchestrator } from '../../src/hooks/useCellOrchestrator.js';
 import { useCellDependencies } from '../../src/hooks/useCellDependencies.js';
 
-function setup(cells, edges, decisionResults = {}) {
-  const nb = { id: 'nb', cells, decisionResults };
+function setup(cells, edges, decisionResults = {}, nbExtra = {}) {
+  const nb = { id: 'nb', cells, decisionResults, ...nbExtra };
   const notebooksRef = { current: [nb] };
   const runOrder = [];
   const dispatchRun = vi.fn(async (_nbId, cell) => { runOrder.push(cell.id); return { success: true }; });
@@ -65,5 +65,53 @@ describe('useCellOrchestrator', () => {
 
     await act(async () => { await orch.current.runWithDeps('nb', 'consumer'); });
     expect(runOrder).toEqual(['producer', 'consumer']); // producer first, unrelated not run
+  });
+
+  it('runWithDeps does NOT run a dependency that comes AFTER the target', async () => {
+    // 'early' (index 0) reads a variable that 'late' (index 1) defines, so the
+    // data-flow edge points late -> early. Running 'early' must not drag the
+    // later cell into the run.
+    const cells = [{ id: 'early', type: 'code' }, { id: 'late', type: 'code' }];
+    const edges = [{ from: 'late', to: 'early' }];
+    const { result, runOrder } = setup(cells, edges);
+    await act(async () => { await result.current.runWithDeps('nb', 'early'); });
+    expect(runOrder).toEqual(['early']);
+    expect(runOrder).not.toContain('late');
+  });
+
+  it('runWithDeps skips a fresh (already-run, not stale) previous dependency', async () => {
+    // 'a' ran successfully and is unchanged; running 'b' should run 'b' only.
+    const cells = [
+      { id: 'a', type: 'code', content: 'var x = 1;', _lastRunCode: 'var x = 1;' },
+      { id: 'b', type: 'code', content: 'x;' },
+    ];
+    const edges = [{ from: 'a', to: 'b' }];
+    const { result, runOrder } = setup(cells, edges, {}, { cellResults: { a: 'success' }, staleCellIds: [] });
+    await act(async () => { await result.current.runWithDeps('nb', 'b'); });
+    expect(runOrder).toEqual(['b']);
+  });
+
+  it('runWithDeps runs a previous dependency that is stale', async () => {
+    // 'a' ran successfully but was flagged stale (downstream of a change);
+    // running 'b' re-runs 'a' first.
+    const cells = [
+      { id: 'a', type: 'code', content: 'var x = 1;', _lastRunCode: 'var x = 1;' },
+      { id: 'b', type: 'code', content: 'x;' },
+    ];
+    const edges = [{ from: 'a', to: 'b' }];
+    const { result, runOrder } = setup(cells, edges, {}, { cellResults: { a: 'success', b: 'success' }, staleCellIds: ['a'] });
+    await act(async () => { await result.current.runWithDeps('nb', 'b'); });
+    expect(runOrder).toEqual(['a', 'b']);
+  });
+
+  it('runWithDeps re-runs a previous dependency edited since its last run', async () => {
+    const cells = [
+      { id: 'a', type: 'code', content: 'var x = 2;', _lastRunCode: 'var x = 1;' }, // edited
+      { id: 'b', type: 'code', content: 'x;' },
+    ];
+    const edges = [{ from: 'a', to: 'b' }];
+    const { result, runOrder } = setup(cells, edges, {}, { cellResults: { a: 'success', b: 'success' }, staleCellIds: [] });
+    await act(async () => { await result.current.runWithDeps('nb', 'b'); });
+    expect(runOrder).toEqual(['a', 'b']);
   });
 });

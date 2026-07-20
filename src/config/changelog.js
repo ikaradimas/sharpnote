@@ -4,6 +4,11 @@
 // gears: 1 = minor fix/tweak, 2 = notable feature, 3 = major feature/architecture
 
 export const CHANGELOG = [
+  { version: '2.25.3', date: '2026-07-20', title: 'Dependency-first runs: previous + stale only', gears: 1, items: [
+    'Fixed: running a cell could also run a later ("next") cell when that later cell reassigned a variable the current one reads. Dependency-first execution now only pulls in PREVIOUS cells (earlier in notebook order) and never traverses through a later cell',
+    'Running a cell now re-runs only its STALE previous dependencies — a dependency that already ran successfully and is unchanged is skipped instead of being recomputed every time. Stale = downstream-invalidated, never run successfully, or edited since its last run',
+    'Applies to both the ▶ Run button / Ctrl+Enter and the Orchestration panel\'s "Run with Upstream" action',
+  ]},
   { version: '2.25.2', date: '2026-07-20', title: 'Removed the decorative "Fun" features', gears: 1, items: [
     'Removed the status-bar fish, empty-notebook circuit-board animation, cursor ghost companion, and idle skyline — along with their Settings → Appearance → Fun toggles. These purely decorative extras had run their course',
     'Their persisted settings keys (showFish, showCircuit, showGhost, showSkyline, and the legacy showMinigame) are now ignored; existing settings files load cleanly without them',
