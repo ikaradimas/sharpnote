@@ -147,6 +147,11 @@ public class DataHelper
             records.Add(fields.ToArray());
         }
 
+        // Drop blank lines (a record that is a single empty field) so a leading or
+        // stray blank line doesn't become an empty header or empty row. A row of
+        // genuinely-empty delimited fields (e.g. ",,") has length > 1 and is kept.
+        records.RemoveAll(r => r.Length == 1 && r[0].Length == 0);
+
         return records;
     }
 

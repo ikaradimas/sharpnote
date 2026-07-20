@@ -4,6 +4,9 @@
 // gears: 1 = minor fix/tweak, 2 = notable feature, 3 = major feature/architecture
 
 export const CHANGELOG = [
+  { version: '2.24.5', date: '2026-07-20', title: 'CSV parser skips blank lines', gears: 1, items: [
+    'Fixed: a leading blank line made the CSV header parse as a single empty column, collapsing every row into one blank-named column (Files.ContentCsv / Data.LoadCsv). Blank lines (a record that is a single empty field) are now skipped, so the header is the first real row; a row of genuinely-empty delimited fields like ",," is preserved',
+  ]},
   { version: '2.24.4', date: '2026-07-20', title: 'CSV parser strips leading UTF-8 BOM', gears: 1, items: [
     'The CSV parser now strips a leading UTF-8 BOM, so the first column name is no longer silently prefixed with an invisible \\uFEFF (which broke lookups like rows[0]["AccountId"] and could make the first column appear wrong) — affects Files.ContentCsv and Data.LoadCsv',
   ]},

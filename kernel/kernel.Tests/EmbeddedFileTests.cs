@@ -122,6 +122,27 @@ public class EmbeddedFileTests
     }
 
     [Fact]
+    public void ContentCsv_SkipsLeadingBlankLine()
+    {
+        // A leading blank line must not become an empty single-column header.
+        var file = MakeFile("\n\"AccountId\",\"PurchaseId\",\"OfferId\"\n\"a\",\"b\",\"c\"");
+        var rows = file.ContentCsv;
+        rows.Should().HaveCount(1);
+        rows[0].Keys.Should().BeEquivalentTo(new[] { "AccountId", "PurchaseId", "OfferId" });
+        rows[0]["AccountId"].Should().Be("a");
+    }
+
+    [Fact]
+    public void ContentCsv_SkipsLeadingBlankCrlfLineAndInteriorBlanks()
+    {
+        var file = MakeFile("\r\nName,Age\r\nAlice,30\r\n\r\nBob,25\r\n");
+        var rows = file.ContentCsv;
+        rows.Should().HaveCount(2); // the interior blank line is skipped, not a row
+        rows[0].Keys.Should().BeEquivalentTo(new[] { "Name", "Age" });
+        rows[1]["Name"].Should().Be("Bob");
+    }
+
+    [Fact]
     public void ContentCsv_QuotedFieldsWithGuids()
     {
         // Reproduces the reported shape: every field quoted, comma-delimited.
