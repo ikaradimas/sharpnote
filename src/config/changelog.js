@@ -4,6 +4,10 @@
 // gears: 1 = minor fix/tweak, 2 = notable feature, 3 = major feature/architecture
 
 export const CHANGELOG = [
+  { version: '2.25.0', date: '2026-07-20', title: 'Display.Checklist output', gears: 2, items: [
+    'New Display.Checklist(title, items…) — run a bunch of checks in code, then render a pass/fail checklist: green ✓ / red ✗ per item, an optional per-item note, and a passed/total header colored by overall status',
+    'Items accept (label, pass) or (label, pass, note) tuples (via a CheckItem record with implicit conversions), or a pre-built IEnumerable<CheckItem>',
+  ]},
   { version: '2.24.5', date: '2026-07-20', title: 'CSV parser skips blank lines', gears: 1, items: [
     'Fixed: a leading blank line made the CSV header parse as a single empty column, collapsing every row into one blank-named column (Files.ContentCsv / Data.LoadCsv). Blank lines (a record that is a single empty field) are now skipped, so the header is the first real row; a row of genuinely-empty delimited fields like ",," is preserved',
   ]},

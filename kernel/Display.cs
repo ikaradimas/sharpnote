@@ -101,6 +101,20 @@ public record FormField(
         => new(key, label, "date", defaultValue ?? DateTime.Today.ToString("yyyy-MM-dd"));
 }
 
+// ── CheckItem ───────────────────────────────────────────────────────────────
+
+/// <summary>
+/// One item in a <see cref="DisplayHelper.Checklist(string, CheckItem[])"/>: a label,
+/// whether it passed, and an optional note (e.g. a failure reason). Implicitly
+/// convertible from <c>(label, pass)</c> and <c>(label, pass, note)</c> tuples so
+/// checklists read cleanly inline.
+/// </summary>
+public record CheckItem(string Label, bool Pass, string? Note = null)
+{
+    public static implicit operator CheckItem((string Label, bool Pass) t) => new(t.Label, t.Pass);
+    public static implicit operator CheckItem((string Label, bool Pass, string Note) t) => new(t.Label, t.Pass, t.Note);
+}
+
 // ── LayoutCell ────────────────────────────────────────────────────────────────
 
 /// <summary>A titled cell for use with <see cref="DisplayHelper.Layout"/>.</summary>
@@ -664,6 +678,42 @@ public class DisplayHelper
   <div style=""position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;color:#ddd;font-family:monospace"">{System.Net.WebUtility.HtmlEncode(lbl)}</div>
 </div>";
         Html(html, title);
+    }
+
+    /// <summary>
+    /// Display a checklist of pass/fail results. Each item shows a green ✓ or red ✗,
+    /// its label, and an optional note; a header shows the passed/total count.
+    /// Items accept <c>(label, pass)</c> or <c>(label, pass, note)</c> tuples, e.g.
+    /// <c>Display.Checklist("Pre-flight", ("Config loaded", ok), ("No errors", errs == 0, "see log"))</c>.
+    /// </summary>
+    public void Checklist(string title, params CheckItem[] items)
+        => Checklist(title, (IEnumerable<CheckItem>)items);
+
+    /// <summary>Checklist with no title.</summary>
+    public void Checklist(params CheckItem[] items)
+        => Checklist("", (IEnumerable<CheckItem>)items);
+
+    /// <summary>Checklist from a pre-built collection of items.</summary>
+    public void Checklist(string title, IEnumerable<CheckItem> items)
+    {
+        var list = items?.ToList() ?? new List<CheckItem>();
+        int passed = list.Count(i => i.Pass);
+        int total  = list.Count;
+        string Enc(string? s) => System.Net.WebUtility.HtmlEncode(s ?? "");
+        var headerColor = total > 0 && passed == total ? "#4ec9b0" : passed == 0 ? "#e05050" : "#e0a040";
+
+        var rows = string.Join("", list.Select(i =>
+            $@"<div style=""display:flex;gap:8px;align-items:baseline;padding:4px 0;border-top:1px solid #262633"">
+  <span style=""color:{(i.Pass ? "#4ec9b0" : "#e05050")};font-weight:700;font-family:monospace"">{(i.Pass ? "✓" : "✗")}</span>
+  <span style=""color:#ccc"">{Enc(i.Label)}</span>{(string.IsNullOrEmpty(i.Note) ? "" : $@"<span style=""color:#777;font-size:0.85em"">— {Enc(i.Note)}</span>")}
+</div>"));
+
+        var name = string.IsNullOrEmpty(title) ? "" : $@"<span style=""font-weight:700;color:#ddd"">{Enc(title)}</span>";
+        var html = $@"<div style=""background:#1a1a22;border:1px solid #333;border-radius:6px;padding:10px 16px;font-family:system-ui,-apple-system,sans-serif;max-width:520px"">
+  <div style=""display:flex;align-items:center;justify-content:space-between;gap:12px"">{name}<span style=""font-size:12px;font-weight:600;color:{headerColor};font-family:monospace"">{passed}/{total} passed</span></div>
+  {rows}
+</div>";
+        Html(html);
     }
 
     // ── Updateable display handles ────────────────────────────────────────────

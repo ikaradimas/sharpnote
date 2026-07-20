@@ -241,6 +241,34 @@ public class DisplayTests : IClassFixture<KernelFixture>, IAsyncLifetime
         output.GetProperty("content").GetString().Should().Be("th=70 region=EU dry=True");
     }
 
+    // ── Display.Checklist ─────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Checklist_RendersItemsWithPassFailAndCount()
+    {
+        var id = KernelFixture.NewId();
+        _k.ClearMessages();
+        await _k.SendAsync(new { type = "execute", id, code =
+            "Display.Checklist(\"Pre-flight\", (\"Config loaded\", true), (\"No errors\", false, \"see log\"));" });
+
+        await _k.WaitForMessageAsync(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "complete" &&
+            el.TryGetProperty("id", out var i) && i.GetString() == id);
+
+        var output = _k.GetMessages().FirstOrDefault(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "display" &&
+            el.TryGetProperty("format", out var f) && f.GetString() == "html");
+
+        output.ValueKind.Should().NotBe(JsonValueKind.Undefined);
+        var html = output.GetProperty("content").GetString()!;
+        html.Should().Contain("Pre-flight");
+        html.Should().Contain("Config loaded");
+        html.Should().Contain("No errors");
+        html.Should().Contain("see log");
+        html.Should().Contain("✓").And.Contain("✗");
+        html.Should().Contain("1/2 passed");
+    }
+
     // ── Display.Plot ──────────────────────────────────────────────────────────
 
     [Fact]

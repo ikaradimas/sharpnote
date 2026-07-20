@@ -116,6 +116,7 @@
 - **Object tree viewer** — complex objects displayed via `.Display()` / `.Dump()` render as an interactive collapsible tree instead of a flat JSON block; nested objects and arrays can be expanded or collapsed individually
 - **Display.Layout** — `Display.Layout(columns, items...)` arranges multiple outputs side-by-side in a CSS grid; wrap items with `Display.Cell(title, content)` for labeled cells; works with any output type (tables, charts, images, HTML, trees)
 - **Progress bars** — `Display.Progress(label, total)` creates a live-updating progress bar; call `.Report(n)` to update the fill and percentage, `.Complete()` to mark it done; updates stream to the output in real time
+- **Checklist output** — `Display.Checklist(title, items…)` renders a pass/fail checklist (green ✓ / red ✗ per item, with an optional note and a passed/total header) from checks you run in code; each item is a `(label, pass)` or `(label, pass, note)` tuple
 - **PDF export** — File → Export as PDF… exports the active notebook's output to a paginated A4 PDF using Electron's `printToPDF()`
 - **Display.Markdown** — `Display.Markdown(text)` renders markdown from C# code with Mermaid diagram and KaTeX math support, enabling dynamic reports and documentation generation
 - **Graph panel** — live time-series chart driven by `Display.Plot(name, value)` calls; per-variable avg / max overlay lines; Clear button and `Display.ClearGraph()` API; chart type, legend toggle (`Ctrl+Shift+R`)
