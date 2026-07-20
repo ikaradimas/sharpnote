@@ -112,6 +112,29 @@ public class EmbeddedFileTests
     }
 
     [Fact]
+    public void ContentCsv_StripsLeadingBomFromFirstHeader()
+    {
+        // A UTF-8 BOM must not become part of the first column name.
+        var file = MakeFile("\uFEFF\"AccountId\",\"PurchaseId\",\"OfferId\"\n\"a\",\"b\",\"c\"");
+        var rows = file.ContentCsv;
+        rows[0].Keys.Should().BeEquivalentTo(new[] { "AccountId", "PurchaseId", "OfferId" });
+        rows[0]["AccountId"].Should().Be("a");
+    }
+
+    [Fact]
+    public void ContentCsv_QuotedFieldsWithGuids()
+    {
+        // Reproduces the reported shape: every field quoted, comma-delimited.
+        var file = MakeFile(
+            "\"AccountId\",\"PurchaseId\",\"OfferId\"\n" +
+            "\"626eee00\",\"6a76fff8-62e8-4e79\",\"68182ed4-1725\"");
+        var rows = file.ContentCsv;
+        rows.Should().HaveCount(1);
+        rows[0].Keys.Should().BeEquivalentTo(new[] { "AccountId", "PurchaseId", "OfferId" });
+        rows[0]["PurchaseId"].Should().Be("6a76fff8-62e8-4e79");
+    }
+
+    [Fact]
     public void Exists_And_Contains_ReturnSameResult()
     {
         var helper = new FilesHelper(TextWriter.Null);

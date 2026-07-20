@@ -66,6 +66,11 @@ public class DataHelper
 
     internal static List<string[]> ParseCsv(string text, char delimiter)
     {
+        // Strip a leading UTF-8 BOM — otherwise it becomes part of the first
+        // header/field (e.g. the key "\uFEFFAccountId"), which silently breaks
+        // lookups by the visible column name.
+        if (text.Length > 0 && text[0] == '\uFEFF') text = text.Substring(1);
+
         var records = new List<string[]>();
         var fields = new List<string>();
         var field = new StringBuilder();

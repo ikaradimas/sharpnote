@@ -4,6 +4,9 @@
 // gears: 1 = minor fix/tweak, 2 = notable feature, 3 = major feature/architecture
 
 export const CHANGELOG = [
+  { version: '2.24.4', date: '2026-07-20', title: 'CSV parser strips leading UTF-8 BOM', gears: 1, items: [
+    'The CSV parser now strips a leading UTF-8 BOM, so the first column name is no longer silently prefixed with an invisible \\uFEFF (which broke lookups like rows[0]["AccountId"] and could make the first column appear wrong) — affects Files.ContentCsv and Data.LoadCsv',
+  ]},
   { version: '2.24.3', date: '2026-07-20', title: 'Files.ContentCsv auto-detects the delimiter', gears: 1, items: [
     'Files["name"].ContentCsv now auto-detects the delimiter (comma, semicolon, tab, or pipe) instead of assuming comma — semicolon-separated CSVs (common in European locales) previously collapsed into a single column',
     'New DataHelper.SniffDelimiter() picks the delimiter that yields the most fields on the header line, respecting quotes; falls back to comma. ContentTsv and ParseCsvContent(delimiter) remain explicit',
