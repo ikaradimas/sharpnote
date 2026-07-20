@@ -195,7 +195,7 @@ alongside it. The \`Files\` global lets you create, read, and update them from c
 | Embed / overwrite bytes | \`Files.Embed(name, byte[], filename, mimeType?)\` |
 | Read text | \`Files["name"].ContentAsText\` · \`Files["name"].OpenRead()\` |
 | Read bytes | \`Files["name"].Content\` |
-| Parse as table | \`Files["name"].ContentCsv\` · \`.ContentTsv\` · \`.ParseCsvContent(delim, hasHeader)\` |
+| Parse as table | \`Files["name"].ContentCsv\` (delimiter auto-detected) · \`.ContentTsv\` · \`.ParseCsvContent(delim, hasHeader)\` |
 | Metadata | \`Files["name"].SetVariable(k, v)\` · \`.GetVariable(k)\` · \`.Variables\` |
 | Existence / list | \`Files.Exists("name")\` · \`Files.List()\` |
 

@@ -4,6 +4,10 @@
 // gears: 1 = minor fix/tweak, 2 = notable feature, 3 = major feature/architecture
 
 export const CHANGELOG = [
+  { version: '2.24.3', date: '2026-07-20', title: 'Files.ContentCsv auto-detects the delimiter', gears: 1, items: [
+    'Files["name"].ContentCsv now auto-detects the delimiter (comma, semicolon, tab, or pipe) instead of assuming comma — semicolon-separated CSVs (common in European locales) previously collapsed into a single column',
+    'New DataHelper.SniffDelimiter() picks the delimiter that yields the most fields on the header line, respecting quotes; falls back to comma. ContentTsv and ParseCsvContent(delimiter) remain explicit',
+  ]},
   { version: '2.24.2', date: '2026-07-20', title: 'Switch-decision edges render purple', gears: 1, items: [
     'Switch-case edges in the Orchestration graph now render purple (line, arrowhead, and case label) — matching the purple decision node and the documentation; previously they fell back to the default blue-grey',
     'Reconciled the docs wording (all switch-case edges are purple and labeled, not only a "matched" one)',

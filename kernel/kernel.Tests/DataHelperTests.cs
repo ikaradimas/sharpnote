@@ -174,6 +174,37 @@ public class DataHelperTests
         rows[1]["X"].Should().Be(2L);
     }
 
+    // ── SniffDelimiter ─────────────────────────────────────────────────────────
+
+    [Theory]
+    [InlineData("a,b,c\n1,2,3", ',')]
+    [InlineData("a;b;c\n1;2;3", ';')]
+    [InlineData("a\tb\tc\n1\t2\t3", '\t')]
+    [InlineData("a|b|c\n1|2|3", '|')]
+    public void SniffDelimiter_DetectsCommonDelimiters(string text, char expected)
+    {
+        DataHelper.SniffDelimiter(text).Should().Be(expected);
+    }
+
+    [Fact]
+    public void SniffDelimiter_SingleColumn_FallsBackToComma()
+    {
+        DataHelper.SniffDelimiter("OnlyOneColumn\nvalue1\nvalue2").Should().Be(',');
+    }
+
+    [Fact]
+    public void SniffDelimiter_EmptyText_FallsBackToComma()
+    {
+        DataHelper.SniffDelimiter("").Should().Be(',');
+    }
+
+    [Fact]
+    public void SniffDelimiter_IgnoresDelimitersInsideQuotedFields()
+    {
+        // Header uses ';'; a quoted field contains commas that must not sway detection.
+        DataHelper.SniffDelimiter("\"City, State\";Pop\n\"Athens, GR\";3153000").Should().Be(';');
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private static string WriteTempCsv(string content)

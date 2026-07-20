@@ -145,6 +145,43 @@ public class DataHelper
         return records;
     }
 
+    // ── Delimiter detection ──────────────────────────────────────────────────
+
+    private static readonly char[] DelimiterCandidates = { ',', ';', '\t', '|' };
+
+    /// <summary>
+    /// Heuristically detect the delimiter of delimited text by inspecting the first
+    /// non-empty line and choosing the candidate (comma, semicolon, tab, or pipe)
+    /// that splits it into the most fields. Quotes are respected. Falls back to comma
+    /// (e.g. a genuine single-column file). Useful for European CSVs, which commonly
+    /// use ';' because ',' is the decimal separator.
+    /// </summary>
+    public static char SniffDelimiter(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return ',';
+
+        string firstLine = "";
+        using (var reader = new StringReader(text))
+        {
+            string? line;
+            while ((line = reader.ReadLine()) != null)
+            {
+                if (line.Trim().Length > 0) { firstLine = line; break; }
+            }
+        }
+        if (firstLine.Length == 0) return ',';
+
+        char best = ',';
+        int bestCount = 1;
+        foreach (var d in DelimiterCandidates)
+        {
+            var records = ParseCsv(firstLine, d);
+            int fields = records.Count > 0 ? records[0].Length : 1;
+            if (fields > bestCount) { bestCount = fields; best = d; }
+        }
+        return best;
+    }
+
     // ── Type inference ───────────────────────────────────────────────────────
 
     internal static object InferType(string value)

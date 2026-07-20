@@ -38,9 +38,14 @@ public class EmbeddedFile
     private Lazy<List<Dictionary<string, object>>>? _csvCache;
     private Lazy<List<Dictionary<string, object>>>? _tsvCache;
 
-    /// <summary>Parses the content as CSV into the same format as Data.LoadCsv(). Cached after first access.</summary>
+    /// <summary>
+    /// Parses the content as CSV into the same format as Data.LoadCsv(). The delimiter is
+    /// auto-detected (comma, semicolon, tab, or pipe) so European ';'-separated files work
+    /// without extra arguments. Cached after first access. For an explicit delimiter, use
+    /// ParseCsvContent(delimiter, hasHeader).
+    /// </summary>
     public List<Dictionary<string, object>> ContentCsv =>
-        (_csvCache ??= new(() => ParseCsvContent(',', true))).Value;
+        (_csvCache ??= new(() => ParseCsvContent(DataHelper.SniffDelimiter(ContentAsText), true))).Value;
 
     /// <summary>Parses the content as TSV into the same format as Data.LoadCsv(). Cached after first access.</summary>
     public List<Dictionary<string, object>> ContentTsv =>

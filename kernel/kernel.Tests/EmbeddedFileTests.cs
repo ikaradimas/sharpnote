@@ -82,6 +82,36 @@ public class EmbeddedFileTests
     }
 
     [Fact]
+    public void ContentCsv_AutoDetectsSemicolonDelimiter()
+    {
+        // European-style CSV: ';' delimiter (',' is the decimal separator).
+        var file = MakeFile("Region;Units;Revenue\nNorth;142;9990,50\nSouth;87;24990,00");
+        var rows = file.ContentCsv;
+
+        rows.Should().HaveCount(2);
+        rows[0].Keys.Should().BeEquivalentTo(new[] { "Region", "Units", "Revenue" });
+        rows[0]["Region"].Should().Be("North");
+        rows[0]["Units"].Should().Be(142L);
+    }
+
+    [Fact]
+    public void ContentCsv_AutoDetectsTabAndPipeDelimiters()
+    {
+        var tab = MakeFile("Region\tUnits\tRevenue\nNorth\t142\t9990.50");
+        tab.ContentCsv[0].Keys.Should().BeEquivalentTo(new[] { "Region", "Units", "Revenue" });
+
+        var pipe = MakeFile("Region|Units|Revenue\nNorth|142|9990.50");
+        pipe.ContentCsv[0].Keys.Should().BeEquivalentTo(new[] { "Region", "Units", "Revenue" });
+    }
+
+    [Fact]
+    public void ContentCsv_CommaStillWorks()
+    {
+        var file = MakeFile("Region,Units,Revenue\nNorth,142,9990.50");
+        file.ContentCsv[0].Keys.Should().BeEquivalentTo(new[] { "Region", "Units", "Revenue" });
+    }
+
+    [Fact]
     public void Exists_And_Contains_ReturnSameResult()
     {
         var helper = new FilesHelper(TextWriter.Null);
