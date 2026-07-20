@@ -57,6 +57,7 @@ export const NOTEBOOK_TEMPLATES = [
   { key: 'workspace-panels', label: 'Workspace & Panels',      description: 'Panels API, dock/float, layout scripting' },
   { key: 'orchestration',    label: 'Cell Orchestration',      description: 'Decision cells, naming, colors, pipelines' },
   { key: 'forms',            label: 'Forms',                   description: 'Interactive forms, submit-to-cell, dashboard mode' },
+  { key: 'embedded-files',   label: 'Embedded Files',          description: 'Embed files in the notebook, then write, read, and update them from code' },
   { key: 'raytracer',        label: 'Raytracer',               description: 'Build a raytracer with live preview using Display.Image' },
   { key: 'service-mesh',    label: 'Service Mesh',            description: 'Docker containers, mock APIs, health checks, traffic routing' },
   { key: 'infographic',     label: 'Infographic Dashboard',   description: 'Column layouts, stat cards, marquees, progress bars, CSS animations' },
@@ -74,6 +75,7 @@ function cellsForTemplate(key) {
     case 'workspace-panels': return makeWorkspacePanelsCells();
     case 'orchestration':    return makeOrchestrationCells();
     case 'forms':            return makeFormsCells();
+    case 'embedded-files':   return makeEmbeddedFilesCells();
     case 'raytracer':        return makeRaytracerCells();
     case 'service-mesh':    return makeServiceMeshCells();
     case 'infographic':     return makeInfographicCells();
@@ -174,6 +176,117 @@ var cities = new[] {
   new { City = "Lisbon",  Country = "Portugal",Pop = 2_957_000 },
 };
 cities.DisplayTable();`),
+  ];
+}
+
+// ── Embedded Files (write · read · update) ────────────────────────────────────
+
+function makeEmbeddedFilesCells() {
+  return [
+    md(`# Embedded Files
+
+Files can live **inside** the notebook. They are stored (base64) in the \`.cnb\` file,
+so the notebook stays self-contained and portable — no external paths, nothing to ship
+alongside it. The \`Files\` global lets you create, read, and update them from code.
+
+| Do | API |
+|----|-----|
+| Embed / overwrite text | \`Files.EmbedText(name, text, filename, mimeType?)\` |
+| Embed / overwrite bytes | \`Files.Embed(name, byte[], filename, mimeType?)\` |
+| Read text | \`Files["name"].ContentAsText\` · \`Files["name"].OpenRead()\` |
+| Read bytes | \`Files["name"].Content\` |
+| Parse as table | \`Files["name"].ContentCsv\` · \`.ContentTsv\` · \`.ParseCsvContent(delim, hasHeader)\` |
+| Metadata | \`Files["name"].SetVariable(k, v)\` · \`.GetVariable(k)\` · \`.Variables\` |
+| Existence / list | \`Files.Exists("name")\` · \`Files.List()\` |
+
+> Run the cells top to bottom — each one builds on the file created before it.`),
+
+    { ...cs(`Display.StatCard("Stored in .cnb", "Portable · base64 · no external paths", color: "#569cd6", icon: "📎");`), columns: 2 },
+    { ...cs(`Display.StatCard("Files global", "Embed · Read · Update · Metadata", color: "#4ec9b0", icon: "🗂️");`), columns: 2 },
+
+    md('## 1. Write — embed a file from code'),
+
+    cs(`// EmbedText writes a brand-new file straight into the notebook.
+// (Re-running with the same name overwrites it — see step 4.)
+Files.EmbedText(
+    name: "greeting",
+    text: "Hello from an embedded file!\\nCreated entirely in C#.",
+    filename: "greeting.txt");
+
+var f = Files["greeting"];
+$"Embedded '{f.Filename}' ({f.MimeType}, {f.Content.Length} bytes)".Dump();`),
+
+    md('## 2. Read — pull the content back out'),
+
+    cs(`// Read the decoded UTF-8 text directly...
+Files["greeting"].ContentAsText.Dump("ContentAsText");
+
+// ...or stream it, exactly like a file on disk.
+using var reader = new StreamReader(Files["greeting"].OpenRead());
+reader.ReadToEnd().Dump("via OpenRead()");`),
+
+    md('## 3. Structured data — embed a CSV, read it as a table'),
+
+    cs(`// Embed some CSV...
+Files.EmbedText("sales", @"Region,Units,Revenue
+North,142,9990.50
+South,87,24990.00
+East,321,4990.75", "sales.csv", "text/csv");
+
+// ...then parse it into rows (RFC-4180, with type inference) and render.
+Display.Table(Files["sales"].ContentCsv);`),
+
+    md('## 4. Update — overwrite content in place'),
+
+    cs(`// Embedding the same name again replaces the content
+// (metadata variables from step 5 are preserved across the update).
+var current = Files["greeting"].ContentAsText;
+Files.EmbedText("greeting", current + "\\nAppended at " + DateTime.Now.ToString("T"), "greeting.txt");
+
+Files["greeting"].ContentAsText.Dump("greeting.txt is now");`),
+
+    md('## 5. Metadata — attach variables to a file'),
+
+    cs(`// Every embedded file carries a small string→string bag, persisted with the
+// notebook and editable in the Embedded Files panel.
+Files["sales"].SetVariable("source", "Q3 export");
+Files["sales"].SetVariable("reviewed", "true");
+
+Files["sales"].GetVariable("source").Dump("source");
+Files["sales"].Variables.Dump("all metadata");`),
+
+    md('## 6. Binary files'),
+
+    cs(`// Bytes work just as well as text — store any binary payload.
+byte[] payload = System.Text.Encoding.UTF8.GetBytes("binary-ish payload ✓");
+Files.Embed("blob", payload, "payload.bin", "application/octet-stream");
+
+var blob = Files["blob"];
+$"Stored {blob.Content.Length} bytes; round-trips to: {blob.ContentAsText}".Dump();`),
+
+    md('## 7. Manage them all'),
+
+    cs(`// Enumerate everything embedded in this notebook.
+Display.Table(Files.List().Select(f => new {
+    f.Name,
+    f.Filename,
+    f.MimeType,
+    Bytes = f.Content.Length,
+}));
+
+// Guard lookups for names that may not exist — the indexer throws if missing.
+Files.Exists("greeting").Dump("greeting present?");
+Files.Exists("nope").Dump("nope present?");`),
+
+    md(`## Where they live & the UI
+
+- Embedded files are saved **base64 inside the \`.cnb\`**, so the notebook is fully
+  self-contained and safe to move or share.
+- Add files without code too: drag one from the **Files** panel onto a code cell, or use
+  the **Embedded Files** panel (the **+** button) to add, rename, delete, and edit metadata.
+- On reload the notebook re-sends its files to the kernel, so \`Files["name"]\` keeps
+  working across sessions.
+- \`Files["name"]\` throws if the name is missing — guard with \`Files.Exists("name")\`.`),
   ];
 }
 
