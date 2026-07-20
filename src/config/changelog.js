@@ -4,6 +4,11 @@
 // gears: 1 = minor fix/tweak, 2 = notable feature, 3 = major feature/architecture
 
 export const CHANGELOG = [
+  { version: '2.24.1', date: '2026-07-20', title: 'Orchestration docs + dead-code cleanup', gears: 1, items: [
+    'Documented dependency-first execution and the "no implicit notebook-order" default in the Cell Orchestration docs and example template, with a "what the edges mean" breakdown',
+    'The Cell Orchestration template now shows dependency-first execution (running Compute Stats runs Load Orders + Data Check first) and graph-based staleness',
+    'Removed dead edge.implicit handling from the Orchestration panel (no implicit edges exist anymore); the edge count now reflects real dependency edges only',
+  ]},
   { version: '2.24.0', date: '2026-07-20', title: 'Graph-based stale-cell banner', gears: 1, items: [
     'The "↺ upstream variables changed" banner is now graph-based: after a run that changes a variable, the cells flagged stale are the ones DOWNSTREAM of it in the dependency graph (data-flow consumers of the changed variable, plus cascading dependents) — not simply every code cell positioned below it',
     'A direct dependent is staled only if its edge carries a changed variable; explicit-link/decision dependents always propagate; staleness cascades transitively',

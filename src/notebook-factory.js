@@ -1922,16 +1922,21 @@ function makeOrchestrationCells() {
     md(`# Cell Orchestration
 
 This template demonstrates the **cell orchestration** features — named cells, colors,
-decision branching, and the interactive dependency graph.
+decision branching, dependency-first execution, and the interactive dependency graph.
 
 ## How to use
 
 1. Open the **Orchestration** panel (Tools → Orchestration, or **Ctrl+Shift+Y**)
 2. Run the cells below — the graph will light up with execution status
-3. **Click a node** in the graph to run it, **double-click** to navigate
+3. **Click a node** in the graph to run just that cell, **double-click** to navigate
 4. **Right-click** a node for: *Run with upstream*, *Run downstream*, *Add to pipeline*
 5. Use **zoom** (scroll) and **pan** (drag empty space) to navigate the graph
-6. Create **pipelines** in the bottom section to group and re-run cells`),
+6. Create **pipelines** in the bottom section to group and re-run cells
+
+> **Dependency-first execution:** running a code cell (its ▶ Run button or Ctrl+Enter)
+> first runs the cell's dependencies — the cells that produce the variables it uses, plus
+> any explicitly-wired links — in order, then the cell itself. Try running *Compute Stats*
+> below: *Load Orders* and *Data Check* run first, automatically.`),
 
     md(`## 1. Cell Naming & Colors
 
@@ -1951,8 +1956,10 @@ They appear as nodes in the dependency graph.`),
 
     md(`## 3. Computed Dependencies
 
-This cell references \`orders\` from the Load cell — creating a dependency edge in the graph.
-Open the Orchestration panel to see the edge from *Load Orders* → *Compute Stats*.`),
+This cell references \`orders\` from the Load cell — creating a **data-flow dependency** edge
+in the graph. Because of it, **running this cell first runs *Load Orders* (and the wired
+*Data Check*) automatically**, then *Compute Stats* — you never have to run upstream cells by
+hand. Open the Orchestration panel to see the edge from *Load Orders* → *Compute Stats*.`),
 
     statsCell,
 
@@ -2020,7 +2027,9 @@ Decision cells dynamically choose which branch to follow during pipeline executi
 - **Fit** resets zoom and pan to default
 - **Cancel** (⏹) stops a running orchestration mid-flight
 - Nodes pulse when running, show ✓/✗ when done, and turn amber when stale
-- Variable names appear as edge labels to show data flow`),
+- Variable names appear as edge labels to show data flow
+- Running a cell runs its **upstream dependencies first**; a cell with no data-flow and no explicit links runs alone (there is no implicit notebook-order chaining)
+- After a run changes a variable, only the cells **downstream in the graph** are marked stale (amber) — not every cell below it`),
   ];
 }
 

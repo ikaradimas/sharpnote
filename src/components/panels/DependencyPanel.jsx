@@ -93,13 +93,11 @@ function getEdgeColor(edge) {
   if (edge.branch === 'true' || edge.branch === true) return '#4ec9b0';
   if (edge.branch === 'false' || edge.branch === false) return '#e05050';
   if (edge.link) return '#569cd6';
-  if (edge.implicit) return '#2a3545';
   if (edge.virtual) return '#505060';
   return '#3a5068';
 }
 
 function getEdgeDash(edge) {
-  if (edge.implicit) return '3 3';
   if (edge.branch === 'false' || edge.branch === false) return '4 3';
   return 'none';
 }
@@ -123,7 +121,7 @@ function layoutNodes(nodes, edges, expandedBoxes, nodePositions) {
   const predecessors = {};
   for (const n of nodes) predecessors[n.id] = [];
   for (const e of edges) {
-    if (!e.implicit && predecessors[e.to]) predecessors[e.to].push(e.from);
+    if (predecessors[e.to]) predecessors[e.to].push(e.from);
   }
 
   // First pass: compute initial x positions per depth row (centered, no barycenter yet)
@@ -221,11 +219,10 @@ function computeCriticalPath(nodes, edges, cellElapsed) {
   const elapsed = cellElapsed || {};
   if (nodes.length === 0) return null;
 
-  const explicitEdges = edges.filter((e) => !e.implicit);
   const outAdj = {};
   const inAdj = {};
   for (const n of nodes) { outAdj[n.id] = []; inAdj[n.id] = []; }
-  for (const e of explicitEdges) {
+  for (const e of edges) {
     outAdj[e.from]?.push(e.to);
     inAdj[e.to]?.push(e.from);
   }
@@ -343,7 +340,6 @@ export function DependencyPanel({
   }, []);
 
   /* ── Derived data ──────────────────────────────────────────────────────── */
-  const explicitEdges = useMemo(() => edges.filter((e) => !e.implicit), [edges]);
   const nodeMap = useMemo(() => Object.fromEntries(nodes.map((n) => [n.id, n])), [nodes]);
   const selectedPipeline = (pipelines || []).find((p) => p.id === selectedPipelineId);
 
@@ -356,8 +352,8 @@ export function DependencyPanel({
   );
 
   const criticalPath = useMemo(
-    () => computeCriticalPath(nodes, explicitEdges, notebook?.cellElapsed),
-    [nodes, explicitEdges, notebook?.cellElapsed],
+    () => computeCriticalPath(nodes, edges, notebook?.cellElapsed),
+    [nodes, edges, notebook?.cellElapsed],
   );
 
   const completedSet = useMemo(
@@ -660,7 +656,7 @@ export function DependencyPanel({
         </div>
 
         <span className="orch-toolbar-info">
-          {realNodes.length} cells &middot; {explicitEdges.length} edges
+          {realNodes.length} cells &middot; {edges.filter((e) => !e.virtual).length} edges
         </span>
       </div>
 
@@ -1007,7 +1003,7 @@ export function DependencyPanel({
               return (
                 <>
                   <g transform={`scale(${scale})`}>
-                    {explicitEdges.map((e, i) => {
+                    {edges.map((e, i) => {
                       const from = positions[e.from];
                       const to = positions[e.to];
                       if (!from || !to) return null;

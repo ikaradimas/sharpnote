@@ -1407,7 +1407,7 @@ export const DOCS_SECTIONS = [
       ]},
       { type: 'p', text: 'Decision cells appear as diamond-shaped nodes in the dependency graph.' },
       { type: 'h3', text: 'Dependency Graph (Orchestration Panel)' },
-      { type: 'p', text: 'The Orchestration panel (Ctrl+Shift+Y) is an interactive view of cell relationships. Nodes represent cells; edges represent execution dependencies and decision branches.' },
+      { type: 'p', text: 'The Orchestration panel (Ctrl+Shift+Y) is an interactive view of cell relationships. Nodes represent cells; edges represent dependencies and decision branches.' },
       { type: 'ul', items: [
         'Click a node to select and scroll to the corresponding cell',
         'Right-click a node for a context menu: Run, Run with Upstream, Run Downstream',
@@ -1416,6 +1416,13 @@ export const DOCS_SECTIONS = [
         'Decision nodes show two labeled outgoing edges (true / false)',
         'Cell colors and names are reflected on graph nodes',
       ]},
+      { type: 'h4', text: 'What the edges mean' },
+      { type: 'ul', items: [
+        'Data-flow — drawn from a cell that produces a variable to a cell that uses it; the variable name appears as the edge label. Detected automatically from your code.',
+        'Explicit link (blue) — a Prev / Next link you set in the cell header pickers, or by dragging between node ports in the graph',
+        'Decision branch — the path a decision cell takes (solid green true, dashed red false, or labeled switch cases)',
+      ]},
+      { type: 'p', text: 'There are no implicit "notebook order" edges — two adjacent cells are NOT connected just because one sits below the other. A cell is linked only when it uses another cell\'s variables or you wire the two explicitly, so a cell with no edges is independent and runs on its own. Running a code cell first runs its upstream dependencies (see Reactive Cell Dependencies).' },
       { type: 'h3', text: 'Pipelines' },
       { type: 'p', text: 'A pipeline is a named group of cells that execute in dependency order. Create pipelines from the orchestration panel to bundle related cells into a reusable execution unit.' },
       { type: 'ul', items: [
