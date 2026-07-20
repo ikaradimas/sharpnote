@@ -1268,6 +1268,22 @@ Quick one-liners for dashboard-style visuals. Combine with \`columns\` layout fo
     { ...cs(`Display.ProgressBar(42, "Memory — 42%", color: "#4ec9b0");`), columns: 2 },
 
     cs(`Display.Marquee("  ●  SYSTEM STATUS: ALL SERVICES OPERATIONAL  ●  LAST DEPLOY: 2 hours ago  ●  ", speed: 30, color: "#4ec9b0", background: "#0a0a12");`),
+
+    md(`## Checklist
+
+Run a bunch of checks in code, then show a pass/fail checklist. Each item is a
+\`(label, pass)\` — or \`(label, pass, note)\` — tuple; the header shows the passed/total
+count and turns teal when everything passes, amber when some fail.`),
+
+    cs(`// The conditions are ordinary C# — computed here, then rendered.
+var services = new[] { "auth", "billing", "search" };
+var latencyMs = 143;
+
+Display.Checklist("Deploy readiness",
+    ("All services listed",   services.Length == 3),
+    ("Latency under budget",  latencyMs < 200),
+    ("Migrations applied",    true),
+    ("No open incidents",     false, "1 incident still open"));`),
   ];
 }
 

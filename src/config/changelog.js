@@ -4,6 +4,9 @@
 // gears: 1 = minor fix/tweak, 2 = notable feature, 3 = major feature/architecture
 
 export const CHANGELOG = [
+  { version: '2.25.1', date: '2026-07-20', title: 'Checklist example in Display & Rich Output template', gears: 1, items: [
+    'The Display & Rich Output starter template now demonstrates Display.Checklist (a "Deploy readiness" pass/fail example) alongside the other infographic helpers',
+  ]},
   { version: '2.25.0', date: '2026-07-20', title: 'Display.Checklist output', gears: 2, items: [
     'New Display.Checklist(title, items…) — run a bunch of checks in code, then render a pass/fail checklist: green ✓ / red ✗ per item, an optional per-item note, and a passed/total header colored by overall status',
     'Items accept (label, pass) or (label, pass, note) tuples (via a CheckItem record with implicit conversions), or a pre-built IEnumerable<CheckItem>',
