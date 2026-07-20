@@ -23,8 +23,6 @@ import { NotebookView } from '../components/NotebookView.jsx';
 import { LibraryEditorPane } from '../components/panels/library/LibraryEditorPane.jsx';
 import { DocsPanel } from '../components/panels/docs/DocsPanel.jsx';
 import { ChangelogPanel } from '../components/panels/ChangelogPanel.jsx';
-import { Ghost } from '../components/Ghost.jsx';
-import { IdleSkyline } from '../components/IdleSkyline.jsx';
 import { KafkaPanel } from '../components/panels/kafka/KafkaPanel.jsx';
 import { DockZone } from '../components/dock/DockZone.jsx';
 import { FloatPanel } from '../components/dock/FloatPanel.jsx';
@@ -93,20 +91,6 @@ export function App() {
   useEffect(() => { strongCuesRef.current = strongCuesEnabled; }, [strongCuesEnabled]);
   const formatOnSaveRef = useRef(false);
   useEffect(() => { formatOnSaveRef.current = formatOnSave; }, [formatOnSave]);
-
-  const [showFish, setShowFish] = useState(true);
-  const showFishRef = useRef(true);
-  useEffect(() => { showFishRef.current = showFish; }, [showFish]);
-  const [showCircuit, setShowCircuit] = useState(true);
-  const showCircuitRef = useRef(true);
-  useEffect(() => { showCircuitRef.current = showCircuit; }, [showCircuit]);
-  const [showGhost, setShowGhost] = useState(true);
-  const showGhostRef = useRef(true);
-  useEffect(() => { showGhostRef.current = showGhost; }, [showGhost]);
-  const [showSkyline, setShowSkyline] = useState(true);
-  const showSkylineRef = useRef(true);
-  useEffect(() => { showSkylineRef.current = showSkyline; }, [showSkyline]);
-  const skylineTriggerRef = useRef(null);
 
   const [notebookBg, setNotebookBg] = useState('none');
   const notebookBgRef = useRef('none');
@@ -353,10 +337,6 @@ export function App() {
       lintEnabled: lintEnabledRef.current,
       strongCuesEnabled: strongCuesRef.current,
       formatOnSave: formatOnSaveRef.current,
-      showFish: showFishRef.current,
-      showCircuit: showCircuitRef.current,
-      showGhost: showGhostRef.current,
-      showSkyline: showSkylineRef.current,
       notebookBg: notebookBgRef.current,
       notebookBgOpacity: notebookBgOpacityRef.current,
       notebookBgTint: notebookBgTintRef.current,
@@ -389,11 +369,6 @@ export function App() {
       if (typeof s?.lintEnabled === 'boolean') setLintEnabled(s.lintEnabled);
       if (typeof s?.strongCuesEnabled === 'boolean') setStrongCuesEnabled(s.strongCuesEnabled);
       if (typeof s?.formatOnSave === 'boolean') setFormatOnSave(s.formatOnSave);
-      if (typeof s?.showFish === 'boolean') setShowFish(s.showFish);
-      if (typeof s?.showCircuit === 'boolean') setShowCircuit(s.showCircuit);
-      else if (typeof s?.showMinigame === 'boolean') setShowCircuit(s.showMinigame);
-      if (typeof s?.showGhost === 'boolean') setShowGhost(s.showGhost);
-      if (typeof s?.showSkyline === 'boolean') setShowSkyline(s.showSkyline);
       if (s?.notebookBg) setNotebookBg(s.notebookBg);
       if (typeof s?.notebookBgOpacity === 'number') setNotebookBgOpacity(s.notebookBgOpacity);
       if (typeof s?.notebookBgTint === 'boolean') setNotebookBgTint(s.notebookBgTint);
@@ -1039,10 +1014,6 @@ export function App() {
     if (typeof s.lintEnabled === 'boolean') setLintEnabled(s.lintEnabled);
     if (typeof s.strongCuesEnabled === 'boolean') setStrongCuesEnabled(s.strongCuesEnabled);
     if (typeof s.formatOnSave === 'boolean') setFormatOnSave(s.formatOnSave);
-    if (typeof s.showFish === 'boolean') setShowFish(s.showFish);
-    if (typeof s.showCircuit === 'boolean') setShowCircuit(s.showCircuit);
-    if (typeof s.showGhost === 'boolean') setShowGhost(s.showGhost);
-    if (typeof s.showSkyline === 'boolean') setShowSkyline(s.showSkyline);
     if (s.notebookBg) setNotebookBg(s.notebookBg);
     if (typeof s.notebookBgOpacity === 'number') setNotebookBgOpacity(s.notebookBgOpacity);
     if (typeof s.notebookBgTint === 'boolean') setNotebookBgTint(s.notebookBgTint);
@@ -1595,7 +1566,6 @@ export function App() {
                     onToggleBreakpoint={toggleBreakpoint}
                     onRetainOutput={handleRetainOutput}
                     onUnretainOutput={handleUnretainOutput}
-                    showCircuit={showCircuit}
                     notebookBg={notebookBg}
                     notebookBgOpacity={notebookBgOpacity}
                     notebookBgTint={notebookBgTint}
@@ -1660,10 +1630,7 @@ export function App() {
           {!viewerMode && <DockZone zone="bottom" {...dockZoneProps} />}
         </div>
       </div>
-      <StatusBar notebooks={notebooks} activeId={activeId} showFish={showFish}
-        showSkyline={showSkyline} onTriggerSkyline={() => skylineTriggerRef.current?.()} />
-      {showGhost && <Ghost />}
-      {showSkyline && <IdleSkyline triggerRef={skylineTriggerRef} />}
+      <StatusBar notebooks={notebooks} activeId={activeId} />
       {!viewerMode && Object.entries(dockLayout.assignments)
         .filter(([panelId, z]) => z === 'float' && !!effectiveOpenFlags[panelId])
         .map(([panelId]) => {
@@ -1697,10 +1664,6 @@ export function App() {
               lintEnabled: lintEnabledRef.current,
               strongCuesEnabled: strongCuesRef.current,
               formatOnSave: formatOnSaveRef.current,
-              showFish: showFishRef.current,
-              showCircuit: showCircuitRef.current,
-              showGhost: showGhostRef.current,
-              showSkyline: showSkylineRef.current,
               notebookBg: notebookBgRef.current,
               notebookBgOpacity: notebookBgOpacityRef.current,
               tablePageSize: tablePageSizeRef.current,
@@ -1742,14 +1705,6 @@ export function App() {
           onStrongCuesChange={setStrongCuesEnabled}
           formatOnSave={formatOnSave}
           onFormatOnSaveChange={setFormatOnSave}
-          showFish={showFish}
-          onShowFishChange={setShowFish}
-          showCircuit={showCircuit}
-          onShowCircuitChange={setShowCircuit}
-          showGhost={showGhost}
-          onShowGhostChange={setShowGhost}
-          showSkyline={showSkyline}
-          onShowSkylineChange={setShowSkyline}
           notebookBg={notebookBg}
           onNotebookBgChange={setNotebookBg}
           notebookBgOpacity={notebookBgOpacity}

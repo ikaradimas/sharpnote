@@ -16,7 +16,6 @@ import { DockerCell } from './editor/DockerCell.jsx';
 import { FlociCell } from './editor/FlociCell.jsx';
 import { AddBar } from './editor/AddBar.jsx';
 import { FindBar } from './FindBar.jsx';
-import { CircuitBoard } from './CircuitBoard.jsx';
 
 function NotebookBgOverlay({ file, opacity, tint }) {
   const src = `assets/backgrounds/${file}`;
@@ -90,7 +89,6 @@ export function NotebookView({
   onToggleBreakpoint,
   onRetainOutput,
   onUnretainOutput,
-  showCircuit = true,
   notebookBg = 'none',
   notebookBgOpacity = 0.15,
   notebookBgTint = false,
@@ -504,7 +502,6 @@ export function NotebookView({
           <div className="empty-notebook">
             <h2>Empty Notebook</h2>
             <p>Add a markdown or code cell to get started.</p>
-            {showCircuit && <CircuitBoard />}
           </div>
         )}
 

@@ -1618,16 +1618,6 @@ body {
   line-height: 1.7;
 }
 
-/* ── Circuit board animation ────────────────────────────────────────────── */
-.circuit-board {
-  margin-top: 80px;
-  display: flex; justify-content: center;
-}
-.circuit-canvas {
-  display: block;
-  opacity: 0.6;
-}
-
 /* ── CodeMirror lint + autocomplete theming ─────────────────────────────── */
 
 .cm-lintRange-error {
@@ -3812,156 +3802,6 @@ body {
   flex-shrink: 0;
   -webkit-app-region: no-drag;
 }
-/* ── Status bar fish ─────────────────────────────────────── */
-.status-fish-swarm {
-  display: inline-flex; align-items: center; flex-shrink: 0;
-  width: 80px; height: 26px; position: relative;
-  overflow: visible;
-}
-
-/* ── Waves ──────────────────────────────────────────────── */
-.fish-wave {
-  position: absolute; left: -4px; right: -4px;
-  height: 1px; pointer-events: none; opacity: 0.12;
-  background: #2ec4b6;
-}
-.fish-wave-1 {
-  top: 3px;
-  animation: fish-wave-drift 4s ease-in-out infinite;
-}
-.fish-wave-2 {
-  bottom: 3px;
-  animation: fish-wave-drift 4s ease-in-out infinite reverse;
-}
-@keyframes fish-wave-drift {
-  0%, 100% { transform: scaleX(1) translateX(0); opacity: 0.12; }
-  50%      { transform: scaleX(0.85) translateX(3px); opacity: 0.06; }
-}
-
-/* ── Bubbles ────────────────────────────────────────────── */
-.fish-bubble {
-  position: absolute; border-radius: 50%; pointer-events: none;
-  background: rgba(46, 196, 182, 0.25);
-  border: 0.5px solid rgba(46, 196, 182, 0.3);
-}
-.fish-bubble-0 {
-  width: 3px; height: 3px; left: 22px;
-  animation: fish-bubble-rise 3s ease-in infinite;
-}
-.fish-bubble-1 {
-  width: 2px; height: 2px; left: 42px;
-  animation: fish-bubble-rise 3.5s ease-in infinite 1s;
-}
-.fish-bubble-2 {
-  width: 2px; height: 2px; left: 58px;
-  animation: fish-bubble-rise 4s ease-in infinite 2s;
-}
-@keyframes fish-bubble-rise {
-  0%   { bottom: 2px; opacity: 0.4; }
-  60%  { opacity: 0.25; }
-  100% { bottom: 26px; opacity: 0; }
-}
-
-.status-fish {
-  display: inline-flex; align-items: center; flex-shrink: 0;
-  width: 20px; position: relative;
-  animation: fish-drift 3s ease-in-out infinite;
-  transition: opacity 0.5s, transform 0.5s;
-}
-.fish-body {
-  position: absolute; display: block;
-  width: 10px; height: 5.5px;
-  background: #2ec4b6; border-radius: 50% 35% 35% 50%;
-  animation: fish-wiggle 0.8s ease-in-out infinite;
-}
-.fish-eye {
-  position: absolute; top: 1.2px; left: 1.5px;
-  width: 2px; height: 2px;
-  background: #b0f0e8; border-radius: 50%;
-  box-shadow: 0 0 1.5px #b0f0e8;
-}
-.fish-tail {
-  position: absolute; right: -3.5px; top: 0.25px;
-  width: 0; height: 0;
-  border-top: 2.5px solid transparent;
-  border-bottom: 2.5px solid transparent;
-  border-left: 4.5px solid #2ec4b6;
-  animation: tail-flap 0.35s ease-in-out infinite alternate;
-  transform-origin: left center;
-}
-.fish-fin {
-  position: absolute; bottom: -1.5px; left: 3.5px;
-  width: 0; height: 0;
-  border-left: 2px solid transparent;
-  border-right: 2px solid transparent;
-  border-top: 2.5px solid #22a89c;
-  animation: fin-wave 0.7s ease-in-out infinite alternate;
-  transform-origin: top center;
-}
-@keyframes fish-drift {
-  0%       { transform: translateX(0) translateY(0); }
-  25%      { transform: translateX(6px) translateY(-2px); }
-  50%      { transform: translateX(12px) translateY(0); }
-  75%      { transform: translateX(6px) translateY(2px); }
-  100%     { transform: translateX(0) translateY(0); }
-}
-@keyframes fish-wiggle {
-  0%, 100% { transform: rotate(0deg); }
-  25%      { transform: rotate(3deg); }
-  75%      { transform: rotate(-3deg); }
-}
-@keyframes tail-flap {
-  from { transform: scaleY(1) rotate(-8deg); }
-  to   { transform: scaleY(0.5) rotate(8deg); }
-}
-@keyframes fin-wave {
-  from { transform: rotate(-10deg); }
-  to   { transform: rotate(10deg); }
-}
-
-/* ── Ghost character ─────────────────────────────────────── */
-.ghost-sprite {
-  position: fixed; z-index: 8500; pointer-events: none;
-  opacity: 0; transition: opacity 0.5s ease-in-out;
-  filter: drop-shadow(0 0 8px currentColor);
-  animation: ghost-hover 2s ease-in-out infinite;
-}
-.ghost-sprite.ghost-visible { opacity: 0.75; }
-
-/* ── Ghost symbols ────────────────────────────────────────── */
-.ghost-symbol {
-  position: fixed; z-index: 8490; pointer-events: none;
-  font-size: 16px; line-height: 1;
-  color: #38b6ff;
-  filter: drop-shadow(0 0 6px #38b6ff);
-  transform: translate(-50%, -50%);
-  transition: color 0.2s, filter 0.2s;
-  animation: ghost-symbol-pulse 2s ease-in-out infinite;
-}
-.ghost-symbol-hover {
-  color: #f0c040 !important;
-  filter: drop-shadow(0 0 10px #f0c040) !important;
-}
-@keyframes ghost-symbol-pulse {
-  0%, 100% { transform: translate(-50%, -50%) scale(1); }
-  50%      { transform: translate(-50%, -50%) scale(1.15); }
-}
-
-/* ── Idle skyline ─────────────────────────────────────────── */
-.idle-skyline {
-  position: fixed; bottom: 34px; left: 0; right: 0;
-  z-index: 25; pointer-events: none;
-  height: 160px;
-}
-.idle-skyline.idle-skyline-active {
-  pointer-events: auto; cursor: pointer;
-}
-
-@keyframes ghost-hover {
-  0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(-4px); }
-}
-
 .status-icon { color: #3a5060; flex-shrink: 0; }
 
 .status-label {
@@ -4003,12 +3843,6 @@ body {
 
 .status-save-icon { color: #4ec9b0; flex-shrink: 0; }
 .status-save-icon.status-save-unsaved { color: #e0a040; }
-.status-skyline-btn {
-  background: none; border: none; cursor: pointer; padding: 0 2px;
-  color: var(--text-dim); display: flex; align-items: center; flex-shrink: 0;
-  transition: color 0.15s;
-}
-.status-skyline-btn:hover { color: var(--accent-secondary); }
 .status-running-icon {
   color: var(--accent-primary); flex-shrink: 0;
   animation: spin 0.8s linear infinite;

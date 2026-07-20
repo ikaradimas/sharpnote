@@ -12,7 +12,7 @@ const PANEL_FONT_SIZE_DEFAULT = 11.5;
 
 // ── Appearance section ────────────────────────────────────────────────────────
 
-function AppearanceSection({ theme, fontSize, onThemeChange, onFontSizeChange, panelFontSize, onPanelFontSizeChange, lineAltEnabled, onLineAltChange, lintEnabled, onLintEnabledChange, strongCuesEnabled, onStrongCuesChange, formatOnSave, onFormatOnSaveChange, showFish, onShowFishChange, showCircuit, onShowCircuitChange, showGhost, onShowGhostChange, showSkyline, onShowSkylineChange, notebookBg = 'none', onNotebookBgChange, notebookBgOpacity = 0.15, onNotebookBgOpacityChange, notebookBgTint = false, onNotebookBgTintChange, tablePageSize = 10, onTablePageSizeChange }) {
+function AppearanceSection({ theme, fontSize, onThemeChange, onFontSizeChange, panelFontSize, onPanelFontSizeChange, lineAltEnabled, onLineAltChange, lintEnabled, onLintEnabledChange, strongCuesEnabled, onStrongCuesChange, formatOnSave, onFormatOnSaveChange, notebookBg = 'none', onNotebookBgChange, notebookBgOpacity = 0.15, onNotebookBgOpacityChange, notebookBgTint = false, onNotebookBgTintChange, tablePageSize = 10, onTablePageSizeChange }) {
   return (
     <div className="settings-section">
       <div className="settings-group">
@@ -97,42 +97,6 @@ function AppearanceSection({ theme, fontSize, onThemeChange, onFontSizeChange, p
             onChange={(e) => onFormatOnSaveChange(e.target.checked)}
           />
           <span>Format and check code on save (reformats C# cells and reports errors)</span>
-        </label>
-      </div>
-
-      <div className="settings-group">
-        <div className="settings-group-label">Fun</div>
-        <label className="settings-toggle-row">
-          <input
-            type="checkbox"
-            checked={!!showFish}
-            onChange={(e) => onShowFishChange(e.target.checked)}
-          />
-          <span>Status bar fish (animated fish in the bottom bar)</span>
-        </label>
-        <label className="settings-toggle-row">
-          <input
-            type="checkbox"
-            checked={!!showCircuit}
-            onChange={(e) => onShowCircuitChange(e.target.checked)}
-          />
-          <span>Circuit board animation (draws on empty notebooks)</span>
-        </label>
-        <label className="settings-toggle-row">
-          <input
-            type="checkbox"
-            checked={!!showGhost}
-            onChange={(e) => onShowGhostChange(e.target.checked)}
-          />
-          <span>Ghost companion (friendly ghost that appears near your cursor)</span>
-        </label>
-        <label className="settings-toggle-row">
-          <input
-            type="checkbox"
-            checked={!!showSkyline}
-            onChange={(e) => onShowSkylineChange(e.target.checked)}
-          />
-          <span>Idle skyline (futuristic city builds when you're away)</span>
         </label>
       </div>
 
@@ -497,14 +461,6 @@ export function SettingsDialog({
   onStrongCuesChange,
   formatOnSave,
   onFormatOnSaveChange,
-  showFish,
-  onShowFishChange,
-  showCircuit,
-  onShowCircuitChange,
-  showGhost,
-  onShowGhostChange,
-  showSkyline,
-  onShowSkylineChange,
   notebookBg,
   onNotebookBgChange,
   notebookBgOpacity,
@@ -624,14 +580,6 @@ export function SettingsDialog({
                 onStrongCuesChange={onStrongCuesChange}
                 formatOnSave={formatOnSave}
                 onFormatOnSaveChange={onFormatOnSaveChange}
-                showFish={showFish}
-                onShowFishChange={onShowFishChange}
-                showCircuit={showCircuit}
-                onShowCircuitChange={onShowCircuitChange}
-                showGhost={showGhost}
-                onShowGhostChange={onShowGhostChange}
-                showSkyline={showSkyline}
-                onShowSkylineChange={onShowSkylineChange}
                 notebookBg={notebookBg}
                 onNotebookBgChange={onNotebookBgChange}
                 notebookBgOpacity={notebookBgOpacity}
