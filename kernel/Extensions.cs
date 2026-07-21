@@ -88,7 +88,11 @@ public static class SharpNoteExtensions
 
         if (obj is string s)
         {
-            d.Html($"<pre>{System.Net.WebUtility.HtmlEncode(s)}</pre>", title);
+            var enc  = System.Net.WebUtility.HtmlEncode(s);
+            // Long strings: mark it clearly with a character count so a wrapped
+            // wall of text is obviously a single long value, not many.
+            var meta = s.Length > 200 ? $"<div class=\"sn-scalar-meta\">{s.Length:N0} characters</div>" : "";
+            d.Html($"<pre class=\"sn-scalar\">{enc}</pre>{meta}", title);
             return;
         }
 
@@ -116,7 +120,7 @@ public static class SharpNoteExtensions
 
         if (DisplayHelper.IsScalar(obj.GetType()))
         {
-            d.Html($"<pre>{System.Net.WebUtility.HtmlEncode(DisplayHelper.ScalarValue(obj)?.ToString() ?? "")}</pre>", title);
+            d.Html($"<pre class=\"sn-scalar\">{System.Net.WebUtility.HtmlEncode(DisplayHelper.ScalarValue(obj)?.ToString() ?? "")}</pre>", title);
             return;
         }
 

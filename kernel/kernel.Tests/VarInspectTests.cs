@@ -43,7 +43,8 @@ public class VarInspectTests : IClassFixture<KernelFixture>, IAsyncLifetime
             var guids = new List<Guid> { Guid.Parse(""11111111-1111-1111-1111-111111111111""), Guid.Parse(""22222222-2222-2222-2222-222222222222"") };
             var dates = new List<DateTime> { new DateTime(2026, 1, 2, 3, 4, 5) };
             var days = new List<DayOfWeek> { DayOfWeek.Monday, DayOfWeek.Friday };
-            var oneGuid = Guid.Parse(""33333333-3333-3333-3333-333333333333"");" });
+            var oneGuid = Guid.Parse(""33333333-3333-3333-3333-333333333333"");
+            var longStr = new string('x', 500);" });
         await _k.WaitForMessageAsync(el =>
             el.TryGetProperty("type", out var t) && t.GetString() == "complete" &&
             el.TryGetProperty("id", out var i) && i.GetString() == id);
@@ -68,6 +69,25 @@ public class VarInspectTests : IClassFixture<KernelFixture>, IAsyncLifetime
         var res = await InspectDisplayAsync("greeting");
         res.GetProperty("format").GetString().Should().Be("html");
         res.GetProperty("content").GetString().Should().Contain("hello world");
+    }
+
+    [Fact]
+    public async Task LongString_WrapsAndShowsCharacterCount()
+    {
+        await DefineVariablesAsync();
+        var res = await InspectDisplayAsync("longStr");
+        res.GetProperty("format").GetString().Should().Be("html");
+        var html = res.GetProperty("content").GetString();
+        html.Should().Contain("sn-scalar");   // wrap class
+        html.Should().Contain("500 characters"); // clear length indicator
+    }
+
+    [Fact]
+    public async Task ShortString_HasNoCharacterCountIndicator()
+    {
+        await DefineVariablesAsync();
+        var res = await InspectDisplayAsync("greeting");
+        res.GetProperty("content").GetString().Should().NotContain("characters");
     }
 
     [Fact]

@@ -4,6 +4,10 @@
 // gears: 1 = minor fix/tweak, 2 = notable feature, 3 = major feature/architecture
 
 export const CHANGELOG = [
+  { version: '2.26.4', date: '2026-07-21', title: 'Long string values wrap and show a character count', gears: 1, items: [
+    'A long string shown via .Display() or the variable inspector now wraps within its container instead of scrolling off-screen; strings over 200 characters show a "N characters" indicator so a wrapped block is clearly one long value',
+    'Only auto-displayed scalar/string values wrap (a dedicated pre.sn-scalar class) — code in Display.Html / markdown fences is untouched',
+  ]},
   { version: '2.26.3', date: '2026-07-21', title: 'Scalar value types (Guid, DateTime, decimal) render as text', gears: 1, items: [
     'Fixed: a List<Guid> displayed (via .Display(), .DisplayTable(), or the variable inspector) rendered as a garbage table of Guid\'s reflected properties (Variant/Version) instead of the guid text. Same for List<DateTime> (Day/Hour/Ticks/…) and List<decimal> (Scale) — .NET value types that gained public properties',
     'Guid, DateTime, DateTimeOffset, DateOnly, TimeOnly, TimeSpan, decimal, and enums are now treated as scalars: a list of them shows an index/value table with the textual representation, and a single value renders as text (enums show their name, not a number)',

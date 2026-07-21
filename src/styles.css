@@ -1435,6 +1435,20 @@ body {
   overflow-x: auto;
 }
 
+/* Auto-displayed scalar/string values wrap instead of scrolling off-screen. */
+.output-html pre.sn-scalar {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  margin: 0;
+}
+.output-html .sn-scalar-meta {
+  margin-top: 5px;
+  font-size: 10px;
+  font-style: italic;
+  color: var(--text-muted);
+}
+
 /* ── Data Table ──────────────────────────────────────────────────────────── */
 
 .data-table-wrap {
