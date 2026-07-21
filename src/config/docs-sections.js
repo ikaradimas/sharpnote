@@ -1601,4 +1601,14 @@ export const DOCS_SECTIONS = [
       { type: 'p', text: 'All patterns use the current theme\'s text color, so they automatically adapt to any theme including light themes.' },
     ],
   },
+  {
+    id: 'changelog', title: 'Changelog',
+    content: [
+      { type: 'p', text: 'SharpNote has a built-in changelog that lists what changed in each release, grouped by version (newest first) with a short title and bullet points per entry.' },
+      { type: 'h3', text: 'Opening the Changelog' },
+      { type: 'p', text: 'Open it from Help → Changelog in the application menu, or from the Command Palette (Ctrl+K) by searching for "Changelog". It opens as its own tab; close the tab when you\'re done.' },
+      { type: 'h3', text: 'What it shows' },
+      { type: 'p', text: 'Each entry shows the version number, a one-line summary, and the specific changes in that release. A gear indicator conveys the scale of the release (a minor fix versus a notable feature versus a major change).' },
+    ],
+  },
 ];

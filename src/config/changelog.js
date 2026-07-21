@@ -4,6 +4,10 @@
 // gears: 1 = minor fix/tweak, 2 = notable feature, 3 = major feature/architecture
 
 export const CHANGELOG = [
+  { version: '2.27.1', date: '2026-07-21', title: 'Document the changelog viewer; add it to the command palette', gears: 1, items: [
+    'Documented the built-in changelog viewer — a new "Changelog" section in the in-app docs and a matching line in the README. It was reachable from Help → Changelog but undocumented',
+    'Added a "Changelog" entry to the Command Palette (Ctrl+K), alongside Documentation and About',
+  ]},
   { version: '2.27.0', date: '2026-07-21', title: 'Hover quick-info for any symbol', gears: 2, items: [
     'Hovering a symbol in a code cell now shows its type signature in a tooltip — a local shows List<int> nums, a method shows its full signature, a type shows class Foo. Works for locals, parameters, fields, properties, methods, and types',
     'This is compile-time info from Roslyn, so it works before running a cell and for symbols that are not variables — complementing the Inline Variable Peek, which shows a variable\'s live runtime value after a run',

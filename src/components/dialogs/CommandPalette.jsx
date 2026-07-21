@@ -17,6 +17,7 @@ const COMMANDS = [
   { id: 'reset',            label: 'Reset Kernel',                             category: 'Execution' },
   { id: 'clear-output',     label: 'Clear All Output',                         category: 'Execution' },
   { id: 'docs',             label: 'Documentation',             keys: 'F1',    category: 'Settings' },
+  { id: 'changelog',        label: 'Changelog',                                category: 'Settings' },
   { id: 'settings',         label: 'Settings…',                 keys: '⌘,',   category: 'Settings' },
   { id: 'about',            label: 'About SharpNote',                          category: 'Settings' },
   { id: 'shortcuts',        label: 'Keyboard Shortcuts',        keys: '⌘⇧?',  category: 'Settings' },

@@ -61,6 +61,15 @@ describe('CommandPalette — required commands present', () => {
     expect(PALETTE_COMMANDS.find((c) => c.id === 'toggle-todo')).toBeTruthy();
   });
 
+  it('PALETTE_COMMANDS includes changelog', () => {
+    expect(PALETTE_COMMANDS.find((c) => c.id === 'changelog')).toBeTruthy();
+  });
+
+  it('includes changelog command on Commands tab', () => {
+    render(<CommandPalette {...makeProps()} />);
+    expect(screen.getByText('Changelog')).toBeInTheDocument();
+  });
+
   it('includes about command on Commands tab', () => {
     render(<CommandPalette {...makeProps()} />);
     expect(screen.getByText('About SharpNote')).toBeInTheDocument();

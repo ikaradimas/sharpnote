@@ -180,6 +180,7 @@
 
 - **Settings dialog** — ⌘, / Ctrl+, opens a tabbed preferences dialog: Appearance (font size slider with live preview, theme picker), Paths (open Library / user data / log / documents folders in Finder), Startup (manage pinned notebooks that reopen on launch); Export… / Import… buttons back up and restore all settings (theme, font size, dock layout, DB connections, API configs) as a single JSON file
 - **Command Palette** — ⌘K / Ctrl+K opens a fuzzy-search overlay of every action in the app; keyboard-navigable with arrow keys and Enter; results filter as you type
+- **Changelog** — a built-in changelog viewer listing what changed in each release, grouped by version (newest first) with a per-entry summary and bullets; open it from Help → Changelog or the Command Palette
 - **Keyboard Shortcuts** — Settings → Shortcuts shows all shortcuts grouped by category with a search box; click any reassignable shortcut to capture a custom key combination; custom bindings are persisted and applied to the application menu instantly
 - **Recent files** — last 12 opened notebooks persisted to `userData/recent-files.json`; exposed in the File menu
 - **CLI / headless execution** — run notebooks from the command line (`electron . run notebook.cnb`) without opening the GUI; supports `--config Key=Value` overrides, `--output path` to write results to a file, and `--format json` for machine-readable output; exits with code 0 when all checks pass, 1 on any failure; ideal for CI/CD, cron jobs, and automated reporting
