@@ -4,6 +4,9 @@
 // gears: 1 = minor fix/tweak, 2 = notable feature, 3 = major feature/architecture
 
 export const CHANGELOG = [
+  { version: '2.27.2', date: '2026-07-21', title: 'Fix spurious "; expected" from cells ending in an expression', gears: 1, items: [
+    'Fixed: a cell whose last statement is an expression (e.g. ending in Display.Checklist(…) or x.Display()) was stored in the cross-cell analysis workspace without its terminating semicolon — the trim used to capture the return value leaked into the stored source. The accumulated document then read `…expr«no ;» nextCell`, which can surface as a spurious CS1002 "; expected" at that boundary. The workspace now stores the untrimmed, well-terminated code; the semicolon trim is applied only to the execution submission',
+  ]},
   { version: '2.27.1', date: '2026-07-21', title: 'Document the changelog viewer; add it to the command palette', gears: 1, items: [
     'Documented the built-in changelog viewer — a new "Changelog" section in the in-app docs and a matching line in the README. It was reachable from Help → Changelog but undocumented',
     'Added a "Changelog" entry to the Command Palette (Ctrl+K), alongside Documentation and About',

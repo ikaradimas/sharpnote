@@ -358,4 +358,38 @@ public class WorkspaceManagerTests
 
         hover.Should().BeNull();
     }
+
+    // ── Accumulated-source integrity ────────────────────────────────────────
+    // ExecuteHandler stores each executed cell in the workspace. Cells whose last
+    // statement is an expression have their semicolon trimmed for return-value
+    // capture at execution time; that trimmed form must NOT be what's persisted —
+    // otherwise the accumulated document reads `…expr«no ;» nextCell` and raises a
+    // spurious CS1002 "; expected". These verify accumulation stays well-formed.
+
+    [Fact]
+    public async Task GetDiagnostics_ExpressionEndingPriorCells_NoSpuriousSemicolonError()
+    {
+        using var wm = new WorkspaceManager();
+        // Prior cells ending in an expression statement, stored WITH their
+        // terminating semicolons (the fixed behaviour).
+        wm.AppendExecutedCode("var a = 1;\na.ToString();");
+        wm.AppendExecutedCode("var b = 2;\nb.ToString();");
+        wm.UpdateDocument("var c = a + b;");
+
+        var diags = await wm.GetDiagnosticsAsync();
+        diags.Should().NotContain(d => d.Message.Contains("; expected"));
+        diags.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task GetCompletions_AfterExpressionEndingPriorCell_StillResolvesItsSymbols()
+    {
+        using var wm = new WorkspaceManager();
+        wm.AppendExecutedCode("var nums = new System.Collections.Generic.List<int>();\nnums.Count.ToString();");
+        var code = "nums.";
+        wm.UpdateDocument(code);
+
+        var items = await wm.GetCompletionsAsync(code.Length);
+        items.Select(i => i.Label).Should().Contain("Add");
+    }
 }

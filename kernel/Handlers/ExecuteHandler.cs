@@ -141,6 +141,14 @@ partial class Program
             cleanCode = sb.ToString() + cleanCode;
         }
 
+        // The workspace (used for IntelliSense/diagnostics across cells) must get the
+        // WELL-TERMINATED code. Trimming the final expression's semicolon below is only
+        // so Roslyn captures the submission's return value at execution time; persisting
+        // that trimmed text would leave a semicolon-less statement in the accumulated
+        // source, making every later cell parse as `…priorExpr«no ;» thisCell` and raise
+        // a spurious CS1002 "; expected" at the boundary.
+        var codeForWorkspace = cleanCode;
+
         // Strip trailing semicolon from the final expression statement so Roslyn
         // captures its return value (e.g. `DateTime.Compare(a,b);` → displays the int).
         cleanCode = TrimFinalExprSemicolon(cleanCode);
@@ -270,7 +278,7 @@ partial class Program
         {
             // Append executed code to workspace so subsequent cells' LSP diagnostics
             // can resolve types, records, and variables defined here.
-            _workspaceManager.AppendExecutedCode(cleanCode);
+            _workspaceManager.AppendExecutedCode(codeForWorkspace);
 
             var vars = script.Variables
                 .Where(v => !v.Name.StartsWith("<"))
