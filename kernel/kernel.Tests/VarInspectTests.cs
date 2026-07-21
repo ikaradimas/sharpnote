@@ -50,6 +50,43 @@ public class VarInspectTests : IClassFixture<KernelFixture>, IAsyncLifetime
             el.TryGetProperty("id", out var i) && i.GetString() == id);
     }
 
+    private async Task ExecuteAsync(string code)
+    {
+        var id = KernelFixture.NewId();
+        await _k.SendAsync(new { type = "execute", id, code });
+        await _k.WaitForMessageAsync(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "complete" &&
+            el.TryGetProperty("id", out var i) && i.GetString() == id);
+    }
+
+    [Fact]
+    public async Task RedeclaredVariable_InspectsLatestValue()
+    {
+        // Re-running a cell re-declares its `var`s; the inspector must show the
+        // current binding, not the stale original (Roslyn keeps every submission's).
+        await ExecuteAsync("var rv = 1;");
+        await ExecuteAsync("var rv = 2;");
+        await ExecuteAsync("var rv = 99;");
+
+        var res = await InspectDisplayAsync("rv");
+        res.GetProperty("content").GetString().Should().Contain("99");
+    }
+
+    [Fact]
+    public async Task VarsUpdate_DeduplicatesRedeclaredVariable()
+    {
+        await ExecuteAsync("var dv = 1;");
+        _k.ClearMessages();
+        await ExecuteAsync("var dv = 2;");
+
+        var vu = _k.GetMessages().First(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "vars_update");
+        var dvs = vu.GetProperty("vars").EnumerateArray()
+            .Where(v => v.GetProperty("name").GetString() == "dv").ToList();
+        dvs.Should().HaveCount(1);                       // deduped, not one-per-submission
+        dvs[0].GetProperty("value").GetString().Should().Be("2");
+    }
+
     [Fact]
     public async Task Collection_InfersTableFormat()
     {

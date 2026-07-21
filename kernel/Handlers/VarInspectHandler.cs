@@ -37,7 +37,10 @@ partial class Program
             }
             else
             {
-                var variable = script.Variables.FirstOrDefault(v => v.Name == name);
+                // LastOrDefault: re-running a cell re-declares its `var`s, so a name can
+                // appear multiple times in script.Variables (shadowed). The last one is
+                // the current binding — FirstOrDefault would return the stale original.
+                var variable = script.Variables.LastOrDefault(v => v.Name == name);
                 if (variable == null)
                 {
                     EmitInspectMiss(realStdout, name, asDisplay, isExpression);

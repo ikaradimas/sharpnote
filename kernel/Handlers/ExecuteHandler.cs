@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -167,14 +168,16 @@ partial class Program
         // breakpoints are set and not stepping.
         var debugCtx = new DebugContext(
             realStdout, id, execToken, breakpointLines,
-            () => script?.Variables
-                .Where(v => !v.Name.StartsWith("<"))
-                .Select(v => (object)new {
-                    name = v.Name,
-                    typeName = v.Type.Name,
-                    value = SafeToString(v.Value, v.Type.Name),
-                })
-                .ToList() ?? new System.Collections.Generic.List<object>());
+            () => script == null
+                ? new List<object>()
+                : CurrentVariables(script)
+                    .Where(v => !v.Name.StartsWith("<"))
+                    .Select(v => (object)new {
+                        name = v.Name,
+                        typeName = v.Type.Name,
+                        value = SafeToString(v.Value, v.Type.Name),
+                    })
+                    .ToList());
         globals.__dbg__ = debugCtx;
         _currentDebugCtx = debugCtx;
 
@@ -280,7 +283,7 @@ partial class Program
             // can resolve types, records, and variables defined here.
             _workspaceManager.AppendExecutedCode(codeForWorkspace);
 
-            var vars = script.Variables
+            var vars = CurrentVariables(script)
                 .Where(v => !v.Name.StartsWith("<"))
                 .Select(v => new {
                     name         = v.Name,
@@ -364,6 +367,15 @@ partial class Program
         try { var s = value.ToString() ?? ""; return s.Length > 120 ? s[..120] + "…" : s; }
         catch { return $"<{typeName}>"; }
     }
+
+    /// <summary>
+    /// The current variable bindings, one per name. Re-running a cell re-declares its
+    /// `var`s, so a name can appear multiple times in ScriptState.Variables (each
+    /// submission's declaration shadows the previous); we keep the last (current) one.
+    /// Without this, snapshots and the inspector would report a stale shadowed value.
+    /// </summary>
+    internal static IEnumerable<ScriptVariable> CurrentVariables(ScriptState state) =>
+        state.Variables.GroupBy(v => v.Name).Select(g => g.Last());
 
     // ── Return value renderer ─────────────────────────────────────────────────
 

@@ -4,6 +4,10 @@
 // gears: 1 = minor fix/tweak, 2 = notable feature, 3 = major feature/architecture
 
 export const CHANGELOG = [
+  { version: '2.27.4', date: '2026-07-21', title: 'Inspector shows the current value of re-declared variables', gears: 1, items: [
+    'Fixed: after re-running a cell, inspecting a variable it re-declares (var x = …) showed the stale original value. Roslyn keeps every submission\'s declaration, and the inspector picked the first (oldest) match; it now picks the current (last) binding',
+    'The variables snapshot (Variables panel) is likewise de-duplicated to one entry per name — re-declared variables no longer appear as duplicate rows',
+  ]},
   { version: '2.27.3', date: '2026-07-21', title: 'Hover quick-info renders as a code block, not raw HTML', gears: 1, items: [
     'Fixed: the hover tooltip showed its markup literally (e.g. "<pre><code class=\\"language-csharp\\">…</code></pre>") instead of rendering it. The language-server plugin needs allowHTMLContent enabled to render the markdown hover payload as HTML; it now is, so signatures display as a formatted code block',
   ]},
