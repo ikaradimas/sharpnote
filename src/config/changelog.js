@@ -4,6 +4,10 @@
 // gears: 1 = minor fix/tweak, 2 = notable feature, 3 = major feature/architecture
 
 export const CHANGELOG = [
+  { version: '2.27.5', date: '2026-07-21', title: 'Colour-coded Table of Contents headings', gears: 1, items: [
+    'Table of Contents headings are now colour- and weight-coded by level — H1 uses the theme\'s primary accent (with a coloured left rule), H2 the secondary accent, H3 a dimmer tone — so structure is easy to scan and headings stand out from code-cell entries, which stay neutral with their type badge',
+    'The colours come from the active theme\'s palette, so the scheme is consistent across every theme, including light themes',
+  ]},
   { version: '2.27.4', date: '2026-07-21', title: 'Inspector shows the current value of re-declared variables', gears: 1, items: [
     'Fixed: after re-running a cell, inspecting a variable it re-declares (var x = …) showed the stale original value. Roslyn keeps every submission\'s declaration, and the inspector picked the first (oldest) match; it now picks the current (last) binding',
     'The variables snapshot (Variables panel) is likewise de-duplicated to one entry per name — re-declared variables no longer appear as duplicate rows',

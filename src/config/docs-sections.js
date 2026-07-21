@@ -642,7 +642,9 @@ export const DOCS_SECTIONS = [
     content: [
       { type: 'p', text: 'Open the Table of Contents panel with the ToC button in the toolbar. It lists all headings extracted from markdown cells in the active notebook.' },
       { type: 'img', src: 'docs/screenshots/toc.png', alt: 'Table of Contents panel', caption: 'ToC panel — click any heading to scroll the notebook to it' },
-      { type: 'p', text: 'Click any entry to scroll the notebook smoothly to that heading. Heading levels (H1–H6) are reflected as indentation in the list.' },
+      { type: 'p', text: 'Click any entry to scroll the notebook smoothly to that heading. Heading levels are reflected as indentation in the list.' },
+      { type: 'h3', text: 'Colour-coded headings' },
+      { type: 'p', text: 'Headings are colour- and weight-coded by level so the document structure is easy to scan and headings stand out from cell entries: H1 uses the theme\'s primary accent (with a coloured left rule), H2 the secondary accent, and H3 a dimmer tone. Named code / SQL / HTTP cells stay in neutral text with a type badge, so they read distinctly from the accent-coloured headings. The colours are drawn from the active theme\'s palette, so the scheme stays consistent across every theme (including light themes).' },
       { type: 'p', text: 'If the notebook contains no markdown cells with headings, the panel shows "No headings found".' },
     ],
   },
