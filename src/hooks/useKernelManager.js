@@ -358,7 +358,11 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
             for (const v of prevVars) {
               if (!newMap.has(v.name)) diff[v.name] = 'removed';
             }
-            return { vars: msg.vars, varDiff: Object.keys(diff).length > 0 ? diff : null };
+            // varsVersion bumps on every snapshot so live consumers (e.g. the
+            // per-cell inspector popups) can refresh on execution rather than
+            // diffing the lossy, truncated value string — which never changes
+            // for collections whose ToString() is a constant.
+            return { vars: msg.vars, varDiff: Object.keys(diff).length > 0 ? diff : null, varsVersion: (n.varsVersion || 0) + 1 };
           });
           // Clear diff highlight after 5 seconds
           setTimeout(() => setNb(notebookId, { varDiff: null }), 5000);

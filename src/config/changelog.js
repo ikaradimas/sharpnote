@@ -4,6 +4,10 @@
 // gears: 1 = minor fix/tweak, 2 = notable feature, 3 = major feature/architecture
 
 export const CHANGELOG = [
+  { version: '2.26.1', date: '2026-07-21', title: 'Inspector popups refresh reliably for large collections', gears: 1, items: [
+    'Fixed: a variable inspector popup could go stale for lists/collections. Live refresh had keyed off the variable\'s truncated value string, which for a collection is a constant ToString() (e.g. "System.Collections.Generic.List`1[…]") that never changes — so mutations were never picked up, and any change past ~120 chars was invisible for other types too',
+    'Popups now re-fetch from the kernel after every execution in the notebook (while the variable is in scope), so the rendered value always reflects the current contents regardless of size',
+  ]},
   { version: '2.26.0', date: '2026-07-21', title: 'Per-cell variable inspector', gears: 2, items: [
     'Each code cell header now has an inspector button (magnifier icon) that lists the variables that cell declares and that currently exist in the kernel',
     'Choosing a variable opens a draggable, persistent popup that renders its value with the same type inference as the .Display() family — collection → table, object/dictionary → tree, string/primitive → text (the kernel runs AutoDisplay and returns a {format, content} payload rendered by the existing output components)',

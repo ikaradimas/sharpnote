@@ -1828,15 +1828,15 @@ export function App() {
       )}
       {openInspectors.map((ins) => {
         const nb = notebooks.find((n) => n.id === ins.notebookId);
-        const v = nb?.vars?.find((vv) => vv.name === ins.varName);
-        const valueSig = v ? String(v.value ?? '') : null;
+        const inScope = !!nb?.vars?.some((vv) => vv.name === ins.varName);
         return (
           <VarInspectorPopup
             key={ins.id}
             notebookId={ins.notebookId}
             varName={ins.varName}
             typeName={ins.typeName}
-            valueSig={valueSig}
+            inScope={inScope}
+            varsVersion={nb?.varsVersion ?? 0}
             payload={ins.payload}
             isNull={ins.isNull}
             error={ins.error}

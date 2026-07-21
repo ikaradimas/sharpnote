@@ -9,7 +9,8 @@ function makeProps(overrides = {}) {
     notebookId: 'nb1',
     varName: 'greeting',
     typeName: 'String',
-    valueSig: 'hello',
+    inScope: true,
+    varsVersion: 1,
     payload: { format: 'html', content: '<pre>hello world</pre>' },
     isNull: false,
     error: null,
@@ -39,11 +40,19 @@ describe('VarInspectorPopup', () => {
     expect(onRequest).toHaveBeenCalledWith('nb1', 'greeting');
   });
 
-  it('does NOT request when the variable is out of scope (valueSig null)', () => {
+  it('does NOT request when the variable is out of scope', () => {
     const onRequest = vi.fn();
-    render(<VarInspectorPopup {...makeProps({ valueSig: null, onRequest })} />);
+    render(<VarInspectorPopup {...makeProps({ inScope: false, onRequest })} />);
     expect(onRequest).not.toHaveBeenCalled();
     expect(screen.getByText(/not in scope/i)).toBeInTheDocument();
+  });
+
+  it('re-requests when varsVersion changes (live refresh on execution)', () => {
+    const onRequest = vi.fn();
+    const { rerender } = render(<VarInspectorPopup {...makeProps({ varsVersion: 1, onRequest })} />);
+    expect(onRequest).toHaveBeenCalledTimes(1);
+    rerender(<VarInspectorPopup {...makeProps({ varsVersion: 2, onRequest })} />);
+    expect(onRequest).toHaveBeenCalledTimes(2);
   });
 
   it('shows null indicator when isNull', () => {

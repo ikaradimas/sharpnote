@@ -7,22 +7,25 @@ import { FormatContent } from '../output/FormatContent.jsx';
  * value using the same inference as the .Display() family (the kernel runs
  * AutoDisplay and returns a { format, content } payload, rendered here by
  * FormatContent). Multiple popups can be open at once; each re-requests its
- * payload whenever the variable's value signature changes, so it stays live.
+ * payload after every execution in its notebook (varsVersion), so it stays
+ * live for any mutation — including large collections whose truncated value
+ * string wouldn't reveal a change.
  */
 export function VarInspectorPopup({
   notebookId, varName, typeName,
-  valueSig, payload, isNull, error, loading,
+  inScope, varsVersion, payload, isNull, error, loading,
   initialPos,
   onRequest, onClose,
 }) {
   const [pos, setPos] = useState(initialPos || { x: 120, y: 120 });
   const dragRef = useRef(null);
 
-  // Re-request the display payload on mount and whenever the value changes.
-  // valueSig === null means the variable is no longer in scope — skip.
+  // Re-request the display payload on mount and after every execution in this
+  // notebook (varsVersion changes on each vars_update). Skipped when the
+  // variable is no longer in scope.
   useEffect(() => {
-    if (valueSig !== null) onRequest(notebookId, varName);
-  }, [notebookId, varName, valueSig, onRequest]);
+    if (inScope) onRequest(notebookId, varName);
+  }, [notebookId, varName, varsVersion, inScope, onRequest]);
 
   const handleHeaderDown = (e) => {
     // Ignore drags that start on the close button.
@@ -44,7 +47,7 @@ export function VarInspectorPopup({
   };
 
   let body;
-  if (valueSig === null) {
+  if (!inScope) {
     body = <div className="var-inspector-empty">Variable not in scope — run the cell.</div>;
   } else if (error) {
     body = <div className="var-inspector-error">{error}</div>;

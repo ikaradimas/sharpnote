@@ -4101,6 +4101,7 @@ export function createNotebook(templateKey = null) {
     dbPanelOpen: false,
     vars: [],
     varHistory: {},
+    varsVersion: 0,   // bumped on every vars_update; drives live inspector refresh
     varsPanelOpen: false,
     tocPanelOpen: false,
     graphPanelOpen: false,
