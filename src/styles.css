@@ -6436,6 +6436,70 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 .vars-row:hover .vars-inspect-btn { opacity: 1; }
 .vars-inspect-btn:hover { color: var(--accent-primary); }
 
+/* ── Per-cell variable inspector (header button + menu) ──────────────────── */
+
+.cell-var-inspector { position: relative; display: inline-flex; }
+.cell-var-inspector-btn {
+  background: none; border: none; cursor: pointer; padding: 2px;
+  color: var(--text-muted); display: flex; align-items: center;
+  transition: color 0.15s;
+}
+.cell-var-inspector-btn:hover:not(:disabled) { color: var(--accent-primary); }
+.cell-var-inspector-btn:disabled { opacity: 0.35; cursor: default; }
+.cell-var-inspector-menu {
+  position: absolute; top: 100%; right: 0; z-index: 1300; margin-top: 4px;
+  background: var(--bg-elevated); border: 1px solid var(--border-default);
+  border-radius: 6px; box-shadow: 0 6px 24px rgba(0,0,0,0.5);
+  min-width: 180px; max-width: 320px; max-height: 300px; overflow-y: auto; padding: 4px;
+}
+.cell-var-inspector-item {
+  display: flex; align-items: baseline; gap: 8px; width: 100%;
+  background: none; border: none; cursor: pointer; text-align: left;
+  padding: 5px 8px; border-radius: 4px; color: var(--text-secondary);
+}
+.cell-var-inspector-item:hover { background: var(--bg-mid); color: var(--text-primary); }
+.cell-var-inspector-item-name {
+  font-family: var(--font-code); font-size: 12px; font-weight: 600;
+}
+.cell-var-inspector-item-type {
+  margin-left: auto; font-size: 10px; color: var(--accent-secondary);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;
+}
+
+/* ── Draggable variable inspector popup ──────────────────────────────────── */
+
+.var-inspector-popup {
+  position: fixed; z-index: 8600; width: 420px; max-width: 92vw;
+  background: var(--bg-elevated); border: 1px solid var(--border-default);
+  border-radius: 6px; box-shadow: 0 10px 36px rgba(0,0,0,0.6);
+  display: flex; flex-direction: column;
+}
+.var-inspector-header {
+  display: flex; align-items: center; gap: 8px; cursor: move;
+  padding: 8px 10px; border-bottom: 1px solid var(--border-subtle);
+  user-select: none;
+}
+.var-inspector-name {
+  font-family: var(--font-code); font-size: 12px; color: var(--text-primary); font-weight: 600;
+}
+.var-inspector-type {
+  font-size: 10px; color: var(--accent-secondary);
+  background: var(--bg-mid); padding: 1px 6px; border-radius: 3px;
+}
+.var-inspector-close {
+  margin-left: auto; background: none; border: none; cursor: pointer;
+  color: var(--text-muted); display: flex; align-items: center; padding: 2px;
+}
+.var-inspector-close:hover { color: var(--text-primary); }
+.var-inspector-body {
+  padding: 10px 12px; max-height: 420px; overflow: auto;
+}
+.var-inspector-empty { color: var(--text-muted); font-size: 12px; font-style: italic; }
+.var-inspector-error {
+  color: var(--status-error); font-size: 11px; font-family: var(--font-code);
+  white-space: pre-wrap; word-break: break-word;
+}
+
 /* ── Log panel cell ID links ─────────────────────────────────────────────── */
 
 .log-cell-link {

@@ -630,6 +630,9 @@ export const DOCS_SECTIONS = [
       { type: 'p', text: 'After each cell execution, variables that changed are briefly highlighted: green for new variables, blue for modified values, and red strikethrough for removed variables. The highlight fades after 5 seconds.' },
       { type: 'h3', text: 'Watch Expressions' },
       { type: 'p', text: 'Pin important variables to a Watch section at the top of the panel. Type a variable name in the watch input and press Enter or click Add. Watched variables show their current value (or "not in scope" if the variable does not exist). Click the × button on a watch entry to remove it. Watches are saved with the notebook.' },
+      { type: 'h3', text: 'Per-cell Variable Inspector' },
+      { type: 'p', text: 'Each code cell header has an inspector button (magnifier icon) on the right. Click it to list the variables that cell declares and that currently exist in the kernel. Choosing one opens a draggable inspector popup.' },
+      { type: 'p', text: 'The popup renders the value with the same type inference as the .Display() family: collections show as a table, objects and dictionaries as a collapsible tree, and strings and primitives as text. Popups are persistent and can be dragged anywhere — open as many as you like — and each one refreshes automatically whenever its variable changes. The button is disabled for cells whose variables are not yet in scope (run the cell first).' },
     ],
   },
   {

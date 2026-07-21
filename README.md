@@ -144,6 +144,7 @@
 
 - **Variables panel** — live snapshot of the kernel's global state after each execution; diff highlights (green/blue/red) flash briefly after each run to show new, modified, and removed variables
 - **Variable Inspection** — click ⊕ in the Variables panel to open a full-value inspection dialog; Load Full Value fetches the complete JSON-serialised representation from the kernel with a copy-to-clipboard button
+- **Per-cell variable inspector** — each code cell header has an inspector button listing the variables that cell declares; choosing one opens a draggable, persistent popup that renders the value using the same inference as `.Display()` (collection → table, object → tree, scalar → text) and refreshes live as the variable changes
 - **Watch expressions** — pin important variables to a Watch section at the top of the Variables panel; watched variables show their current value or "not in scope" and are saved with the notebook
 - **Copy as C# literal** — click ⧉ on any variable row to copy its value as a type-aware C# literal (strings are quoted/escaped, numbers get correct suffixes, booleans produce true/false)
 - **Log panel** — structured, time-stamped kernel log stream with `NOTEBOOK` lifecycle entries and `USER` entries written by `.Log()` calls in scripts

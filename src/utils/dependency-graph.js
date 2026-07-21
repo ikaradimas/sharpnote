@@ -12,6 +12,30 @@ function escapeRegex(str) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+/**
+ * Given a cell's source and a list of candidate variable names, return the
+ * names that the cell *produces* (declares/assigns at a statement position).
+ * A name counts as produced when it appears as `<name> =`, preceded by
+ * start-of-line, `var `, or a type token (`Foo name =`). This is the single
+ * source of truth for producer detection — buildCellGraph and the per-cell
+ * variable inspector both rely on it, so "what a cell produces" never diverges.
+ *
+ * @param {string} content    cell source
+ * @param {string[]} varNames candidate variable names (typically the live kernel snapshot)
+ * @returns {string[]} the subset of varNames the content produces
+ */
+export function cellProducedVarNames(content, varNames) {
+  const src = content || '';
+  const out = [];
+  for (const name of varNames || []) {
+    try {
+      const defPattern = new RegExp(`(?:^|\\bvar\\s+|\\b\\w+\\s+)${escapeRegex(name)}\\s*=`, 'm');
+      if (defPattern.test(src)) out.push(name);
+    } catch { /* ignore malformed name */ }
+  }
+  return out;
+}
+
 const GRAPH_CELL_TYPES = new Set(['code', 'sql', 'check', 'http', 'shell', 'docker', 'decision']);
 
 /**
@@ -44,15 +68,9 @@ export function buildCellGraph(cellsInput, varsInput) {
   }
 
   for (const cell of cells) {
-    const content = cell.content || '';
-    for (const name of varNames) {
-      try {
-        const defPattern = new RegExp(`(?:^|\\bvar\\s+|\\b\\w+\\s+)${escapeRegex(name)}\\s*=`, 'm');
-        if (defPattern.test(content)) {
-          producerMap[name] = cell.id;
-          cellProduces[cell.id]?.add(name);
-        }
-      } catch { /* ignore */ }
+    for (const name of cellProducedVarNames(cell.content, varNames)) {
+      producerMap[name] = cell.id;
+      cellProduces[cell.id]?.add(name);
     }
   }
 

@@ -6,6 +6,7 @@ import { CellControls } from './CellControls.jsx';
 import { CellNameColor } from './CellNameColor.jsx';
 import { CellLinkPicker } from './CellLinkPicker.jsx';
 import { CellRunGroup } from './CellRunGroup.jsx';
+import { CellVarInspector } from './CellVarInspector.jsx';
 import { computeLineDiff } from '../../utils/text-diff.js';
 
 function formatElapsed(ms) {
@@ -92,6 +93,7 @@ export function CodeCell({
   onPrevCellsChange,
   cellElapsed,
   vars,
+  onInspectVariable,
 }) {
   const outputMode = cell.outputMode || 'auto';
   const locked = cell.locked || false;
@@ -257,6 +259,13 @@ export function CodeCell({
             >
               {snapshotStatus === 'match' ? '✓' : snapshotStatus === 'mismatch' ? '✗' : '📷'}
             </span>
+          )}
+          {onInspectVariable && (
+            <CellVarInspector
+              content={cell.content}
+              vars={vars}
+              onInspect={(name, typeName) => onInspectVariable(notebookId, name, typeName)}
+            />
           )}
           <CellControls onCopy={onCopy} onMoveUp={onMoveUp} onMoveDown={onMoveDown} onDelete={onDelete} columns={columns} onColumnsChange={onColumnsChange} bookmarked={cell.bookmarked} onToggleBookmark={onToggleBookmark} snapshot={cell.snapshot} onToggleSnapshot={onToggleSnapshot} />
         </div>

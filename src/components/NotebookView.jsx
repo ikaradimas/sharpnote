@@ -89,6 +89,7 @@ export function NotebookView({
   onToggleBreakpoint,
   onRetainOutput,
   onUnretainOutput,
+  onInspectVariable,
   notebookBg = 'none',
   notebookBgOpacity = 0.15,
   notebookBgTint = false,
@@ -478,7 +479,8 @@ export function NotebookView({
           window.electronAPI.snapshotSave(nb.path, cell.id, visible)
             .then(() => onSetNb((n) => ({ snapshotStatus: { ...(n.snapshotStatus || {}), [cell.id]: 'match' } })));
         }}
-        vars={nb.vars || []} />
+        vars={nb.vars || []}
+        onInspectVariable={onInspectVariable} />
     );
   };
 

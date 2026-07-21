@@ -61,7 +61,7 @@ export function prepareCellRun(setNb, pendingResolversRef, notebookId, cellId, r
  * @param {function} opts.onPanelCloseAll     - () — close all open panels
  * @param {function} opts.setDbConnections    - DB connections state setter
  */
-export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVarInspectDialog, onPanelVisible, onPanelDock, onPanelFloat, onPanelCloseAll, onApiEditorLoad, setDbConnections }) {
+export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVarInspectDialog, setOpenInspectors, onPanelVisible, onPanelDock, onPanelFloat, onPanelCloseAll, onApiEditorLoad, setDbConnections }) {
   const pendingResolversRef = useRef({});
   const prevVarsSnapRef       = useRef({});
   const runAllRef             = useRef(null);
@@ -564,6 +564,21 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
           setVarInspectDialog((prev) =>
             prev && prev.name === msg.name ? { ...prev, fullValue: msg.json } : prev
           );
+          break;
+
+        case 'var_display_result':
+          // Route the .Display()-inferred payload to the matching inspector popup(s).
+          setOpenInspectors?.((prev) => prev.map((ins) =>
+            ins.notebookId === notebookId && ins.varName === msg.name
+              ? {
+                  ...ins,
+                  payload: msg.format ? { format: msg.format, content: msg.content } : null,
+                  isNull: !!msg.isNull,
+                  error: msg.error || null,
+                  loading: false,
+                }
+              : ins
+          ));
           break;
 
         case 'reset_complete':

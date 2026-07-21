@@ -14,98 +14,60 @@ partial class Program
     {
         var name = msg.TryGetProperty("name", out var nameProp) ? nameProp.GetString() : null;
         var isExpression = msg.TryGetProperty("expression", out var exprProp) && exprProp.GetBoolean();
+        // Display mode: render the value with the same inference as the .Display()
+        // family (AutoDisplay → html / table / tree) instead of raw JSON. Used by
+        // the per-cell variable inspector popups.
+        var asDisplay = msg.TryGetProperty("display", out var dispProp) && dispProp.GetBoolean();
 
         if (name == null || script == null)
         {
-            lock (realStdout)
-            {
-                realStdout.WriteLine(JsonSerializer.Serialize(new
-                {
-                    type = "var_inspect_result",
-                    name = name ?? "",
-                    typeName = "",
-                    json = "null",
-                }));
-            }
+            EmitInspectMiss(realStdout, name ?? "", asDisplay, isExpression);
             return;
         }
 
-        // Expression evaluation mode — evaluate arbitrary C# expression
-        if (isExpression)
+        // ── Resolve the value + its runtime type ──────────────────────────────
+        object? value;
+        string typeName;
+        try
         {
-            try
+            if (isExpression)
             {
-                var result = await CSharpScript.EvaluateAsync<object>(name, options, globals);
-                string exprJson;
-                string exprType;
-                try
-                {
-                    exprJson = JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true, MaxDepth = 32 });
-                    exprType = result?.GetType().Name ?? "null";
-                }
-                catch
-                {
-                    exprJson = result?.ToString() ?? "null";
-                    exprType = result?.GetType().Name ?? "null";
-                }
-                lock (realStdout)
-                {
-                    realStdout.WriteLine(JsonSerializer.Serialize(new
-                    {
-                        type = "var_inspect_result",
-                        name,
-                        typeName = exprType,
-                        json = exprJson,
-                        expression = true,
-                    }));
-                }
+                value = await CSharpScript.EvaluateAsync<object>(name, options, globals);
+                typeName = value?.GetType().Name ?? "null";
             }
-            catch (Exception ex)
+            else
             {
-                lock (realStdout)
+                var variable = script.Variables.FirstOrDefault(v => v.Name == name);
+                if (variable == null)
                 {
-                    realStdout.WriteLine(JsonSerializer.Serialize(new
-                    {
-                        type = "var_inspect_result",
-                        name,
-                        typeName = "",
-                        json = "null",
-                        error = ex.Message,
-                        expression = true,
-                    }));
+                    EmitInspectMiss(realStdout, name, asDisplay, isExpression);
+                    return;
                 }
+                value = variable.Value;
+                typeName = variable.Type.Name;
             }
-            return;
         }
-
-        var variable = script.Variables.FirstOrDefault(v => v.Name == name);
-        if (variable == null)
+        catch (Exception ex)
         {
-            lock (realStdout)
-            {
-                realStdout.WriteLine(JsonSerializer.Serialize(new
-                {
-                    type = "var_inspect_result",
-                    name,
-                    typeName = "",
-                    json = "null",
-                }));
-            }
+            EmitInspectError(realStdout, name, ex.Message, asDisplay, isExpression);
             return;
         }
 
+        if (asDisplay)
+        {
+            EmitDisplayResult(realStdout, name, typeName, value, isExpression);
+            return;
+        }
+
+        // ── Raw-JSON mode (existing var inspector dialog / Vars panel) ─────────
         string json;
         try
         {
-            json = JsonSerializer.Serialize(variable.Value, new JsonSerializerOptions
-            {
-                WriteIndented = true,
-                MaxDepth = 32,
-            });
+            json = JsonSerializer.Serialize(value, new JsonSerializerOptions { WriteIndented = true, MaxDepth = 32 });
         }
         catch
         {
-            json = variable.Value?.ToString() ?? "null";
+            json = value?.ToString() ?? "null";
         }
 
         lock (realStdout)
@@ -114,9 +76,81 @@ partial class Program
             {
                 type = "var_inspect_result",
                 name,
-                typeName = variable.Type.Name,
+                typeName,
                 json,
+                expression = isExpression ? true : (bool?)null,
             }));
+        }
+    }
+
+    /// <summary>
+    /// Runs the value through <see cref="SharpNoteExtensions.AutoDisplay"/> — the same
+    /// type-dispatch the .Display() family uses — captures the emitted display payload,
+    /// and returns its { format, content } to the renderer.
+    /// </summary>
+    private static void EmitDisplayResult(TextWriter realStdout, string name, string typeName, object? value, bool isExpression)
+    {
+        string? format = null;
+        JsonElement content = default;
+        var hasContent = false;
+        var isNull = value == null;
+
+        if (!isNull)
+        {
+            try
+            {
+                var sw = new StringWriter();
+                SharpNoteExtensions.AutoDisplay(new DisplayHelper(sw), value);
+                var raw = sw.ToString().Trim();
+                if (raw.Length > 0)
+                {
+                    // AutoDisplay emits a single {type:"display", format, content, …} line.
+                    var firstLine = raw.Split('\n')[0];
+                    using var doc = JsonDocument.Parse(firstLine);
+                    var root = doc.RootElement;
+                    if (root.TryGetProperty("format", out var f)) format = f.GetString();
+                    if (root.TryGetProperty("content", out var c)) { content = c.Clone(); hasContent = true; }
+                }
+            }
+            catch
+            {
+                format = null;
+                hasContent = false;
+            }
+        }
+
+        lock (realStdout)
+        {
+            realStdout.WriteLine(JsonSerializer.Serialize(new
+            {
+                type = "var_display_result",
+                name,
+                typeName,
+                format,
+                content = hasContent ? (object?)content : null,
+                isNull,
+                expression = isExpression ? true : (bool?)null,
+            }));
+        }
+    }
+
+    private static void EmitInspectMiss(TextWriter realStdout, string name, bool asDisplay, bool isExpression)
+    {
+        lock (realStdout)
+        {
+            realStdout.WriteLine(asDisplay
+                ? JsonSerializer.Serialize(new { type = "var_display_result", name, typeName = "", format = (string?)null, content = (object?)null, isNull = true, expression = isExpression ? true : (bool?)null })
+                : JsonSerializer.Serialize(new { type = "var_inspect_result", name, typeName = "", json = "null", expression = isExpression ? true : (bool?)null }));
+        }
+    }
+
+    private static void EmitInspectError(TextWriter realStdout, string name, string error, bool asDisplay, bool isExpression)
+    {
+        lock (realStdout)
+        {
+            realStdout.WriteLine(asDisplay
+                ? JsonSerializer.Serialize(new { type = "var_display_result", name, typeName = "", format = (string?)null, content = (object?)null, isNull = true, error, expression = isExpression ? true : (bool?)null })
+                : JsonSerializer.Serialize(new { type = "var_inspect_result", name, typeName = "", json = "null", error, expression = isExpression ? true : (bool?)null }));
         }
     }
 }

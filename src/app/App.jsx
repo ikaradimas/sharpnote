@@ -32,6 +32,7 @@ import { AboutDialog } from '../components/dialogs/AboutDialog.jsx';
 import { SettingsDialog } from '../components/dialogs/SettingsDialog.jsx';
 import { CommandPalette } from '../components/dialogs/CommandPalette.jsx';
 import { VarInspectDialog } from '../components/dialogs/VarInspectDialog.jsx';
+import { VarInspectorPopup } from '../components/dialogs/VarInspectorPopup.jsx';
 import { DbConnectionDialog } from '../components/dialogs/DbConnectionDialog.jsx';
 import { NewNotebookDialog } from '../components/dialogs/NewNotebookDialog.jsx';
 import { ExportAppDialog } from '../components/dialogs/ExportAppDialog.jsx';
@@ -126,6 +127,9 @@ export function App() {
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [varInspectDialog, setVarInspectDialog] = useState(null);
+  // Draggable, live per-cell variable inspector popups. Each: { id, notebookId,
+  // varName, typeName, payload:{format,content}|null, isNull, error, loading }.
+  const [openInspectors, setOpenInspectors] = useState([]);
   const [dbConnDialog, setDbConnDialog] = useState(null); // null | connection object (edit) | opened with null (new)
   const [exportAppOpen, setExportAppOpen] = useState(false);
   const [viewerMode, setViewerMode] = useState(null);
@@ -279,7 +283,7 @@ export function App() {
   const { runCell, runCellWithFormData, runSqlCell, runHttpCell, runShellCell, runDockerCell, runFlociCell, dispatchCellRun, stopDockerCell, pollDockerStatus, fetchDockerLogs, runCheckCell, runDecisionCell, runAll, runFrom, runTo, handleInterrupt, handleReset,
           cancelPendingCells, debugResume, debugStep, toggleBreakpoint } =
     useKernelManager({
-      setNb, notebooksRef, dbConnectionsRef, setVarInspectDialog,
+      setNb, notebooksRef, dbConnectionsRef, setVarInspectDialog, setOpenInspectors,
       onPanelVisible: setPanelVisible,
       onPanelDock:    setPanelDock,
       onPanelFloat:   setPanelFloat,
@@ -1127,6 +1131,33 @@ export function App() {
     return runCell(nbId, cell);
   }, [orchestrator, runCell]);
 
+  // ── Per-cell variable inspector popups ─────────────────────────────────────
+  // Ask the kernel to render a variable with the .Display() inference. Marks the
+  // matching popups as loading; the result arrives via 'var_display_result'.
+  const requestInspect = useCallback((nbId, varName) => {
+    setOpenInspectors((prev) => prev.map((ins) =>
+      ins.notebookId === nbId && ins.varName === varName ? { ...ins, loading: true } : ins));
+    window.electronAPI?.sendToKernel(nbId, { type: 'var_inspect', name: varName, display: true });
+  }, []);
+
+  // Open a popup for a variable (deduped per notebook+variable).
+  const handleInspectVariable = useCallback((nbId, varName, typeName) => {
+    const id = `${nbId}::${varName}`;
+    setOpenInspectors((prev) => {
+      if (prev.some((ins) => ins.id === id)) return prev;
+      const n = prev.length % 6;
+      return [...prev, {
+        id, notebookId: nbId, varName, typeName,
+        payload: null, isNull: false, error: null, loading: true,
+        pos: { x: 160 + n * 26, y: 150 + n * 26 },
+      }];
+    });
+  }, []);
+
+  const closeInspector = useCallback((id) => {
+    setOpenInspectors((prev) => prev.filter((ins) => ins.id !== id));
+  }, []);
+
   // ── Per-notebook dock layout sync ──────────────────────────────────────────
   // When switching notebooks, restore the saved layout; when layout changes, save to notebook
   const prevActiveIdRef = useRef(activeId);
@@ -1566,6 +1597,7 @@ export function App() {
                     onToggleBreakpoint={toggleBreakpoint}
                     onRetainOutput={handleRetainOutput}
                     onUnretainOutput={handleUnretainOutput}
+                    onInspectVariable={handleInspectVariable}
                     notebookBg={notebookBg}
                     notebookBgOpacity={notebookBgOpacity}
                     notebookBgTint={notebookBgTint}
@@ -1794,6 +1826,27 @@ export function App() {
           onClose={() => setVarInspectDialog(null)}
         />
       )}
+      {openInspectors.map((ins) => {
+        const nb = notebooks.find((n) => n.id === ins.notebookId);
+        const v = nb?.vars?.find((vv) => vv.name === ins.varName);
+        const valueSig = v ? String(v.value ?? '') : null;
+        return (
+          <VarInspectorPopup
+            key={ins.id}
+            notebookId={ins.notebookId}
+            varName={ins.varName}
+            typeName={ins.typeName}
+            valueSig={valueSig}
+            payload={ins.payload}
+            isNull={ins.isNull}
+            error={ins.error}
+            loading={ins.loading}
+            initialPos={ins.pos}
+            onRequest={requestInspect}
+            onClose={() => closeInspector(ins.id)}
+          />
+        );
+      })}
     </div>
     </TablePageSizeContext.Provider>
   );

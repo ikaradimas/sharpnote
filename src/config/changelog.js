@@ -4,6 +4,12 @@
 // gears: 1 = minor fix/tweak, 2 = notable feature, 3 = major feature/architecture
 
 export const CHANGELOG = [
+  { version: '2.26.0', date: '2026-07-21', title: 'Per-cell variable inspector', gears: 2, items: [
+    'Each code cell header now has an inspector button (magnifier icon) that lists the variables that cell declares and that currently exist in the kernel',
+    'Choosing a variable opens a draggable, persistent popup that renders its value with the same type inference as the .Display() family — collection → table, object/dictionary → tree, string/primitive → text (the kernel runs AutoDisplay and returns a {format, content} payload rendered by the existing output components)',
+    'Popups stay open, can be dragged anywhere, multiple at once, and each refreshes automatically whenever its variable changes',
+    'The button is disabled when a cell has no variables in scope (run it first). "Variables of the cell" reuses the dependency graph\'s producer detection, so it never diverges from the graph',
+  ]},
   { version: '2.25.3', date: '2026-07-20', title: 'Dependency-first runs: previous + stale only', gears: 1, items: [
     'Fixed: running a cell could also run a later ("next") cell when that later cell reassigned a variable the current one reads. Dependency-first execution now only pulls in PREVIOUS cells (earlier in notebook order) and never traverses through a later cell',
     'Running a cell now re-runs only its STALE previous dependencies — a dependency that already ran successfully and is unchanged is skipped instead of being recomputed every time. Stale = downstream-invalidated, never run successfully, or edited since its last run',
