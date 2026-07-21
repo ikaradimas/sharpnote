@@ -6469,10 +6469,10 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 /* ── Draggable variable inspector popup ──────────────────────────────────── */
 
 .var-inspector-popup {
-  position: fixed; z-index: 8600; width: 420px; max-width: 92vw;
+  position: fixed; z-index: 8600; max-width: 96vw;
   background: var(--bg-elevated); border: 1px solid var(--border-default);
   border-radius: 6px; box-shadow: 0 10px 36px rgba(0,0,0,0.6);
-  display: flex; flex-direction: column;
+  display: flex; flex-direction: column; overflow: hidden;
 }
 .var-inspector-header {
   display: flex; align-items: center; gap: 8px; cursor: move;
@@ -6492,12 +6492,22 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 }
 .var-inspector-close:hover { color: var(--text-primary); }
 .var-inspector-body {
-  padding: 10px 12px; max-height: 420px; overflow: auto;
+  padding: 10px 12px; flex: 1 1 auto; min-height: 0; overflow: auto;
 }
 .var-inspector-empty { color: var(--text-muted); font-size: 12px; font-style: italic; }
 .var-inspector-error {
   color: var(--status-error); font-size: 11px; font-family: var(--font-code);
   white-space: pre-wrap; word-break: break-word;
+}
+.var-inspector-resize {
+  position: absolute; right: 0; bottom: 0;
+  width: 14px; height: 14px; cursor: se-resize;
+}
+.var-inspector-resize::after {
+  content: ''; position: absolute; right: 3px; bottom: 3px;
+  width: 6px; height: 6px;
+  border-right: 2px solid var(--border-default);
+  border-bottom: 2px solid var(--border-default);
 }
 
 /* ── Log panel cell ID links ─────────────────────────────────────────────── */

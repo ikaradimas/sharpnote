@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { VarInspectorPopup } from '../../src/components/dialogs/VarInspectorPopup.jsx';
 
@@ -70,5 +70,31 @@ describe('VarInspectorPopup', () => {
     render(<VarInspectorPopup {...makeProps({ onClose })} />);
     screen.getByTitle('Close').click();
     expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it('resizes when the corner handle is dragged', () => {
+    const { container } = render(<VarInspectorPopup {...makeProps()} />);
+    const popup = container.querySelector('.var-inspector-popup');
+    const handle = container.querySelector('.var-inspector-resize');
+    expect(handle).not.toBeNull();
+    expect(popup.style.width).toBe('420px'); // default
+
+    fireEvent.mouseDown(handle, { clientX: 100, clientY: 100 });
+    fireEvent.mouseMove(window, { clientX: 220, clientY: 190 }); // +120w, +90h
+    fireEvent.mouseUp(window);
+
+    expect(popup.style.width).toBe('540px');
+    expect(popup.style.height).toBe('390px');
+  });
+
+  it('clamps the size to a minimum when dragged small', () => {
+    const { container } = render(<VarInspectorPopup {...makeProps()} />);
+    const popup = container.querySelector('.var-inspector-popup');
+    const handle = container.querySelector('.var-inspector-resize');
+    fireEvent.mouseDown(handle, { clientX: 100, clientY: 100 });
+    fireEvent.mouseMove(window, { clientX: -500, clientY: -500 });
+    fireEvent.mouseUp(window);
+    expect(popup.style.width).toBe('240px');  // min width
+    expect(popup.style.height).toBe('140px'); // min height
   });
 });

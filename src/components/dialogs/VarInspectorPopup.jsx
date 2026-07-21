@@ -18,6 +18,7 @@ export function VarInspectorPopup({
   onRequest, onClose,
 }) {
   const [pos, setPos] = useState(initialPos || { x: 120, y: 120 });
+  const [size, setSize] = useState({ w: 420, h: 300 });
   const dragRef = useRef(null);
 
   // Re-request the display payload on mount and after every execution in this
@@ -46,6 +47,22 @@ export function VarInspectorPopup({
     window.addEventListener('mouseup', up);
   };
 
+  const handleResizeDown = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const sx = e.clientX, sy = e.clientY, sw = size.w, sh = size.h;
+    const move = (ev) => setSize({
+      w: Math.max(240, sw + ev.clientX - sx),
+      h: Math.max(140, sh + ev.clientY - sy),
+    });
+    const up = () => {
+      window.removeEventListener('mousemove', move);
+      window.removeEventListener('mouseup', up);
+    };
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+  };
+
   let body;
   if (!inScope) {
     body = <div className="var-inspector-empty">Variable not in scope — run the cell.</div>;
@@ -60,7 +77,7 @@ export function VarInspectorPopup({
   }
 
   return (
-    <div className="var-inspector-popup" ref={dragRef} style={{ left: pos.x, top: pos.y }}>
+    <div className="var-inspector-popup" ref={dragRef} style={{ left: pos.x, top: pos.y, width: size.w, height: size.h }}>
       <div className="var-inspector-header" onMouseDown={handleHeaderDown}>
         <span className="var-inspector-name">{varName}</span>
         {typeName && <span className="var-inspector-type">{typeName}</span>}
@@ -69,6 +86,7 @@ export function VarInspectorPopup({
         </button>
       </div>
       <div className="var-inspector-body">{body}</div>
+      <div className="var-inspector-resize" onMouseDown={handleResizeDown} title="Drag to resize" />
     </div>
   );
 }

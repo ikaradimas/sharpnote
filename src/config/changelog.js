@@ -4,6 +4,9 @@
 // gears: 1 = minor fix/tweak, 2 = notable feature, 3 = major feature/architecture
 
 export const CHANGELOG = [
+  { version: '2.26.2', date: '2026-07-21', title: 'Variable inspector popups are resizable', gears: 1, items: [
+    'Variable inspector popups can now be resized by dragging the bottom-right corner — useful for wide or long tables (min 240×140)',
+  ]},
   { version: '2.26.1', date: '2026-07-21', title: 'Inspector popups refresh reliably for large collections', gears: 1, items: [
     'Fixed: a variable inspector popup could go stale for lists/collections. Live refresh had keyed off the variable\'s truncated value string, which for a collection is a constant ToString() (e.g. "System.Collections.Generic.List`1[…]") that never changes — so mutations were never picked up, and any change past ~120 chars was invisible for other types too',
     'Popups now re-fetch from the kernel after every execution in the notebook (while the variable is in scope), so the rendered value always reflects the current contents regardless of size',
