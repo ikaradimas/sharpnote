@@ -4,6 +4,9 @@
 // gears: 1 = minor fix/tweak, 2 = notable feature, 3 = major feature/architecture
 
 export const CHANGELOG = [
+  { version: '2.27.6', date: '2026-07-21', title: 'Bookmarks get the accent left rule too', gears: 1, items: [
+    'Bookmarked-cell entries in the Table of Contents now carry an accent left rule matching their star, echoing the heading rules for a consistent look',
+  ]},
   { version: '2.27.5', date: '2026-07-21', title: 'Colour-coded Table of Contents headings', gears: 1, items: [
     'Table of Contents headings are now colour- and weight-coded by level — H1 uses the theme\'s primary accent (with a coloured left rule), H2 the secondary accent, H3 a dimmer tone — so structure is easy to scan and headings stand out from code-cell entries, which stay neutral with their type badge',
     'The colours come from the active theme\'s palette, so the scheme is consistent across every theme, including light themes',

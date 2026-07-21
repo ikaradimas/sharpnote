@@ -8992,7 +8992,8 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
   margin-right: 4px;
   font-size: 11px;
 }
-.toc-bookmarked { font-weight: 500; }
+/* Bookmarks get an accent left rule matching their star, echoing the heading rules. */
+.toc-bookmarked { font-weight: 500; border-left: 2px solid var(--accent-primary); }
 
 /* Feature 29: Copy button in vars panel */
 .vars-copy-btn {
