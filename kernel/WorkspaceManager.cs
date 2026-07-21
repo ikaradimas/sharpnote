@@ -34,6 +34,10 @@ public record SignatureHelpData(IReadOnlyList<SignatureData> Signatures, int Act
         new(Array.Empty<SignatureData>(), 0);
 }
 
+// Hover: the symbol's type signature + optional XML-doc summary, plus the span
+// (relative to user code) of the token being hovered.
+public record HoverData(string Signature, string? Documentation, int From, int To);
+
 // ── WorkspaceManager ──────────────────────────────────────────────────────────
 //
 // Keeps an AdhocWorkspace in sync with the kernel's script state.
@@ -350,6 +354,84 @@ public sealed class WorkspaceManager : IDisposable
         }).ToList();
 
         return new SignatureHelpData(signatures, activeParam);
+    }
+
+    // Quick-info format: minimally-qualified names, include the type for locals /
+    // fields / parameters and full method signatures — same style as tooltips in
+    // a typical C# IDE.
+    private static readonly SymbolDisplayFormat HoverFormat =
+        SymbolDisplayFormat.MinimallyQualifiedFormat;
+
+    /// <summary>
+    /// Returns quick-info for the symbol at <paramref name="position"/> (relative
+    /// to the start of user code): its type signature and, when available, the
+    /// XML-doc summary. Returns null when the cursor is not on a resolvable
+    /// identifier. Call <see cref="UpdateDocument"/> first.
+    /// </summary>
+    public async Task<HoverData?> GetHoverAsync(int position)
+    {
+        var doc   = _workspace.CurrentSolution.GetDocument(_docId)!;
+        var root  = await doc.GetSyntaxRootAsync();
+        var model = await doc.GetSemanticModelAsync();
+        if (root == null || model == null) return null;
+
+        var adjusted = Math.Clamp(TotalPreambleLength + position, 0, Math.Max(0, root.FullSpan.End - 1));
+        var token    = root.FindToken(adjusted);
+        if (!token.IsKind(SyntaxKind.IdentifierToken)) return null;
+
+        var node = token.Parent;
+        if (node == null) return null;
+
+        var symbol = model.GetSymbolInfo(node).Symbol
+                     ?? model.GetSymbolInfo(node).CandidateSymbols.FirstOrDefault()
+                     ?? model.GetDeclaredSymbol(node);
+        if (symbol == null || symbol.Kind is SymbolKind.ErrorType or SymbolKind.Discard)
+            return null;
+
+        var signature = FormatSymbol(symbol);
+        if (string.IsNullOrWhiteSpace(signature)) return null;
+        var summary   = ExtractSummary(symbol.GetDocumentationCommentXml());
+
+        var from = Math.Max(0, token.Span.Start - TotalPreambleLength);
+        var to   = Math.Max(from, token.Span.End - TotalPreambleLength);
+        return new HoverData(signature, summary, from, to);
+    }
+
+    /// <summary>Renders a symbol as an IDE-style quick-info signature.</summary>
+    private static string FormatSymbol(ISymbol symbol)
+    {
+        // Hovering a type name in `new Foo()` resolves to the constructor —
+        // describe the type instead.
+        if (symbol is IMethodSymbol { MethodKind: MethodKind.Constructor } ctor && ctor.ContainingType != null)
+            symbol = ctor.ContainingType;
+
+        var display = symbol.ToDisplayString(HoverFormat);
+
+        if (symbol is INamedTypeSymbol nt)
+        {
+            var kind = nt.TypeKind switch
+            {
+                TypeKind.Class     => nt.IsRecord ? "record" : "class",
+                TypeKind.Struct    => nt.IsRecord ? "record struct" : "struct",
+                TypeKind.Interface => "interface",
+                TypeKind.Enum      => "enum",
+                TypeKind.Delegate  => "delegate",
+                _                  => null,
+            };
+            if (kind != null) display = $"{kind} {display}";
+        }
+        return display;
+    }
+
+    /// <summary>Extracts the &lt;summary&gt; text from an XML doc comment, if any.</summary>
+    private static string? ExtractSummary(string? xml)
+    {
+        if (string.IsNullOrWhiteSpace(xml)) return null;
+        var m = Regex.Match(xml, "<summary>(.*?)</summary>", RegexOptions.Singleline);
+        if (!m.Success) return null;
+        var text = Regex.Replace(m.Groups[1].Value, "<.*?>", "");  // strip inner tags (<see>, <c>, …)
+        text = Regex.Replace(text, "\\s+", " ").Trim();
+        return text.Length == 0 ? null : text;
     }
 
     public void Dispose() => _workspace.Dispose();

@@ -4,6 +4,11 @@
 // gears: 1 = minor fix/tweak, 2 = notable feature, 3 = major feature/architecture
 
 export const CHANGELOG = [
+  { version: '2.27.0', date: '2026-07-21', title: 'Hover quick-info for any symbol', gears: 2, items: [
+    'Hovering a symbol in a code cell now shows its type signature in a tooltip — a local shows List<int> nums, a method shows its full signature, a type shows class Foo. Works for locals, parameters, fields, properties, methods, and types',
+    'This is compile-time info from Roslyn, so it works before running a cell and for symbols that are not variables — complementing the Inline Variable Peek, which shows a variable\'s live runtime value after a run',
+    'Implemented as a textDocument/hover handler in the kernel LSP server (Roslyn semantic model → MinimallyQualifiedFormat + XML-doc summary when available); the editor was already wired to request and render it',
+  ]},
   { version: '2.26.4', date: '2026-07-21', title: 'Long string values wrap and show a character count', gears: 1, items: [
     'A long string shown via .Display() or the variable inspector now wraps within its container instead of scrolling off-screen; strings over 200 characters show a "N characters" indicator so a wrapped block is clearly one long value',
     'Only auto-displayed scalar/string values wrap (a dedicated pre.sn-scalar class) — code in Display.Html / markdown fences is untouched',

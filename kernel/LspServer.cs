@@ -25,6 +25,7 @@ public sealed record LspDidChangeParams(
     LspContentChangeEvent[] ContentChanges);
 public sealed record LspCompletionParams(LspTextDocumentIdentifier TextDocument, LspPosition Position);
 public sealed record LspSignatureHelpParams(LspTextDocumentIdentifier TextDocument, LspPosition Position);
+public sealed record LspHoverParams(LspTextDocumentIdentifier TextDocument, LspPosition Position);
 
 // ── LspServer ─────────────────────────────────────────────────────────────────
 //
@@ -119,6 +120,7 @@ internal sealed class LspHandlers
             {
                 triggerCharacters = new[] { "(", "," },
             },
+            hoverProvider = true,
         },
         serverInfo = new { name = "SharpNote", version = "1.0" }
     };
@@ -182,6 +184,30 @@ internal sealed class LspHandlers
             }).ToList(),
             activeSignature = 0,
             activeParameter = help.ActiveParameter,
+        };
+    }
+
+    [JsonRpcMethod("textDocument/hover")]
+    public async Task<object?> HoverAsync(LspHoverParams @params)
+    {
+        var offset = ToOffset(@params.Position);
+        var hover  = await _wm.GetHoverAsync(offset);
+        if (hover is null) return null;
+
+        var value = string.IsNullOrEmpty(hover.Documentation)
+            ? $"```csharp\n{hover.Signature}\n```"
+            : $"```csharp\n{hover.Signature}\n```\n\n{hover.Documentation}";
+
+        var (sl, sc) = ToLineChar(hover.From);
+        var (el, ec) = ToLineChar(hover.To);
+        return new
+        {
+            contents = new { kind = "markdown", value },
+            range = new
+            {
+                start = new { line = sl, character = sc },
+                end   = new { line = el, character = ec },
+            },
         };
     }
 

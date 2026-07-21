@@ -281,4 +281,81 @@ public class WorkspaceManagerTests
 
         items.Select(i => i.Label).Should().Contain("WriteLine");
     }
+
+    // ── Hover (quick info) ──────────────────────────────────────────────────
+
+    [Fact]
+    public async Task GetHover_LocalVariable_ShowsTypeAndName()
+    {
+        using var wm = new WorkspaceManager();
+        var code = "var count = 42;\ncount";
+        wm.UpdateDocument(code);
+        var hover = await wm.GetHoverAsync(code.LastIndexOf("count"));
+
+        hover.Should().NotBeNull();
+        hover!.Signature.Should().Contain("count");
+        hover.Signature.Should().Contain("int");
+    }
+
+    [Fact]
+    public async Task GetHover_GenericLocal_ShowsElementType()
+    {
+        using var wm = new WorkspaceManager();
+        var code = "var nums = new System.Collections.Generic.List<int>();\nnums";
+        wm.UpdateDocument(code);
+        var hover = await wm.GetHoverAsync(code.LastIndexOf("nums"));
+
+        hover.Should().NotBeNull();
+        hover!.Signature.Should().Contain("List<int>");
+    }
+
+    [Fact]
+    public async Task GetHover_Method_ShowsSignature()
+    {
+        using var wm = new WorkspaceManager();
+        var code = "System.Console.WriteLine(\"hi\");";
+        wm.UpdateDocument(code);
+        var hover = await wm.GetHoverAsync(code.IndexOf("WriteLine"));
+
+        hover.Should().NotBeNull();
+        hover!.Signature.Should().Contain("WriteLine");
+    }
+
+    [Fact]
+    public async Task GetHover_TypeName_ShowsKind()
+    {
+        using var wm = new WorkspaceManager();
+        var code = "var sb = new System.Text.StringBuilder();";
+        wm.UpdateDocument(code);
+        var hover = await wm.GetHoverAsync(code.IndexOf("StringBuilder"));
+
+        hover.Should().NotBeNull();
+        hover!.Signature.Should().Contain("StringBuilder");
+        hover.Signature.Should().Contain("class");
+    }
+
+    [Fact]
+    public async Task GetHover_TypeFromPriorCell_Resolves()
+    {
+        using var wm = new WorkspaceManager();
+        // A type defined in a previously-executed cell is visible via the preamble.
+        wm.AppendExecutedCode("class Widget { public int Id { get; set; } }");
+        var code = "var w = new Widget();\nw";
+        wm.UpdateDocument(code);
+        var hover = await wm.GetHoverAsync(code.LastIndexOf("w"));
+
+        hover.Should().NotBeNull();
+        hover!.Signature.Should().Contain("Widget");
+    }
+
+    [Fact]
+    public async Task GetHover_OnWhitespaceOrOperator_ReturnsNull()
+    {
+        using var wm = new WorkspaceManager();
+        var code = "var x = 1;";
+        wm.UpdateDocument(code);
+        var hover = await wm.GetHoverAsync(code.IndexOf(" = ") + 1); // on '='
+
+        hover.Should().BeNull();
+    }
 }

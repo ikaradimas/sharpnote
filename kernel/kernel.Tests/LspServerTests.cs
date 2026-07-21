@@ -79,6 +79,56 @@ public class LspServerTests
         result["capabilities"].Should().NotBeNull();
         result["capabilities"]!["completionProvider"].Should().NotBeNull();
         result["capabilities"]!["signatureHelpProvider"].Should().NotBeNull();
+        result["capabilities"]!["hoverProvider"]!.Value<bool>().Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task LspServer_Hover_ReturnsTypeSignature()
+    {
+        using var wm = new WorkspaceManager();
+        using var server = new LspServer(wm);
+        server.Start();
+
+        await Task.Delay(100);
+
+        using var client = new NamedPipeClientStream(
+            ".", $"sharpnote-lsp-{Environment.ProcessId}",
+            PipeDirection.InOut, PipeOptions.Asynchronous);
+        await client.ConnectAsync(3000);
+
+        var formatter = new JsonMessageFormatter();
+        formatter.JsonSerializer.ContractResolver =
+            new CamelCasePropertyNamesContractResolver();
+        var msgHandler = new HeaderDelimitedMessageHandler(client, formatter);
+        using var rpc = new JsonRpc(msgHandler);
+        rpc.StartListening();
+
+        await rpc.InvokeAsync<JObject>("initialize",
+            new JObject { ["capabilities"] = new JObject() });
+
+        const string text = "var count = 42;\ncount";
+        await rpc.NotifyAsync("textDocument/didOpen", new JObject
+        {
+            ["textDocument"] = new JObject
+            {
+                ["uri"]        = "file:///script.csx",
+                ["languageId"] = "csharp",
+                ["version"]    = 1,
+                ["text"]       = text,
+            }
+        });
+
+        // Hover over the `count` usage on line 1.
+        var hover = await rpc.InvokeAsync<JObject>("textDocument/hover", new JObject
+        {
+            ["textDocument"] = new JObject { ["uri"] = "file:///script.csx" },
+            ["position"]     = new JObject { ["line"] = 1, ["character"] = 2 }
+        });
+
+        hover.Should().NotBeNull();
+        var value = hover["contents"]!["value"]!.Value<string>();
+        value.Should().Contain("count");
+        value.Should().Contain("int");
     }
 
     [Fact]
