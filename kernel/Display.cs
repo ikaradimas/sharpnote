@@ -1041,6 +1041,25 @@ public class DisplayHelper
         catch { return null; }
     }
 
+    // A "scalar" is a value that should render as a single cell, not be reflected
+    // into columns. Besides primitives and strings this covers value types whose
+    // public properties are noise for display purposes — e.g. Guid (Variant,
+    // Version), DateTime (Day, Hour, Ticks, …), decimal (Scale) — so a
+    // List&lt;Guid&gt; shows the guid text rather than a Variant/Version table.
+    internal static bool IsScalar(Type t)
+    {
+        var u = Nullable.GetUnderlyingType(t) ?? t;
+        if (u == typeof(string) || u.IsPrimitive || u.IsEnum) return true;
+        return u == typeof(decimal) || u == typeof(Guid)
+            || u == typeof(DateTime) || u == typeof(DateTimeOffset)
+            || u == typeof(TimeSpan) || u == typeof(DateOnly) || u == typeof(TimeOnly);
+    }
+
+    // Present a scalar as a cell value: enums as their name (System.Text.Json
+    // would otherwise emit the numeric value), everything else as-is so numbers
+    // stay numeric and Guid/DateTime/TimeSpan serialize to their canonical string.
+    internal static object? ScalarValue(object? v) => v is Enum ? v.ToString() : v;
+
     internal static List<Dictionary<string, object?>> ToRowDicts(List<object?> items)
     {
         return items.Select(row =>
@@ -1048,6 +1067,8 @@ public class DisplayHelper
             if (row == null) return new Dictionary<string, object?> { ["value"] = null };
             // Rows from SQL cells are already dictionaries — use them directly
             if (row is Dictionary<string, object?> d) return d;
+            // Scalars (incl. Guid/DateTime/decimal) → single value cell, not reflected columns
+            if (IsScalar(row.GetType())) return new Dictionary<string, object?> { ["value"] = ScalarValue(row) };
             var dict = new Dictionary<string, object?>();
             foreach (var p in row.GetType().GetProperties())
             {

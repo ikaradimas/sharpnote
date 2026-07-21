@@ -441,4 +441,27 @@ public class DisplayTests : IClassFixture<KernelFixture>, IAsyncLifetime
 
         msg.ValueKind.Should().NotBe(JsonValueKind.Undefined);
     }
+
+    // ── DisplayTable of scalar value types (ToRowDicts path) ──────────────────
+
+    [Fact]
+    public async Task DisplayTable_GuidList_RendersTextNotReflectedColumns()
+    {
+        var id = KernelFixture.NewId();
+        _k.ClearMessages();
+        await _k.SendAsync(new { type = "execute", id, code =
+            @"new List<Guid> { Guid.Parse(""44444444-4444-4444-4444-444444444444"") }.DisplayTable();" });
+        await _k.WaitForMessageAsync(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "complete" &&
+            el.TryGetProperty("id", out var i) && i.GetString() == id);
+
+        var tableMsg = _k.GetMessages().FirstOrDefault(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "display" &&
+            el.TryGetProperty("format", out var f) && f.GetString() == "table");
+        tableMsg.ValueKind.Should().NotBe(JsonValueKind.Undefined);
+
+        var first = tableMsg.GetProperty("content")[0];
+        first.GetProperty("value").GetString().Should().Be("44444444-4444-4444-4444-444444444444");
+        first.TryGetProperty("Variant", out _).Should().BeFalse();
+    }
 }

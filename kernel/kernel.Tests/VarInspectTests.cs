@@ -39,7 +39,11 @@ public class VarInspectTests : IClassFixture<KernelFixture>, IAsyncLifetime
             var greeting = ""hello world"";
             var count = 42;
             var person = new { Name = ""Ada"", Age = 36 };
-            string? missing = null;" });
+            string? missing = null;
+            var guids = new List<Guid> { Guid.Parse(""11111111-1111-1111-1111-111111111111""), Guid.Parse(""22222222-2222-2222-2222-222222222222"") };
+            var dates = new List<DateTime> { new DateTime(2026, 1, 2, 3, 4, 5) };
+            var days = new List<DayOfWeek> { DayOfWeek.Monday, DayOfWeek.Friday };
+            var oneGuid = Guid.Parse(""33333333-3333-3333-3333-333333333333"");" });
         await _k.WaitForMessageAsync(el =>
             el.TryGetProperty("type", out var t) && t.GetString() == "complete" &&
             el.TryGetProperty("id", out var i) && i.GetString() == id);
@@ -83,6 +87,50 @@ public class VarInspectTests : IClassFixture<KernelFixture>, IAsyncLifetime
         res.GetProperty("format").GetString().Should().Be("tree");
         // tree content is a JSON string
         res.GetProperty("content").GetString().Should().Contain("Ada");
+    }
+
+    [Fact]
+    public async Task GuidList_RendersAsTextNotReflectedColumns()
+    {
+        await DefineVariablesAsync();
+        var res = await InspectDisplayAsync("guids");
+        res.GetProperty("format").GetString().Should().Be("table");
+        var first = res.GetProperty("content")[0];
+        // The value cell is the guid's textual form …
+        first.GetProperty("value").GetString().Should().Be("11111111-1111-1111-1111-111111111111");
+        // … not Guid's reflected properties (Variant/Version), which is the bug this fixes.
+        first.TryGetProperty("Variant", out _).Should().BeFalse();
+        first.TryGetProperty("Version", out _).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task DateTimeList_RendersAsSingleValueColumn()
+    {
+        await DefineVariablesAsync();
+        var res = await InspectDisplayAsync("dates");
+        res.GetProperty("format").GetString().Should().Be("table");
+        var first = res.GetProperty("content")[0];
+        first.TryGetProperty("value", out _).Should().BeTrue();
+        // Not the dozens of DateTime sub-properties.
+        first.TryGetProperty("Ticks", out _).Should().BeFalse();
+        first.TryGetProperty("DayOfWeek", out _).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task EnumList_RendersNamesNotNumbers()
+    {
+        await DefineVariablesAsync();
+        var res = await InspectDisplayAsync("days");
+        res.GetProperty("content")[0].GetProperty("value").GetString().Should().Be("Monday");
+    }
+
+    [Fact]
+    public async Task SingleGuid_RendersAsHtmlText()
+    {
+        await DefineVariablesAsync();
+        var res = await InspectDisplayAsync("oneGuid");
+        res.GetProperty("format").GetString().Should().Be("html");
+        res.GetProperty("content").GetString().Should().Contain("33333333-3333-3333-3333-333333333333");
     }
 
     [Fact]

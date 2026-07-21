@@ -101,9 +101,9 @@ public static class SharpNoteExtensions
                 return;
             }
             var first = items[0];
-            if (first == null || first is string || first.GetType().IsPrimitive)
+            if (first == null || DisplayHelper.IsScalar(first.GetType()))
             {
-                var rows = items.Select((v, i) => new Dictionary<string, object?> { ["index"] = i, ["value"] = v }).ToList();
+                var rows = items.Select((v, i) => new Dictionary<string, object?> { ["index"] = i, ["value"] = DisplayHelper.ScalarValue(v) }).ToList();
                 d.TableFromDicts(rows, title);
             }
             else
@@ -114,9 +114,9 @@ public static class SharpNoteExtensions
             return;
         }
 
-        if (obj.GetType().IsPrimitive || obj is decimal)
+        if (DisplayHelper.IsScalar(obj.GetType()))
         {
-            d.Html($"<pre>{obj}</pre>", title);
+            d.Html($"<pre>{System.Net.WebUtility.HtmlEncode(DisplayHelper.ScalarValue(obj)?.ToString() ?? "")}</pre>", title);
             return;
         }
 
