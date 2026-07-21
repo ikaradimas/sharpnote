@@ -145,7 +145,11 @@ function buildLspExtensions(notebookId, cellId) {
   });
 
   return [
-    languageServerPlugin.of({ client, documentUri, languageId: 'csharp' }),
+    // allowHTMLContent: hover contents arrive as markdown (a ```csharp code
+    // fence); the plugin renders markdown → HTML and only inserts it via innerHTML
+    // when this is set — otherwise the raw <pre><code> markup shows as literal text.
+    // Content is our own kernel (Roslyn signatures + tag-stripped doc summaries).
+    languageServerPlugin.of({ client, documentUri, languageId: 'csharp', allowHTMLContent: true }),
 
     // Hover documentation tooltip
     hoverTooltip((view, pos) => {

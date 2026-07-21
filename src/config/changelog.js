@@ -4,6 +4,9 @@
 // gears: 1 = minor fix/tweak, 2 = notable feature, 3 = major feature/architecture
 
 export const CHANGELOG = [
+  { version: '2.27.3', date: '2026-07-21', title: 'Hover quick-info renders as a code block, not raw HTML', gears: 1, items: [
+    'Fixed: the hover tooltip showed its markup literally (e.g. "<pre><code class=\\"language-csharp\\">…</code></pre>") instead of rendering it. The language-server plugin needs allowHTMLContent enabled to render the markdown hover payload as HTML; it now is, so signatures display as a formatted code block',
+  ]},
   { version: '2.27.2', date: '2026-07-21', title: 'Fix spurious "; expected" from cells ending in an expression', gears: 1, items: [
     'Fixed: a cell whose last statement is an expression (e.g. ending in Display.Checklist(…) or x.Display()) was stored in the cross-cell analysis workspace without its terminating semicolon — the trim used to capture the return value leaked into the stored source. The accumulated document then read `…expr«no ;» nextCell`, which can surface as a spurious CS1002 "; expected" at that boundary. The workspace now stores the untrimmed, well-terminated code; the semicolon trim is applied only to the execution submission',
   ]},
