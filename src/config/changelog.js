@@ -4,113 +4,40 @@
 // gears: 1 = minor fix/tweak, 2 = notable feature, 3 = major feature/architecture
 
 export const CHANGELOG = [
-  { version: '2.27.6', date: '2026-07-21', title: 'Bookmarks get the accent left rule too', gears: 1, items: [
-    'Bookmarked-cell entries in the Table of Contents now carry an accent left rule matching their star, echoing the heading rules for a consistent look',
+  { version: '2.27', date: '2026-07-21', title: 'Symbol hover, colour-coded ToC, and inspector/analysis fixes', gears: 2, items: [
+    'Hover quick-info: hovering a symbol in a code cell (local, parameter, field, property, method, or type) shows its type signature in a tooltip — compile-time info from Roslyn, so it works before running a cell and for symbols that are not variables; rendered as a formatted code block (a textDocument/hover handler in the kernel LSP server)',
+    'Table of Contents headings are colour- and weight-coded by level — H1 primary accent (with a coloured left rule), H2 secondary accent, H3 a dimmer tone — drawn from the active theme, so structure is easy to scan and headings stand out from the neutral code-cell entries; bookmarked entries get a matching accent left rule',
+    'Documented the built-in changelog viewer (in-app docs + README) and added a Changelog entry to the Command Palette',
+    'Fixed: a cell ending in an expression (e.g. Display.Checklist(…) or x.Display()) no longer leaves a semicolon-less statement in the cross-cell analysis workspace — a spurious CS1002 "; expected" at the boundary',
+    'Fixed: inspecting a re-declared variable now shows its current value, not the stale original; the Variables snapshot is de-duplicated to one entry per name',
   ]},
-  { version: '2.27.5', date: '2026-07-21', title: 'Colour-coded Table of Contents headings', gears: 1, items: [
-    'Table of Contents headings are now colour- and weight-coded by level — H1 uses the theme\'s primary accent (with a coloured left rule), H2 the secondary accent, H3 a dimmer tone — so structure is easy to scan and headings stand out from code-cell entries, which stay neutral with their type badge',
-    'The colours come from the active theme\'s palette, so the scheme is consistent across every theme, including light themes',
+  { version: '2.26', date: '2026-07-21', title: 'Per-cell variable inspector', gears: 2, items: [
+    'Each code cell header has an inspector button (magnifier icon) that lists the variables that cell declares and currently in the kernel; choosing one opens a draggable, resizable, persistent popup that renders the value with the same type inference as the .Display() family — collection → table, object/dictionary → tree, string/primitive → text (AutoDisplay + the existing output components). "Variables of the cell" reuses the dependency graph\'s producer detection',
+    'Popups refresh after every execution while the variable is in scope, so they stay current even for large collections whose contents change (re-fetched from the kernel, not diffed from a truncated value string)',
+    'Fixed: Guid, DateTime, DateTimeOffset, DateOnly, TimeOnly, TimeSpan, decimal, and enums render as their textual value instead of a table of reflected properties — a List<Guid> shows the guids, not Variant/Version columns',
+    'Long string values wrap within their container and show a "N characters" indicator instead of scrolling off-screen',
   ]},
-  { version: '2.27.4', date: '2026-07-21', title: 'Inspector shows the current value of re-declared variables', gears: 1, items: [
-    'Fixed: after re-running a cell, inspecting a variable it re-declares (var x = …) showed the stale original value. Roslyn keeps every submission\'s declaration, and the inspector picked the first (oldest) match; it now picks the current (last) binding',
-    'The variables snapshot (Variables panel) is likewise de-duplicated to one entry per name — re-declared variables no longer appear as duplicate rows',
+  { version: '2.25', date: '2026-07-20', title: 'Display.Checklist, dependency-first refinements, and cleanup', gears: 2, items: [
+    'New Display.Checklist(title, items…) — run a bunch of checks in code, then render a pass/fail checklist (green ✓ / red ✗ per item, an optional per-item note, and a passed/total header coloured by overall status). Items accept (label, pass) or (label, pass, note) tuples, or a pre-built IEnumerable<CheckItem>; demonstrated in the Display & Rich Output template',
+    'Dependency-first execution now runs only a cell\'s STALE PREVIOUS dependencies — never a later ("next") cell that happens to reassign a variable, and fresh dependencies are skipped instead of recomputed. Applies to the ▶ Run button / Ctrl+Enter and the Orchestration panel\'s "Run with Upstream"',
+    'Removed the decorative "Fun" features (status-bar fish, empty-notebook circuit board, cursor ghost, idle skyline) and their Settings → Appearance → Fun toggles; their persisted keys are ignored so existing settings load cleanly',
   ]},
-  { version: '2.27.3', date: '2026-07-21', title: 'Hover quick-info renders as a code block, not raw HTML', gears: 1, items: [
-    'Fixed: the hover tooltip showed its markup literally (e.g. "<pre><code class=\\"language-csharp\\">…</code></pre>") instead of rendering it. The language-server plugin needs allowHTMLContent enabled to render the markdown hover payload as HTML; it now is, so signatures display as a formatted code block',
+  { version: '2.24', date: '2026-07-20', title: 'Graph-based staleness, orchestration docs, CSV parser fixes', gears: 1, items: [
+    'The "↺ upstream variables changed" banner is now graph-based: only cells DOWNSTREAM of a changed variable in the dependency graph are flagged (data-flow consumers plus cascading dependents), not every code cell below the run. The dependency-graph builder was extracted into a shared pure module so the Orchestration panel and stale-cell tracking share one source of truth',
+    'Documented dependency-first execution and the no-implicit-order default in the Cell Orchestration docs and template; switch-decision edges in the graph render purple to match the docs; removed dead implicit-edge handling',
+    'CSV parser (Files.ContentCsv / Data.LoadCsv): auto-detects the delimiter (comma, semicolon, tab, or pipe), strips a leading UTF-8 BOM, and skips blank lines so a leading blank line no longer collapses every row into one blank-named column',
   ]},
-  { version: '2.27.2', date: '2026-07-21', title: 'Fix spurious "; expected" from cells ending in an expression', gears: 1, items: [
-    'Fixed: a cell whose last statement is an expression (e.g. ending in Display.Checklist(…) or x.Display()) was stored in the cross-cell analysis workspace without its terminating semicolon — the trim used to capture the return value leaked into the stored source. The accumulated document then read `…expr«no ;» nextCell`, which can surface as a spurious CS1002 "; expected" at that boundary. The workspace now stores the untrimmed, well-terminated code; the semicolon trim is applied only to the execution submission',
+  { version: '2.23', date: '2026-07-20', title: 'Dependency-first cell execution', gears: 2, items: [
+    'Running a code cell now first runs its dependencies (transitive upstream, topological order), then the cell — so it recomputes exactly the inputs it needs. A dependency is a cell that produces a variable this cell consumes (auto-detected) plus any explicitly-wired ← Prev / Next → links',
+    'Default is now "none": a cell with no data-flow and no explicit links runs alone — removed the implicit "notebook order" sequential chaining and its picker option',
+    'Fixed a latent bug where dependency-ordered runs (Run with Upstream / Downstream / Pipeline, and the panel\'s node Run) were wired to an undefined dispatcher and never actually ran; upstream runs no longer expand a decision cell\'s downstream branch',
   ]},
-  { version: '2.27.1', date: '2026-07-21', title: 'Document the changelog viewer; add it to the command palette', gears: 1, items: [
-    'Documented the built-in changelog viewer — a new "Changelog" section in the in-app docs and a matching line in the README. It was reachable from Help → Changelog but undocumented',
-    'Added a "Changelog" entry to the Command Palette (Ctrl+K), alongside Documentation and About',
+  { version: '2.22', date: '2026-07-20', title: 'DB type aliases, copyable type names, and security fixes', gears: 2, items: [
+    'Attaching a relational database now also generates an EF-style singular alias for each table\'s POCO type — a "Purchases" table gives both Purchases and Purchase (the same type), interchangeable at runtime and in IntelliSense / the syntax check. Aliases are collision-safe, using best-effort English singularization; the plural class name always works regardless',
+    'Each schema-tree row in the DB panel shows a clipboard badge with the generated C# type name (click to copy), mirroring the DbContext variable badge',
+    'Cleared all dependency security advisories: resolved 16 npm-audit findings via semver-compatible lockfile updates and pinned SQLitePCLRaw.bundle_e_sqlite3 to a patched build (NU1903); added the missing package.json author field',
   ]},
-  { version: '2.27.0', date: '2026-07-21', title: 'Hover quick-info for any symbol', gears: 2, items: [
-    'Hovering a symbol in a code cell now shows its type signature in a tooltip — a local shows List<int> nums, a method shows its full signature, a type shows class Foo. Works for locals, parameters, fields, properties, methods, and types',
-    'This is compile-time info from Roslyn, so it works before running a cell and for symbols that are not variables — complementing the Inline Variable Peek, which shows a variable\'s live runtime value after a run',
-    'Implemented as a textDocument/hover handler in the kernel LSP server (Roslyn semantic model → MinimallyQualifiedFormat + XML-doc summary when available); the editor was already wired to request and render it',
-  ]},
-  { version: '2.26.4', date: '2026-07-21', title: 'Long string values wrap and show a character count', gears: 1, items: [
-    'A long string shown via .Display() or the variable inspector now wraps within its container instead of scrolling off-screen; strings over 200 characters show a "N characters" indicator so a wrapped block is clearly one long value',
-    'Only auto-displayed scalar/string values wrap (a dedicated pre.sn-scalar class) — code in Display.Html / markdown fences is untouched',
-  ]},
-  { version: '2.26.3', date: '2026-07-21', title: 'Scalar value types (Guid, DateTime, decimal) render as text', gears: 1, items: [
-    'Fixed: a List<Guid> displayed (via .Display(), .DisplayTable(), or the variable inspector) rendered as a garbage table of Guid\'s reflected properties (Variant/Version) instead of the guid text. Same for List<DateTime> (Day/Hour/Ticks/…) and List<decimal> (Scale) — .NET value types that gained public properties',
-    'Guid, DateTime, DateTimeOffset, DateOnly, TimeOnly, TimeSpan, decimal, and enums are now treated as scalars: a list of them shows an index/value table with the textual representation, and a single value renders as text (enums show their name, not a number)',
-  ]},
-  { version: '2.26.2', date: '2026-07-21', title: 'Variable inspector popups are resizable', gears: 1, items: [
-    'Variable inspector popups can now be resized by dragging the bottom-right corner — useful for wide or long tables (min 240×140)',
-  ]},
-  { version: '2.26.1', date: '2026-07-21', title: 'Inspector popups refresh reliably for large collections', gears: 1, items: [
-    'Fixed: a variable inspector popup could go stale for lists/collections. Live refresh had keyed off the variable\'s truncated value string, which for a collection is a constant ToString() (e.g. "System.Collections.Generic.List`1[…]") that never changes — so mutations were never picked up, and any change past ~120 chars was invisible for other types too',
-    'Popups now re-fetch from the kernel after every execution in the notebook (while the variable is in scope), so the rendered value always reflects the current contents regardless of size',
-  ]},
-  { version: '2.26.0', date: '2026-07-21', title: 'Per-cell variable inspector', gears: 2, items: [
-    'Each code cell header now has an inspector button (magnifier icon) that lists the variables that cell declares and that currently exist in the kernel',
-    'Choosing a variable opens a draggable, persistent popup that renders its value with the same type inference as the .Display() family — collection → table, object/dictionary → tree, string/primitive → text (the kernel runs AutoDisplay and returns a {format, content} payload rendered by the existing output components)',
-    'Popups stay open, can be dragged anywhere, multiple at once, and each refreshes automatically whenever its variable changes',
-    'The button is disabled when a cell has no variables in scope (run it first). "Variables of the cell" reuses the dependency graph\'s producer detection, so it never diverges from the graph',
-  ]},
-  { version: '2.25.3', date: '2026-07-20', title: 'Dependency-first runs: previous + stale only', gears: 1, items: [
-    'Fixed: running a cell could also run a later ("next") cell when that later cell reassigned a variable the current one reads. Dependency-first execution now only pulls in PREVIOUS cells (earlier in notebook order) and never traverses through a later cell',
-    'Running a cell now re-runs only its STALE previous dependencies — a dependency that already ran successfully and is unchanged is skipped instead of being recomputed every time. Stale = downstream-invalidated, never run successfully, or edited since its last run',
-    'Applies to both the ▶ Run button / Ctrl+Enter and the Orchestration panel\'s "Run with Upstream" action',
-  ]},
-  { version: '2.25.2', date: '2026-07-20', title: 'Removed the decorative "Fun" features', gears: 1, items: [
-    'Removed the status-bar fish, empty-notebook circuit-board animation, cursor ghost companion, and idle skyline — along with their Settings → Appearance → Fun toggles. These purely decorative extras had run their course',
-    'Their persisted settings keys (showFish, showCircuit, showGhost, showSkyline, and the legacy showMinigame) are now ignored; existing settings files load cleanly without them',
-  ]},
-  { version: '2.25.1', date: '2026-07-20', title: 'Checklist example in Display & Rich Output template', gears: 1, items: [
-    'The Display & Rich Output starter template now demonstrates Display.Checklist (a "Deploy readiness" pass/fail example) alongside the other infographic helpers',
-  ]},
-  { version: '2.25.0', date: '2026-07-20', title: 'Display.Checklist output', gears: 2, items: [
-    'New Display.Checklist(title, items…) — run a bunch of checks in code, then render a pass/fail checklist: green ✓ / red ✗ per item, an optional per-item note, and a passed/total header colored by overall status',
-    'Items accept (label, pass) or (label, pass, note) tuples (via a CheckItem record with implicit conversions), or a pre-built IEnumerable<CheckItem>',
-  ]},
-  { version: '2.24.5', date: '2026-07-20', title: 'CSV parser skips blank lines', gears: 1, items: [
-    'Fixed: a leading blank line made the CSV header parse as a single empty column, collapsing every row into one blank-named column (Files.ContentCsv / Data.LoadCsv). Blank lines (a record that is a single empty field) are now skipped, so the header is the first real row; a row of genuinely-empty delimited fields like ",," is preserved',
-  ]},
-  { version: '2.24.4', date: '2026-07-20', title: 'CSV parser strips leading UTF-8 BOM', gears: 1, items: [
-    'The CSV parser now strips a leading UTF-8 BOM, so the first column name is no longer silently prefixed with an invisible \\uFEFF (which broke lookups like rows[0]["AccountId"] and could make the first column appear wrong) — affects Files.ContentCsv and Data.LoadCsv',
-  ]},
-  { version: '2.24.3', date: '2026-07-20', title: 'Files.ContentCsv auto-detects the delimiter', gears: 1, items: [
-    'Files["name"].ContentCsv now auto-detects the delimiter (comma, semicolon, tab, or pipe) instead of assuming comma — semicolon-separated CSVs (common in European locales) previously collapsed into a single column',
-    'New DataHelper.SniffDelimiter() picks the delimiter that yields the most fields on the header line, respecting quotes; falls back to comma. ContentTsv and ParseCsvContent(delimiter) remain explicit',
-  ]},
-  { version: '2.24.2', date: '2026-07-20', title: 'Switch-decision edges render purple', gears: 1, items: [
-    'Switch-case edges in the Orchestration graph now render purple (line, arrowhead, and case label) — matching the purple decision node and the documentation; previously they fell back to the default blue-grey',
-    'Reconciled the docs wording (all switch-case edges are purple and labeled, not only a "matched" one)',
-  ]},
-  { version: '2.24.1', date: '2026-07-20', title: 'Orchestration docs + dead-code cleanup', gears: 1, items: [
-    'Documented dependency-first execution and the "no implicit notebook-order" default in the Cell Orchestration docs and example template, with a "what the edges mean" breakdown',
-    'The Cell Orchestration template now shows dependency-first execution (running Compute Stats runs Load Orders + Data Check first) and graph-based staleness',
-    'Removed dead edge.implicit handling from the Orchestration panel (no implicit edges exist anymore); the edge count now reflects real dependency edges only',
-  ]},
-  { version: '2.24.0', date: '2026-07-20', title: 'Graph-based stale-cell banner', gears: 1, items: [
-    'The "↺ upstream variables changed" banner is now graph-based: after a run that changes a variable, the cells flagged stale are the ones DOWNSTREAM of it in the dependency graph (data-flow consumers of the changed variable, plus cascading dependents) — not simply every code cell positioned below it',
-    'A direct dependent is staled only if its edge carries a changed variable; explicit-link/decision dependents always propagate; staleness cascades transitively',
-    'Extracted the dependency-graph builder into a shared pure module (src/utils/dependency-graph.js) so the Orchestration panel and stale-cell tracking use one source of truth',
-  ]},
-  { version: '2.23.0', date: '2026-07-20', title: 'Dependency-first cell execution', gears: 2, items: [
-    'Running a code cell now first runs its dependencies (transitive upstream, topological order), then the cell — so a cell recomputes exactly the inputs it needs',
-    'A dependency = a cell that produces a variable this cell consumes (data-flow, auto-detected) plus any explicitly-wired ← Prev / Next → links',
-    'Default is now "none": a cell with no data-flow and no explicit links has no dependencies and runs alone — removed the implicit "notebook order" sequential chaining (and the picker option for it)',
-    'Fixed a latent bug: the orchestrator\'s dependency-ordered runs (Run with Upstream / Downstream / Pipeline, and the panel\'s node Run) were wired to an undefined dispatcher and never actually ran',
-    'Upstream ("run with deps") runs no longer expand a decision cell\'s downstream branch',
-  ]},
-  { version: '2.22.1', date: '2026-07-20', title: 'Security: clear dependency vulnerabilities', gears: 1, items: [
-    'Kernel: pin SQLitePCLRaw.bundle_e_sqlite3 to 2.1.12 — the 2.1.11 pulled transitively by EF Core Sqlite bundled a SQLite build with a known high-severity vuln (NU1903 / GHSA-2m69-gcr7-jv3q)',
-    'JS: resolved all 16 npm-audit advisories (incl. shipped deps dompurify, mermaid, markdown-it, postcss, uuid, ws, js-yaml) via semver-compatible lockfile updates — the clean rebuild preserves package-lock.json so the fixes persist',
-    'Added the missing package.json "author" field (electron-builder warning)',
-  ]},
-  { version: '2.22.0', date: '2026-07-20', title: 'DB entity types: singular aliases + copyable type names', gears: 2, items: [
-    'Attaching a relational database now also generates an EF-style singular alias for each table\'s POCO type — a "Purchases" table gives you both Purchases and Purchase, the same type, so List<Purchase> and List<Purchases> are interchangeable',
-    'The alias resolves both at runtime and in IntelliSense / the syntax check (added to the LSP preamble and the runtime injection)',
-    'Each table row in the DB panel schema tree now shows a small clipboard badge with the generated C# type name; click to copy — mirrors the DbContext variable badge',
-    'Aliases are collision-safe: suppressed when the singular would clash with another table\'s type name',
-    'Best-effort English singularization (Purchases→Purchase, Categories→Category, Boxes→Box, Addresses→Address, People→Person); the plural class name always works regardless',
-  ]},
-  { version: '2.21.0', date: '2026-07-20', title: 'New "Embedded Files" example template', gears: 1, items: [
+  { version: '2.21', date: '2026-07-20', title: 'Embedded Files example template', gears: 1, items: [
     'New starter template in File → New Notebook demonstrating the Files API: embed files from code (EmbedText/Embed), read them back (ContentAsText, OpenRead, ContentCsv), update in place, attach metadata, and list/guard them',
   ]},
   { version: '2.20.5', date: '2026-07-20', title: 'Cells & Variables: keep only the latest run', gears: 1, items: [
