@@ -432,6 +432,12 @@ partial class Program
                     break;
                 }
 
+                case "var_release":
+                {
+                    await HandleVarRelease(msg, options, globals, realStdout);
+                    break;
+                }
+
                 case "exit":
                     CleanupAllDockerContainers(realStdout);
                     memCts.Cancel();

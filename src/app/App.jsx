@@ -1140,6 +1140,13 @@ export function App() {
     window.electronAPI?.sendToKernel(nbId, { type: 'var_inspect', name: varName, display: true });
   }, []);
 
+  // Free a variable's current value (set it to null on the kernel) to release memory
+  // without a full restart. The kernel emits a vars_update afterward, which bumps
+  // varsVersion and makes the open inspector re-request and show the freed value.
+  const releaseVariable = useCallback((nbId, varName) => {
+    window.electronAPI?.sendToKernel(nbId, { type: 'var_release', name: varName });
+  }, []);
+
   // Open a popup for a variable (deduped per notebook+variable).
   const handleInspectVariable = useCallback((nbId, varName, typeName) => {
     const id = `${nbId}::${varName}`;
@@ -1847,6 +1854,7 @@ export function App() {
             loading={ins.loading}
             initialPos={ins.pos}
             onRequest={requestInspect}
+            onRelease={() => releaseVariable(ins.notebookId, ins.varName)}
             onClose={() => closeInspector(ins.id)}
           />
         );

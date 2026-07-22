@@ -4,6 +4,9 @@
 // gears: 1 = minor fix/tweak, 2 = notable feature, 3 = major feature/architecture
 
 export const CHANGELOG = [
+  { version: '2.28', date: '2026-07-22', title: 'Free variables to reclaim memory on demand', gears: 2, items: [
+    'Variable inspector: each inspector popup now has an eraser (Free) button that releases the variable — the kernel sets it to null so the object it held can be garbage-collected — freeing memory without restarting the kernel (new var_release kernel message). Measured: freeing a 300MB variable dropped the kernel heap by ~298MB. Shown only while the variable is in scope and not already null; a safe no-op for value types',
+  ]},
   { version: '2.27', date: '2026-07-22', title: 'Symbol hover, colour-coded ToC, memory bounds, and fixes', gears: 2, items: [
     'Hover quick-info: hovering a symbol in a code cell (local, parameter, field, property, method, or type) shows its type signature in a tooltip — compile-time info from Roslyn, so it works before running a cell and for symbols that are not variables; rendered as a formatted code block (a textDocument/hover handler in the kernel LSP server)',
     'Table of Contents headings are colour- and weight-coded by level — H1 primary accent (with a coloured left rule), H2 secondary accent, H3 a dimmer tone — drawn from the active theme, so structure is easy to scan and headings stand out from the neutral code-cell entries; bookmarked entries get a matching accent left rule',

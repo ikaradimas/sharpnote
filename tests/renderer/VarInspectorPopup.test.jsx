@@ -97,4 +97,29 @@ describe('VarInspectorPopup', () => {
     expect(popup.style.width).toBe('240px');  // min width
     expect(popup.style.height).toBe('140px'); // min height
   });
+
+  // ── Free / release affordance ─────────────────────────────────────────────
+  it('renders a Free button and calls onRelease when clicked (in scope, value present)', () => {
+    const onRelease = vi.fn();
+    const { container } = render(<VarInspectorPopup {...makeProps({ onRelease })} />);
+    const btn = container.querySelector('.var-inspector-free');
+    expect(btn).not.toBeNull();
+    btn.click();
+    expect(onRelease).toHaveBeenCalledOnce();
+  });
+
+  it('does not render Free without an onRelease handler', () => {
+    const { container } = render(<VarInspectorPopup {...makeProps()} />);
+    expect(container.querySelector('.var-inspector-free')).toBeNull();
+  });
+
+  it('does not render Free when the value is already null', () => {
+    const { container } = render(<VarInspectorPopup {...makeProps({ onRelease: vi.fn(), isNull: true, payload: null })} />);
+    expect(container.querySelector('.var-inspector-free')).toBeNull();
+  });
+
+  it('does not render Free when the variable is out of scope', () => {
+    const { container } = render(<VarInspectorPopup {...makeProps({ onRelease: vi.fn(), inScope: false })} />);
+    expect(container.querySelector('.var-inspector-free')).toBeNull();
+  });
 });

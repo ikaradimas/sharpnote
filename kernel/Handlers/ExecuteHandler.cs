@@ -282,18 +282,7 @@ partial class Program
             // Append executed code to workspace so subsequent cells' LSP diagnostics
             // can resolve types, records, and variables defined here.
             _workspaceManager.AppendExecutedCode(id, codeForWorkspace);
-
-            var vars = CurrentVariables(script)
-                .Where(v => !v.Name.StartsWith("<"))
-                .Select(v => new {
-                    name         = v.Name,
-                    typeName     = v.Type.Name,
-                    fullTypeName = v.Type.FullName ?? v.Type.Name,
-                    value        = SafeToString(v.Value, v.Type.Name),
-                    isNull       = v.Value == null,
-                })
-                .ToList();
-            realStdout.WriteLine(JsonSerializer.Serialize(new { type = "vars_update", vars }));
+            EmitVarsUpdate(script, realStdout);
         }
 
         CurrentCellId = null;
@@ -376,6 +365,26 @@ partial class Program
     /// </summary>
     internal static IEnumerable<ScriptVariable> CurrentVariables(ScriptState state) =>
         state.Variables.GroupBy(v => v.Name).Select(g => g.Last());
+
+    /// <summary>
+    /// Serialises the current variable bindings as a { type: "vars_update", vars } message.
+    /// Shared by HandleExecute and HandleVarRelease so the renderer's Variables panel and
+    /// inspector popups refresh identically after a run or an explicit release.
+    /// </summary>
+    internal static void EmitVarsUpdate(ScriptState state, TextWriter realStdout)
+    {
+        var vars = CurrentVariables(state)
+            .Where(v => !v.Name.StartsWith("<"))
+            .Select(v => new {
+                name         = v.Name,
+                typeName     = v.Type.Name,
+                fullTypeName = v.Type.FullName ?? v.Type.Name,
+                value        = SafeToString(v.Value, v.Type.Name),
+                isNull       = v.Value == null,
+            })
+            .ToList();
+        realStdout.WriteLine(JsonSerializer.Serialize(new { type = "vars_update", vars }));
+    }
 
     // ── Return value renderer ─────────────────────────────────────────────────
 

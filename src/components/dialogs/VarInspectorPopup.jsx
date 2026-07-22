@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { X } from 'lucide-react';
+import { X, Eraser } from 'lucide-react';
 import { FormatContent } from '../output/FormatContent.jsx';
 
 /**
@@ -15,7 +15,7 @@ export function VarInspectorPopup({
   notebookId, varName, typeName,
   inScope, varsVersion, payload, isNull, error, loading,
   initialPos,
-  onRequest, onClose,
+  onRequest, onRelease, onClose,
 }) {
   const [pos, setPos] = useState(initialPos || { x: 120, y: 120 });
   const [size, setSize] = useState({ w: 420, h: 300 });
@@ -29,8 +29,8 @@ export function VarInspectorPopup({
   }, [notebookId, varName, varsVersion, inScope, onRequest]);
 
   const handleHeaderDown = (e) => {
-    // Ignore drags that start on the close button.
-    if (e.target.closest('.var-inspector-close')) return;
+    // Ignore drags that start on a header button (close / free).
+    if (e.target.closest('.var-inspector-close, .var-inspector-free')) return;
     e.preventDefault();
     const ox = e.clientX - pos.x;
     const oy = e.clientY - pos.y;
@@ -81,6 +81,15 @@ export function VarInspectorPopup({
       <div className="var-inspector-header" onMouseDown={handleHeaderDown}>
         <span className="var-inspector-name">{varName}</span>
         {typeName && <span className="var-inspector-type">{typeName}</span>}
+        {onRelease && inScope && !isNull && (
+          <button
+            className="var-inspector-free"
+            onClick={onRelease}
+            title="Free this variable — sets it to null on the kernel to release its memory (you can re-run the cell to recompute it)"
+          >
+            <Eraser size={12} />
+          </button>
+        )}
         <button className="var-inspector-close" onClick={onClose} title="Close">
           <X size={12} />
         </button>
