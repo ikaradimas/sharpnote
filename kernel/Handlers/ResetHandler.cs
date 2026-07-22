@@ -19,6 +19,7 @@ partial class Program
         UtilHelper.ClearCacheStatic();
         CanvasHandle.ClearRegistry();
         _workspaceManager.ClearScriptPreamble();
+        ClearExpressionScriptCache();
         foreach (var info in attachedDbs.Values)
         {
             try { await InjectDbContextAsync(info, options, globals); }

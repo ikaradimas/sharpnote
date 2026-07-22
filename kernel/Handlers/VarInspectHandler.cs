@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -10,6 +11,34 @@ namespace SharpNoteKernel;
 
 partial class Program
 {
+    // Compiled-script cache for watch/expression inspection. CSharpScript.EvaluateAsync
+    // recompiles AND emits a fresh (non-collectible) assembly on every call, so a watch
+    // that re-evaluates on each execution leaks an assembly per refresh. CSharpScript.Create
+    // emits once; reusing the resulting Script across RunAsync calls avoids the repeated
+    // emission (the documented workaround — see tasks/kernel-memory-redesign.md). This does
+    // NOT apply to the main cell-execution path, which chains via ContinueWithAsync and so
+    // recompiles against an ever-changing predecessor; that belongs to the custom-host redesign.
+    private static readonly Dictionary<string, (ScriptOptions Opts, Script<object> Script)> _exprScriptCache = new();
+    private const int MaxExprScriptCache = 64;
+
+    /// <summary>Flushed on kernel reset (references and script state change wholesale).</summary>
+    internal static void ClearExpressionScriptCache() => _exprScriptCache.Clear();
+
+    // Returns a compiled Script for `expr`, reusing the cached one unless `options` (which is
+    // reassigned only when metadata references change — NuGet load, reset) is a new instance.
+    private static Script<object> GetOrCompileExpression(string expr, ScriptOptions options)
+    {
+        if (_exprScriptCache.TryGetValue(expr, out var entry) && ReferenceEquals(entry.Opts, options))
+            return entry.Script;
+
+        if (_exprScriptCache.Count >= MaxExprScriptCache && !_exprScriptCache.ContainsKey(expr))
+            _exprScriptCache.Clear(); // bounded: watches are few; a flush caps the cache itself
+
+        var compiled = CSharpScript.Create<object>(expr, options, typeof(ScriptGlobals));
+        _exprScriptCache[expr] = (options, compiled);
+        return compiled;
+    }
+
     internal static async Task HandleVarInspect(JsonElement msg, ScriptOptions options, ScriptGlobals globals, TextWriter realStdout)
     {
         var name = msg.TryGetProperty("name", out var nameProp) ? nameProp.GetString() : null;
@@ -32,7 +61,10 @@ partial class Program
         {
             if (isExpression)
             {
-                value = await CSharpScript.EvaluateAsync<object>(name, options, globals);
+                // Compile once per distinct expression, then re-run against current globals
+                // for a fresh value — avoids emitting a new assembly on every watch refresh.
+                var compiled = GetOrCompileExpression(name, options);
+                value = (await compiled.RunAsync(globals)).ReturnValue;
                 typeName = value?.GetType().Name ?? "null";
             }
             else
@@ -52,6 +84,7 @@ partial class Program
         }
         catch (Exception ex)
         {
+            if (isExpression) _exprScriptCache.Remove(name); // don't retain a failing compilation
             EmitInspectError(realStdout, name, ex.Message, asDisplay, isExpression);
             return;
         }

@@ -206,4 +206,48 @@ public class VarInspectTests : IClassFixture<KernelFixture>, IAsyncLifetime
         var res = await InspectDisplayAsync("doesNotExist");
         res.GetProperty("isNull").GetBoolean().Should().BeTrue();
     }
+
+    // ── Compiled-script cache for expression/watch inspection ───────────────
+    // Expression mode compiles the watch once and re-runs it; it must NOT cache the
+    // VALUE (each evaluation reflects current state), and repeatedly inspecting the same
+    // expression must reuse the compiled assembly instead of emitting a new one per call
+    // (the old EvaluateAsync path leaked an assembly on every refresh).
+
+    private async Task<string> InspectExprJsonAsync(string expr)
+    {
+        _k.ClearMessages();
+        await _k.SendAsync(new { type = "var_inspect", name = expr, expression = true });
+        var el = await _k.WaitForMessageAsync(e =>
+            e.TryGetProperty("type", out var t) && t.GetString() == "var_inspect_result" &&
+            e.TryGetProperty("name", out var n) && n.GetString() == expr);
+        return el.GetProperty("json").GetString()!;
+    }
+
+    [Fact]
+    public async Task ExpressionInspect_ReRunsForFreshValue_DoesNotCacheTheValue()
+    {
+        await ExecuteAsync("var _warm = 1;"); // var_inspect requires a non-null script
+        var a = await InspectExprJsonAsync("System.Guid.NewGuid().ToString()");
+        var b = await InspectExprJsonAsync("System.Guid.NewGuid().ToString()");
+        // Same expression, cached compilation — but each run must produce a fresh value.
+        a.Should().NotBe(b);
+    }
+
+    [Fact]
+    public async Task ExpressionInspect_RepeatedSameExpression_ReusesCompilation()
+    {
+        await ExecuteAsync("var _warm = 1;");
+        const string expr = "System.AppDomain.CurrentDomain.GetAssemblies().Length";
+        var counts = new System.Collections.Generic.List<int>();
+        for (int i = 0; i < 8; i++)
+            counts.Add(int.Parse(await InspectExprJsonAsync(expr)));
+
+        // With the compiled-script cache, the first inspection compiles+emits once and the
+        // rest reuse it, so the loaded-assembly count stays essentially flat. The old
+        // EvaluateAsync path emitted a fresh assembly per call, climbing by ~1 each time
+        // (growth ≈ 7 over 8 calls). A generous margin keeps this robust against unrelated
+        // lazy loads while still failing loudly if per-call emission regresses.
+        var growthAfterFirst = counts[^1] - counts[1];
+        growthAfterFirst.Should().BeLessThan(3);
+    }
 }
