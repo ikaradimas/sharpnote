@@ -6,7 +6,20 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- Memory footprint: the kernel is a long-lived process that accumulates script
+         state (see tasks/kernel-memory-redesign.md). Workstation GC keeps the base
+         footprint low, and RetainVM=false returns freed segments to the OS so RSS falls
+         after large allocations are collected instead of the runtime hoarding them. -->
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <RetainVMGarbageCollection>false</RetainVMGarbageCollection>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- GC.ConserveMemory (0–9): trade some GC CPU for a smaller, more aggressively
+         decommitted heap. A moderate value keeps working-set closer to live-heap size
+         for a workload that alternates heavy allocation bursts with idle time. -->
+    <RuntimeHostConfigurationOption Include="System.GC.ConserveMemory" Value="5" Trim="false" />
+  </ItemGroup>
 
   <ItemGroup>
     <!-- Exclude test project files from the main kernel compilation -->

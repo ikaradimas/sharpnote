@@ -1662,7 +1662,11 @@ export function App() {
           {!viewerMode && <DockZone zone="bottom" {...dockZoneProps} />}
         </div>
       </div>
-      <StatusBar notebooks={notebooks} activeId={activeId} />
+      <StatusBar
+        notebooks={notebooks}
+        activeId={activeId}
+        onRestartKernel={isNotebookId(activeId) ? () => handleResetWithSchedules(activeId) : undefined}
+      />
       {!viewerMode && Object.entries(dockLayout.assignments)
         .filter(([panelId, z]) => z === 'float' && !!effectiveOpenFlags[panelId])
         .map(([panelId]) => {

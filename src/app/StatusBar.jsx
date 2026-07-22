@@ -40,7 +40,7 @@ function MemorySparkline({ history }) {
   );
 }
 
-export function StatusBar({ notebooks, activeId }) {
+export function StatusBar({ notebooks, activeId, onRestartKernel }) {
   const nb = isNotebookId(activeId) ? notebooks.find((n) => n.id === activeId) : null;
   const rawHistory = nb?.memoryHistory ?? [];
   // Support both legacy (number) and new ({ mb, gc }) formats
@@ -86,7 +86,18 @@ export function StatusBar({ notebooks, activeId }) {
         <span className="status-mem-peak">peak {peak.toFixed(1)}</span>
       )}
       {nb?.memoryWarning && (
-        <span className="status-mem-warning" title="Kernel memory usage is high"><AlertTriangle size={10} /> {nb.memoryWarning}</span>
+        onRestartKernel ? (
+          <button
+            type="button"
+            className="status-mem-warning status-mem-warning-btn"
+            title="Kernel memory is high. Click to restart the kernel — this reclaims all of it, but clears in-memory state so you'll re-run cells."
+            onClick={onRestartKernel}
+          >
+            <AlertTriangle size={10} /> {nb.memoryWarning} · Restart
+          </button>
+        ) : (
+          <span className="status-mem-warning" title="Kernel memory usage is high"><AlertTriangle size={10} /> {nb.memoryWarning}</span>
+        )
       )}
       <span className="status-spacer" />
       {dockerCount > 0 && (

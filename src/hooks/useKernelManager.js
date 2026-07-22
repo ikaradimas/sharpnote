@@ -2,7 +2,7 @@ import { useRef, useCallback, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { buildCellGraph } from '../utils/dependency-graph.js';
 import { computeStaleCells } from '../utils/graph-traversal.js';
-import { appendCapped } from '../utils.js';
+import { appendCapped, memoryWarningText } from '../utils.js';
 
 const RUNNABLE_TYPES = new Set(['code', 'sql', 'http', 'shell', 'check', 'decision', 'docker', 'floci']);
 
@@ -316,7 +316,7 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
             const gcHappened = gc > prevGc;
             return {
               memoryHistory: [...n.memoryHistory.slice(-59), { mb: msg.mb, gc: gcHappened }],
-              memoryWarning: msg.mb > 1024 ? `Kernel memory: ${Math.round(msg.mb)}MB` : null,
+              memoryWarning: memoryWarningText(msg.mb),
               _lastGcCount: gc,
             };
           });

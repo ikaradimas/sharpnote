@@ -273,6 +273,21 @@ export function isMarpMarkdown(content) {
 export const MAX_CELL_OUTPUTS = 500;
 
 /**
+ * WorkingSet (MB) at which the status bar warns that the kernel is holding a lot of
+ * memory and offers a one-click restart. The kernel accumulates script state across a
+ * session (see tasks/kernel-memory-redesign.md); this is the "consider restarting" line.
+ */
+export const MEMORY_WARNING_THRESHOLD_MB = 1024;
+
+/**
+ * Returns a short warning label when the kernel's reported memory exceeds the threshold,
+ * or null otherwise. Kept pure so the status-bar threshold behaviour is unit-testable.
+ */
+export function memoryWarningText(mb, threshold = MEMORY_WARNING_THRESHOLD_MB) {
+  return typeof mb === 'number' && mb > threshold ? `Kernel memory: ${Math.round(mb)} MB` : null;
+}
+
+/**
  * Appends `msg` to a per-cell outputs array while keeping its length bounded.
  * A cell that prints or `.Display()`s in a tight loop would otherwise grow this
  * array (and the React state holding it) without limit for the duration of the

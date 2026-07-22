@@ -3838,6 +3838,15 @@ body {
 .status-mem-warning {
   color: var(--status-error); font-size: 9px; font-weight: 600;
   animation: pulse-warn 2s ease-in-out infinite;
+  display: inline-flex; align-items: center; gap: 3px;
+}
+.status-mem-warning-btn {
+  background: none; border: none; padding: 0 4px; margin: 0;
+  font: inherit; cursor: pointer; border-radius: 3px;
+}
+.status-mem-warning-btn:hover {
+  background: color-mix(in srgb, var(--status-error) 18%, transparent);
+  animation: none; opacity: 1;
 }
 @keyframes pulse-warn { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
 

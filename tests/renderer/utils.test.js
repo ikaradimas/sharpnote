@@ -16,6 +16,37 @@ import {
   LIB_EDITOR_ID_PREFIX,
 } from '../../src/renderer.jsx';
 import { tableToTSV } from '../../src/utils.js';
+import { memoryWarningText, MEMORY_WARNING_THRESHOLD_MB } from '../../src/utils.js';
+
+// ── memoryWarningText ─────────────────────────────────────────────────────────
+
+describe('memoryWarningText', () => {
+  it('returns null below the threshold', () => {
+    expect(memoryWarningText(MEMORY_WARNING_THRESHOLD_MB - 1)).toBeNull();
+    expect(memoryWarningText(0)).toBeNull();
+  });
+
+  it('returns null exactly at the threshold (strictly greater triggers)', () => {
+    expect(memoryWarningText(MEMORY_WARNING_THRESHOLD_MB)).toBeNull();
+  });
+
+  it('returns a rounded label above the threshold', () => {
+    expect(memoryWarningText(MEMORY_WARNING_THRESHOLD_MB + 200.7)).toBe(
+      `Kernel memory: ${Math.round(MEMORY_WARNING_THRESHOLD_MB + 200.7)} MB`
+    );
+  });
+
+  it('honours a custom threshold', () => {
+    expect(memoryWarningText(300, 500)).toBeNull();
+    expect(memoryWarningText(600, 500)).toBe('Kernel memory: 600 MB');
+  });
+
+  it('returns null for non-numeric input', () => {
+    expect(memoryWarningText(undefined)).toBeNull();
+    expect(memoryWarningText(null)).toBeNull();
+    expect(memoryWarningText('1200')).toBeNull();
+  });
+});
 
 // ── formatLogTime ─────────────────────────────────────────────────────────────
 
