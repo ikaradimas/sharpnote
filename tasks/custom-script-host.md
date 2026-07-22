@@ -40,22 +40,38 @@ Two retention findings that shape the design:
    submission's emitted assembly does **not** bring script vars into bare-identifier scope
    (spike: "metadata-ref-only resolves bare x: False"). So the compilation chain must be kept
    in some form — this is the structural source of the per-submission retention.
-5. **A trimmed previous compilation still resolved a prior var** (spike:
-   "chain-from-trimmed-previous resolves x: True" after `previous.RemoveAllSyntaxTrees()`).
-   *Promising* for cutting retention by dropping heavy syntax trees/bound-node caches from prior
-   compilations — but treat as unverified (could be an artifact of shared immutable state).
-   **This is de-risking spike #1 below.**
+5. **Tree-trimming does NOT work — spike #1 RESOLVED, negative.** A rigorous follow-up spike
+   (trimming the compilation that *declares* the symbols, not a downstream one) showed
+   `RemoveAllSyntaxTrees()` destroys the declaration symbols: chaining a submission from a
+   trimmed-declaring previous fails to compile — `x`, a cell-defined `record Foo`, and a
+   method `Bar` all report "does not exist". (The earlier "resolves x: True" was an artifact:
+   the trimmed compilation still chained to an *intact* earlier one that declared `x`.)
+   Trimming also *increased* retained heap (111 vs 72 KB/submission) and left the tip unable to
+   resolve its own vars. **Conclusion: per-submission managed retention is NOT reducible while
+   preserving script semantics.** The ~77 % is reclaimable ONLY by dropping the whole chain
+   (compaction), exactly as [kernel-memory-redesign.md](kernel-memory-redesign.md) concluded.
 
-## What option 3 actually buys (honest value)
+## What option 3 actually buys (honest value — post-spike)
 
-- **Solid:** collectible ALC → reclaim the ~23 % loader heap on reset / generation-drop; and
-  **ownership of the state array + chain reference makes the generational compaction / reseed
-  from the redesign doc *implementable***, which `CSharpScript`'s opaque internals forbid.
-- **Potential (pending spike #1):** trimming trees from prior compilations to cut the ~77 %
-  per-submission managed retention directly.
-- **NOT free:** retention reduction is not automatic — the `previousScriptCompilation` chain
-  must be preserved for script scoping (finding #4). The win comes from trimming (#5) and/or
-  periodic chain-drop + reseed, not from simply switching hosts.
+The custom host, **on its own, delivers no steady-state memory win** over `CSharpScript`: the
+`previousScriptCompilation` chain must be retained for script scoping (finding #4) and its
+compilations can't be trimmed (finding #5). Switching hosts alone is pointless for memory.
+
+Its value is strictly as an **enabler**, realised only when paired with compaction (Phase 4):
+- **Ownership of the state array + chain reference** makes the generational compaction / reseed
+  from the redesign doc *implementable* — `CSharpScript`'s opaque internals forbid it.
+- **A collectible ALC per generation** lets a compaction (or reset) also unload the emitted
+  assemblies — reclaiming the ~23 % loader heap that even `reset` can't free today.
+
+So the prize of the **full** effort (host + compaction) is: **reclaim ~100 % mid-session
+without a process restart AND without losing live variable values or re-running cells** — a
+better-than-`reset` reclamation for long migrations where re-running is expensive. It carries
+the redesign doc's inherent limit: variables of anonymous / cell-defined types can't be rebound
+across the chain-drop (cross-assembly identity) and degrade to `dynamic` or are dropped.
+
+**Corollary:** do not build the host as a standalone deliverable. It is Phase 0–2 of a single
+effort whose payoff is Phase 4. If we are not going to do compaction, there is no reason to
+replace `CSharpScript`, and `Reset Kernel` (already reclaims ~77 %, free) remains the answer.
 
 ## Architecture — the SharpNote script host
 
@@ -86,10 +102,10 @@ Keep `CSharpScript` as a fallback behind a flag until parity is proven; port one
 time. All handlers that mutate `script` today (Execute, SQL, HTTP, Check, Decision, DB) go
 through the same host `Continue(code)` call, so they migrate together once the host lands.
 
-- **Phase 0 — spike #1 (retention):** rigorously determine whether prior compilations can be
-  trimmed (trees/bound nodes dropped) while preserving chaining + variable reads. Measure the
-  managed heap per submission with trimming vs. without. This decides whether the retention win
-  is real or whether we rely solely on compaction. *Gate the whole effort on this.*
+- **Phase 0 — spike #1 (retention): DONE, negative.** Prior compilations cannot be trimmed
+  (finding #5). Consequence: there is no per-submission retention win; the effort is justified
+  ONLY if we commit to Phase 4 (compaction). Decision gate now reads: *proceed only if we
+  intend to ship compaction; otherwise stop and rely on `Reset Kernel`.*
 - **Phase 1 — host + ExecuteHandler parity:** implement `ScriptHost`, route only `HandleExecute`
   through it behind a flag. Prove parity via the corpus harness (below).
 - **Phase 2 — port the other chainers** (SQL/HTTP/Check/Decision/DB) and `VarInspectHandler`
@@ -112,7 +128,8 @@ exception messages + stack traces · `DisplayContext.Current` wiring · params/f
 
 ## Risks & open questions
 
-- **Retention (spike #1)** — the headline uncertainty; may reduce to "compaction only".
+- **Retention (spike #1)** — RESOLVED negative: trimming is impossible, so the effort reduces
+  to "host as enabler for compaction". This is now a scoping conclusion, not an open risk.
 - **Entry-point convention** — `"<Factory>"` / `"Submission#N"` names are compiler-internal
   (undocumented). Proven today, but pin the Roslyn version and add a guard test that fails
   loudly if the convention changes on upgrade.
