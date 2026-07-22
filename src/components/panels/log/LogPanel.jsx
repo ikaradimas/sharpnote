@@ -13,6 +13,10 @@ function parseLogContent(text) {
 // Regex for 8-character base-36 cell IDs
 const CELL_ID_RE = /\b([0-9a-z]{8})\b/g;
 
+// Cap the in-memory live-log buffer. Without this it grows for the whole session —
+// every cell run emits at least a run+completed entry, plus any user Log() calls.
+const MAX_LIVE_LOG_ENTRIES = 2000;
+
 function MessageWithLinks({ message, cellIdSet, onNavigate }) {
   if (!cellIdSet || cellIdSet.size === 0) return <>{message}</>;
 
@@ -107,7 +111,7 @@ export function LogPanel({ isOpen, onToggle, currentMemoryMb = null, cells, onNa
     const handler = (entry) => setLiveEntries((prev) => [
       ...prev,
       { ...entry, memoryMb: memoryRef.current },
-    ]);
+    ].slice(-MAX_LIVE_LOG_ENTRIES));
     window.electronAPI.onLogEntry(handler);
     return () => window.electronAPI.offLogEntry(handler);
   }, []);

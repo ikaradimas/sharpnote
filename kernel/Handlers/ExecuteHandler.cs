@@ -281,7 +281,7 @@ partial class Program
         {
             // Append executed code to workspace so subsequent cells' LSP diagnostics
             // can resolve types, records, and variables defined here.
-            _workspaceManager.AppendExecutedCode(codeForWorkspace);
+            _workspaceManager.AppendExecutedCode(id, codeForWorkspace);
 
             var vars = CurrentVariables(script)
                 .Where(v => !v.Name.StartsWith("<"))

@@ -268,3 +268,34 @@ export function isMarpMarkdown(content) {
   const fm = trimmed.slice(3, end);
   return /^\s*marp\s*:\s*true\s*$/m.test(fm);
 }
+
+/** Default ceiling on outputs retained per cell during a single run. */
+export const MAX_CELL_OUTPUTS = 500;
+
+/**
+ * Appends `msg` to a per-cell outputs array while keeping its length bounded.
+ * A cell that prints or `.Display()`s in a tight loop would otherwise grow this
+ * array (and the React state holding it) without limit for the duration of the
+ * run. When the cap is exceeded the oldest entries are dropped and coalesced
+ * into a single leading marker that reports how many were hidden — so the array
+ * length can never exceed `max` regardless of how much a run emits.
+ */
+export function appendCapped(arr, msg, max = MAX_CELL_OUTPUTS) {
+  const list = arr || [];
+  if (list.length + 1 <= max) return [...list, msg];
+
+  const leadIsMarker = list[0] && list[0]._truncationMarker;
+  const priorDropped = leadIsMarker ? list[0]._dropped || 0 : 0;
+  const body = leadIsMarker ? list.slice(1) : list;
+  const kept = body.concat([msg]).slice(-(max - 1)); // reserve slot 0 for the marker
+  const droppedNow = body.length + 1 - kept.length;
+  const dropped = priorDropped + droppedNow;
+  const marker = {
+    type: 'stdout',
+    id: msg && msg.id,
+    _truncationMarker: true,
+    _dropped: dropped,
+    content: `… ${dropped} earlier output${dropped === 1 ? '' : 's'} hidden to conserve memory …\n`,
+  };
+  return [marker, ...kept];
+}

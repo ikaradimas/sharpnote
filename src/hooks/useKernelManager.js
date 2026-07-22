@@ -2,6 +2,7 @@ import { useRef, useCallback, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { buildCellGraph } from '../utils/dependency-graph.js';
 import { computeStaleCells } from '../utils/graph-traversal.js';
+import { appendCapped } from '../utils.js';
 
 const RUNNABLE_TYPES = new Set(['code', 'sql', 'http', 'shell', 'check', 'decision', 'docker', 'floci']);
 
@@ -184,7 +185,7 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
 
         case 'stdout':
           setNb(notebookId, (n) => ({
-            outputs: { ...n.outputs, [msg.id]: [...(n.outputs[msg.id] || []), msg] },
+            outputs: { ...n.outputs, [msg.id]: appendCapped(n.outputs[msg.id], msg) },
           }));
           break;
 
@@ -200,7 +201,7 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
             }));
           } else {
             setNb(notebookId, (n) => ({
-              outputs: { ...n.outputs, [msg.id]: [...(n.outputs[msg.id] || []), msg] },
+              outputs: { ...n.outputs, [msg.id]: appendCapped(n.outputs[msg.id], msg) },
             }));
           }
           break;
@@ -208,7 +209,7 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
         case 'error':
           if (msg.id) {
             setNb(notebookId, (n) => ({
-              outputs: { ...n.outputs, [msg.id]: [...(n.outputs[msg.id] || []), msg] },
+              outputs: { ...n.outputs, [msg.id]: appendCapped(n.outputs[msg.id], msg) },
             }));
           } else {
             setNb(notebookId, (n) =>
@@ -643,12 +644,13 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
                 : d
             );
             if (!msg.cellId) return { attachedDbs };
-            const cellOutputs = n.outputs[msg.cellId] || [];
             return {
               attachedDbs,
               outputs: {
                 ...n.outputs,
-                [msg.cellId]: [...cellOutputs, { type: 'error', id: msg.cellId, message: msg.message }],
+                [msg.cellId]: appendCapped(n.outputs[msg.cellId], {
+                  type: 'error', id: msg.cellId, message: msg.message,
+                }),
               },
             };
           });

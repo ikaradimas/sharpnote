@@ -339,7 +339,7 @@ public class WorkspaceManagerTests
     {
         using var wm = new WorkspaceManager();
         // A type defined in a previously-executed cell is visible via the preamble.
-        wm.AppendExecutedCode("class Widget { public int Id { get; set; } }");
+        wm.AppendExecutedCode("cell1", "class Widget { public int Id { get; set; } }");
         var code = "var w = new Widget();\nw";
         wm.UpdateDocument(code);
         var hover = await wm.GetHoverAsync(code.LastIndexOf("w"));
@@ -372,8 +372,8 @@ public class WorkspaceManagerTests
         using var wm = new WorkspaceManager();
         // Prior cells ending in an expression statement, stored WITH their
         // terminating semicolons (the fixed behaviour).
-        wm.AppendExecutedCode("var a = 1;\na.ToString();");
-        wm.AppendExecutedCode("var b = 2;\nb.ToString();");
+        wm.AppendExecutedCode("cellA", "var a = 1;\na.ToString();");
+        wm.AppendExecutedCode("cellB", "var b = 2;\nb.ToString();");
         wm.UpdateDocument("var c = a + b;");
 
         var diags = await wm.GetDiagnosticsAsync();
@@ -385,11 +385,65 @@ public class WorkspaceManagerTests
     public async Task GetCompletions_AfterExpressionEndingPriorCell_StillResolvesItsSymbols()
     {
         using var wm = new WorkspaceManager();
-        wm.AppendExecutedCode("var nums = new System.Collections.Generic.List<int>();\nnums.Count.ToString();");
+        wm.AppendExecutedCode("cellNums", "var nums = new System.Collections.Generic.List<int>();\nnums.Count.ToString();");
         var code = "nums.";
         wm.UpdateDocument(code);
 
         var items = await wm.GetCompletionsAsync(code.Length);
         items.Select(i => i.Label).Should().Contain("Add");
+    }
+
+    // ── Bounded, cell-id-keyed accumulation (memory) ────────────────────────
+    // Re-running a cell must REPLACE its stored source, not append a duplicate,
+    // and the total preamble must stay bounded. See tasks/kernel-memory-redesign.md.
+
+    [Fact]
+    public async Task AppendExecutedCode_ReRunSameCell_ReplacesRatherThanDuplicates()
+    {
+        using var wm = new WorkspaceManager();
+        // First run declares `n`; a re-run of the SAME cell re-declares it. If the old
+        // source were kept, the document would contain two `var n` at script scope and
+        // raise CS0128 "a local named 'n' is already defined".
+        wm.AppendExecutedCode("cellN", "var n = 1;");
+        wm.AppendExecutedCode("cellN", "var n = 2;");
+        wm.UpdateDocument("n");
+
+        var diags = await wm.GetDiagnosticsAsync();
+        diags.Should().NotContain(d => d.Message.Contains("already defined"));
+    }
+
+    [Fact]
+    public async Task AppendExecutedCode_DistinctCells_PreservedInOrder()
+    {
+        using var wm = new WorkspaceManager();
+        wm.AppendExecutedCode("c1", "var a = 1;");
+        wm.AppendExecutedCode("c2", "var b = a + 1;"); // depends on the earlier cell
+        wm.UpdateDocument("b");
+
+        var diags = await wm.GetDiagnosticsAsync();
+        diags.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task AppendExecutedCode_ExceedingCap_EvictsOldestButKeepsRecent()
+    {
+        using var wm = new WorkspaceManager();
+        // 40 cells of ~32 KB each (~1.25 MB) far exceed the 512 KB cap, so the oldest
+        // cells are evicted. Each cell declares a uniquely named variable padded with a
+        // big comment; whether a variable still resolves is an observable proxy for
+        // "is this cell still in the preamble?".
+        var pad = new string('x', 32 * 1024);
+        for (int i = 0; i < 40; i++)
+            wm.AppendExecutedCode("big" + i, $"var v{i} = {i}; /* {pad} */");
+
+        // The most recent cell survives.
+        wm.UpdateDocument("v39");
+        (await wm.GetDiagnosticsAsync())
+            .Should().NotContain(d => d.Message.Contains("v39"));
+
+        // The oldest cell was evicted, so its variable no longer resolves (CS0103).
+        wm.UpdateDocument("v0");
+        (await wm.GetDiagnosticsAsync())
+            .Should().Contain(d => d.Message.Contains("v0") && d.Message.Contains("does not exist"));
     }
 }

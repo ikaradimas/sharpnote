@@ -57,7 +57,17 @@ public sealed class WorkspaceManager : IDisposable
     private string _dynamicPreamble = "";
     // Accumulated source from successfully executed cells — gives the workspace
     // visibility into types, records, methods, and variables defined in prior cells.
+    // Kept per cell id (in first-seen order) so a re-run REPLACES that cell's source
+    // instead of appending a duplicate, and so the total stays bounded: without this the
+    // preamble grew unbounded (every re-run appended a full copy) and every LSP keystroke
+    // re-parsed the whole accumulated document. See tasks/kernel-memory-redesign.md.
+    private readonly List<string> _cellOrder = new();
+    private readonly Dictionary<string, string> _cellCode = new();
     private string _scriptPreamble = "";
+    // Cap on the concatenated per-cell source (characters). Oldest cells are evicted once
+    // exceeded — a soft LSP-only degradation (completions for very old cells may lapse)
+    // that keeps a runaway notebook from re-binding a multi-megabyte document per keystroke.
+    private const int MaxScriptPreambleChars = 512 * 1024;
     private int TotalPreambleLength => GlobalsPreamble.Length + _dynamicPreamble.Length + _scriptPreamble.Length;
 
     private readonly AdhocWorkspace _workspace;
@@ -131,18 +141,53 @@ public sealed class WorkspaceManager : IDisposable
     }
 
     /// <summary>
-    /// Appends successfully executed cell code to the script preamble so the
-    /// workspace can resolve types, records, and variables defined in prior cells.
+    /// Records a successfully executed cell's source so the workspace can resolve types,
+    /// records, and variables defined in prior cells. Keyed by cell id: re-running a cell
+    /// replaces its previous source (in place, preserving declaration order) rather than
+    /// appending a duplicate. The concatenated preamble is capped; oldest cells are evicted
+    /// once <see cref="MaxScriptPreambleChars"/> is exceeded.
     /// </summary>
-    public void AppendExecutedCode(string code)
+    public void AppendExecutedCode(string cellId, string code)
     {
-        if (!string.IsNullOrWhiteSpace(code))
-            _scriptPreamble += code + "\n";
+        if (string.IsNullOrWhiteSpace(code)) return;
+
+        if (_cellCode.ContainsKey(cellId))
+        {
+            _cellCode[cellId] = code; // re-run: replace in place, keep order position
+        }
+        else
+        {
+            _cellOrder.Add(cellId);
+            _cellCode[cellId] = code;
+        }
+
+        // Evict oldest cells while over the cap (never evict the cell just recorded).
+        var total = _cellCode.Values.Sum(c => c.Length + 1);
+        while (total > MaxScriptPreambleChars && _cellOrder.Count > 1)
+        {
+            var oldest = _cellOrder[0];
+            if (oldest == cellId) break;
+            _cellOrder.RemoveAt(0);
+            total -= _cellCode[oldest].Length + 1;
+            _cellCode.Remove(oldest);
+        }
+
+        RebuildScriptPreamble();
+    }
+
+    private void RebuildScriptPreamble()
+    {
+        var sb = new StringBuilder();
+        foreach (var id in _cellOrder)
+            sb.Append(_cellCode[id]).Append('\n');
+        _scriptPreamble = sb.ToString();
     }
 
     /// <summary>Clears the accumulated script preamble (e.g. on kernel reset).</summary>
     public void ClearScriptPreamble()
     {
+        _cellOrder.Clear();
+        _cellCode.Clear();
         _scriptPreamble = "";
     }
 

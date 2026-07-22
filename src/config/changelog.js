@@ -4,12 +4,14 @@
 // gears: 1 = minor fix/tweak, 2 = notable feature, 3 = major feature/architecture
 
 export const CHANGELOG = [
-  { version: '2.27', date: '2026-07-21', title: 'Symbol hover, colour-coded ToC, and inspector/analysis fixes', gears: 2, items: [
+  { version: '2.27', date: '2026-07-22', title: 'Symbol hover, colour-coded ToC, memory bounds, and fixes', gears: 2, items: [
     'Hover quick-info: hovering a symbol in a code cell (local, parameter, field, property, method, or type) shows its type signature in a tooltip — compile-time info from Roslyn, so it works before running a cell and for symbols that are not variables; rendered as a formatted code block (a textDocument/hover handler in the kernel LSP server)',
     'Table of Contents headings are colour- and weight-coded by level — H1 primary accent (with a coloured left rule), H2 secondary accent, H3 a dimmer tone — drawn from the active theme, so structure is easy to scan and headings stand out from the neutral code-cell entries; bookmarked entries get a matching accent left rule',
     'Documented the built-in changelog viewer (in-app docs + README) and added a Changelog entry to the Command Palette',
     'Fixed: a cell ending in an expression (e.g. Display.Checklist(…) or x.Display()) no longer leaves a semicolon-less statement in the cross-cell analysis workspace — a spurious CS1002 "; expected" at the boundary',
     'Fixed: inspecting a re-declared variable now shows its current value, not the stale original; the Variables snapshot is de-duplicated to one entry per name',
+    'Memory: the kernel LSP analysis workspace no longer grows without bound — re-running a cell now REPLACES its stored source instead of appending a duplicate, and the accumulated cross-cell source is capped (oldest cells evicted), so completions and diagnostics stop re-parsing an ever-growing document',
+    'Memory: bounded renderer accumulation during long or looping runs — per-cell output is capped (oldest entries coalesced into a single "N earlier outputs hidden to conserve memory" marker) and the Log panel\'s live buffer keeps only the most recent entries. Documented long-session memory behaviour and Reset Kernel in the Kernel docs',
   ]},
   { version: '2.26', date: '2026-07-21', title: 'Per-cell variable inspector', gears: 2, items: [
     'Each code cell header has an inspector button (magnifier icon) that lists the variables that cell declares and currently in the kernel; choosing one opens a draggable, resizable, persistent popup that renders the value with the same type inference as the .Display() family — collection → table, object/dictionary → tree, string/primitive → text (AutoDisplay + the existing output components). "Variables of the cell" reuses the dependency graph\'s producer detection',
