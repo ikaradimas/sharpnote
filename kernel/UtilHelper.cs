@@ -447,4 +447,22 @@ public class UtilHelper
     {
         lock (_cacheLock) { _cache.Clear(); }
     }
+
+    // ── Util.Release ──────────────────────────────────────────────────────────
+
+    // Frees one script variable's bindings by name; wired by Program at startup so this
+    // helper stays decoupled from the script-state machinery.
+    internal static Func<string, bool>? ReleaseHook;
+
+    /// <summary>
+    /// Frees previously-declared script variables by name: each variable (and any
+    /// shadowed older copies) is set to null on the kernel so the memory it held can be
+    /// garbage-collected — no kernel restart needed. Use it mid-pipeline when you are
+    /// done with a large intermediate, e.g. <c>Util.Release("rawRows", "parsed");</c>.
+    /// Returns the number of variables whose current value was freed. Value-typed
+    /// variables and unknown names are skipped (nothing to free); variables declared in
+    /// the currently-running cell are not yet visible to the kernel and are skipped too.
+    /// </summary>
+    public int Release(params string[] names) =>
+        names?.Count(n => !string.IsNullOrEmpty(n) && (ReleaseHook?.Invoke(n) ?? false)) ?? 0;
 }

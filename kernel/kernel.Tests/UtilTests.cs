@@ -232,4 +232,59 @@ public class UtilTests : IClassFixture<KernelFixture>, IAsyncLifetime
         msg.GetProperty("separator").GetString().Should().Be("16px");
         msg.GetProperty("content").GetArrayLength().Should().Be(2);
     }
+
+    // ── Util.Release ──────────────────────────────────────────────────────────
+
+    private async Task ExecuteAsync(string code)
+    {
+        var id = KernelFixture.NewId();
+        await _k.SendAsync(new { type = "execute", id, code });
+        await _k.WaitForMessageAsync(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "complete" &&
+            el.TryGetProperty("id", out var i) && i.GetString() == id);
+    }
+
+    private async Task<JsonElement> RunAndGetVarsAsync(string code)
+    {
+        _k.ClearMessages();
+        await ExecuteAsync(code);
+        return await _k.WaitForMessageAsync(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "vars_update");
+    }
+
+    private static JsonElement Var(JsonElement vu, string name) =>
+        vu.GetProperty("vars").EnumerateArray().First(v => v.GetProperty("name").GetString() == name);
+
+    [Fact]
+    public async Task Release_FreesReferenceVariable_AndReturnsCount()
+    {
+        await ExecuteAsync("var big = new byte[100_000]; var keep = new byte[10];");
+        var vu = await RunAndGetVarsAsync("var freed = Util.Release(\"big\");");
+
+        Var(vu, "freed").GetProperty("value").GetString().Should().Be("1");
+        Var(vu, "big").GetProperty("isNull").GetBoolean().Should().BeTrue();
+        Var(vu, "keep").GetProperty("isNull").GetBoolean().Should().BeFalse(); // untouched
+    }
+
+    [Fact]
+    public async Task Release_MultipleNames_CountsOnlyFreed()
+    {
+        await ExecuteAsync("var a = new int[10]; var b = new int[10]; var v = 42;");
+        // a and b are freed; v is a value type (skipped); ghost doesn't exist.
+        var vu = await RunAndGetVarsAsync("var freed = Util.Release(\"a\", \"b\", \"v\", \"ghost\");");
+
+        Var(vu, "freed").GetProperty("value").GetString().Should().Be("2");
+        Var(vu, "a").GetProperty("isNull").GetBoolean().Should().BeTrue();
+        Var(vu, "b").GetProperty("isNull").GetBoolean().Should().BeTrue();
+        Var(vu, "v").GetProperty("value").GetString().Should().Be("42"); // value type untouched
+    }
+
+    [Fact]
+    public async Task Release_ReadsAsNullAfterwardsInLaterCells()
+    {
+        await ExecuteAsync("var data = new List<int> { 1, 2, 3 };");
+        await ExecuteAsync("Util.Release(\"data\");");
+        var vu = await RunAndGetVarsAsync("var isGone = data == null;");
+        Var(vu, "isGone").GetProperty("value").GetString().Should().Be("True");
+    }
 }

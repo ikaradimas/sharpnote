@@ -4,6 +4,9 @@
 // gears: 1 = minor fix/tweak, 2 = notable feature, 3 = major feature/architecture
 
 export const CHANGELOG = [
+  { version: '2.29', date: '2026-07-22', title: 'Util.Release — free variables from code', gears: 2, items: [
+    'New Util.Release(names…) scripting API — free previously-declared variables by name from inside a cell: each variable (and any shadowed older copies) is set to null on the kernel so the memory it held can be garbage-collected, no restart needed. Ideal mid-pipeline when a large intermediate is no longer needed: Util.Release("rawRows", "parsed"). Returns the count freed; value-typed and unknown names are skipped; the released variables read as null in later cells',
+  ]},
   { version: '2.28', date: '2026-07-22', title: 'Free variables to reclaim memory on demand', gears: 2, items: [
     'Variable inspector: each inspector popup now has an eraser (Free) button that releases the variable — the kernel sets it to null so the object it held can be garbage-collected — freeing memory without restarting the kernel (new var_release kernel message). Measured: freeing a 300MB variable dropped the kernel heap by ~298MB. Shown only while the variable is in scope and not already null; a safe no-op for value types',
     'Memory: re-running a cell no longer retains the previous run\'s data — after every execution (code, SQL, HTTP, DB) the kernel prunes shadowed variable bindings, the older copies a re-declaration leaves behind, so they can be garbage-collected. Measured: 25 re-runs of a cell holding a 20MB buffer used to retain ~547MB of live heap; now stays at ~62MB (the one live copy). Caveat: a delegate captured before a re-declaration sees null instead of the old stale value',

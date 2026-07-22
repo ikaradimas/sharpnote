@@ -219,6 +219,7 @@ export const DOCS_SECTIONS = [
         'Util.Highlight(obj, color?) — display an object inside a colored highlight box (default: amber)',
         'Util.Cache<T>(key, getValue) — memoize a computation; cached value persists until kernel reset',
         'Util.ClearCache() — clear all memoized values',
+        'Util.Release(names…) — free previously-declared variables by name: each (and its shadowed older copies) is set to null so the memory can be garbage-collected without a kernel restart; returns the count freed. Value-typed and unknown names are skipped',
         'Util.ConfirmAsync(message, title?) — display an OK / Cancel dialog; awaits user click; returns true (OK) or false (Cancel)',
         'Util.PromptAsync(message, title?, defaultValue?) — display a text-input dialog; awaits user input; returns the entered string or null if cancelled',
       ]},

@@ -90,7 +90,7 @@
 - **Cell Diff View** — when a code cell is marked stale (upstream variables changed), click "Show changes since last run" to see an inline LCS-based diff of added and removed lines since the last execution
 - **Hover quick-info** — hover over any symbol (local, parameter, field, property, method, or type) to see its type signature in a tooltip via the Roslyn LSP `textDocument/hover`; compile-time info, so it works before running a cell and for non-variables (e.g. `nums` → `List<int> nums`, a method → its full signature, a type → `class Foo`)
 - **Inline Variable Peek** — hover over any variable name in the code editor to see its type and current value in a tooltip; powered by the kernel's live variable state (complements the compile-time hover quick-info with the runtime value)
-- **`Util` helper** — LinqPAD-compatible utilities available as a global: `.Dump()` / `.DumpTable()` aliases, `Util.Cmd()` shell command execution, `Util.Time()` benchmarking, `Util.Dif()` LCS line diff, `Util.HorizontalRun()` side-by-side layout, `Util.Metatext()` / `Util.Highlight()` styled output, `Util.Cache<T>()` cross-execution memoization cleared on kernel reset, `Util.ConfirmAsync()` interactive OK/Cancel dialogs that pause execution, `Util.PromptAsync()` text-input dialogs
+- **`Util` helper** — LinqPAD-compatible utilities available as a global: `.Dump()` / `.DumpTable()` aliases, `Util.Cmd()` shell command execution, `Util.Time()` benchmarking, `Util.Dif()` LCS line diff, `Util.HorizontalRun()` side-by-side layout, `Util.Metatext()` / `Util.Highlight()` styled output, `Util.Cache<T>()` cross-execution memoization cleared on kernel reset, `Util.Release("name", …)` freeing declared variables (and their shadowed copies) to reclaim memory without a kernel restart, `Util.ConfirmAsync()` interactive OK/Cancel dialogs that pause execution, `Util.PromptAsync()` text-input dialogs
 - **Cell folding** — collapse any code cell to a single-line preview using the ▾/▸ toggle in the cell header; the cell remains executable while folded; folded cells show their last execution time as a badge; fold state is persisted in the `.cnb` file
 - **Cell bookmarks** — bookmark any cell via the bookmark icon in the cell controls; bookmarked cells appear in a dedicated section at the top of the Table of Contents panel for quick navigation
 - **Cell output toggle** — show or hide cell output with the ▾ Output / ▸ Output toggle above each output block; useful for decluttering long-running cells
@@ -363,6 +363,7 @@ Util.Metatext("Generated at 2025-01-01");         // dimmed gray metadata text
 Util.Highlight(importantValue, "#ffe066");        // colored highlight box (default: amber)
 var data = Util.Cache("key", () => LoadData());  // memoize across executions until reset
 Util.ClearCache();                                // clear all cached values
+Util.Release("rawRows", "parsed");                // free variables (null them) to reclaim memory
 if (await Util.ConfirmAsync("Delete all?", "Confirm"))  // interactive OK/Cancel dialog
     DeleteAll();
 ```

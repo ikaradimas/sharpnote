@@ -75,6 +75,9 @@ partial class Program
         var files   = new FilesHelper(realStdout);
         var util    = new UtilHelper(realStdout);
         UtilContext.Current = util;
+        // Wire Util.Release to the variable-release machinery. Reads the static `script`
+        // at call time, so it always operates on the current chain tip.
+        UtilHelper.ReleaseHook = name => script != null && ReleaseVariableBindings(script, name);
         var geo     = new GeoHelper(realStdout);
         var globals = new ScriptGlobals { Display = display, Panels = panels, Db = db, Data = data, Docker = docker, Mock = mock, Files = files, Geo = geo };
 
