@@ -16,14 +16,22 @@ Two independent, additive leaks — both confirmed by driving the real kernel ov
 JSON-lines protocol and measuring `GC.GetTotalMemory(forceFullCollection: true)` (live
 managed heap) plus OS RSS.
 
-### Leak A — retained user objects (re-run amplification)
-Re-running **the same cell** that declares `var big = new byte[20 MB]` adds ~21 MB to the
-**live** heap on every run (25 → 547 MB over 25 re-runs). The value survives a forced full
+### Leak A — retained user objects (re-run amplification) — **FIXED (shadowed-binding pruning)**
+Re-running **the same cell** that declares `var big = new byte[20 MB]` added ~21 MB to the
+**live** heap on every run (25 → 547 MB over 25 re-runs). The value survived a forced full
 GC. Cause: `CSharpScript.ContinueWithAsync` (`Handlers/ExecuteHandler.cs:207-210`) chains
 each submission onto the previous `ScriptState`, which roots **every** prior binding
 forever. Re-declaring `big` shadows the name for *display* (`CurrentVariables` dedupes by
-name, `ExecuteHandler.cs:377`) but the old object stays rooted through the chain. Freed
-only by dropping the chain (`reset` → 549→26 MB).
+name) but the old object stayed rooted through the chain.
+
+**Fix shipped (no custom host needed):** `ScriptVariable.Value` has a *public setter* that
+writes through to the underlying submission field — so shadowed bindings, while unreachable
+from user code, ARE reachable via `script.Variables`. `PruneShadowedVariables` (in
+`Handlers/VarReleaseHandler.cs`) nulls every non-current binding after each successful
+chain advance (execute/SQL/HTTP/DB). Re-measured Experiment A: 25 re-runs now end at
+**62 MB** instead of 547 MB. Known caveat: a delegate captured before a re-declaration
+observes null instead of the stale value. (This invalidates the earlier claim that Leak A
+was "freed only by dropping the chain".)
 
 ### Leak B — accumulated compilation graph (every submission, even trivial)
 300 distinct trivial submissions (`int aN = N;`, no user data) grew the live heap **292 MB

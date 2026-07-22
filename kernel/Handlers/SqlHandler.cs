@@ -125,6 +125,9 @@ partial class Program
             else
                 script = await script.ContinueWithAsync<object?>(code, opts);
 
+            // Re-running a SQL cell re-declares its result variable; free the old results.
+            PruneShadowedVariables(script);
+
             realStdout.WriteLine(JsonSerializer.Serialize(new { type = "complete", id = cellId, success = true }));
         }
         catch (Exception ex)

@@ -434,7 +434,7 @@ partial class Program
 
                 case "var_release":
                 {
-                    await HandleVarRelease(msg, options, globals, realStdout);
+                    HandleVarRelease(msg, realStdout);
                     break;
                 }
 

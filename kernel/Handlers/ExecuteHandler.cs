@@ -282,6 +282,9 @@ partial class Program
             // Append executed code to workspace so subsequent cells' LSP diagnostics
             // can resolve types, records, and variables defined here.
             _workspaceManager.AppendExecutedCode(id, codeForWorkspace);
+            // Free the previous copies of any variables this run re-declared — without
+            // this, every re-run of a cell holding large data retains the old data too.
+            PruneShadowedVariables(script);
             EmitVarsUpdate(script, realStdout);
         }
 

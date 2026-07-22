@@ -8,10 +8,12 @@ using Xunit.Abstractions;
 namespace kernel.Tests;
 
 /// <summary>
-/// Tests the var_release handler: freeing a variable's current value by running a
-/// synthetic `name = null;` submission so the object it held can be collected without a
-/// kernel restart. Must be safe for value types / const (graceful no-op) and must reject
-/// non-identifier names (the name is interpolated into compiled source).
+/// Tests the var_release handler and shadowed-binding pruning: variables are freed by
+/// nulling their bindings directly on the script state (ScriptVariable.Value writes
+/// through to the submission field) — no synthetic submission, no chain growth. Must be
+/// safe for value types (graceful no-op on the current binding), free keyword-named
+/// variables, and — via the automatic post-execution prune — stop re-runs of a declaring
+/// cell from accumulating the previous runs' copies.
 /// </summary>
 public class VarReleaseTests : IClassFixture<KernelFixture>, IAsyncLifetime
 {
@@ -88,8 +90,8 @@ public class VarReleaseTests : IClassFixture<KernelFixture>, IAsyncLifetime
     {
         await ExecuteAsync("var a = new int[10];");
         _k.ClearMessages();
-        // Injection-shaped name: the identifier guard rejects it before building source,
-        // so nothing runs (no vars_update) and `a` is left intact.
+        // Expression-shaped name: release matches variables by exact name (never compiled
+        // as source), so this matches nothing — no vars_update, `a` left intact.
         await _k.SendAsync(new { type = "var_release", name = "a = null; a" });
         await Task.Delay(300);
         _k.GetMessages().Any(el => el.TryGetProperty("type", out var t) && t.GetString() == "vars_update")
@@ -97,5 +99,53 @@ public class VarReleaseTests : IClassFixture<KernelFixture>, IAsyncLifetime
         // Confirm `a` was NOT freed.
         var vu = await ReleaseAsync("a");
         Var(vu, "a").GetProperty("isNull").GetBoolean().Should().BeTrue(); // now it frees cleanly
+    }
+
+    // ── Automatic shadowed-binding pruning ────────────────────────────────────
+
+    private async Task<double> HeapMbAsync()
+    {
+        var id = KernelFixture.NewId();
+        _k.ClearMessages();
+        await _k.SendAsync(new { type = "execute", id, code =
+            "System.GC.Collect(); System.GC.WaitForPendingFinalizers(); System.GC.Collect();" +
+            "Console.WriteLine((System.GC.GetTotalMemory(true) / 1048576.0).ToString(\"F1\", System.Globalization.CultureInfo.InvariantCulture));" });
+        var so = await _k.WaitForMessageAsync(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "stdout" &&
+            el.TryGetProperty("id", out var i) && i.GetString() == id);
+        await _k.WaitForMessageAsync(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "complete" &&
+            el.TryGetProperty("id", out var i) && i.GetString() == id);
+        return double.Parse(so.GetProperty("content").GetString()!.Trim(),
+            System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    [Fact]
+    public async Task ReRunningDeclaringCell_DoesNotAccumulateShadowedCopies()
+    {
+        var before = await HeapMbAsync();
+        // Re-declare a 30 MB buffer five times — the exact re-run pattern that used to
+        // retain every copy (~150 MB). With post-execution pruning only the current copy
+        // stays live.
+        for (var i = 0; i < 5; i++)
+            await ExecuteAsync("var blob = new byte[30 * 1024 * 1024]; for (int k = 0; k < blob.Length; k += 4096) blob[k] = 1;");
+        var after = await HeapMbAsync();
+
+        // One live copy ≈ 30 MB plus a few MB of compilation state; without pruning the
+        // delta is ~150 MB. 90 MB splits the outcomes with wide margins on both sides.
+        (after - before).Should().BeLessThan(90);
+    }
+
+    [Fact]
+    public async Task Pruning_PreservesTheCurrentBinding()
+    {
+        await ExecuteAsync("var pv = \"first\";");
+        await ExecuteAsync("var pv = \"second\";");
+        // The current binding survives pruning intact — readable AND writable.
+        _k.ClearMessages();
+        await ExecuteAsync("pv += \"!\";");
+        var vu = await _k.WaitForMessageAsync(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "vars_update");
+        Var(vu, "pv").GetProperty("value").GetString().Should().Be("second!");
     }
 }

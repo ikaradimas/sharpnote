@@ -73,6 +73,15 @@ across the chain-drop (cross-assembly identity) and degrade to `dynamic` or are 
 effort whose payoff is Phase 4. If we are not going to do compaction, there is no reason to
 replace `CSharpScript`, and `Reset Kernel` (already reclaims ~77 %, free) remains the answer.
 
+**Update (post-scoping, shipped separately):** the *re-run retained-object* half of the leak
+(Leak A) turned out NOT to need the host at all — `ScriptVariable.Value` has a public setter
+that writes through to the submission field, so shadowed bindings can be nulled directly
+(`PruneShadowedVariables`, shipped; Experiment A re-measured 547 MB → 62 MB). This shrinks
+the host+compaction prize to what pruning cannot reach: the **compilation graph**
+(~1 MB/submission, Leak B) and the **loader heap** (~23 %). The go/no-go question is now
+"is ~1 MB per executed cell + the loader heap worth the host+compaction effort?" — a much
+weaker case than before; long sessions that hit it are served by the one-click restart.
+
 ## Architecture — the SharpNote script host
 
 A single `ScriptHost` class (kernel/ScriptHost/) replacing the `ScriptState<object?> script`

@@ -67,6 +67,9 @@ partial class Program
         script = script == null
             ? await CSharpScript.RunAsync<object?>(code, opts, globals, typeof(ScriptGlobals))
             : await script.ContinueWithAsync<object?>(code, opts);
+
+        // Reconnecting re-declares the context variable; free the shadowed old context.
+        PruneShadowedVariables(script);
     }
 
     // Safe C# string literal

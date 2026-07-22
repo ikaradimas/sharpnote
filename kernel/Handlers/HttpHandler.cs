@@ -180,6 +180,9 @@ partial class Program
             else
                 script = await script.ContinueWithAsync<object?>(fullCode, opts);
 
+            // Re-running an HTTP cell re-declares its response variables; free the old ones.
+            PruneShadowedVariables(script);
+
             // Extract timing from script state
             long durationMs = 0;
             int statusCode = 0;
