@@ -58,9 +58,10 @@ export function buildCellGraph(cellsInput, varsInput) {
   const varNames = vars.map((v) => v.name);
 
   // ── Variable analysis ────────────────────────────────────────────────────
-  const producerMap = {}; // varName → cellId
-  const cellProduces = {}; // cellId → Set<varName>
-  const cellConsumes = {}; // cellId → Set<varName>
+  const producerMap = {};   // varName → cellId (last writer wins — drives edges)
+  const producersOf = {};   // varName → [cellId,…] (every cell that produces it, in order)
+  const cellProduces = {};  // cellId → Set<varName>
+  const cellConsumes = {};  // cellId → Set<varName>
 
   for (const cell of cells) {
     cellProduces[cell.id] = new Set();
@@ -69,9 +70,18 @@ export function buildCellGraph(cellsInput, varsInput) {
 
   for (const cell of cells) {
     for (const name of cellProducedVarNames(cell.content, varNames)) {
-      producerMap[name] = cell.id;
+      producerMap[name] = cell.id; // last writer wins (unchanged — feeds the data-flow edges)
+      (producersOf[name] ||= []).push(cell.id);
       cellProduces[cell.id]?.add(name);
     }
+  }
+
+  // Variables produced by more than one cell: the source of "why is that cell a
+  // prerequisite?" surprises (last-writer-wins picks one producer for the edge,
+  // which may not be the one the reader expects). Exposed so the UI can flag it.
+  const ambiguousVars = {}; // varName → [cellId,…] (only vars with 2+ producers)
+  for (const [name, ids] of Object.entries(producersOf)) {
+    if (ids.length > 1) ambiguousVars[name] = ids;
   }
 
   for (const cell of cells) {
@@ -96,6 +106,9 @@ export function buildCellGraph(cellsInput, varsInput) {
     color: cell.color || null,
     produces: [...(cellProduces[cell.id] || [])],
     consumes: [...(cellConsumes[cell.id] || [])],
+    // Vars this cell produces that are ALSO produced by another cell (ambiguous).
+    ambiguous: [...(cellProduces[cell.id] || [])].filter((n) => ambiguousVars[n]),
+    manualOnly: !!cell.manualOnly,
     virtual: false,
     depth: 0,
   }));
@@ -228,5 +241,5 @@ export function buildCellGraph(cellsInput, varsInput) {
 
   for (const n of allNodes) n.depth = depthMap[n.id] || 0;
 
-  return { nodes: allNodes, edges: allEdges, startId: START_ID, endIds };
+  return { nodes: allNodes, edges: allEdges, startId: START_ID, endIds, ambiguousVars };
 }

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Play, Square, ChevronsRight, ChevronsUp } from 'lucide-react';
 import { useOutsideClick } from '../../hooks/useOutsideClick.js';
 
-export function CellRunGroup({ onRun, onInterrupt, onRunFrom, onRunTo, isRunning, disabled }) {
+export function CellRunGroup({ onRun, onInterrupt, onRunFrom, onRunTo, isRunning, disabled, runTitle }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   useOutsideClick(ref, () => setOpen(false), open);
@@ -24,7 +24,7 @@ export function CellRunGroup({ onRun, onInterrupt, onRunFrom, onRunTo, isRunning
         )
       ) : (
         <>
-          <button className="run-btn" onClick={onRun} disabled={disabled} title="Run (Ctrl+Enter)">
+          <button className="run-btn" onClick={onRun} disabled={disabled} title={runTitle || 'Run (Ctrl+Enter)'}>
             <Play size={12} /> Run
           </button>
           {(onRunFrom || onRunTo) && (

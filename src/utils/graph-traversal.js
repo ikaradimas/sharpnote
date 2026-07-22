@@ -104,6 +104,75 @@ export function computeStaleCells(ranCellId, changedVars, edges) {
 }
 
 /**
+ * Compute what the dependency-first ▶ run of `cellId` will do: the transitive
+ * data-flow / link producers that sit *before* the target in notebook order and
+ * are stale, in execution order. This is the single source of truth shared by
+ * the orchestrator (which runs the plan) and the run-button tooltip (which
+ * previews it), so what the user is told matches what actually runs.
+ *
+ * `manualOnly` producers are excluded and are NOT traversed through — a cell the
+ * user marked "run manually" is never dragged into another cell's run, and cells
+ * reachable only through it are not either. Such skipped producers are reported
+ * separately so the UI can explain why a consumed variable may be out of date.
+ *
+ * @param {string} cellId target cell
+ * @param {Array} cells notebook cells (need id, content, _lastRunCode, manualOnly)
+ * @param {{from,to}[]} edges dependency edges
+ * @param {{ staleCellIds?: string[], cellResults?: Record<string,string> }} [opts]
+ * @returns {{ willRun: string[], deps: string[], skippedManualOnly: string[] }}
+ *   willRun — stale, non-manual previous deps in execution order (excludes target);
+ *   deps — all such previous deps (stale or not); skippedManualOnly — excluded
+ *   manual-only producers.
+ */
+export function computeRunPlan(cellId, cells, edges, opts = {}) {
+  const { staleCellIds = [], cellResults = {} } = opts;
+  const cellList = cells || [];
+  const orderIndex = new Map(cellList.map((c, i) => [c.id, i]));
+  const cellById = new Map(cellList.map((c) => [c.id, c]));
+  const targetIndex = orderIndex.get(cellId);
+  if (targetIndex == null) return { willRun: [], deps: [], skippedManualOnly: [] };
+
+  const staleSet = new Set(staleCellIds);
+  const isStale = (id) => {
+    const c = cellById.get(id);
+    if (!c) return false;
+    if (staleSet.has(id)) return true;                                       // downstream-invalidated
+    if (cellResults[id] !== 'success') return true;                          // never ran / pending / errored
+    if (c._lastRunCode != null && c._lastRunCode !== c.content) return true; // edited since last run
+    return false;
+  };
+
+  const incoming = {};
+  for (const e of edges || []) {
+    if (String(e.from).startsWith('__') || String(e.to).startsWith('__')) continue;
+    (incoming[e.to] ||= []).push(e.from);
+  }
+
+  const deps = new Set();
+  const skippedManualOnly = new Set();
+  const visit = (id) => {
+    for (const parent of incoming[id] || []) {
+      const pIdx = orderIndex.get(parent);
+      if (pIdx == null || pIdx >= targetIndex) continue;   // only cells before the target
+      if (deps.has(parent) || skippedManualOnly.has(parent)) continue;
+      if (cellById.get(parent)?.manualOnly) {              // never auto-run a manual-only cell
+        skippedManualOnly.add(parent);
+        continue;                                          // ...and don't traverse through it
+      }
+      deps.add(parent);
+      visit(parent);
+    }
+  };
+  visit(cellId);
+
+  return {
+    willRun: topoSort([...deps].filter(isStale), edges),
+    deps: [...deps],
+    skippedManualOnly: [...skippedManualOnly],
+  };
+}
+
+/**
  * Topologically sort a subset of cell IDs using Kahn's algorithm.
  * Only considers edges between cells in the given subset.
  * @param {string[]} cellIds

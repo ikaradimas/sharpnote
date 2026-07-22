@@ -59,6 +59,18 @@ describe('useCellScheduler', () => {
     expect(runCell).toHaveBeenCalledOnce();
   });
 
+  it('skips tick when the cell is manual-only (never auto-run)', () => {
+    const runCell = vi.fn();
+    const notebooksRef = makeNotebooksRef({
+      cells: [{ id: 'c1', type: 'code', content: 'var x=1;', outputMode: 'auto', manualOnly: true }],
+    });
+    const { result } = renderHook(() => useCellScheduler({ notebooksRef, runCell }));
+
+    act(() => result.current.startSchedule('nb-1', 'c1', 5000));
+    act(() => { vi.advanceTimersByTime(15000); });
+    expect(runCell).not.toHaveBeenCalled();
+  });
+
   it('skips tick when kernel is not ready', () => {
     const runCell = vi.fn();
     const notebooksRef = makeNotebooksRef({ kernelStatus: 'starting' });

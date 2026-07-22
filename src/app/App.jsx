@@ -1527,6 +1527,7 @@ export function App() {
                   <NotebookView
                     nb={notebook}
                     isActive={notebook.id === activeId}
+                    depGraph={notebook.id === activeId ? depGraph : undefined}
                     onSetNb={(updater) => setNb(notebook.id, updater)}
                     onSetNbDirty={(updater) => setNbDirty(notebook.id, updater)}
                     onRunCell={runCellWithDeps}

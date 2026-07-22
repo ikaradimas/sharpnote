@@ -2,6 +2,8 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { Play, Square, Monitor, Container, Clock, Wifi, X, ScrollText, Terminal } from 'lucide-react';
 import { CellNameColor } from './CellNameColor.jsx';
 import { CellControls } from './CellControls.jsx';
+import { CellManualToggle } from './CellManualToggle.jsx';
+import { CellAmbiguityBadge } from './CellAmbiguityBadge.jsx';
 import { CellOutput } from '../output/OutputBlock.jsx';
 import { StatusBadge, HealthBadge, StatsRow, LogsPopup, ExecSection } from './DockerShared.jsx';
 
@@ -27,6 +29,8 @@ export function DockerCell({
   onDelete, onCopy, onMoveUp, onMoveDown,
   onToggleBookmark,
   onNameChange, onColorChange,
+  onToggleManualOnly,
+  ambiguousTip,
 }) {
   const presenting = cell.presenting || false;
   const containerId = cell.containerId || null;
@@ -171,7 +175,7 @@ export function DockerCell({
 
   // ── Edit mode ────────────────────────────────────────────────────────────
   return (
-    <div className={`cell docker-cell${isRunning ? ' running' : ''}${containerState === 'running' ? ' docker-running' : ''}`}>
+    <div className={`cell docker-cell${isRunning ? ' running' : ''}${containerState === 'running' ? ' docker-running' : ''}${cell.manualOnly ? ' cell-manual-only' : ''}`}>
       <span className="cell-index-badge">{cellIndex + 1}</span>
       <div className="code-cell-header">
         <CellNameColor
@@ -208,6 +212,8 @@ export function DockerCell({
             onClick={() => updateField('presenting', !presenting)}
           ><Monitor size={12} /></button>
         </div>
+        <CellAmbiguityBadge tip={ambiguousTip} />
+        {onToggleManualOnly && <CellManualToggle manualOnly={cell.manualOnly} onToggle={onToggleManualOnly} />}
         <CellControls
           onCopy={onCopy}
           onMoveUp={onMoveUp}

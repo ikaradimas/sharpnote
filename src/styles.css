@@ -6479,6 +6479,31 @@ body.dock-panel-dragging .dock-drop-zone.drag-over .dock-drop-label {
 
 /* ── Per-cell variable inspector (header button + menu) ──────────────────── */
 
+/* Manual-only toggle (hand icon) — mirrors the var-inspector header button;
+   highlighted + always visible when on, subtle otherwise. */
+.cell-manual-btn {
+  background: none; border: none; cursor: pointer; padding: 2px;
+  color: var(--text-muted); display: inline-flex; align-items: center;
+  transition: color 0.15s, opacity 0.15s;
+}
+.cell-manual-btn:hover:not(:disabled) { color: var(--accent-warning, #e6a23c); }
+.cell-manual-btn-on {
+  color: var(--accent-warning, #e6a23c);
+  text-shadow: 0 0 6px color-mix(in srgb, var(--accent-warning, #e6a23c) 60%, transparent);
+}
+
+/* Ambiguous-producer warning badge (amber triangle). */
+.cell-ambiguous-badge {
+  display: inline-flex; align-items: center; cursor: help;
+  color: var(--accent-warning, #e6a23c); padding: 0 2px;
+}
+
+/* Persistent cue on a manual-only cell: an amber left rule + a hand watermark
+   is overkill; a thin left border keeps it legible without shouting. */
+.cell.cell-manual-only {
+  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--accent-warning, #e6a23c) 55%, transparent);
+}
+
 .cell-var-inspector { position: relative; display: inline-flex; }
 .cell-var-inspector-btn {
   background: none; border: none; cursor: pointer; padding: 2px;

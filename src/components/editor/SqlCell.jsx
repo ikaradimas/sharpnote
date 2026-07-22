@@ -4,6 +4,8 @@ import { CellOutput } from '../output/OutputBlock.jsx';
 import { CellControls } from './CellControls.jsx';
 import { CellNameColor } from './CellNameColor.jsx';
 import { CellRunGroup } from './CellRunGroup.jsx';
+import { CellManualToggle } from './CellManualToggle.jsx';
+import { CellAmbiguityBadge } from './CellAmbiguityBadge.jsx';
 
 export function SqlCell({
   cell,
@@ -25,6 +27,8 @@ export function SqlCell({
   onToggleBookmark,
   onNameChange,
   onColorChange,
+  onToggleManualOnly,
+  ambiguousTip,
 }) {
   const readyDbs = (attachedDbs || []).filter((d) => d.status === 'ready');
   const selectedDb = cell.db || (readyDbs[0]?.connectionId ?? '');
@@ -69,7 +73,7 @@ export function SqlCell({
   }, [cell.content, onRun]);
 
   return (
-    <div className={`cell sql-cell${isRunning ? ' running' : ''}`}>
+    <div className={`cell sql-cell${isRunning ? ' running' : ''}${cell.manualOnly ? ' cell-manual-only' : ''}`}>
       {cellIndex != null && <span className="cell-index-badge">{cellIndex + 1}</span>}
       <div className="code-cell-header">
         <CellNameColor name={cell.name} color={cell.color} onNameChange={onNameChange} onColorChange={onColorChange} />
@@ -118,6 +122,8 @@ export function SqlCell({
         </div>
         <CellRunGroup onRun={handleRun} onRunFrom={onRunFrom} onRunTo={onRunTo} isRunning={isRunning} disabled={anyRunning || !kernelReady || readyDbs.length === 0 || !selectedDb} />
         <div className="header-right">
+          <CellAmbiguityBadge tip={ambiguousTip} />
+          {onToggleManualOnly && <CellManualToggle manualOnly={cell.manualOnly} onToggle={onToggleManualOnly} />}
           <CellControls onCopy={onCopy} onMoveUp={onMoveUp} onMoveDown={onMoveDown} onDelete={onDelete} columns={columns} onColumnsChange={onColumnsChange} bookmarked={cell.bookmarked} onToggleBookmark={onToggleBookmark} />
         </div>
       </div>

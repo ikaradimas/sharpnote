@@ -4,6 +4,8 @@ import { CellOutput } from '../output/OutputBlock.jsx';
 import { CellControls } from './CellControls.jsx';
 import { CellNameColor } from './CellNameColor.jsx';
 import { CellRunGroup } from './CellRunGroup.jsx';
+import { CellManualToggle } from './CellManualToggle.jsx';
+import { CellAmbiguityBadge } from './CellAmbiguityBadge.jsx';
 
 export function ShellCell({
   cell,
@@ -24,6 +26,8 @@ export function ShellCell({
   onNameChange,
   onColorChange,
   onWorkingDirChange,
+  onToggleManualOnly,
+  ambiguousTip,
 }) {
   const [cwdEditing, setCwdEditing] = useState(false);
   const [cwdDraft, setCwdDraft] = useState('');
@@ -45,7 +49,7 @@ export function ShellCell({
   };
 
   return (
-    <div className={`cell shell-cell${isRunning ? ' running' : ''}`}>
+    <div className={`cell shell-cell${isRunning ? ' running' : ''}${cell.manualOnly ? ' cell-manual-only' : ''}`}>
       {cellIndex != null && <span className="cell-index-badge">{cellIndex + 1}</span>}
       <div className="code-cell-header">
         <CellNameColor name={cell.name} color={cell.color} onNameChange={onNameChange} onColorChange={onColorChange} />
@@ -53,6 +57,8 @@ export function ShellCell({
         <span className="cell-id-label" title={`Cell ID: ${cell.id}`}>{cell.id}</span>
         <CellRunGroup onRun={onRun} onRunFrom={onRunFrom} onRunTo={onRunTo} isRunning={isRunning} disabled={anyRunning || !kernelReady} />
         <div className="header-right">
+          <CellAmbiguityBadge tip={ambiguousTip} />
+          {onToggleManualOnly && <CellManualToggle manualOnly={cell.manualOnly} onToggle={onToggleManualOnly} />}
           <CellControls onCopy={onCopy} onMoveUp={onMoveUp} onMoveDown={onMoveDown} onDelete={onDelete} columns={columns} onColumnsChange={onColumnsChange} bookmarked={cell.bookmarked} onToggleBookmark={onToggleBookmark} />
         </div>
       </div>

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { ShellCell } from '../../src/components/editor/ShellCell.jsx';
 
 const makeCell = (overrides = {}) => ({
@@ -58,5 +58,28 @@ describe('ShellCell', () => {
     const outputs = [{ type: 'text', text: 'hello' }];
     render(<ShellCell {...defaultProps({ outputs })} />);
     expect(document.querySelector('.cell-output')).not.toBeNull();
+  });
+
+  // ── Manual-only toggle + ambiguity badge wiring (cell-side of #1/#2) ──
+  it('renders the manual-only toggle and reflects the cell flag + persist call', () => {
+    const onToggleManualOnly = vi.fn();
+    render(<ShellCell {...defaultProps({ cell: makeCell({ manualOnly: true }), onToggleManualOnly })} />);
+    const btn = document.querySelector('.cell-manual-btn');
+    expect(btn).not.toBeNull();
+    expect(btn.className).toContain('cell-manual-btn-on'); // reflects cell.manualOnly
+    fireEvent.click(btn);
+    expect(onToggleManualOnly).toHaveBeenCalledOnce();
+  });
+
+  it('marks the cell root with cell-manual-only when the flag is set', () => {
+    render(<ShellCell {...defaultProps({ cell: makeCell({ manualOnly: true }), onToggleManualOnly: vi.fn() })} />);
+    expect(document.querySelector('.cell.cell-manual-only')).not.toBeNull();
+  });
+
+  it('renders the ambiguity badge only when a tip is provided', () => {
+    const { rerender } = render(<ShellCell {...defaultProps({ onToggleManualOnly: vi.fn() })} />);
+    expect(document.querySelector('.cell-ambiguous-badge')).toBeNull();
+    rerender(<ShellCell {...defaultProps({ onToggleManualOnly: vi.fn(), ambiguousTip: '"x" is also set by Cell 2 — "Cell 3" wins' })} />);
+    expect(document.querySelector('.cell-ambiguous-badge')).not.toBeNull();
   });
 });

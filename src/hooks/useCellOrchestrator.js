@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { getDownstream, topoSort } from '../utils/graph-traversal.js';
+import { getDownstream, topoSort, computeRunPlan } from '../utils/graph-traversal.js';
 
 /**
  * Provides dependency-aware cell execution: run with deps, run downstream,
@@ -79,59 +79,19 @@ export function useCellOrchestrator({
     setTimeout(() => setProgress(null), 2000);
   }, [notebooksRef, edges, dispatchRun]);
 
-  // Run a cell's stale dependencies first, then the cell itself.
-  // Only *previous* cells (earlier in notebook order) are considered — a
-  // data-flow edge from a later cell (e.g. a variable reassigned below) must
-  // never drag "the next cell" into the run. Traversal never passes through a
-  // later cell either. Of the previous dependencies, only stale ones actually
-  // run: cells that are downstream-invalidated, have never run successfully, or
-  // were edited since their last run. Fresh dependencies are left untouched.
+  // Run a cell's stale dependencies first, then the cell itself. The set of
+  // dependencies is computed by the shared computeRunPlan() helper — the same
+  // one the run-button tooltip uses — so the preview matches what runs. Only
+  // *previous*, *stale*, non-manual-only producers run; the explicit target
+  // always runs last (even if it is itself marked manual-only).
   const runWithDeps = useCallback(async (notebookId, cellId) => {
     const nb = notebooksRef.current.find((n) => n.id === notebookId);
     if (!nb) return;
-    const cells = nb.cells || [];
-    const orderIndex = new Map(cells.map((c, i) => [c.id, i]));
-    const targetIndex = orderIndex.get(cellId);
-    if (targetIndex == null) {
-      await executeQueue(notebookId, [cellId], { expandDecisions: false });
-      return;
-    }
-
-    const staleSet = new Set(nb.staleCellIds || []);
-    const cellResults = nb.cellResults || {};
-    const cellById = new Map(cells.map((c) => [c.id, c]));
-    const isStale = (id) => {
-      const c = cellById.get(id);
-      if (!c) return false;
-      if (staleSet.has(id)) return true;                                  // downstream-invalidated
-      if (cellResults[id] !== 'success') return true;                     // never ran / pending / errored
-      if (c._lastRunCode != null && c._lastRunCode !== c.content) return true; // edited since last run
-      return false;
-    };
-
-    // Incoming adjacency (producer → consumer), ignoring virtual Start/End edges.
-    const incoming = {};
-    for (const e of edges) {
-      if (String(e.from).startsWith('__') || String(e.to).startsWith('__')) continue;
-      (incoming[e.to] ||= []).push(e.from);
-    }
-
-    // Collect transitive dependencies that sit *before* the target, without
-    // traversing into or through any cell at/after the target's position.
-    const deps = new Set();
-    const visit = (id) => {
-      for (const parent of incoming[id] || []) {
-        const pIdx = orderIndex.get(parent);
-        if (pIdx == null || pIdx >= targetIndex) continue;
-        if (deps.has(parent)) continue;
-        deps.add(parent);
-        visit(parent);
-      }
-    };
-    visit(cellId);
-
-    const staleDeps = topoSort([...deps].filter(isStale), edges);
-    await executeQueue(notebookId, [...staleDeps, cellId], { expandDecisions: false });
+    const { willRun } = computeRunPlan(cellId, nb.cells || [], edges, {
+      staleCellIds: nb.staleCellIds || [],
+      cellResults: nb.cellResults || {},
+    });
+    await executeQueue(notebookId, [...willRun, cellId], { expandDecisions: false });
   }, [notebooksRef, edges, executeQueue]);
 
   const runDownstream = useCallback(async (notebookId, cellId) => {

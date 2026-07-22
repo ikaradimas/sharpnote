@@ -114,4 +114,25 @@ describe('useCellOrchestrator', () => {
     await act(async () => { await result.current.runWithDeps('nb', 'b'); });
     expect(runOrder).toEqual(['a', 'b']);
   });
+
+  it('runWithDeps does NOT auto-run a manual-only dependency (but runs the target)', async () => {
+    // 'a' is a stale side-effect cell marked manual-only; running 'b' must run
+    // only 'b' — 'a' is never dragged in.
+    const cells = [
+      { id: 'a', type: 'sql', content: 'INSERT …', manualOnly: true },
+      { id: 'b', type: 'code', content: 'x;' },
+    ];
+    const edges = [{ from: 'a', to: 'b' }];
+    const { result, runOrder } = setup(cells, edges, {}, { cellResults: {}, staleCellIds: [] });
+    await act(async () => { await result.current.runWithDeps('nb', 'b'); });
+    expect(runOrder).toEqual(['b']);
+  });
+
+  it('runWithDeps runs a manual-only cell when it is the explicit target', async () => {
+    const cells = [{ id: 'a', type: 'sql', content: 'INSERT …', manualOnly: true }];
+    const edges = [];
+    const { result, runOrder } = setup(cells, edges, {}, { cellResults: {}, staleCellIds: [] });
+    await act(async () => { await result.current.runWithDeps('nb', 'a'); });
+    expect(runOrder).toEqual(['a']);
+  });
 });

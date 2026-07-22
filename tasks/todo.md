@@ -1,80 +1,47 @@
-# Task: Rework cell interdependencies — run dependencies first; default "none"
+# Dependency-execution safety (#1 manual-only + #2 ambiguity/run-plan)
 
-**Branch:** `fix/bugfixes-cleanup`
+Two small changes that came straight from incidents this session: side-effect cells
+silently re-firing via dependency auto-run, and the B2B/B2C ambiguous-producer confusion.
 
-## Behavior
-- Running a **code cell** first navigates its dependency tree and runs its transitive
-  **upstream** dependencies (topological order), then the cell itself.
-- A dependency = a cell that **produces a variable this cell consumes** (data-flow,
-  auto-detected) **or** an **explicitly-wired** prev/next link. Decision-branch edges included.
-- **Default is "none":** a cell with no data-flow and no explicit links has NO dependencies
-  and runs alone. The old "implicit / next-in-notebook-order" sequential fallback is removed.
+## #1 — "Manual only" cells (never auto-run)
+- [ ] `graph-traversal`: extract `computeRunPlan(cellId, cells, edges, {staleCellIds, cellResults})`
+      — single source of truth for "what previous stale deps run when I run this cell". Skips
+      `manualOnly` producers (and does not traverse through them).
+- [ ] `useCellOrchestrator.runWithDeps`: use `computeRunPlan` instead of its inline collection.
+- [ ] `useKernelManager.runAll / runFrom / runTo`: skip `cell.manualOnly`.
+- [ ] UI: header toggle on runnable cells (code/sql/http/shell/docker) + a "manual only" badge;
+      mirror the existing `locked`/`codeFolded` toggle wiring.
+- [ ] Persist `manualOnly` in `buildNotebookData` (field whitelist).
 
-## Changes
-- [ ] `src/hooks/useCellDependencies.js` — delete the "implicit sequential edges" loop
-      (adjacent-cell fallback). Edges now = variable-flow + decision paths + explicit next/prev.
-- [ ] `src/components/editor/CellLinkPicker.jsx` — remove the "Next in notebook order"
-      (implicit) option; `undefined`/`null`/`[]` all render as "None (default)"; normalize
-      cleared selection to `null`.
-- [ ] `src/hooks/useCellOrchestrator.js` — add `expandDecisions` option to `executeQueue`
-      (default true); `runWithDeps` passes `false` (upstream runs must NOT expand a decision's
-      downstream branch). `runDownstream`/`runSubgraph`/`runPipeline` keep expansion.
-- [ ] `src/app/App.jsx` — wire `onRunCell` (code-cell Run) to run dependencies-first via
-      `orchestrator.runWithDeps(nbId, cell.id)`. Leave `runCell` (scheduler) and `runAll`/
-      `runFrom`/`runTo` unchanged.
-- [ ] CSS: drop the now-unused `.cell-link-implicit` rule if present.
+## #2 — Ambiguous-producer lint + run-plan preview
+- [ ] `buildCellGraph`: track ALL producers per var; add `node.ambiguous` (vars this cell produces
+      that are also produced elsewhere) + return `ambiguousVars` map. "last writer wins" unchanged.
+- [ ] UI: warning badge on ambiguous-producer cells; tooltip names the var + the other producers +
+      which one wins.
+- [ ] Run button: hover tooltip showing `computeRunPlan` result — "Also runs: X, Y" and any
+      manual-only producers skipped.
 
-## Not touched (noted)
-- Positional stale-cell banner (`useKernelManager.js`) — separate feature; left as-is.
-- `runAll`/`runFrom`/`runTo` stay in document order.
-
-## Tests
-- [ ] `tests/renderer/useCellDependencies.test.js` (new) — no sequential edges; data-flow edge
-      built from produces/consumes; explicit link edge; isolated cell has no incoming edge.
-- [ ] `tests/renderer/CellLinkPicker.test.jsx` (new) — no "Next in notebook order"; default shows
-      "None"; selecting/clearing calls onChange correctly.
-- [ ] `tests/renderer/useCellOrchestrator.test.js` (new) — executeQueue runs in given order and
-      awaits each; `runWithDeps` runs upstream-then-target and does NOT expand decision branches.
-
-## Docs / version
-- [ ] `docs-sections.js` (Reactive Cell Dependencies / Orchestration), `README.md` (features),
-      `changelog.js`. Minor bump 2.22.1 → 2.23.0.
-- [ ] Build renderer, `npm test`; drive the kernel to confirm running a downstream cell first
-      runs its producer. Commit.
+## Verify
+- [ ] Unit tests: computeRunPlan (manual-only skip, stale filter, previous-only), buildCellGraph
+      ambiguity, orchestrator skip, runAll skip.
+- [ ] Full JS + kernel suites green. Docs (docs-sections + README) + changelog + version bump.
 
 ## Review
 
-**Done.** Running a code cell now runs its dependency tree first; default is "none".
+**Done (2.30.0).** Both features shipped.
 
-- `useCellDependencies.js` — removed the implicit sequential adjacent-cell edges. Edges =
-  data-flow (produces→consumes) + decision paths + explicit next/prev.
-- `CellLinkPicker.jsx` — removed the "Next in notebook order" option; empty/undefined = "None
-  (default)"; cleared selection normalizes to null.
-- `useCellOrchestrator.js` — `executeQueue` gained `expandDecisions` (default true);
-  `runWithDeps` passes false so upstream runs don't drag in a decision's downstream branch.
-- `App.jsx` — `onRunCell` now routes code-cell Run through `orchestrator.runWithDeps`
-  (deps-first), falling back to a plain run for non-active notebooks.
-- **Latent bug fixed:** the orchestrator was receiving `dispatchCellRun` under the wrong key,
-  so `dispatchRun` was undefined — every dependency-ordered run (Run with Upstream/Downstream/
-  Pipeline, panel node Run) had been silently broken. Fixed the prop key.
-- Removed dead `.cell-link-implicit` CSS.
-
-Tests (new): `useCellDependencies.test.js`, `CellLinkPicker.test.jsx`, `useCellOrchestrator.test.js`
-(incl. a composition test: running a variable consumer runs its producer first, skips unrelated).
-Full JS suite **1313 passed / 85 files**. Renderer builds; app smoke-launched cleanly (renderer
-rendered, kernel reached ready, no runtime errors).
-
-Docs: docs-sections Reactive Cell Dependencies (new "Running dependencies first" + "Default: none"),
-README (new Dependency-first execution bullet), changelog 2.23.0. Version → 2.23.0.
-
-### Follow-up (done, 2.24.0): graph-based stale-cell banner
-- Extracted the graph builder to the pure `src/utils/dependency-graph.js` (`buildCellGraph`);
-  `useCellDependencies` is now a thin memo wrapper — one source of truth for panel + staleness.
-- Added `computeStaleCells(ranCellId, changedVars, edges)` to `graph-traversal.js`: seeds direct
-  dependents affected by a changed var (structural links always), then cascades downstream.
-- `useKernelManager` complete handler now uses these instead of the positional "cells below +
-  textual match" scan. Code cells only (matches the banner UI).
-- Tests: 6 `computeStaleCells` cases. Full JS suite 1319 passed. Version → 2.24.0.
-- Verification: pure functions unit-tested + build clean. The complete-handler wiring mirrors the
-  prior block's structure (same changed-var computation); not driven in the live UI (renderer-
-  internal, needs cell-run interaction).
+- `computeRunPlan` (graph-traversal) is the shared source of truth: `runWithDeps` and the
+  run-button tooltip both use it; manual-only producers are excluded and not traversed through.
+- `buildCellGraph` tracks all producers → `node.ambiguous` + `ambiguousVars` map (last-writer-wins
+  edge behaviour unchanged). `node.manualOnly` surfaced too.
+- `runAll`/`runFrom`/`runTo` skip `manualOnly`. `manualOnly` persisted in `buildNotebookData`.
+- UI: shared `CellManualToggle` (hand icon, highlighted when on) + `CellAmbiguityBadge` (amber
+  triangle) added to code/sql/http/shell/docker headers; `cell-manual-only` root cue (amber left
+  rule); `CellRunGroup` gained `runTitle`. NotebookView computes the ambiguity + run-plan tooltips
+  (it has graph + labels) and threads them + `onToggleManualOnly` down; App passes `depGraph` to
+  the active pane only.
+- Tests: 8 `computeRunPlan` + 3 ambiguity/manualOnly graph cases + 2 orchestrator manual-only
+  cases + `CellManualToggle`/`CellAmbiguityBadge` + ShellCell cell-side wiring. Full JS 1389 pass.
+  Docs: reactive-deps section (manual-only + ambiguity/run-plan), README, changelog 2.30.0.
+- Note: live Electron smoke not possible here (electron binary not installed in this env); verified
+  via full renderer bundle compile + unit/component/cell-render tests.

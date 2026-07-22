@@ -55,3 +55,39 @@ describe('useCellDependencies — default "none" (no implicit sequential edges)'
     expect(realIds(getUpstream('c', result.current.edges))).toEqual(['c']);
   });
 });
+
+describe('useCellDependencies — ambiguous producers', () => {
+  const node = (result, id) => result.current.nodes.find((n) => n.id === id);
+
+  it('flags a variable produced by two cells on both producer nodes + ambiguousVars', () => {
+    const cells = [
+      { id: 'p1', type: 'code', content: 'var shared = LoadA();' },
+      { id: 'p2', type: 'code', content: 'var shared = LoadB();' },
+      { id: 'c',  type: 'code', content: 'Use(shared);' },
+    ];
+    const { result } = renderHook(() =>
+      useCellDependencies(nb(cells, [{ name: 'shared', value: '1' }])));
+
+    expect(result.current.ambiguousVars).toEqual({ shared: ['p1', 'p2'] });
+    expect(node(result, 'p1').ambiguous).toEqual(['shared']);
+    expect(node(result, 'p2').ambiguous).toEqual(['shared']);
+    expect(node(result, 'c').ambiguous).toEqual([]); // a consumer, not a producer
+  });
+
+  it('leaves a single-producer variable unflagged', () => {
+    const cells = [
+      { id: 'p', type: 'code', content: 'var only = 1;' },
+      { id: 'c', type: 'code', content: 'Use(only);' },
+    ];
+    const { result } = renderHook(() =>
+      useCellDependencies(nb(cells, [{ name: 'only', value: '1' }])));
+    expect(result.current.ambiguousVars).toEqual({});
+    expect(node(result, 'p').ambiguous).toEqual([]);
+  });
+
+  it('surfaces manualOnly on the node', () => {
+    const cells = [{ id: 'a', type: 'sql', content: 'INSERT …', manualOnly: true }];
+    const { result } = renderHook(() => useCellDependencies(nb(cells, [])));
+    expect(node(result, 'a').manualOnly).toBe(true);
+  });
+});

@@ -7,6 +7,8 @@ import { CellNameColor } from './CellNameColor.jsx';
 import { CellLinkPicker } from './CellLinkPicker.jsx';
 import { CellRunGroup } from './CellRunGroup.jsx';
 import { CellVarInspector } from './CellVarInspector.jsx';
+import { CellManualToggle } from './CellManualToggle.jsx';
+import { CellAmbiguityBadge } from './CellAmbiguityBadge.jsx';
 import { computeLineDiff } from '../../utils/text-diff.js';
 
 function formatElapsed(ms) {
@@ -94,9 +96,13 @@ export function CodeCell({
   cellElapsed,
   vars,
   onInspectVariable,
+  onToggleManualOnly,
+  ambiguousTip,
+  runTitle,
 }) {
   const outputMode = cell.outputMode || 'auto';
   const locked = cell.locked || false;
+  const manualOnly = cell.manualOnly || false;
   const codeFolded = cell.codeFolded || false;
   const presenting = cell.presenting || false;
   const presentInterval = cell.presentInterval || 0;
@@ -181,7 +187,7 @@ export function CodeCell({
   }, [errorCount, showErrors]);
 
   return (
-    <div className={`cell code-cell${isRunning ? ' running' : ''}${locked ? ' cell-locked' : ''}${isStale ? ' cell-stale' : ''}${codeFolded ? ' cell-folded' : ''}${isScheduled ? ' cell-scheduled' : ''}${presenting ? ' cell-presenting' : ''}${debugState?.cellId === cell.id && debugState.paused ? ' debug-paused' : ''}`}>
+    <div className={`cell code-cell${isRunning ? ' running' : ''}${locked ? ' cell-locked' : ''}${manualOnly ? ' cell-manual-only' : ''}${isStale ? ' cell-stale' : ''}${codeFolded ? ' cell-folded' : ''}${isScheduled ? ' cell-scheduled' : ''}${presenting ? ' cell-presenting' : ''}${debugState?.cellId === cell.id && debugState.paused ? ' debug-paused' : ''}`}>
       {cellIndex != null && <span className="cell-index-badge">{cellIndex + 1}</span>}
       {isStale && (
         <div className="cell-stale-banner" title="Variables used in this cell may have changed — consider re-running">
@@ -224,7 +230,7 @@ export function CodeCell({
         <span className="cell-lang-label">C#</span>
         <span className="cell-id-label" title={`Cell ID: ${cell.id}`}>{cell.id}</span>
         <CellRunGroup onRun={onRun} onInterrupt={onInterrupt} onRunFrom={onRunFrom} onRunTo={onRunTo}
-          isRunning={isRunning} disabled={anyRunning || !kernelReady} />
+          isRunning={isRunning} disabled={anyRunning || !kernelReady} runTitle={runTitle} />
         {!isRunning && lastDuration !== null && (
           <span className={`cell-header-timer${lastDuration > 5000 ? ' cell-timer-very-slow' : lastDuration > 1000 ? ' cell-timer-slow' : ''}`}>
             {formatElapsed(lastDuration)}
@@ -260,6 +266,8 @@ export function CodeCell({
               {snapshotStatus === 'match' ? '✓' : snapshotStatus === 'mismatch' ? '✗' : '📷'}
             </span>
           )}
+          <CellAmbiguityBadge tip={ambiguousTip} />
+          {onToggleManualOnly && <CellManualToggle manualOnly={manualOnly} onToggle={onToggleManualOnly} />}
           {onInspectVariable && (
             <CellVarInspector
               content={cell.content}

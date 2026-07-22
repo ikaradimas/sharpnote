@@ -4,6 +4,11 @@
 // gears: 1 = minor fix/tweak, 2 = notable feature, 3 = major feature/architecture
 
 export const CHANGELOG = [
+  { version: '2.30', date: '2026-07-22', title: 'Manual-only cells + ambiguous-producer warnings', gears: 2, items: [
+    'Manual-only cells: toggle the hand icon in a runnable cell\'s header (code / SQL / HTTP / shell / docker) to exclude it from every automatic run — it is never pulled in as another cell\'s stale dependency, is skipped by Run All / Run from here / Run to here, dependency traversal does not pass through it, and it does not auto-fire from a schedule, presentation mode, or run-on-startup. It runs only from its own ▶. Purpose-built for side-effecting cells (a SQL INSERT, an HTTP POST, a shell command) so running a downstream cell can never silently re-fire them. Shown by a highlighted toggle + an amber left-rule on the cell, and saved with the notebook',
+    'Ambiguous-producer warning: when two or more cells declare the SAME variable, the dependency edge uses the last one in notebook order ("last writer wins") — which could make a surprising cell look like a prerequisite. Such cells now show an amber warning badge whose tooltip names the shared variable, the other producers, and which one wins',
+    'Run-plan preview: hovering a code cell\'s ▶ shows a tooltip of exactly what the dependency-first run will do — the stale dependencies that will also run, and any manual-only producers that were skipped. The orchestrator and the preview share one computeRunPlan() helper, so the tooltip always matches what actually runs',
+  ]},
   { version: '2.29', date: '2026-07-22', title: 'Util.Release — free variables from code', gears: 2, items: [
     'New Util.Release(names…) scripting API — free previously-declared variables by name from inside a cell: each variable (and any shadowed older copies) is set to null on the kernel so the memory it held can be garbage-collected, no restart needed. Ideal mid-pipeline when a large intermediate is no longer needed: Util.Release("rawRows", "parsed"). Returns the count freed; value-typed and unknown names are skipped; the released variables read as null in later cells',
   ]},

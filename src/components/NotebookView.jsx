@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { makeCell } from '../notebook-factory.js';
 import { getSectionHeadingLevel, getCollapsedSections } from '../utils.js';
+import { computeRunPlan } from '../utils/graph-traversal.js';
 import { NOTEBOOK_BACKGROUNDS } from '../config/notebook-backgrounds.js';
 import { Toolbar } from './toolbar/Toolbar.jsx';
 import { NotebookParams } from './NotebookParams.jsx';
@@ -96,6 +97,7 @@ export function NotebookView({
   highlightedCellIds,
   onHighlightCells,
   viewerMode = false,
+  depGraph,
 }) {
   const { cells, outputs, cellResults, running, kernelStatus,
           config, logPanelOpen, nugetPanelOpen, configPanelOpen, inlineDiagnostics,
@@ -192,6 +194,39 @@ export function NotebookView({
 
   const toggleFold = (id) => updateCellProp(id, 'codeFolded', !(cells.find((c) => c.id === id)?.codeFolded || false));
   const toggleBookmark = (id) => updateCellProp(id, 'bookmarked', !(cells.find((c) => c.id === id)?.bookmarked || false));
+  const toggleManualOnly = (id) => updateCellProp(id, 'manualOnly', !(cells.find((c) => c.id === id)?.manualOnly || false));
+
+  // ── Dependency-graph derived per-cell hints (ambiguity + run-plan preview) ──
+  const graphNodeById = useMemo(
+    () => new Map((depGraph?.nodes || []).map((n) => [n.id, n])),
+    [depGraph],
+  );
+  const cellLabel = (id) => graphNodeById.get(id)?.label || id;
+
+  // Tooltip for a cell that declares a variable also declared elsewhere: names the
+  // shared variable, the other producers, and which one wins (last in order).
+  const ambiguityTip = (cellId) => {
+    const node = graphNodeById.get(cellId);
+    if (!node?.ambiguous?.length) return null;
+    return node.ambiguous.map((v) => {
+      const producers = depGraph?.ambiguousVars?.[v] || [];
+      const others = producers.filter((id) => id !== cellId).map(cellLabel);
+      const winner = cellLabel(producers[producers.length - 1]);
+      return `"${v}" is also set by ${others.join(', ') || 'another cell'} — "${winner}" wins (last in order)`;
+    }).join('\n');
+  };
+
+  // Tooltip for a code cell's ▶: what running it will ALSO run (its stale deps),
+  // and any manual-only producers that are skipped. Matches what runWithDeps does.
+  const runPlanTip = (cellId) => {
+    if (!depGraph?.edges) return undefined;
+    const plan = computeRunPlan(cellId, cells, depGraph.edges, { staleCellIds, cellResults });
+    if (!plan.willRun.length && !plan.skippedManualOnly.length) return undefined;
+    const lines = ['Run (Ctrl+Enter)'];
+    if (plan.willRun.length) lines.push(`Also runs: ${plan.willRun.map(cellLabel).join(', ')}`);
+    if (plan.skippedManualOnly.length) lines.push(`Skipped (manual-only): ${plan.skippedManualOnly.map(cellLabel).join(', ')}`);
+    return lines.join('\n');
+  };
 
   const { hidden: collapsedCellIds, counts: collapsedCounts } = useMemo(
     () => getCollapsedSections(cells),
@@ -317,6 +352,7 @@ export function NotebookView({
         onRun={() => onRunSqlCell(nb.id, cell)}
         onRunFrom={() => onRunFrom(nb.id, cell.id)} onRunTo={() => onRunTo(nb.id, cell.id)}
         onDbChange={(connectionId) => updateCellProp(cell.id, 'db', connectionId)}
+        onToggleManualOnly={() => toggleManualOnly(cell.id)} ambiguousTip={ambiguityTip(cell.id)}
         onDelete={() => deleteCell(cell.id)}
         onCopy={() => copyCell(cell.id)}
         onMoveUp={() => moveCell(cell.id, -1)} onMoveDown={() => moveCell(cell.id, 1)}
@@ -339,6 +375,7 @@ export function NotebookView({
         onNameChange={(name) => updateCellProp(cell.id, 'name', name)}
         onColorChange={(color) => updateCellProp(cell.id, 'color', color)}
         onEnvChange={(env) => updateCellProp(cell.id, 'env', env || undefined)}
+        onToggleManualOnly={() => toggleManualOnly(cell.id)} ambiguousTip={ambiguityTip(cell.id)}
         onToggleBookmark={() => toggleBookmark(cell.id)} />
     );
     if (cell.type === 'shell') return (
@@ -354,6 +391,7 @@ export function NotebookView({
         onNameChange={(name) => updateCellProp(cell.id, 'name', name)}
         onColorChange={(color) => updateCellProp(cell.id, 'color', color)}
         onWorkingDirChange={(dir) => updateCellProp(cell.id, 'workingDir', dir)}
+        onToggleManualOnly={() => toggleManualOnly(cell.id)} ambiguousTip={ambiguityTip(cell.id)}
         onToggleBookmark={() => toggleBookmark(cell.id)} />
     );
     if (cell.type === 'docker') return (
@@ -366,6 +404,7 @@ export function NotebookView({
         }}
         onRun={() => onRunDockerCell(nb.id, cell)} onStopDocker={onStopDockerCell}
         onPollDockerStatus={onPollDockerStatus} onFetchDockerLogs={onFetchDockerLogs}
+        onToggleManualOnly={() => toggleManualOnly(cell.id)} ambiguousTip={ambiguityTip(cell.id)}
         onDelete={() => deleteCell(cell.id)}
         onCopy={() => copyCell(cell.id)}
         onMoveUp={() => moveCell(cell.id, -1)} onMoveDown={() => moveCell(cell.id, 1)}
@@ -451,6 +490,8 @@ export function NotebookView({
         isScheduled={scheduledCells?.has(cell.id) || false}
         onOutputModeChange={(mode) => updateCellProp(cell.id, 'outputMode', mode)}
         onToggleLock={() => updateCellProp(cell.id, 'locked', !(cell.locked || false))}
+        onToggleManualOnly={() => toggleManualOnly(cell.id)}
+        ambiguousTip={ambiguityTip(cell.id)} runTitle={runPlanTip(cell.id)}
         onToggleFold={() => toggleFold(cell.id)}
         onScheduleStart={(ms) => { updateCellProp(cell.id, 'scheduleInterval', ms); onScheduleStart?.(nb.id, cell.id, ms); }}
         onScheduleStop={() => onScheduleStop?.(cell.id)}

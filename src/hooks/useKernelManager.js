@@ -108,8 +108,8 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
           if (nb.autoRun) {
             setTimeout(() => runAllRef.current?.(notebookId), 200);
           } else {
-            // Auto-execute presenting cells on kernel ready
-            const presentingCells = nb.cells.filter((c) => c.type === 'code' && c.presenting);
+            // Auto-execute presenting cells on kernel ready (manual-only cells never auto-run)
+            const presentingCells = nb.cells.filter((c) => c.type === 'code' && c.presenting && !c.manualOnly);
             if (presentingCells.length > 0) {
               setTimeout(async () => {
                 for (const cell of presentingCells) {
@@ -121,7 +121,7 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
             }
 
             // Auto-execute floci cells with runOnStartup
-            const startupFlociCells = nb.cells.filter((c) => c.type === 'floci' && c.runOnStartup && c.services?.length > 0);
+            const startupFlociCells = nb.cells.filter((c) => c.type === 'floci' && c.runOnStartup && c.services?.length > 0 && !c.manualOnly);
             if (startupFlociCells.length > 0) {
               setTimeout(async () => {
                 for (const cell of startupFlociCells) {
@@ -133,7 +133,7 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
             }
 
             // Auto-execute docker cells with runOnStartup
-            const startupDockerCells = nb.cells.filter((c) => c.type === 'docker' && c.runOnStartup && c.image);
+            const startupDockerCells = nb.cells.filter((c) => c.type === 'docker' && c.runOnStartup && c.image && !c.manualOnly);
             if (startupDockerCells.length > 0) {
               setTimeout(async () => {
                 for (const cell of startupDockerCells) {
@@ -932,7 +932,8 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
     if (!nb) return;
     setNb(notebookId, () => ({ runningAll: true }));
     try {
-      for (const cell of nb.cells.filter((c) => RUNNABLE_TYPES.has(c.type))) {
+      // Skip manual-only cells: they run only from their own ▶, never in a bulk run.
+      for (const cell of nb.cells.filter((c) => RUNNABLE_TYPES.has(c.type) && !c.manualOnly)) {
         const nbNow = notebooksRef.current.find((n) => n.id === notebookId);
         if (!nbNow || nbNow.kernelStatus !== 'ready') break;
         await dispatchCellRun(notebookId, cell);
@@ -950,7 +951,7 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
     if (!nb || nb.running.size > 0) return;
     const idx = nb.cells.findIndex((c) => c.id === cellId);
     if (idx < 0) return;
-    for (const cell of nb.cells.slice(idx).filter((c) => RUNNABLE_TYPES.has(c.type)))
+    for (const cell of nb.cells.slice(idx).filter((c) => RUNNABLE_TYPES.has(c.type) && !c.manualOnly))
       await dispatchCellRun(notebookId, cell);
   }, [dispatchCellRun]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -959,7 +960,7 @@ export function useKernelManager({ setNb, notebooksRef, dbConnectionsRef, setVar
     if (!nb || nb.running.size > 0) return;
     const idx = nb.cells.findIndex((c) => c.id === cellId);
     if (idx < 0) return;
-    for (const cell of nb.cells.slice(0, idx + 1).filter((c) => RUNNABLE_TYPES.has(c.type)))
+    for (const cell of nb.cells.slice(0, idx + 1).filter((c) => RUNNABLE_TYPES.has(c.type) && !c.manualOnly))
       await dispatchCellRun(notebookId, cell);
   }, [dispatchCellRun]); // eslint-disable-line react-hooks/exhaustive-deps
 

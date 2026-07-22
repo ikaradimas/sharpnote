@@ -49,6 +49,7 @@ export function useCellScheduler({ notebooksRef, runCell, runAll }) {
         stopSchedule(cellId);
         return;
       }
+      if (cell.manualOnly) return; // manual-only cells never auto-run, even if scheduled
       runCell(notebookId, cell);
     };
 
