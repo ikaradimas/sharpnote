@@ -1435,6 +1435,7 @@ export const DOCS_SECTIONS = [
         'Zoom and pan with scroll wheel and drag; fit-to-view button resets the viewport',
         'Decision nodes show two labeled outgoing edges (true / false)',
         'Cell colors and names are reflected on graph nodes',
+        'Export ▾ saves the whole graph as a PNG image or a PDF document — the export always captures the entire graph at natural scale (not just the current zoom/pan), so you can drop it into a doc or print it. The PDF fits one page, landscape when the graph is wider than tall',
       ]},
       { type: 'h4', text: 'What the edges mean' },
       { type: 'ul', items: [

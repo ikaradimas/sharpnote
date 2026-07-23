@@ -373,6 +373,55 @@ function registerAllHandlers() {
     }
   });
 
+  // Export the orchestration graph (rasterised in the renderer) as a one-page PDF.
+  // The PNG is printed through a hidden BrowserWindow so it never disturbs the main
+  // window; the page is fit to A4 (landscape when the graph is wider than tall).
+  ipcMain.handle('export-graph-pdf', async (_event, { pngDataUrl, landscape, defaultName } = {}) => {
+    if (!pngDataUrl || !pngDataUrl.startsWith('data:image/png;base64,')) {
+      return { success: false, error: 'No image to export' };
+    }
+    const { filePath, canceled } = await dialog.showSaveDialog(mainWindow, {
+      title: 'Export Orchestration as PDF',
+      defaultPath: `${defaultName || 'orchestration'}.pdf`,
+      filters: [{ name: 'PDF Document', extensions: ['pdf'] }],
+    });
+    if (canceled || !filePath) return { success: false };
+
+    const stamp = `${process.pid}-${filePath.length}`; // avoids Date.* here; unique enough per save
+    const pngPath  = path.join(app.getPath('temp'), `sharpnote-graph-${stamp}.png`);
+    const htmlPath = path.join(app.getPath('temp'), `sharpnote-graph-${stamp}.html`);
+    let win;
+    try {
+      fs.writeFileSync(pngPath, Buffer.from(pngDataUrl.split(',')[1], 'base64'));
+      const html = `<!doctype html><html><head><meta charset="utf-8"><style>
+        @page { margin: 0; }
+        html, body { margin: 0; padding: 0; height: 100%; background: #ffffff; }
+        body { display: flex; align-items: center; justify-content: center; }
+        img { max-width: 100%; max-height: 100%; object-fit: contain; }
+      </style></head><body><img src="file://${pngPath.replace(/\\/g, '/')}"></body></html>`;
+      fs.writeFileSync(htmlPath, html, 'utf-8');
+
+      win = new BrowserWindow({ show: false, webPreferences: { sandbox: true } });
+      await win.loadFile(htmlPath);
+      await new Promise((r) => setTimeout(r, 150)); // let the image paint before printing
+
+      const pdf = await win.webContents.printToPDF({
+        printBackground: true,
+        pageSize: 'A4',
+        landscape: !!landscape,
+        margins: { marginType: 'custom', top: 0, bottom: 0, left: 0, right: 0 },
+      });
+      fs.writeFileSync(filePath, pdf);
+      return { success: true, filePath };
+    } catch (err) {
+      return { success: false, error: err.message };
+    } finally {
+      if (win && !win.isDestroyed()) win.destroy();
+      try { fs.unlinkSync(pngPath); } catch { /* ignore */ }
+      try { fs.unlinkSync(htmlPath); } catch { /* ignore */ }
+    }
+  });
+
   // App info.
   ipcMain.handle('get-app-version', () => app.getVersion());
   ipcMain.handle('get-app-paths', () => ({

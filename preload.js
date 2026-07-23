@@ -45,6 +45,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   importPolyglotNotebook: () => ipcRenderer.invoke('import-polyglot-notebook'),
   importDataFile: () => ipcRenderer.invoke('import-data-dialog'),
   saveFile: (opts) => ipcRenderer.invoke('save-file', opts),
+  exportGraphPdf: (opts) => ipcRenderer.invoke('export-graph-pdf', opts),
 
   // Snapshots
   snapshotCaptureOrCompare: (notebookPath, cellId, outputs) =>

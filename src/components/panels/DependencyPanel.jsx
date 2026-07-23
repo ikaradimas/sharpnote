@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
+import { flushSync } from 'react-dom';
 import { useCellDependencies } from '../../hooks/useCellDependencies.js';
 import { CELL_COLORS } from '../../notebook-factory.js';
 import { CellNodeContextMenu } from './dep/CellNodeContextMenu.jsx';
 import { PipelineToolbar } from './dep/PipelineToolbar.jsx';
+import { captureGraphPng, graphExportBaseName, graphPdfLandscape } from '../../utils/graph-export.js';
 
 /* ── Constants ─────────────────────────────────────────────────────────────── */
 
@@ -552,6 +554,65 @@ export function DependencyPanel({
     return () => document.removeEventListener('mousedown', handler);
   }, [addMenuOpen]);
 
+  /* ── Export the graph as PNG / PDF ─────────────────────────────────────── */
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const exportMenuRef = useRef(null);
+  useEffect(() => {
+    if (!exportMenuOpen) return;
+    const handler = (e) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target)) setExportMenuOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [exportMenuOpen]);
+
+  // Rasterise the whole graph at natural scale. The SVG bakes zoom/pan into its
+  // geometry, so we flip to zoom 1 / pan 0 synchronously for the capture, then restore.
+  const captureCurrentGraph = () => {
+    const prevZoom = zoom, prevPan = pan;
+    const bgcolor = (scrollRef.current && getComputedStyle(scrollRef.current).backgroundColor) || '#1e1e1e';
+    return captureGraphPng({
+      svg: svgRef.current, totalW, totalH, bgcolor,
+      normalize: () => flushSync(() => { setZoom(1); setPan({ x: 0, y: 0 }); }),
+      restore:   () => flushSync(() => { setZoom(prevZoom); setPan(prevPan); }),
+      loadDomToImage: () => import('dom-to-image-more').then((m) => m.default),
+    });
+  };
+
+  const exportPng = async () => {
+    setExportMenuOpen(false);
+    if (exporting) return;
+    setExporting(true);
+    try {
+      const dataUrl = await captureCurrentGraph();
+      if (!dataUrl) return;
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = `${graphExportBaseName(notebook?.title)}-orchestration.png`;
+      a.click();
+    } catch (err) {
+      console.error('[orch-export] PNG export failed:', err);
+    } finally { setExporting(false); }
+  };
+
+  const exportPdf = async () => {
+    setExportMenuOpen(false);
+    if (exporting || !window.electronAPI?.exportGraphPdf) return;
+    setExporting(true);
+    try {
+      const dataUrl = await captureCurrentGraph();
+      if (!dataUrl) return;
+      await window.electronAPI.exportGraphPdf({
+        pngDataUrl: dataUrl,
+        landscape: graphPdfLandscape(totalW, totalH),
+        defaultName: `${graphExportBaseName(notebook?.title)}-orchestration`,
+      });
+    } catch (err) {
+      console.error('[orch-export] PDF export failed:', err);
+    } finally { setExporting(false); }
+  };
+
   /* ── Edge bezier helper ────────────────────────────────────────────────── */
   const edgePath = useCallback((x1, y1, x2, y2) => {
     const dy = Math.abs(y2 - y1);
@@ -655,6 +716,25 @@ export function DependencyPanel({
           <button className="orch-toolbar-btn" onClick={() => setZoom((z) => Math.max(0.2, z - 0.2))} title="Zoom out">&minus;</button>
           <button className="orch-toolbar-btn" onClick={fitAll} title="Fit to view">&oplus;</button>
         </div>
+
+        <span className="orch-toolbar-sep" />
+
+        <span className="orch-toolbar-add-wrap" ref={exportMenuRef}>
+          <button
+            className="orch-toolbar-btn"
+            onClick={() => setExportMenuOpen((v) => !v)}
+            disabled={exporting}
+            title="Export the graph as an image or PDF"
+          >
+            {exporting ? 'Exporting…' : 'Export ▾'}
+          </button>
+          {exportMenuOpen && (
+            <div className="orch-add-menu">
+              <button className="orch-add-menu-item" onClick={exportPng}>PNG image</button>
+              <button className="orch-add-menu-item" onClick={exportPdf}>PDF document</button>
+            </div>
+          )}
+        </span>
 
         <span className="orch-toolbar-info">
           {realNodes.length} cells &middot; {edges.filter((e) => !e.virtual).length} edges
