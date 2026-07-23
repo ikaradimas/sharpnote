@@ -1184,6 +1184,7 @@ export const DOCS_SECTIONS = [
         'Every time you save a notebook, a snapshot is automatically stored in a sidecar .cnb.history file',
         'Up to 50 snapshots are retained with oldest-first (FIFO) eviction',
         'Snapshots include cell contents, configuration, and metadata',
+        'Large embedded files are deliberately not copied into snapshots (they would otherwise be duplicated across all 50 and bloat the history file); restoring an older snapshot keeps the notebook\'s current embedded files',
       ]},
       { type: 'h3', text: 'Using the Panel' },
       { type: 'ul', items: [

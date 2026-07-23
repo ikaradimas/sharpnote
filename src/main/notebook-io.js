@@ -45,12 +45,17 @@ function decryptConfigSecrets(config) {
   });
 }
 
-function writeNotebookFile(filePath, data) {
-  notebookHistory.saveSnapshot(filePath, data);
+async function writeNotebookFile(filePath, data) {
+  await notebookHistory.saveSnapshot(filePath, data);
   const encrypted = { ...data, config: encryptConfigSecrets(data.config) };
+  // Notebooks carrying embedded file blobs are written compact — indenting megabytes
+  // of embedded data is pure CPU cost and no one reads these by hand. Small notebooks
+  // stay pretty-printed (human/diff friendly). Writes are async so the main-process
+  // event loop (and the whole app UI) is not blocked while the file is written.
+  const compact = Array.isArray(data.embeddedFiles) && data.embeddedFiles.length > 0;
   const tmp = filePath + '.tmp';
-  fs.writeFileSync(tmp, JSON.stringify(encrypted, null, 2), 'utf-8');
-  fs.renameSync(tmp, filePath);
+  await fs.promises.writeFile(tmp, JSON.stringify(encrypted, null, compact ? undefined : 2), 'utf-8');
+  await fs.promises.rename(tmp, filePath);
   if (_addRecentFile) _addRecentFile(filePath);
   return { success: true, filePath };
 }
@@ -69,7 +74,7 @@ function register(ipcMain, { mainWindow, dialog, addRecentFile, writeLog } = {})
     });
     if (canceled || !filePath) return { success: false };
     try {
-      const result = writeNotebookFile(filePath, data);
+      const result = await writeNotebookFile(filePath, data);
       _writeLog('SAVE', `Notebook saved: ${path.basename(filePath)}`);
       return result;
     } catch (err) {
@@ -80,7 +85,7 @@ function register(ipcMain, { mainWindow, dialog, addRecentFile, writeLog } = {})
 
   ipcMain.handle('save-notebook-to', async (_event, { filePath, data }) => {
     try {
-      const result = writeNotebookFile(filePath, data);
+      const result = await writeNotebookFile(filePath, data);
       _writeLog('SAVE', `Auto-saved: ${path.basename(filePath)}`);
       return result;
     } catch (err) {

@@ -417,8 +417,8 @@ export function App() {
     const timer = setInterval(() => {
       for (const nb of notebooksRef.current) {
         if (nb.isDirty && nb.path) {
-          const data = buildNotebookData(nb);
-          window.electronAPI?.autoSaveBackup(nb.path, data);
+          const data = buildNotebookData(nb.id);
+          if (data) window.electronAPI?.autoSaveBackup(nb.path, data);
         }
       }
     }, 60000);

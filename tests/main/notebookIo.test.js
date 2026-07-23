@@ -36,7 +36,7 @@ describe('Config secret encryption round-trip', () => {
     expect(decrypted).toBe(original);
   });
 
-  it('writeNotebookFile encrypts secret config entries on disk', () => {
+  it('writeNotebookFile encrypts secret config entries on disk', async () => {
     const filePath = path.join(tmpDir, 'test-secrets.cnb');
     const data = {
       title: 'Test',
@@ -47,7 +47,7 @@ describe('Config secret encryption round-trip', () => {
       ],
     };
 
-    nbIo.writeNotebookFile(filePath, data);
+    await nbIo.writeNotebookFile(filePath, data);
 
     const raw = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
     const secretEntry = raw.config.find((e) => e.key === 'apiKey');
@@ -90,22 +90,42 @@ describe('Config secret encryption round-trip', () => {
 });
 
 describe('Notebook params round-trip', () => {
-  it('persists params verbatim through write/read', () => {
+  it('persists params verbatim through write/read', async () => {
     const filePath = path.join(tmpDir, 'test-params.cnb');
     const params = [
       { name: 'Threshold', type: 'double', default: 0.5,  value: 0.7 },
       { name: 'Region',    type: 'choice', default: 'EU', options: ['EU', 'US', 'APAC'] },
       { name: 'Dry',       type: 'bool',   default: false },
     ];
-    nbIo.writeNotebookFile(filePath, { title: 'P', cells: [], params });
+    await nbIo.writeNotebookFile(filePath, { title: 'P', cells: [], params });
     const raw = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
     expect(raw.params).toEqual(params);
   });
 
-  it('writing without a params field keeps the file backwards-compatible', () => {
+  it('writing without a params field keeps the file backwards-compatible', async () => {
     const filePath = path.join(tmpDir, 'test-no-params.cnb');
-    nbIo.writeNotebookFile(filePath, { title: 'NP', cells: [] });
+    await nbIo.writeNotebookFile(filePath, { title: 'NP', cells: [] });
     const raw = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
     expect(raw.params).toBeUndefined();
+  });
+});
+
+describe('Notebook write formatting (embedded-file notebooks stay compact)', () => {
+  it('pretty-prints a small notebook but writes an embedded-file notebook compact', async () => {
+    const pretty = path.join(tmpDir, 'small.cnb');
+    await nbIo.writeNotebookFile(pretty, { title: 'S', cells: [{ id: 'c1', type: 'code', content: 'x' }] });
+    const prettyRaw = fs.readFileSync(pretty, 'utf-8');
+    expect(prettyRaw).toContain('\n  '); // indented
+
+    const compact = path.join(tmpDir, 'embedded.cnb');
+    await nbIo.writeNotebookFile(compact, {
+      title: 'E', cells: [{ id: 'c1', type: 'code', content: 'x' }],
+      embeddedFiles: [{ name: 'a.csv', content: 'col\n1\n2' }],
+    });
+    const compactRaw = fs.readFileSync(compact, 'utf-8');
+    expect(compactRaw).not.toContain('\n  '); // no indentation
+    // still valid + round-trips
+    const parsed = JSON.parse(compactRaw);
+    expect(parsed.embeddedFiles).toHaveLength(1);
   });
 });

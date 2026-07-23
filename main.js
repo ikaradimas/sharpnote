@@ -438,10 +438,13 @@ function registerAllHandlers() {
 
   // Auto-save backup
   ipcMain.handle('auto-save-backup', async (_event, { filePath, data }) => {
-    if (!filePath) return { success: false };
+    if (!filePath || !data) return { success: false };
     try {
       const bakPath = filePath + '.bak';
-      fs.writeFileSync(bakPath, JSON.stringify(data, null, 2), 'utf-8');
+      // Async + compact for embedded-file notebooks — the 60s backup must never block
+      // the main-process event loop (this runs while the user is actively editing).
+      const compact = Array.isArray(data.embeddedFiles) && data.embeddedFiles.length > 0;
+      await fs.promises.writeFile(bakPath, JSON.stringify(data, null, compact ? undefined : 2), 'utf-8');
       return { success: true };
     } catch (err) {
       console.error('[auto-save] backup failed:', err.message);

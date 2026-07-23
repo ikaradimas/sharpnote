@@ -3,6 +3,17 @@
 const fs = require('fs');
 
 const MAX_SNAPSHOTS = 50;
+// Self-heal cap: a well-formed history of 50 cell/config snapshots is well under a
+// megabyte. Anything above this is a pathologically bloated file (e.g. the pre-fix
+// bug that duplicated multi-MB embeddedFiles into every snapshot) — ignore it and let
+// the next save replace it, rather than synchronously parsing hundreds of MB.
+const MAX_HISTORY_BYTES = 25 * 1024 * 1024;
+// Large, (near-)static blobs excluded from snapshots. They would otherwise be
+// duplicated across all 50 snapshots (embeddedFiles alone can be megabytes → the
+// history file ballooned to hundreds of MB and froze the app on every save). Restore
+// only ever applies cells/config/title (see App onRestore), so these were never
+// restored from history anyway — dropping them is behaviour-preserving.
+const SNAPSHOT_OMIT = ['embeddedFiles', 'retainedResults'];
 
 function historyPath(notebookPath) {
   return notebookPath + '.history';
@@ -10,13 +21,22 @@ function historyPath(notebookPath) {
 
 function loadHistory(notebookPath) {
   try {
-    return JSON.parse(fs.readFileSync(historyPath(notebookPath), 'utf-8'));
+    const hp = historyPath(notebookPath);
+    const { size } = fs.statSync(hp);
+    if (size > MAX_HISTORY_BYTES) {
+      console.warn(`[history] ignoring oversized history file (${(size / 1048576).toFixed(0)}MB): ${hp}`);
+      return [];
+    }
+    return JSON.parse(fs.readFileSync(hp, 'utf-8'));
   } catch { return []; }
 }
 
-function saveSnapshot(notebookPath, data) {
+async function saveSnapshot(notebookPath, data) {
   const hp = historyPath(notebookPath);
   const history = loadHistory(notebookPath);
+
+  const slim = { ...data };
+  for (const k of SNAPSHOT_OMIT) delete slim[k];
 
   const snapshot = {
     timestamp: new Date().toISOString(),
@@ -28,7 +48,7 @@ function saveSnapshot(notebookPath, data) {
       type: c.type,
       preview: (c.content || '').slice(0, 80),
     })),
-    data: { ...data },
+    data: slim,
   };
 
   history.push(snapshot);
@@ -37,7 +57,7 @@ function saveSnapshot(notebookPath, data) {
   while (history.length > MAX_SNAPSHOTS) history.shift();
 
   try {
-    fs.writeFileSync(hp, JSON.stringify(history), 'utf-8');
+    await fs.promises.writeFile(hp, JSON.stringify(history), 'utf-8');
   } catch (err) {
     console.error('[history] save failed:', err.message);
   }
@@ -74,9 +94,9 @@ function register(ipcMain) {
     return { success: true };
   });
 
-  ipcMain.handle('notebook-history-snapshot', (_event, { filePath, data }) => {
+  ipcMain.handle('notebook-history-snapshot', async (_event, { filePath, data }) => {
     try {
-      saveSnapshot(filePath, data);
+      await saveSnapshot(filePath, data);
       return { success: true };
     } catch (err) {
       return { success: false, error: err.message };
