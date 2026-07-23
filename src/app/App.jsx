@@ -7,7 +7,7 @@ import React, {
 } from 'react';
 import { DOCS_TAB_ID, CHANGELOG_TAB_ID, KAFKA_TAB_ID, PANEL_TAB_PREFIX } from '../constants.js';
 import {
-  makeLibEditorId, isLibEditorId, isNotebookId, isPanelTabId, getNotebookDisplayName, generateDockerCompose, makePanelTabId,
+  makeLibEditorId, isLibEditorId, isNotebookId, isPanelTabId, getNotebookDisplayName, generateDockerCompose, makePanelTabId, uniqueEmbedName,
 } from '../utils.js';
 import { DEFAULT_DOCK_LAYOUT, DEFAULT_FLOAT_W, DEFAULT_FLOAT_H } from '../config/dock-layout.jsx';
 import { TablePageSizeContext } from '../config/table-page-size-context.js';
@@ -1423,16 +1423,18 @@ export function App() {
           if (!nbId) return;
           const result = await window.electronAPI?.pickEmbedFile?.();
           if (!result) return;
-          const name = result.filename.replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9_]/g, '_');
-          setNbDirty(nbId, (n) => ({
-            embeddedFiles: [...(n.embeddedFiles || []), { name, ...result, variables: {} }],
-          }));
+          const existing = nb?.embeddedFiles || [];
+          const name = uniqueEmbedName(result.filename.replace(/\.[^.]+$/, ''), existing.map(f => f.name));
+          const newFiles = [...existing, { name, ...result, variables: {} }];
+          setNbDirty(nbId, () => ({ embeddedFiles: newFiles }));
           if (nb?.kernelStatus === 'ready') {
-            window.electronAPI?.sendToKernel(nbId, {
-              type: 'set_embedded_files',
-              files: [...(nb.embeddedFiles || []), { name, ...result, variables: {} }],
-            });
+            window.electronAPI?.sendToKernel(nbId, { type: 'set_embedded_files', files: newFiles });
           }
+        },
+        onExport: (file) => {
+          window.electronAPI?.exportEmbeddedFile?.({
+            filename: file.filename, content: file.content, encoding: file.encoding,
+          });
         },
         onDelete: (name) => {
           if (!nbId) return;

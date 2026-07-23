@@ -130,7 +130,7 @@ function registerAllHandlers() {
     writeLog: logOps.writeLog,
   });
 
-  fileOps.register(ipcMain, { app, shell });
+  fileOps.register(ipcMain, { app, shell, dialog });
 
   library.register(ipcMain, { shell });
 

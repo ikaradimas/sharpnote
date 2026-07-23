@@ -10,7 +10,7 @@ vi.mock('readline', () => ({
 }));
 
 const tmpDir = path.join(os.tmpdir(), `sharpnote-fileops-test-${Date.now()}`);
-let ipcHandlers, shell;
+let ipcHandlers, shell, dialogMock;
 const fakeEvent = {};
 
 beforeAll(async () => {
@@ -23,6 +23,7 @@ beforeAll(async () => {
   const fo = await import('../../src/main/file-ops.js');
   ipcHandlers = fo._ipcHandlers;
   shell = fo._shell;
+  dialogMock = fo._dialog; // the exact injected dialog the handlers call
   vi.spyOn(shell, 'trashItem').mockResolvedValue(undefined);
 });
 
@@ -96,6 +97,50 @@ describe('IPC – fs-get-home', () => {
     const result = await ipcHandlers['fs-get-home'](fakeEvent);
     expect(typeof result).toBe('string');
     expect(result).toBeTruthy();
+  });
+});
+
+describe('IPC – export-embedded-file', () => {
+  it('writes a text entry as UTF-8 and round-trips', async () => {
+    const out = path.join(tmpDir, 'exported.txt');
+    vi.spyOn(dialogMock, 'showSaveDialog').mockResolvedValue({ canceled: false, filePath: out });
+    const res = await ipcHandlers['export-embedded-file'](fakeEvent, {
+      filename: 'notes.txt', content: 'héllo\nworld', encoding: 'text',
+    });
+    expect(res.success).toBe(true);
+    expect(res.filePath).toBe(out);
+    expect(fs.readFileSync(out, 'utf-8')).toBe('héllo\nworld');
+    dialogMock.showSaveDialog.mockRestore();
+  });
+
+  it('decodes a base64 entry to raw bytes (binary-safe, not UTF-8)', async () => {
+    const out = path.join(tmpDir, 'exported.bin');
+    const bytes = Buffer.from([0x00, 0xff, 0x10, 0x89]); // incl. NUL/high bytes UTF-8 would mangle
+    vi.spyOn(dialogMock, 'showSaveDialog').mockResolvedValue({ canceled: false, filePath: out });
+    const res = await ipcHandlers['export-embedded-file'](fakeEvent, {
+      filename: 'blob.bin', content: bytes.toString('base64'), encoding: 'base64',
+    });
+    expect(res.success).toBe(true);
+    expect(fs.readFileSync(out).equals(bytes)).toBe(true);
+    dialogMock.showSaveDialog.mockRestore();
+  });
+
+  it('passes defaultPath = filename to the save dialog', async () => {
+    const spy = vi.spyOn(dialogMock, 'showSaveDialog').mockResolvedValue({ canceled: true });
+    await ipcHandlers['export-embedded-file'](fakeEvent, { filename: 'data.csv', content: 'x', encoding: 'text' });
+    expect(spy).toHaveBeenCalledWith(expect.objectContaining({ defaultPath: 'data.csv' }));
+    spy.mockRestore();
+  });
+
+  it('returns canceled without writing when the dialog is dismissed', async () => {
+    const out = path.join(tmpDir, 'should-not-exist.txt');
+    vi.spyOn(dialogMock, 'showSaveDialog').mockResolvedValue({ canceled: true, filePath: out });
+    const res = await ipcHandlers['export-embedded-file'](fakeEvent, {
+      filename: 'x.txt', content: 'nope', encoding: 'text',
+    });
+    expect(res).toEqual({ success: false, canceled: true });
+    expect(fs.existsSync(out)).toBe(false);
+    dialogMock.showSaveDialog.mockRestore();
   });
 });
 

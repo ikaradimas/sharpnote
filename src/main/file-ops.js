@@ -8,9 +8,11 @@ const _ipcHandlers = {};
 const _ipcEvents   = {};
 
 let _shell = null;
+let _dialog = null;
 
-function register(ipcMain, { app, shell }) {
+function register(ipcMain, { app, shell, dialog }) {
   _shell = shell;
+  _dialog = dialog;
 
   function handle(channel, fn) {
     if (process.env.VITEST) _ipcHandlers[channel] = fn;
@@ -128,6 +130,25 @@ function register(ipcMain, { app, shell }) {
       encoding: isText ? 'text' : 'base64',
     };
   });
+  // Export a single embedded file back to disk. Binary-safe: base64 entries are decoded
+  // to bytes before writing (the generic save-file handler is utf-8-only and would
+  // corrupt binary content). Content lives in the notebook, so it's passed in directly.
+  handle('export-embedded-file', async (_event, { filename, content, encoding } = {}) => {
+    const dialog = _dialog || require('electron').dialog;
+    const result = await dialog.showSaveDialog({
+      title: 'Export Embedded File',
+      defaultPath: filename || 'file',
+    });
+    if (result.canceled || !result.filePath) return { success: false, canceled: true };
+    try {
+      const buf = Buffer.from(content || '', encoding === 'base64' ? 'base64' : 'utf-8');
+      fs.writeFileSync(result.filePath, buf);
+      return { success: true, filePath: result.filePath };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
   handle('get-env-var', (_event, name) => {
     if (typeof name !== 'string' || !name) return '';
     return process.env[name] ?? '';
@@ -138,7 +159,7 @@ function register(ipcMain, { app, shell }) {
 // import this module directly without going through main.js.
 if (process.env.VITEST) {
   const electron = require('../../__mocks__/electron.js');
-  register(electron.ipcMain, { app: electron.app, shell: electron.shell });
+  register(electron.ipcMain, { app: electron.app, shell: electron.shell, dialog: electron.dialog });
 }
 
-module.exports = { register, _ipcHandlers, _ipcEvents, get _shell() { return _shell; } };
+module.exports = { register, _ipcHandlers, _ipcEvents, get _shell() { return _shell; }, get _dialog() { return _dialog; } };

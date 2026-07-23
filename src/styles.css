@@ -757,12 +757,25 @@ body {
 }
 .embed-panel-hint { font-size: 10px; color: var(--text-faint); margin-top: 6px; }
 .embed-panel-hint code { font-family: var(--font-code); font-size: 9px; }
-.embed-file-edit {
+.embed-file-edit,
+.embed-file-export {
   background: none; border: none; cursor: pointer; color: var(--text-dim);
   padding: 0 2px; opacity: 0; transition: opacity 0.15s;
 }
-.embed-file-row:hover .embed-file-edit { opacity: 1; }
-.embed-file-edit:hover { color: var(--accent-secondary); }
+.embed-file-row:hover .embed-file-edit,
+.embed-file-row:hover .embed-file-export { opacity: 1; }
+.embed-file-edit:hover,
+.embed-file-export:hover { color: var(--accent-secondary); }
+.embed-file-preview {
+  margin: 2px 0 4px; padding: 6px 8px; max-height: 220px; overflow: auto;
+  font-family: var(--font-code); font-size: 10px; line-height: 1.5;
+  color: var(--text-secondary); background: var(--bg-deepest);
+  border: 1px solid var(--border-default); border-radius: 3px;
+  white-space: pre; tab-size: 4;
+}
+.embed-file-preview-note {
+  color: var(--text-faint); font-size: 9px; font-style: italic; margin-bottom: 4px;
+}
 
 /* ── Embed edit dialog ───────────────────────────────────────────────────── */
 .embed-edit-overlay {

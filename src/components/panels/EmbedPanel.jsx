@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { File, Plus, Trash2, ChevronDown, ChevronRight, Pencil, X } from 'lucide-react';
-import { formatFileSize } from '../../utils.js';
+import { File, Plus, Trash2, ChevronDown, ChevronRight, Pencil, X, Download } from 'lucide-react';
+import { formatFileSize, embedPreviewLines } from '../../utils.js';
 
 function EditDialog({ file, onSave, onCancel }) {
   const [name, setName] = useState(file.name);
@@ -103,7 +103,7 @@ function EditDialog({ file, onSave, onCancel }) {
   );
 }
 
-export function EmbedPanel({ files = [], onAdd, onDelete, onUpdateVars, onUpdate, onToggle }) {
+export function EmbedPanel({ files = [], onAdd, onDelete, onExport, onUpdateVars, onUpdate, onToggle }) {
   const [openFile, setOpenFile] = useState(null);
   const [editingFile, setEditingFile] = useState(null);
 
@@ -113,7 +113,7 @@ export function EmbedPanel({ files = [], onAdd, onDelete, onUpdateVars, onUpdate
         <File size={12} className="embed-panel-icon" />
         <span className="embed-panel-title">Embedded Files</span>
         <span className="embed-panel-count">{files.length}</span>
-        {onAdd && <button className="embed-panel-add" onClick={onAdd} title="Embed a file"><Plus size={12} /></button>}
+        {onAdd && <button className="embed-panel-add" onClick={onAdd} title="Import file…"><Plus size={12} /></button>}
       </div>
       <div className="embed-panel-list">
         {files.map((f) => {
@@ -122,12 +122,15 @@ export function EmbedPanel({ files = [], onAdd, onDelete, onUpdateVars, onUpdate
             : (f.content?.length || 0);
           const isOpen = openFile === f.name;
           const varCount = Object.keys(f.variables || {}).length;
+          const preview = isOpen ? embedPreviewLines(f) : null;
+          const previewText = preview && !preview.binary ? preview.lines.join('\n') : '';
           return (
             <div key={f.name} className="embed-file-item">
               <div className="embed-file-row" onClick={() => setOpenFile(isOpen ? null : f.name)}>
                 {isOpen ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
                 <span className="embed-file-name">{f.name}</span>
                 <span className="embed-file-meta">{formatFileSize(size)}</span>
+                {onExport && <button className="embed-file-export" onClick={(e) => { e.stopPropagation(); onExport(f); }} title="Export / download"><Download size={10} /></button>}
                 <button className="embed-file-edit" onClick={(e) => { e.stopPropagation(); setEditingFile(f); }} title="Edit"><Pencil size={10} /></button>
                 <button className="embed-file-del" onClick={(e) => { e.stopPropagation(); onDelete?.(f.name); }} title="Remove"><Trash2 size={10} /></button>
               </div>
@@ -145,6 +148,19 @@ export function EmbedPanel({ files = [], onAdd, onDelete, onUpdateVars, onUpdate
                     <span className="embed-file-label">Encoding</span>
                     <span className="embed-file-value">{f.encoding}</span>
                   </div>
+                  <div className="embed-file-section-label">Preview</div>
+                  {preview.binary ? (
+                    <div className="embed-file-preview-note">Binary file — no text preview.</div>
+                  ) : previewText.length === 0 ? (
+                    <div className="embed-file-preview-note">(empty)</div>
+                  ) : (
+                    <>
+                      <pre className="embed-file-preview">{previewText}</pre>
+                      {preview.truncated && (
+                        <div className="embed-file-preview-note">Preview truncated — first {preview.lines.length} lines.</div>
+                      )}
+                    </>
+                  )}
                   {varCount > 0 && (
                     <>
                       <div className="embed-file-section-label">Variables</div>

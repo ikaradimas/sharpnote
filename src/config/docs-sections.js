@@ -1243,6 +1243,7 @@ export const DOCS_SECTIONS = [
     id: 'embedded-files', title: 'Embedded Files',
     content: [
       { type: 'p', text: 'Store files inline in the notebook (.cnb) and access them from code. Open the Embedded Files panel from the Tools menu or View > Embedded Files (Ctrl+Shift+E / Cmd+Shift+E) to manage files visually, or embed programmatically.' },
+      { type: 'p', text: 'In the panel: click the + button to import a file from disk; click a file to expand it and preview the first 100 lines of its contents (binary files show a note instead of text); click the download button on a file to export it back to disk (binary-safe — base64 entries are decoded to their original bytes). Importing a file whose name collides with an existing one gets a unique suffix (name_2, name_3, …).' },
       { type: 'ul', items: [
         'Files["name"] — access by name (returns EmbeddedFile)',
         'Files["name"].ContentAsText — UTF-8 string content',

@@ -4,6 +4,11 @@
 // gears: 1 = minor fix/tweak, 2 = notable feature, 3 = major feature/architecture
 
 export const CHANGELOG = [
+  { version: '2.33', date: '2026-07-23', title: 'Preview, import & export embedded files', gears: 2, items: [
+    'The Embedded Files panel can now preview file contents: expand any file to see the first 100 lines of its text, decoded in-place (no kernel round-trip). Binary files — or ones that don\'t decode as UTF-8 — show a "no text preview" note instead of garbled bytes, and files longer than the preview budget show a "Preview truncated" marker',
+    'Export embedded files: each file has a download button that saves it back to disk. Exports are binary-safe — base64-encoded entries (images, archives, any non-text file) are decoded to their original bytes rather than written as UTF-8, so they round-trip byte-for-byte',
+    'Import hardening: importing a file whose sanitised code-name would collide with an existing embedded file now gets a unique suffix (name_2, name_3, …) instead of silently clobbering the other file\'s Files["name"] key',
+  ]},
   { version: '2.32', date: '2026-07-23', title: 'Log panel loads large files without freezing', gears: 1, items: [
     'Opening a saved log file in the Log panel now loads only its last 1,000 entries instead of the whole file, so a very large log no longer freezes the panel. When there are more, a notice shows "Showing the last 1,000 of N entries" with an "Open full file" link that opens the complete log in your default application. The Live stream is unaffected — it is never truncated this way. Implemented with a tail-reading IPC channel so a big file is never shipped whole to the renderer',
   ]},

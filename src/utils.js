@@ -142,6 +142,59 @@ export function formatFileSize(bytes) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+// ── Embedded-file helpers ─────────────────────────────────────────────────────
+// An embedded file stores `content` as a plain string: raw UTF-8 when
+// encoding === 'text', base64 otherwise. These helpers are browser-safe
+// (atob/TextDecoder, no Node Buffer) so the panel can preview content without any
+// IPC round-trip — the bytes already live in renderer state.
+
+/**
+ * Decode an embedded file's content to text for preview, capping how many bytes are
+ * decoded so a multi-MB blob is never fully turned into a string just to show a few
+ * lines. Returns { text, capped }; `text` is null when base64 content can't be decoded.
+ */
+export function decodeEmbeddedContent(file, maxBytes = 128 * 1024) {
+  const raw = file?.content || '';
+  if (file?.encoding === 'base64') {
+    const b64 = raw.replace(/\s/g, '').slice(0, Math.ceil(maxBytes / 3) * 4);
+    let bin;
+    try { bin = atob(b64); } catch { return { text: null, capped: false }; }
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const text = new TextDecoder('utf-8', { fatal: false }).decode(bytes);
+    return { text, capped: Math.floor(raw.length * 0.75) > maxBytes };
+  }
+  return { text: raw.slice(0, maxBytes), capped: raw.length > maxBytes };
+}
+
+/**
+ * Build a head preview of an embedded file: the first `maxLines` lines of decoded text.
+ * Flags binary content (undecodable base64 or a NUL byte) so callers can show a note
+ * instead of garbled bytes. `truncated` is true when capped by bytes or by line count.
+ */
+export function embedPreviewLines(file, maxLines = 100, maxBytes = 128 * 1024) {
+  const { text, capped } = decodeEmbeddedContent(file, maxBytes);
+  if (text == null || text.includes('\0')) return { binary: true, lines: [], truncated: false };
+  const all = text.split('\n');
+  const lines = all.slice(0, maxLines);
+  return { binary: false, lines, truncated: capped || all.length > maxLines };
+}
+
+/**
+ * Derive a unique, code-safe embedded-file name. Sanitises `base` to [A-Za-z0-9_]
+ * (trimming stray underscores, falling back to "file"), then appends _2, _3, … until it
+ * no longer collides with `existingNames`. Prevents two imports from sharing one
+ * Files["name"] key (which would clobber in the kernel and duplicate React keys).
+ */
+export function uniqueEmbedName(base, existingNames = []) {
+  const taken = new Set(existingNames);
+  const clean = String(base || '').replace(/[^a-zA-Z0-9_]/g, '_').replace(/^_+|_+$/g, '') || 'file';
+  if (!taken.has(clean)) return clean;
+  let i = 2;
+  while (taken.has(`${clean}_${i}`)) i++;
+  return `${clean}_${i}`;
+}
+
 // ── KaTeX math pre-processing ─────────────────────────────────────────────────
 // Replaces $...$ (inline) and $$...$$ (block) with rendered KaTeX HTML, skipping
 // fenced code blocks and inline code spans so math inside code is never touched.

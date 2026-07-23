@@ -1,47 +1,56 @@
-# Dependency-execution safety (#1 manual-only + #2 ambiguity/run-plan)
+# Embedded Files: preview + import/export UI (2.33.0)
 
-Two small changes that came straight from incidents this session: side-effect cells
-silently re-firing via dependency auto-run, and the B2B/B2C ambiguous-producer confusion.
+Plan: `~/.claude/plans/declarative-mixing-rainbow.md`
 
-## #1 — "Manual only" cells (never auto-run)
-- [ ] `graph-traversal`: extract `computeRunPlan(cellId, cells, edges, {staleCellIds, cellResults})`
-      — single source of truth for "what previous stale deps run when I run this cell". Skips
-      `manualOnly` producers (and does not traverse through them).
-- [ ] `useCellOrchestrator.runWithDeps`: use `computeRunPlan` instead of its inline collection.
-- [ ] `useKernelManager.runAll / runFrom / runTo`: skip `cell.manualOnly`.
-- [ ] UI: header toggle on runnable cells (code/sql/http/shell/docker) + a "manual only" badge;
-      mirror the existing `locked`/`codeFolded` toggle wiring.
-- [ ] Persist `manualOnly` in `buildNotebookData` (field whitelist).
+## A. Preview (head ~100 lines) — renderer-only
+- [x] `src/utils.js`: `decodeEmbeddedContent(file, maxBytes)` + `embedPreviewLines(file, maxLines, maxBytes)`
+- [x] `EmbedPanel.jsx`: Preview section in expanded row (binary note / empty / `<pre>` + truncated note)
+- [x] `src/styles.css`: `.embed-file-preview`, `.embed-file-preview-note`
 
-## #2 — Ambiguous-producer lint + run-plan preview
-- [ ] `buildCellGraph`: track ALL producers per var; add `node.ambiguous` (vars this cell produces
-      that are also produced elsewhere) + return `ambiguousVars` map. "last writer wins" unchanged.
-- [ ] UI: warning badge on ambiguous-producer cells; tooltip names the var + the other producers +
-      which one wins.
-- [ ] Run button: hover tooltip showing `computeRunPlan` result — "Also runs: X, Y" and any
-      manual-only producers skipped.
+## B. Export (per-file, binary-safe)
+- [x] `src/main/file-ops.js`: `export-embedded-file` handler (Buffer base64/utf-8, save dialog)
+- [x] `preload.js`: `exportEmbeddedFile`
+- [x] `src/app/App.jsx`: `onExport` in embed panel props
+- [x] `EmbedPanel.jsx`: Download button in row actions; `.embed-file-export` CSS
 
-## Verify
-- [ ] Unit tests: computeRunPlan (manual-only skip, stale filter, previous-only), buildCellGraph
-      ambiguity, orchestrator skip, runAll skip.
-- [ ] Full JS + kernel suites green. Docs (docs-sections + README) + changelog + version bump.
+## C. Import — harden existing single-file
+- [x] `src/utils.js`: `uniqueEmbedName(base, existingNames)`
+- [x] `src/app/App.jsx` `onAdd`: use `uniqueEmbedName`
+- [x] `EmbedPanel.jsx`: relabel `+` title → "Import file…"
+
+## D. Docs
+- [x] `src/config/docs-sections.js`: extend `embedded-files` section
+- [x] `README.md`: Features list (+ new Embedded Files panel bullet)
+- [x] `src/config/changelog.js`: 2.33 entry (consistency with prior features)
+
+## E. Tests
+- [x] `tests/renderer/embedPreview.test.js` (new): helpers — 16 pass
+- [x] `tests/renderer/EmbedPanel.test.jsx` (new): preview/binary/export/import UI — 5 pass
+- [x] `tests/main/fileOps.test.js` (extend): export-embedded-file round-trip + cancel — 16 pass
+
+## F. Verify + commit
+- [x] `npm test` green (kernel untouched) — 95 files / 1441 tests
+- [x] Renderer bundle compiles (esbuild, exit 0) — GUI not runnable here
+- [x] Bump `package.json` 2.32.1 → 2.33.0
+- [ ] Commit (Claude authorship + trailer)
 
 ## Review
 
-**Done (2.30.0).** Both features shipped.
+**Done (2.33.0).**
 
-- `computeRunPlan` (graph-traversal) is the shared source of truth: `runWithDeps` and the
-  run-button tooltip both use it; manual-only producers are excluded and not traversed through.
-- `buildCellGraph` tracks all producers → `node.ambiguous` + `ambiguousVars` map (last-writer-wins
-  edge behaviour unchanged). `node.manualOnly` surfaced too.
-- `runAll`/`runFrom`/`runTo` skip `manualOnly`. `manualOnly` persisted in `buildNotebookData`.
-- UI: shared `CellManualToggle` (hand icon, highlighted when on) + `CellAmbiguityBadge` (amber
-  triangle) added to code/sql/http/shell/docker headers; `cell-manual-only` root cue (amber left
-  rule); `CellRunGroup` gained `runTitle`. NotebookView computes the ambiguity + run-plan tooltips
-  (it has graph + labels) and threads them + `onToggleManualOnly` down; App passes `depGraph` to
-  the active pane only.
-- Tests: 8 `computeRunPlan` + 3 ambiguity/manualOnly graph cases + 2 orchestrator manual-only
-  cases + `CellManualToggle`/`CellAmbiguityBadge` + ShellCell cell-side wiring. Full JS 1389 pass.
-  Docs: reactive-deps section (manual-only + ambiguity/run-plan), README, changelog 2.30.0.
-- Note: live Electron smoke not possible here (electron binary not installed in this env); verified
-  via full renderer bundle compile + unit/component/cell-render tests.
+- **Preview** is renderer-only: two browser-safe helpers in `utils.js`
+  (`decodeEmbeddedContent` caps the decode at 128 KB; `embedPreviewLines` slices to 100
+  lines and flags binary via NUL-sniff / undecodable-base64). EmbedPanel shows it lazily in
+  the expanded row (`<pre>`, capped-height scroll), with binary / empty / truncated notes.
+- **Export** is a per-file download button → new `export-embedded-file` IPC. Binary-safe:
+  base64 entries decode to bytes (`Buffer.from(content,'base64')`), text writes UTF-8. The
+  handler takes an injected `dialog` (consistent with the module's `app`/`shell` DI; `require`
+  fallback for prod), which also made it unit-testable via `fo._dialog`.
+- **Import** kept single-file; hardened with `uniqueEmbedName` so a colliding sanitised name
+  gets `_2/_3…` instead of clobbering `Files["name"]`. `+` relabelled "Import file…".
+- Tests: 16 helper + 5 panel + 4 export-handler (round-trip text & binary, cancel,
+  defaultPath). Full JS suite 1441 pass. Docs: docs-sections, README (new panel bullet),
+  changelog 2.33.
+- Not runnable here: live Electron GUI (no binary in env) — verified via component render
+  tests + full renderer bundle compile. Manual byte-for-byte binary-export check is the one
+  thing left for a human at a GUI.

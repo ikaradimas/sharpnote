@@ -213,6 +213,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   fsGetHome:  ()                  => ipcRenderer.invoke('fs-get-home'),
   fsReadPreview: (filePath)       => ipcRenderer.invoke('fs-read-preview', filePath),
   pickEmbedFile: ()               => ipcRenderer.invoke('pick-embed-file'),
+  exportEmbeddedFile: (opts)      => ipcRenderer.invoke('export-embedded-file', opts),
   getEnvVar:  (name)              => ipcRenderer.invoke('get-env-var', name),
 
   // Code library
