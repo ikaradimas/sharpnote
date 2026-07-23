@@ -14,6 +14,8 @@ function makeAPI(overrides = {}) {
     onLogEntry:   vi.fn((cb) => { onLogEntryCallback = cb; }),
     offLogEntry:  vi.fn(),
     readLogFile:  vi.fn().mockResolvedValue(''),
+    readLogFileTail: vi.fn().mockResolvedValue({ text: '', total: 0, truncated: false }),
+    openLogFile:  vi.fn().mockResolvedValue({ success: true }),
     saveFile:     vi.fn().mockResolvedValue({}),
     deleteLogFile: vi.fn().mockResolvedValue({ success: true }),
     ...overrides,
@@ -208,5 +210,56 @@ describe('cell ID links', () => {
     pushEntry(makeEntry(`Error in cell ${CELL_ID}`));
     fireEvent.click(document.querySelector('.log-cell-link'));
     expect(onNav).toHaveBeenCalledWith(CELL_ID);
+  });
+});
+
+// ── Large-file truncation notice ────────────────────────────────────────────────
+
+describe('LogPanel — large file truncation', () => {
+  async function selectFile(name) {
+    render(<LogPanel isOpen onToggle={vi.fn()} cells={[]} />);
+    await screen.findByRole('option', { name });
+    fireEvent.change(document.querySelector('.log-file-select'), { target: { value: name } });
+  }
+
+  it('loads a file via the tail loader (last N entries), not the whole file', async () => {
+    window.electronAPI = makeAPI({
+      getLogFiles: vi.fn().mockResolvedValue(['big.log']),
+      readLogFileTail: vi.fn().mockResolvedValue({ text: 'x [A] one', total: 5000, truncated: true }),
+    });
+    await selectFile('big.log');
+    await screen.findByText(/Showing the last/i);
+    expect(window.electronAPI.readLogFileTail).toHaveBeenCalledWith('big.log', 1000);
+    expect(window.electronAPI.readLogFile).not.toHaveBeenCalled();
+  });
+
+  it('shows "last 1,000 of N" + an Open full file link that opens the file', async () => {
+    window.electronAPI = makeAPI({
+      getLogFiles: vi.fn().mockResolvedValue(['big.log']),
+      readLogFileTail: vi.fn().mockResolvedValue({ text: 'x [A] one', total: 5000, truncated: true }),
+    });
+    await selectFile('big.log');
+    expect(await screen.findByText(/Showing the last 1,000 of 5,000 entries/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Open full file/i }));
+    expect(window.electronAPI.openLogFile).toHaveBeenCalledWith('big.log');
+  });
+
+  it('shows no notice when the file fits within the limit', async () => {
+    window.electronAPI = makeAPI({
+      getLogFiles: vi.fn().mockResolvedValue(['small.log']),
+      readLogFileTail: vi.fn().mockResolvedValue({ text: 'x [A] one\ny [B] two', total: 2, truncated: false }),
+    });
+    await selectFile('small.log');
+    await screen.findByText('one');
+    expect(screen.queryByText(/Showing the last/i)).toBeNull();
+  });
+
+  it('never truncates the live view', async () => {
+    window.electronAPI = makeAPI();
+    render(<LogPanel isOpen onToggle={vi.fn()} cells={[]} />);
+    // live is selected by default; push many entries
+    for (let i = 0; i < 20; i++) pushEntry(makeEntry(`live ${i}`));
+    expect(screen.queryByText(/Showing the last/i)).toBeNull();
+    expect(window.electronAPI.readLogFileTail).not.toHaveBeenCalled();
   });
 });

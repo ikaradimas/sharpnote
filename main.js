@@ -122,7 +122,7 @@ function createWindow() {
 
 // ── Register all IPC handlers ─────────────────────────────────────────────────
 function registerAllHandlers() {
-  logOps.register(ipcMain, { logDir, mainWindow });
+  logOps.register(ipcMain, { logDir, mainWindow, shell });
 
   kernelManager.register(ipcMain, {
     mainWindow,

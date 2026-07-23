@@ -17,6 +17,11 @@ const CELL_ID_RE = /\b([0-9a-z]{8})\b/g;
 // every cell run emits at least a run+completed entry, plus any user Log() calls.
 const MAX_LIVE_LOG_ENTRIES = 2000;
 
+// When viewing a saved log file, load only its last N entries — a large file would
+// otherwise be shipped whole to the renderer and choke the panel. The rest stay
+// accessible via the "Open full file" link. Does NOT apply to the live view.
+const FILE_LOG_LIMIT = 1000;
+
 function MessageWithLinks({ message, cellIdSet, onNavigate }) {
   if (!cellIdSet || cellIdSet.size === 0) return <>{message}</>;
 
@@ -90,6 +95,8 @@ export function LogPanel({ isOpen, onToggle, currentMemoryMb = null, cells, onNa
   const [logFiles, setLogFiles] = useState([]);
   const [selectedFile, setSelectedFile] = useState('live');
   const [fileEntries, setFileEntries] = useState([]);
+  // { total, shown } when a loaded file had more than FILE_LOG_LIMIT entries; else null.
+  const [fileTruncated, setFileTruncated] = useState(null);
   const [liveEntries, setLiveEntries] = useState([]);
   const [tagFilter, setTagFilter] = useState('');
   const scrollRef = useRef(null);
@@ -118,9 +125,27 @@ export function LogPanel({ isOpen, onToggle, currentMemoryMb = null, cells, onNa
 
   useEffect(() => {
     if (!isOpen || selectedFile === 'live' || !window.electronAPI) return;
-    window.electronAPI.readLogFile(selectedFile).then((text) => {
-      setFileEntries(parseLogContent(text || ''));
+    let cancelled = false;
+    const api = window.electronAPI;
+    // Prefer the tail loader (last N entries only); fall back to reading the whole
+    // file and slicing client-side if it isn't available.
+    const load = api.readLogFileTail
+      ? api.readLogFileTail(selectedFile, FILE_LOG_LIMIT)
+          .then((r) => r || { text: '', total: 0, truncated: false })
+      : api.readLogFile(selectedFile).then((text) => {
+          const lines = (text || '').split('\n').filter(Boolean);
+          return {
+            text: lines.slice(-FILE_LOG_LIMIT).join('\n'),
+            total: lines.length,
+            truncated: lines.length > FILE_LOG_LIMIT,
+          };
+        });
+    load.then((r) => {
+      if (cancelled) return;
+      setFileEntries(parseLogContent(r.text || ''));
+      setFileTruncated(r.truncated ? { total: r.total, shown: FILE_LOG_LIMIT } : null);
     });
+    return () => { cancelled = true; };
   }, [isOpen, selectedFile]);
 
   useEffect(() => {
@@ -131,8 +156,8 @@ export function LogPanel({ isOpen, onToggle, currentMemoryMb = null, cells, onNa
 
   const rawEntries = selectedFile === 'live' ? liveEntries : fileEntries;
 
-  // Reset tag filter when switching between live/file views
-  useEffect(() => { setTagFilter(''); }, [selectedFile]);
+  // Reset tag filter + truncation notice when switching between live/file views
+  useEffect(() => { setTagFilter(''); setFileTruncated(null); }, [selectedFile]);
 
   const allTags = useMemo(() => {
     const tags = new Set();
@@ -201,6 +226,21 @@ export function LogPanel({ isOpen, onToggle, currentMemoryMb = null, cells, onNa
         }
         <button className="log-close-btn" title="Close logs" onClick={onToggle}>×</button>
       </div>
+      {selectedFile !== 'live' && fileTruncated && (
+        <div className="log-truncation-notice">
+          <span>
+            Showing the last {fileTruncated.shown.toLocaleString()} of{' '}
+            {fileTruncated.total.toLocaleString()} entries.
+          </span>
+          <button
+            className="log-open-file-link"
+            onClick={() => window.electronAPI?.openLogFile?.(selectedFile)}
+            title="Open the full log file in your default application"
+          >
+            Open full file
+          </button>
+        </div>
+      )}
       <div className="log-entries" ref={scrollRef}>
         {entries.length === 0
           ? <div className="log-empty">No entries</div>

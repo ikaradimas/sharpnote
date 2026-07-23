@@ -4,6 +4,9 @@
 // gears: 1 = minor fix/tweak, 2 = notable feature, 3 = major feature/architecture
 
 export const CHANGELOG = [
+  { version: '2.32', date: '2026-07-23', title: 'Log panel loads large files without freezing', gears: 1, items: [
+    'Opening a saved log file in the Log panel now loads only its last 1,000 entries instead of the whole file, so a very large log no longer freezes the panel. When there are more, a notice shows "Showing the last 1,000 of N entries" with an "Open full file" link that opens the complete log in your default application. The Live stream is unaffected — it is never truncated this way. Implemented with a tail-reading IPC channel so a big file is never shipped whole to the renderer',
+  ]},
   { version: '2.31', date: '2026-07-23', title: 'Export the orchestration graph as PNG / PDF', gears: 2, items: [
     'The Orchestration panel has a new Export ▾ menu: save the whole dependency graph as a PNG image or a PDF document. The export always captures the entire graph at natural scale — not just the currently visible zoom/pan region — by momentarily normalising the view for the capture and restoring it after. The PDF is fit to a single page (landscape when the graph is wider than tall) and printed via a hidden window so it never disturbs the notebook. Filenames derive from the notebook title (e.g. "My Notebook-orchestration.png")',
   ]},

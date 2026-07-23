@@ -98,6 +98,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   getLogFiles: () => ipcRenderer.invoke('get-log-files'),
   readLogFile: (filename) => ipcRenderer.invoke('read-log-file', filename),
+  readLogFileTail: (filename, limit) => ipcRenderer.invoke('read-log-file-tail', { filename, limit }),
+  openLogFile: (filename) => ipcRenderer.invoke('open-log-file', filename),
   deleteLogFile: (filename) => ipcRenderer.invoke('delete-log-file', filename),
 
   // Recent files

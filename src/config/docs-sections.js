@@ -606,6 +606,8 @@ export const DOCS_SECTIONS = [
       { type: 'p', text: 'Open the Log panel with Tools → Logs (⌘⇧G) or the Logs button in the toolbar. It shows a real-time interleaved stream from all open notebooks and writes daily rotating log files alongside the app.' },
       { type: 'h3', text: 'Live Stream' },
       { type: 'p', text: 'When "Live" is selected in the dropdown, log entries appear in real time and the panel auto-scrolls to the latest entry.' },
+      { type: 'h3', text: 'Loading Saved Log Files' },
+      { type: 'p', text: 'Selecting a saved daily log file from the dropdown loads only its last 1,000 entries, so a very large file never freezes the panel. If the file has more, a notice at the top shows "Showing the last 1,000 of N entries" with an "Open full file" link that opens the complete log in your default application. This limit applies only to saved files — the Live stream is never truncated this way (it keeps its most recent entries in memory).' },
       { type: 'h3', text: 'Collapsible Entries' },
       { type: 'p', text: 'Entries with long or multi-line messages (such as stack traces from kernel errors) are collapsed to a single truncated line by default. Click the ▶ chevron to expand an entry and see the full content. Click ▼ to collapse it again.' },
       { type: 'h3', text: 'Log Entry Tags' },
