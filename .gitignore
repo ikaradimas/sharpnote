@@ -24,3 +24,6 @@ release/
 
 # Daily log files
 logs/
+
+# Runtime MRU state (lives in userData; never belongs in the repo)
+recent-files.json

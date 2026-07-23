@@ -19,6 +19,10 @@ function loadRecentFiles(userDataPath) {
 }
 
 function saveRecentFiles() {
+  // Never write before loadRecentFiles() has set the userData dir — otherwise
+  // path.join('', 'recent-files.json') resolves to the cwd and leaves a stray
+  // copy in the repo root (the source of the long-lived tracked-file noise).
+  if (!_userDataPath) return;
   const recentFilesPath = path.join(_userDataPath, 'recent-files.json');
   try {
     fs.mkdirSync(path.dirname(recentFilesPath), { recursive: true });
