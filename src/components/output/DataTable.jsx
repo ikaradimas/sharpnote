@@ -4,7 +4,7 @@ import { tableToCSV, tableToTSV } from '../../utils.js';
 
 const PREVIEW_ROWS = 5;
 
-export function DataTable({ rows }) {
+export function DataTable({ rows, truncated = false, totalRows = null }) {
   if (!Array.isArray(rows) || rows.length === 0) {
     return <div className="output-stdout">(empty table)</div>;
   }
@@ -128,6 +128,11 @@ export function DataTable({ rows }) {
         <div className="table-collapse-bar table-collapse-bar-bottom">{collapseToggle}</div>
       )}
       <div className="table-footer">
+        {truncated && (
+          <div className="table-truncation-note">
+            Showing the first {rows.length.toLocaleString()} of {(totalRows ?? rows.length).toLocaleString()} rows — output capped by the kernel to keep the app responsive.
+          </div>
+        )}
         {!collapsed && pageCount > 1 && (
           <div className="table-pager">
             <span className="table-pager-info">

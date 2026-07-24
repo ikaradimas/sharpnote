@@ -69,7 +69,7 @@ export function OutputBlock({ msg, index, notebookId, allCells, onRunCellByName 
     if (msg.format === 'html') {
       inner = <div className="output-html" dangerouslySetInnerHTML={{ __html: msg.content }} />;
     } else if (msg.format === 'table') {
-      inner = <DataTable rows={msg.content} />;
+      inner = <DataTable rows={msg.content} truncated={msg.truncated} totalRows={msg.totalRows} />;
     } else if (msg.format === 'csv') {
       inner = <DataTable rows={parseCsv(msg.content)} />;
     } else if (msg.format === 'graph') {

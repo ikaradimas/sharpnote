@@ -118,6 +118,18 @@ partial class Program
         _lspServer.Start();
         realStdout.WriteLine(JsonSerializer.Serialize(new { type = "ready", lspPipe = _lspServer.ConnectPath }));
 
+        // ── Roslyn warm-up ────────────────────────────────────────────────────
+        // The first CSharpScript compile pays the full Roslyn + JIT cold start
+        // (hundreds of ms to seconds). Run a throwaway script in the background,
+        // with the same options, so the compiler and JIT are warm before the
+        // user's first real cell. Fire-and-forget; it uses its own throwaway
+        // ScriptState and never touches the `script` chain.
+        _ = Task.Run(async () =>
+        {
+            try { await CSharpScript.RunAsync("1", options); }
+            catch { /* warm-up only — ignore any failure */ }
+        });
+
         // ── Background memory reporter ────────────────────────────────────────
         var memCts = new CancellationTokenSource();
         _ = Task.Run(async () =>

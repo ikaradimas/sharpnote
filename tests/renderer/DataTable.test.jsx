@@ -197,4 +197,19 @@ describe('DataTable', () => {
     fireEvent.click(collapseBtns[0]);
     expect(document.querySelectorAll('tbody tr')).toHaveLength(5);
   });
+
+  // ── Truncation notice (kernel row cap) ────────────────────────────────────
+
+  it('shows a truncation notice when the kernel capped the rows', () => {
+    render(<DataTable rows={makeRows(5)} truncated totalRows={120000} />);
+    const note = document.querySelector('.table-truncation-note');
+    expect(note).not.toBeNull();
+    expect(note.textContent).toMatch(/first 5 of/i);
+    expect(note.textContent).toMatch(/capped by the kernel/i);
+  });
+
+  it('shows no truncation notice for a normal (uncapped) table', () => {
+    render(<DataTable rows={makeRows(5)} />);
+    expect(document.querySelector('.table-truncation-note')).toBeNull();
+  });
 });

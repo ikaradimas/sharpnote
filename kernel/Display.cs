@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -585,16 +586,37 @@ public class DisplayHelper
     public void Html(string html, string? title = null) =>
         Send(new { type = "display", id = _currentId, format = "html", content = (object)html, title });
 
+    // A very large table serialised as one JSON line blocks the kernel thread and inflates
+    // the IPC message (which the main process then parses + clones). Cap the rows sent to the
+    // renderer and report the true total so the panel can say "first N of M".
+    public const int MaxDisplayRows = 50_000;
+
     public void Table<T>(IEnumerable<T> rows, string? title = null)
     {
-        var list = ToRowDicts(rows.Cast<object?>().ToList());
-        Send(new { type = "display", id = _currentId, format = "table", content = (object)list, title });
+        var all = rows.Cast<object?>().ToList();
+        var total = all.Count;
+        var slice = total > MaxDisplayRows ? all.Take(MaxDisplayRows).ToList() : all;
+        SendTable(ToRowDicts(slice), title, total);
     }
 
     public void TableFromDicts(IEnumerable<Dictionary<string, object?>> rows, string? title = null)
     {
-        var list = rows.ToList();
-        Send(new { type = "display", id = _currentId, format = "table", content = (object)list, title });
+        var all = rows as List<Dictionary<string, object?>> ?? rows.ToList();
+        var total = all.Count;
+        var content = total > MaxDisplayRows ? all.Take(MaxDisplayRows).ToList() : all;
+        SendTable(content, title, total);
+    }
+
+    // Only attach totalRows/truncated when a cap actually applies, so the common
+    // (un-truncated) table payload stays byte-identical to before — no spurious
+    // output-snapshot diffs for existing notebooks.
+    private void SendTable(object content, string? title, int total)
+    {
+        if (total > MaxDisplayRows)
+            Send(new { type = "display", id = _currentId, format = "table", content, title,
+                       totalRows = total, truncated = true });
+        else
+            Send(new { type = "display", id = _currentId, format = "table", content, title });
     }
 
     public void Csv(string csv, string? title = null) =>
@@ -1060,6 +1082,15 @@ public class DisplayHelper
     // stay numeric and Guid/DateTime/TimeSpan serialize to their canonical string.
     internal static object? ScalarValue(object? v) => v is Enum ? v.ToString() : v;
 
+    // Cache the display-relevant (non-indexer) properties per row type. Otherwise property
+    // discovery via reflection is repeated for every one of N identically typed rows, which
+    // dominates the cost of materialising a large table.
+    private static readonly ConcurrentDictionary<Type, PropertyInfo[]> _propCache = new();
+
+    private static PropertyInfo[] DisplayProps(Type t) =>
+        _propCache.GetOrAdd(t, static tt =>
+            tt.GetProperties().Where(p => p.GetIndexParameters().Length == 0).ToArray());
+
     internal static List<Dictionary<string, object?>> ToRowDicts(List<object?> items)
     {
         return items.Select(row =>
@@ -1070,11 +1101,8 @@ public class DisplayHelper
             // Scalars (incl. Guid/DateTime/decimal) → single value cell, not reflected columns
             if (IsScalar(row.GetType())) return new Dictionary<string, object?> { ["value"] = ScalarValue(row) };
             var dict = new Dictionary<string, object?>();
-            foreach (var p in row.GetType().GetProperties())
-            {
-                if (p.GetIndexParameters().Length > 0) continue; // skip indexers
+            foreach (var p in DisplayProps(row.GetType()))
                 dict[p.Name] = p.GetValue(row);
-            }
             if (dict.Count == 0)
                 dict["value"] = row.ToString();
             return dict;

@@ -1,13 +1,8 @@
 import React, { useMemo, useEffect, useRef } from 'react';
 import { marked } from 'marked';
 import { applyMath, isMarpMarkdown } from '../../utils.js';
+import { getMermaid } from '../../utils/mermaid-loader.js';
 import { MarpRender } from './MarpRender.jsx';
-
-let mermaidPromise = null;
-function getMermaid() {
-  if (!mermaidPromise) mermaidPromise = import('mermaid').then((m) => m.default);
-  return mermaidPromise;
-}
 
 export function MarkdownOutput({ content }) {
   if (isMarpMarkdown(content)) return <MarpRender content={content} />;

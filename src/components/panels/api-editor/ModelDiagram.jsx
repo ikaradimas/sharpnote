@@ -1,7 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import mermaid from 'mermaid';
-
-mermaid.initialize({ startOnLoad: false, theme: 'dark' });
+import { getMermaid } from '../../../utils/mermaid-loader.js';
 
 export function ModelDiagram({ models }) {
   const ref = useRef(null);
@@ -28,11 +26,13 @@ export function ModelDiagram({ models }) {
       }
     }
     const id = 'model-erd-' + Date.now();
-    mermaid.render(id, erd).then(({ svg }) => {
-      if (ref.current) ref.current.innerHTML = svg;
-    }).catch(() => {
-      if (ref.current) ref.current.innerHTML = '<span style="color:var(--text-dim)">Unable to render diagram</span>';
-    });
+    getMermaid()
+      .then((mermaid) => mermaid.render(id, erd))
+      .then(({ svg }) => {
+        if (ref.current) ref.current.innerHTML = svg;
+      }).catch(() => {
+        if (ref.current) ref.current.innerHTML = '<span style="color:var(--text-dim)">Unable to render diagram</span>';
+      });
   }, [models]);
 
   if (!models?.length) return null;

@@ -98,7 +98,7 @@ export function CodeCell({
   onInspectVariable,
   onToggleManualOnly,
   ambiguousTip,
-  runTitle,
+  getRunTitle,
 }) {
   const outputMode = cell.outputMode || 'auto';
   const locked = cell.locked || false;
@@ -230,7 +230,7 @@ export function CodeCell({
         <span className="cell-lang-label">C#</span>
         <span className="cell-id-label" title={`Cell ID: ${cell.id}`}>{cell.id}</span>
         <CellRunGroup onRun={onRun} onInterrupt={onInterrupt} onRunFrom={onRunFrom} onRunTo={onRunTo}
-          isRunning={isRunning} disabled={anyRunning || !kernelReady} runTitle={runTitle} />
+          isRunning={isRunning} disabled={anyRunning || !kernelReady} getRunTitle={getRunTitle} />
         {!isRunning && lastDuration !== null && (
           <span className={`cell-header-timer${lastDuration > 5000 ? ' cell-timer-very-slow' : lastDuration > 1000 ? ' cell-timer-slow' : ''}`}>
             {formatElapsed(lastDuration)}

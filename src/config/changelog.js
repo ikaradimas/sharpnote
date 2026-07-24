@@ -4,6 +4,12 @@
 // gears: 1 = minor fix/tweak, 2 = notable feature, 3 = major feature/architecture
 
 export const CHANGELOG = [
+  { version: '2.34', date: '2026-07-24', title: 'Performance: faster startup, snappier typing, safer large outputs', gears: 2, items: [
+    'Smaller, faster startup: the packaged app bundle is now minified (roughly halved in size), and mermaid — the single heaviest dependency — is loaded lazily the first time a diagram renders instead of eagerly at launch',
+    'Faster first run: the kernel warms up the Roslyn compiler on a background thread as soon as it signals ready, so the first cell you run no longer pays the full compiler cold start (previously a noticeable one-off stall)',
+    'Snappier typing in large notebooks: a code cell\'s run-plan tooltip (what its ▶ will also run) is now computed only when you hover the run button, instead of for every cell on every keystroke — that was O(N²) work per render that grew with notebook size',
+    'Large tables no longer freeze the app: a table output is capped at the first 50,000 rows when sent from the kernel to the UI, with a "showing the first 50,000 of N rows" notice (narrow the result upstream to see a specific slice). Per-row reflection is also cached, so materialising a big table is much cheaper',
+  ]},
   { version: '2.33', date: '2026-07-23', title: 'Preview, import & export embedded files', gears: 2, items: [
     'The Embedded Files panel can now preview file contents: expand any file to see the first 100 lines of its text, decoded in-place (no kernel round-trip). Binary files — or ones that don\'t decode as UTF-8 — show a "no text preview" note instead of garbled bytes, and files longer than the preview budget show a "Preview truncated" marker',
     'Export embedded files: each file has a download button that saves it back to disk. Exports are binary-safe — base64-encoded entries (images, archives, any non-text file) are decoded to their original bytes rather than written as UTF-8, so they round-trip byte-for-byte',

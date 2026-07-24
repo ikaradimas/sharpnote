@@ -1,56 +1,69 @@
-# Embedded Files: preview + import/export UI (2.33.0)
+# Performance: Top 5 quick wins (2.34.0)
 
-Plan: `~/.claude/plans/declarative-mixing-rainbow.md`
+## 1. Minify production bundle
+- [x] `package.json`: extract `build:assets`; add `build:renderer:prod` (--minify); point `dist:*` at it
+- [x] Verify: prod build 18.8 MB → 9.3 MB (~50%)
 
-## A. Preview (head ~100 lines) — renderer-only
-- [x] `src/utils.js`: `decodeEmbeddedContent(file, maxBytes)` + `embedPreviewLines(file, maxLines, maxBytes)`
-- [x] `EmbedPanel.jsx`: Preview section in expanded row (binary note / empty / `<pre>` + truncated note)
-- [x] `src/styles.css`: `.embed-file-preview`, `.embed-file-preview-note`
+## 2. Lazy-load mermaid (keep it out of startup execution)
+- [x] `src/utils/mermaid-loader.js` (new): shared `getMermaid()` that dynamic-imports + initialises once
+- [x] `MarkdownCell.jsx`: drop static import + module-load initialize; use `getMermaid()`
+- [x] `MarkdownOutput.jsx`: use shared loader (also fixes missing initialize)
+- [x] `api-editor/ModelDiagram.jsx`: drop static import; use `getMermaid()`
 
-## B. Export (per-file, binary-safe)
-- [x] `src/main/file-ops.js`: `export-embedded-file` handler (Buffer base64/utf-8, save dialog)
-- [x] `preload.js`: `exportEmbeddedFile`
-- [x] `src/app/App.jsx`: `onExport` in embed panel props
-- [x] `EmbedPanel.jsx`: Download button in row actions; `.embed-file-export` CSS
+## 3. Roslyn warm-up after "ready"
+- [x] `kernel/Program.cs`: fire-and-forget `CSharpScript.RunAsync("1", options)` after ready emit — builds clean
 
-## C. Import — harden existing single-file
-- [x] `src/utils.js`: `uniqueEmbedName(base, existingNames)`
-- [x] `src/app/App.jsx` `onAdd`: use `uniqueEmbedName`
-- [x] `EmbedPanel.jsx`: relabel `+` title → "Import file…"
+## 4. Lazy run-plan tooltip (kill O(N²) per render)
+- [x] `NotebookView.jsx`: pass `getRunTitle={() => runPlanTip(cell.id)}` instead of eager string
+- [x] `CodeCell.jsx`: thread `getRunTitle`
+- [x] `CellRunGroup.jsx`: compute title on run-button `onMouseEnter` (imperative), default otherwise
+- [x] (ambiguityTip stays eager — it's cheap map lookups, not the hot path)
 
-## D. Docs
-- [x] `src/config/docs-sections.js`: extend `embedded-files` section
-- [x] `README.md`: Features list (+ new Embedded Files panel bullet)
-- [x] `src/config/changelog.js`: 2.33 entry (consistency with prior features)
+## 5. Cap large table outputs at the kernel boundary + cache reflection
+- [x] `kernel/Display.cs`: `_propCache` per-type PropertyInfo cache in `ToRowDicts`
+- [x] `kernel/Display.cs`: `MaxDisplayRows` (50k) cap in `Table`/`TableFromDicts`; emit `totalRows`/`truncated` only when capped
+- [x] `src/components/output/OutputBlock.jsx`: thread `truncated`/`totalRows` to DataTable
+- [x] `src/components/output/DataTable.jsx` + CSS: "first N of M — capped by the kernel" notice (never silent)
+- [x] Confirmed cap covers SQL (`DisplayTable`→`TableFromDicts`) + AutoDisplay + `.Display()`
 
-## E. Tests
-- [x] `tests/renderer/embedPreview.test.js` (new): helpers — 16 pass
-- [x] `tests/renderer/EmbedPanel.test.jsx` (new): preview/binary/export/import UI — 5 pass
-- [x] `tests/main/fileOps.test.js` (extend): export-embedded-file round-trip + cancel — 16 pass
+## Docs
+- [x] docs-sections "Large Tables" note, README Rich-output clause, changelog 2.34
 
-## F. Verify + commit
-- [x] `npm test` green (kernel untouched) — 95 files / 1441 tests
-- [x] Renderer bundle compiles (esbuild, exit 0) — GUI not runnable here
-- [x] Bump `package.json` 2.32.1 → 2.33.0
+## Tests
+- [x] `tests/renderer/mermaidLoader.test.js` (memoize + initialize once) — 1
+- [x] `tests/renderer/CellRunGroup.test.jsx` (lazy title on hover) — 3
+- [x] `tests/renderer/DataTable.test.jsx` (truncation notice) — +2 (25 total)
+- [x] `kernel/kernel.Tests` DisplayTests: row cap + truncated + under-cap unchanged — +2 (318 total)
+- [x] Full JS (1447) + kernel (318) green; prod bundle 18.8→9.3 MB
+
+## Verify + commit
+- [x] Bump `package.json` 2.33.0 → 2.34.0
 - [ ] Commit (Claude authorship + trailer)
 
 ## Review
 
-**Done (2.33.0).**
+**Done (2.34.0).** All five landed, both suites green (JS 1447 / kernel 318), renderer compiles.
 
-- **Preview** is renderer-only: two browser-safe helpers in `utils.js`
-  (`decodeEmbeddedContent` caps the decode at 128 KB; `embedPreviewLines` slices to 100
-  lines and flags binary via NUL-sniff / undecodable-base64). EmbedPanel shows it lazily in
-  the expanded row (`<pre>`, capped-height scroll), with binary / empty / truncated notes.
-- **Export** is a per-file download button → new `export-embedded-file` IPC. Binary-safe:
-  base64 entries decode to bytes (`Buffer.from(content,'base64')`), text writes UTF-8. The
-  handler takes an injected `dialog` (consistent with the module's `app`/`shell` DI; `require`
-  fallback for prod), which also made it unit-testable via `fo._dialog`.
-- **Import** kept single-file; hardened with `uniqueEmbedName` so a colliding sanitised name
-  gets `_2/_3…` instead of clobbering `Files["name"]`. `+` relabelled "Import file…".
-- Tests: 16 helper + 5 panel + 4 export-handler (round-trip text & binary, cancel,
-  defaultPath). Full JS suite 1441 pass. Docs: docs-sections, README (new panel bullet),
-  changelog 2.33.
-- Not runnable here: live Electron GUI (no binary in env) — verified via component render
-  tests + full renderer bundle compile. Manual byte-for-byte binary-export check is the one
-  thing left for a human at a GUI.
+1. **Minify** — factored `build:assets`, added `build:renderer:prod` (--minify) used by `dist:*`;
+   dev/tests keep the readable unminified build. **18.8 MB → 9.3 MB.**
+2. **Lazy mermaid** — shared `src/utils/mermaid-loader.js` (`getMermaid()`, initialised once);
+   removed the static import + module-load `initialize()` from MarkdownCell/MarkdownOutput/
+   ModelDiagram. Defers the heaviest dep's execution off startup (also fixed MarkdownOutput
+   silently missing the theme/security init).
+3. **Roslyn warm-up** — fire-and-forget `CSharpScript.RunAsync("1", options)` after `ready`;
+   own throwaway ScriptState, never touches the `script` chain.
+4. **Lazy run-plan tooltip** — `getRunTitle` computed on the run button's `onMouseEnter`
+   (imperative title set), not per cell per render. Kills the O(N²) `computeRunPlan` from the
+   typing path. `ambiguityTip` left eager (cheap map lookups).
+5. **Output cap + reflection cache** — `MaxDisplayRows = 50_000` cap in `Table`/`TableFromDicts`
+   (covers `.Display()`, AutoDisplay, `.DisplayTable`/SQL); `totalRows`/`truncated` attached
+   ONLY when capped (normal payloads byte-identical → no snapshot churn); per-type
+   `PropertyInfo` cache in `ToRowDicts`. Renderer shows a non-silent "first N of M" notice.
+
+Not runnable here: live Electron GUI (no binary). Verified via full JS + kernel suites, prod/dev
+bundle builds, and renderer compile. Manual GUI check worth doing: confirm perceived startup +
+first-run feel and that a >50k-row `.Display()` shows the notice.
+
+Follow-ups I noted but did NOT do (out of Top-5 scope): esbuild `--splitting` (to actually shrink
+the initial chunk, needs `<script type="module">`), lazy-load katex + `React.lazy` output
+renderers, LSP diagnostics debounce, main-thread raw-string forwarding of large kernel messages.

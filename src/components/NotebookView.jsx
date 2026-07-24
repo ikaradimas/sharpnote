@@ -491,7 +491,7 @@ export function NotebookView({
         onOutputModeChange={(mode) => updateCellProp(cell.id, 'outputMode', mode)}
         onToggleLock={() => updateCellProp(cell.id, 'locked', !(cell.locked || false))}
         onToggleManualOnly={() => toggleManualOnly(cell.id)}
-        ambiguousTip={ambiguityTip(cell.id)} runTitle={runPlanTip(cell.id)}
+        ambiguousTip={ambiguityTip(cell.id)} getRunTitle={() => runPlanTip(cell.id)}
         onToggleFold={() => toggleFold(cell.id)}
         onScheduleStart={(ms) => { updateCellProp(cell.id, 'scheduleInterval', ms); onScheduleStart?.(nb.id, cell.id, ms); }}
         onScheduleStop={() => onScheduleStop?.(cell.id)}

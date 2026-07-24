@@ -1,12 +1,10 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { marked } from 'marked';
-import mermaid from 'mermaid';
 import { applyMath, isMarpMarkdown } from '../../utils.js';
+import { getMermaid } from '../../utils/mermaid-loader.js';
 import { CodeEditor } from './CodeEditor.jsx';
 import { CellControls } from './CellControls.jsx';
 import { MarpRender } from '../output/MarpRender.jsx';
-
-mermaid.initialize({ startOnLoad: false, theme: 'dark', securityLevel: 'loose' });
 
 export function MarkdownCell({
   cell, cellIndex, onUpdate, onDelete, onCopy, onMoveUp, onMoveDown,
@@ -48,22 +46,24 @@ export function MarkdownCell({
     if (nodes.length === 0) return;
 
     const ts = Date.now();
-    nodes.forEach(async (node, idx) => {
-      const pre = node.parentElement;
-      const graphDef = node.textContent;
-      const id = `mermaid-${cell.id}-${ts}-${idx}`;
-      try {
-        const { svg } = await mermaid.render(id, graphDef);
-        const wrapper = document.createElement('div');
-        wrapper.className = 'mermaid-render';
-        wrapper.innerHTML = svg;
-        pre.replaceWith(wrapper);
-      } catch (e) {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'mermaid-render mermaid-error';
-        wrapper.textContent = String(e.message || e);
-        pre.replaceWith(wrapper);
-      }
+    getMermaid().then((mermaid) => {
+      nodes.forEach(async (node, idx) => {
+        const pre = node.parentElement;
+        const graphDef = node.textContent;
+        const id = `mermaid-${cell.id}-${ts}-${idx}`;
+        try {
+          const { svg } = await mermaid.render(id, graphDef);
+          const wrapper = document.createElement('div');
+          wrapper.className = 'mermaid-render';
+          wrapper.innerHTML = svg;
+          pre.replaceWith(wrapper);
+        } catch (e) {
+          const wrapper = document.createElement('div');
+          wrapper.className = 'mermaid-render mermaid-error';
+          wrapper.textContent = String(e.message || e);
+          pre.replaceWith(wrapper);
+        }
+      });
     });
   }, [renderedHtml, cell.id, editing]);
 

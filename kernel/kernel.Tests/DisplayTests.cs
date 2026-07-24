@@ -464,4 +464,52 @@ public class DisplayTests : IClassFixture<KernelFixture>, IAsyncLifetime
         first.GetProperty("value").GetString().Should().Be("44444444-4444-4444-4444-444444444444");
         first.TryGetProperty("Variant", out _).Should().BeFalse();
     }
+
+    // ── Large-table row cap (MaxDisplayRows) ─────────────────────────────────
+
+    [Fact]
+    public async Task DisplayTable_OverCap_TruncatesAndReportsTrueTotal()
+    {
+        var cap = SharpNoteKernel.DisplayHelper.MaxDisplayRows;
+        var id = KernelFixture.NewId();
+        _k.ClearMessages();
+        await _k.SendAsync(new { type = "execute", id, code =
+            $"Enumerable.Range(0, {cap + 1}).Select(i => new {{ n = i }}).ToList().DisplayTable();" });
+        await _k.WaitForMessageAsync(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "complete" &&
+            el.TryGetProperty("id", out var i) && i.GetString() == id,
+            timeoutMs: 30_000);
+
+        var tableMsg = _k.GetMessages().FirstOrDefault(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "display" &&
+            el.TryGetProperty("format", out var f) && f.GetString() == "table");
+        tableMsg.ValueKind.Should().NotBe(JsonValueKind.Undefined);
+
+        // Only `cap` rows are sent, but the true total is reported so the panel can say "first N of M".
+        tableMsg.GetProperty("content").GetArrayLength().Should().Be(cap);
+        tableMsg.GetProperty("truncated").GetBoolean().Should().BeTrue();
+        tableMsg.GetProperty("totalRows").GetInt32().Should().Be(cap + 1);
+    }
+
+    [Fact]
+    public async Task DisplayTable_UnderCap_OmitsTruncationFields()
+    {
+        var id = KernelFixture.NewId();
+        _k.ClearMessages();
+        await _k.SendAsync(new { type = "execute", id, code =
+            "Enumerable.Range(0, 3).Select(i => new { n = i }).ToList().DisplayTable();" });
+        await _k.WaitForMessageAsync(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "complete" &&
+            el.TryGetProperty("id", out var i) && i.GetString() == id);
+
+        var tableMsg = _k.GetMessages().FirstOrDefault(el =>
+            el.TryGetProperty("type", out var t) && t.GetString() == "display" &&
+            el.TryGetProperty("format", out var f) && f.GetString() == "table");
+        tableMsg.ValueKind.Should().NotBe(JsonValueKind.Undefined);
+
+        // A normal table payload is byte-identical to before — no truncation metadata.
+        tableMsg.GetProperty("content").GetArrayLength().Should().Be(3);
+        tableMsg.TryGetProperty("truncated", out _).Should().BeFalse();
+        tableMsg.TryGetProperty("totalRows", out _).Should().BeFalse();
+    }
 }
